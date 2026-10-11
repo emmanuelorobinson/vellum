@@ -1,0 +1,33 @@
+# Dev-only backing services for the cloud apps (account, api, sync server). Not used by the editor,
+# the CLI, the daemon or any local feature. Bound to loopback; the credentials below are throwaway.
+name: vellum-dev
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: vellum
+      POSTGRES_PASSWORD: vellum-dev-only
+      POSTGRES_DB: vellum
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vellum -d vellum"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

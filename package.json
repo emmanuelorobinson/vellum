@@ -1,0 +1,45 @@
+{
+  "name": "vellum-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vellum: design where your code lives. Monorepo root (Cargo workspace + pnpm workspaces + Turborepo).",
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run //#cargo:build //#wasm:build build",
+    "lint": "turbo run //#lint:ts //#lint:rust",
+    "type-check": "turbo run //#cargo:check type-check",
+    "test": "turbo run //#cargo:test //#test:scripts test",
+    "test:watch": "turbo watch test",
+    "format": "biome format --write . && cargo fmt --all",
+    "format:check": "biome format . && cargo fmt --all --check",
+    "refs": "bash scripts/refs.sh",
+    "deps:check": "bash scripts/check-deps.sh",
+    "clean-room": "bash scripts/check-clean-room.sh",
+    "types:gen": "node scripts/types-gen.mjs",
+    "layout-oracle": "bash scripts/gen-layout-oracle.sh",
+    "design:open": "bash scripts/design-open",
+    "design:snapshot": "bash scripts/design-snapshot",
+    "design:check": "bash scripts/design-check",
+    "fixtures:record": "bash scripts/record-engine-fixtures.sh",
+    "checksum": "node scripts/spec-checksums.mjs check",
+    "checksum:update": "node scripts/spec-checksums.mjs update",
+    "clean": "node scripts/clean.mjs",
+    "cargo:build": "cargo build --workspace",
+    "cargo:check": "cargo check --workspace --all-targets",
+    "cargo:test": "cargo test --workspace",
+    "wasm:build": "cargo build -p vellum-wasm --target wasm32-unknown-unknown",
+    "lint:ts": "biome check .",
+    "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
+    "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "turbo": "2.11.7",
+    "typescript": "catalog:"
+  }
+}

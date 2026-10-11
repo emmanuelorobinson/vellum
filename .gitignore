@@ -1,0 +1,30 @@
+# Reference repositories: cloned by scripts/refs.sh, read-only, never committed
+refs/
+
+# Rust
+target/
+
+# Read-only working copy of the design file (scripts/design-open)
+.design-cache/
+
+# Secrets and local environment. Keys live in the OS keychain, never in files.
+.env*
+!.env.example
+
+# Crash-recovery copies are not history; Git is
+*.vellum.recovery
+
+# Node / pnpm / Turborepo
+node_modules/
+.turbo/
+dist/
+.next/
+next-env.d.ts
+coverage/
+*.tsbuildinfo
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

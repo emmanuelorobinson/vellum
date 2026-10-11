@@ -1,0 +1,6 @@
+[env]
+# ts-rs writes bindings here when `cargo test` runs the generated export tests.
+# packages/types-ts/src/generated is GENERATED — never hand-edit it (`pnpm types:gen`).
+TS_RS_EXPORT_DIR = { value = "packages/types-ts/src/generated", relative = true }
+# i64/u64 are never serialised past 2^53 in the file format (ids are strings), so plain numbers.
+TS_RS_LARGE_INT = "number"

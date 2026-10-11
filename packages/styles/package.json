@@ -1,0 +1,18 @@
+{
+  "name": "@vellum/styles",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Built-in visual styles served by get_style.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

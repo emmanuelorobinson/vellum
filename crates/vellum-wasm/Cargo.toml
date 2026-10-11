@@ -1,0 +1,16 @@
+[package]
+name = "vellum-wasm"
+description = "Composition root: the browser engine (vellum-core plus the renderer chosen by ADR-001)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vellum-types = { path = "../vellum-types" }
+
+[lints]
+workspace = true

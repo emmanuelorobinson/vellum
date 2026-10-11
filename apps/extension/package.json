@@ -1,0 +1,20 @@
+{
+  "name": "@vellum/extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "VS Code extension (Cursor and Windsurf through Open VSX).",
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.140.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

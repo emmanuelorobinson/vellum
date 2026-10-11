@@ -1,0 +1,18 @@
+{
+  "name": "@vellum/ui-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Design tokens: light, dark, high contrast; chrome and canvas groups.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,10 @@
+[package]
+name = "vellum-render-vello"
+description = "Renderer adapter over Vello (later, behind a flag)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

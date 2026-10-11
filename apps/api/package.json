@@ -1,0 +1,15 @@
+{
+  "name": "@vellum/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Public REST API (Hono on Bun), /v1/.",
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,10 @@
+[package]
+name = "vellum-engine-builtin"
+description = "AgentEngine: Vellum's own loop over any ModelProvider."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,10 @@
+[package]
+name = "vellum-import-figma-api"
+description = "Importer: Figma file import through the REST API (v1.1)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

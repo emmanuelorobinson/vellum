@@ -1,0 +1,7 @@
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
+# wasm32-unknown-unknown: the browser target vellum-wasm builds for today.
+# wasm32-unknown-emscripten: kept installed until ADR-001 (Prompt 4) decides the renderer path.
+targets = ["wasm32-unknown-unknown", "wasm32-unknown-emscripten"]

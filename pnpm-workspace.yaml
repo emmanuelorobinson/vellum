@@ -1,0 +1,16 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# One place for every shared tool version (guide §5 version policy: exact, no ranges).
+catalog:
+  typescript: 7.0.2
+  vitest: 5.0.3
+  "@types/node": 26.6.5
+  "@types/react": 19.3.0
+  "@types/react-dom": 19.3.0
+  "@types/vscode": 1.140.0
+  react: 19.3.0
+  react-dom: 19.3.0
+  next: 16.4.0
+  electron: 44.7.0

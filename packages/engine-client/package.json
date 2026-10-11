@@ -1,0 +1,18 @@
+{
+  "name": "@vellum/engine-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "EngineClient over vellum-wasm, plus a fake.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

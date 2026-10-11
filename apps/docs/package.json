@@ -1,0 +1,15 @@
+{
+  "name": "@vellum/docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "User docs, MCP reference, format spec, ADRs.",
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

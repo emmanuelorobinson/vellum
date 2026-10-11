@@ -1,0 +1,17 @@
+{
+  "name": "@vellum/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Desktop app (Electron).",
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "electron": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "main": "./dist/main/index.js"
+}

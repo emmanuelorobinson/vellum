@@ -1,0 +1,10 @@
+[package]
+name = "vellum-assets-fs"
+description = "AssetStore on the local file system."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

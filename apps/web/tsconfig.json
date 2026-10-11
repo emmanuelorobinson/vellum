@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["next-env.d.ts", "app", "tests", "next.config.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

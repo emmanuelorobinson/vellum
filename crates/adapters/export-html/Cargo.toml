@@ -1,0 +1,10 @@
+[package]
+name = "vellum-export-html"
+description = "CodeExporter: HTML + Tailwind and HTML + CSS."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

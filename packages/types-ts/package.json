@@ -1,0 +1,19 @@
+{
+  "name": "@vellum/types-ts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TypeScript types GENERATED from vellum-types by ts-rs. Never hand-edited.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

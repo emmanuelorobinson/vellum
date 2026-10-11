@@ -1,0 +1,10 @@
+[package]
+name = "vellum-assets-s3"
+description = "AssetStore on S3-compatible storage."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
