@@ -130,12 +130,18 @@ non-zero with "not implemented yet" rather than pretending to pass.
 | `pnpm build` | `cargo build --workspace`, the wasm build, then every package's `build` |
 | `pnpm test` | Rust tests, script tests, every package's tests |
 | `pnpm type-check` | `cargo check` plus `tsc --noEmit` per package |
-| `pnpm lint` | Biome plus `cargo clippy -D warnings` |
+| `pnpm lint` | Biome, the copy lint (guide Appendix B), and `cargo clippy -D warnings` |
 | `pnpm format` / `pnpm format:check` | Biome and rustfmt |
 | `pnpm types:gen` | regenerate `packages/types-ts` from `vellum-types` (ts-rs) |
 | `pnpm checksum` | prove the read-only specification is unchanged |
 | `pnpm clean` | remove build output (never `node_modules`, `refs/`, `.design-cache/`) |
-| `pnpm refs` `deps:check` `clean-room` `design:*` `layout-oracle` `fixtures:record` | later prompts; exit non-zero until then |
+| `pnpm refs` | clone the 15 reference repositories at their pins into `refs/` (about 2 GB, needs the network), then check that `docs/reference/REFERENCE-INDEX.md` is current and every path it names exists. Local only, not in CI |
+| `pnpm refs:index` | regenerate `docs/reference/REFERENCE-INDEX.md` from guide §3.2 and §3.3 |
+| `pnpm deps:check` | the Rust allowlist for the pure crates (`scripts/rust-deps-allowlist.txt`), cargo-deny bans, licences and sources, and the dependency-cruiser rules for `packages/` and `apps/` |
+| `pnpm cargo:deny` | `cargo deny check`, all four checks; advisories need the network |
+| `pnpm clean-room` | no file contains a string from `scripts/clean-room-denylist.txt`, and every `ported-from:` header has an MIT or Apache-2.0 row in `THIRD_PARTY_NOTICES.md` |
+| `pnpm copy-lint` | `@vellum/config` holds exactly the guide's Appendix B strings, and no UI code repeats them |
+| `pnpm design:*` `layout-oracle` `fixtures:record` | later prompts; exit non-zero until then |
 
 ## Layout
 

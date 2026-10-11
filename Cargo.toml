@@ -16,7 +16,7 @@ members = [
 [workspace.package]
 version = "0.0.0"
 edition = "2024"
-rust-version = "1.98"
+rust-version = "1.99"
 publish = false
 
 [workspace.lints.rust]
@@ -27,7 +27,7 @@ unused_must_use = "deny"
 all = { level = "warn", priority = -1 }
 
 # Versions every crate shares. Only vellum-types, vellum and (later) adapters add dependencies;
-# vellum-core and vellum-types stay on the allowlist in docs (Prompt 2 enforces it).
+# vellum-core and vellum-types stay on scripts/rust-deps-allowlist.txt (scripts/check-deps.sh enforces it).
 [workspace.dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"

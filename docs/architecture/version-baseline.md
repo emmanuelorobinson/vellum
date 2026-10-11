@@ -1,0 +1,170 @@
+# Version baseline
+
+- **Resolved:** 2026-10-11, against the crates.io sparse index, the npm registry, the Rust channel manifest
+  (`static.rust-lang.org`, channel 2026-10-01), the Node.js release index, and the GitHub releases and tags of each
+  reference repository.
+- **Covers:** every line of guide §5, the pins the manifests carry (`package.json`, `pnpm-workspace.yaml`,
+  `Cargo.toml`, `rust-toolchain.toml`, `.nvmrc`), and the reference repositories of guide §3.
+- **Checked by:** `scripts/__tests__/version-baseline.test.mjs` (every §5 line has an exact version, the manifests agree
+  with this file, the reference SHAs are recorded, no lockfile holds a prerelease) and `scripts/__tests__/architecture-records.test.mjs`.
+
+## Rules
+
+1. The latest stable patch of each line in guide §5. Prereleases (canary, beta, rc, alpha) are rejected: for example
+   `axum 0.8.0-rc.1` and `serde 1.0.172-alpha.0` exist and are not used.
+2. Exact versions are recorded here. Manifests pin exact versions for npm and the catalog. Cargo requirements are
+   caret-style (`"1.0.229"`) and `Cargo.lock` holds the exact resolved version.
+3. Lockfiles hold no prerelease. The test above fails if one appears.
+4. A line not yet installed is still recorded, with the prompt that installs it. Nothing is installed ahead of the
+   prompt that needs it.
+
+## Rust toolchain and crates
+
+| Component | Resolved | Guide line | Pinned in | Decision |
+|---|---|---|---|---|
+| Rust toolchain | 1.99.0 | latest stable toolchain | `rust-toolchain.toml` channel; `Cargo.toml` rust-version 1.99 | C1 |
+| tokio | 1.53.2 | 1.53.x | not yet used | latest stable patch of the line |
+| axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
+| interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
+| loro | 1.16.2 | 1.16.x | not yet used | behind DocStore (Prompt 14) |
+| taffy | 0.14.0 | 0.14.x | not yet used | layout adapter (Prompt 18) |
+| parley | 0.12.0 | 0.12.x | not yet used | text adapter (Prompt 19) |
+| fontique | 0.12.0 | 0.12.x | not yet used | ships with parley; a direct dependency only if needed |
+| skia-safe | 0.153.3 | 0.153.x | not yet used | features textlayout, svg, pdf; gl and vulkan off for headless (ADR-001) |
+| vello | 0.11.0 | 0.11.x | not yet used | later, behind a flag |
+| kurbo | 0.13.1 | 0.13.x | not yet used | path geometry adapter |
+| i_overlay | 9.0.1 | 9.0.x | not yet used | boolean operations (Prompt 12) |
+| rstar | 0.13.0 | 0.13.x | not yet used | spatial index (Prompt 20) |
+| rquickjs | 0.14.0 | 0.14.x | not yet used | ScriptRuntime (Prompt 25) |
+| rmcp | 3.5.1 | 3.5.x | not yet used | MCP adapter (Prompt 29) |
+| schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |
+| ts-rs | 12.0.1 | 12.x | `Cargo.toml` workspace.dependencies | TypeScript bindings from vellum-types |
+| wasm-bindgen | 0.2.129 | 0.2.129+ | not yet used | only if ADR-001 picks wasm-bindgen over emscripten exports |
+| notify | 8.2.0 | 8.2.x | not yet used | file watcher (Prompt 28) |
+| rusqlite | 0.40.2 | 0.40.x | not yet used | session store, bundled SQLite (Prompt 34) |
+| keyring | 4.2.0 | 4.2.x | not yet used | SecretStore (Prompt 32) |
+| clap | 4.6.7 | 4.6.x | `Cargo.toml` workspace.dependencies | CLI (Prompt 59) |
+| chromiumoxide | 0.9.1 | 0.9.x | not yet used | BrowserPort, v1.1 (Prompt 65) |
+| naga | 30.0.1 | 30.x | not yet used | shader translation, v1.1, only if ADR-008 uses it |
+| cargo-deny | 0.20.2 | 0.20.x | `scripts/check-deps.sh` and `pnpm cargo:deny` (installed, not a dependency) | C5 |
+| serde | 1.0.229 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
+| serde_json | 1.0.154 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
+
+## Node and JavaScript tooling
+
+| Component | Resolved | Guide line | Pinned in | Decision |
+|---|---|---|---|---|
+| Node | 24.21.0 | Node 24 LTS line | `.nvmrc` (24); `package.json` engines `>=24 <25` | C4 |
+| pnpm | 12.11.2 | 12.11.x | `package.json` packageManager | latest stable patch |
+| Turborepo | 2.11.7 | 2.11.x | root devDependencies (`turbo`) | latest stable patch |
+| TypeScript | 5.9.3 | 7.0.x native line, newest 5.x if a tool conflicts | `pnpm-workspace.yaml` catalog | C3 |
+| @types/node | 24.19.2 | Node runtime line (not in §5) | `pnpm-workspace.yaml` catalog | C2 |
+| Vite | 8.3.4 | 8.3.x | not yet used | first UI bundle (Prompt 45) |
+| React | 19.3.0 | 19.3.x | `pnpm-workspace.yaml` catalog | latest stable patch |
+| @types/react | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
+| @types/react-dom | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
+| @base-ui/react | 1.9.0 | 1.9.x | not yet used | editor UI (Prompt 46) |
+| shadcn | 4.21.4 | CLI current at scaffold (generated source, not a dependency) | not installed | C11 |
+| Tailwind CSS | 4.3.3 | 4.3.x | not yet used | editor UI (Prompt 46) |
+| Zustand | 5.0.15 | 5.0.x | not yet used | vanilla stores in editor-core (Prompt 44) |
+| Zod | 4.6.6 | 4.6.x | not yet used | schemas at the edges (Prompt 10 onward) |
+| i18next | 26.4.3 | 26.x | not yet used | copy and locale work (Prompt 70) |
+| Biome | 2.5.15 | 2.5.x | root devDependencies (`@biomejs/biome`) | latest stable patch |
+| dependency-cruiser | 18.5.0 | 18.5.x | root devDependencies | C10 and C3 |
+| Vitest | 5.0.3 | 5.0.x | `pnpm-workspace.yaml` catalog | latest stable patch |
+| Playwright | 1.64.0 | 1.64.x | not yet used | `@playwright/test` and `playwright` (Prompt 46 onward) |
+| Storybook | 10.6.1 | 10.6.x | not yet used | UI stories (Prompt 46 onward) |
+
+## Frontend apps, desktop, extension and cloud
+
+| Component | Resolved | Guide line | Pinned in | Decision |
+|---|---|---|---|---|
+| Next.js | 16.4.0 | 16.4.x | `pnpm-workspace.yaml` catalog | account app and web viewer |
+| Electron | 44.7.0 | 44.x | `pnpm-workspace.yaml` catalog | desktop host (Prompt 57) |
+| electron-builder | 26.15.7 | 26.15.x | not yet used | packaging (Prompt 58) |
+| electron-updater | 6.8.10 | 6.8.x | not yet used | updater (Prompt 58) |
+| @vscode/vsce | 4.0.0 | 4.0.x | not yet used | VS Code packaging (Prompt 56) |
+| ovsx | 1.2.0 | 1.2.x | not yet used | Open VSX publishing (Prompt 56) |
+| @types/vscode | 1.140.0 | VS Code API types (not in §5) | `pnpm-workspace.yaml` catalog | C8 |
+| canvaskit-wasm | 0.42.0 | 0.42.x, only if ADR-001 picks CanvasKit | not installed | C12 |
+| @modelcontextprotocol/sdk | 1.32.1 | 1.32.x | not yet used | TypeScript side of the extension's MCP registration (Prompt 56) |
+| better-auth | 1.7.7 | 1.7.x | not yet used | wrapped by `@vellum/auth` (Prompt 61) |
+| drizzle-orm | 0.45.4 | 0.45.x | not yet used | account app database (Prompt 61) |
+| Hono | 4.13.13 | 4.13.x | not yet used | public API (Prompt 61) |
+
+## Installed engines and the design tool
+
+These are not dependencies. They are the versions to test against, and each release pins its tested versions in ADR-007.
+
+| Component | Resolved | Guide line | Pinned in | Decision |
+|---|---|---|---|---|
+| Claude Code | 2.1.296 | 2.1.x | not a dependency | C7 |
+| Codex CLI | 0.162.1 | 0.162.x | not a dependency | C7 |
+| @pen.dev/cli | 0.3.11 | 0.3.x (Node 22.19 or later) | not installed | C9 |
+
+## Reference repositories
+
+Each clone under `refs/` is blob-less and shallow, checked out at the commit below. Pins come from guide §3 and are
+recorded in `scripts/refs.tsv`. `docs/reference/REFERENCE-INDEX.md` lists the paths the guide names.
+
+| Repository | Pinned commit | Licence | Use | Newest release check (2026-10-11) |
+|---|---|---|---|---|
+| penpot | 10955f17e27943429a10e90360d0404e3f56e27c | MPL-2.0 | READ ONLY, never port | 2.18.3 (commit 2026-10-06) is older than the pin (2026-10-09) |
+| graphite | 7477cd2fab315494e4c2613bc446c707733e6e7b | Apache-2.0/MIT | read and port with attribution | no GitHub release; tags are not versions |
+| loro | 4f60d921d820de3522624a436de77f994a6622b8 | MIT | read and port with attribution | loro-crdt@1.16.4 (commit 2026-09-30) is older than the pin (2026-10-09) |
+| taffy | 7d33901cc383489d9945ae796a1ceed0a935ef66 | MIT | read and port with attribution | v0.14.0 (commit 2026-08-24) is older than the pin (2026-10-09) |
+| parley | 46fcad316d4ff05dc0d5647fda2d15def7be896e | Apache-2.0/MIT | read and port with attribution | v0.12.0 (commit 2026-10-09 15:37Z) is older than the pin (19:50Z) |
+| vello | 235739c4f08eb48d900e1512459d453a9ab77f96 | Apache-2.0/MIT | read and port with attribution | v0.11.0 (commit 2026-10-02) is older than the pin (2026-10-09) |
+| kurbo | 9366cda80ebb56f41e5d09509a89dbfe81bc4f5b | Apache-2.0/MIT | read and port with attribution | v0.13.1 (commit 2026-05-13) is older than the pin (2026-10-08) |
+| codex | 8c0f7011674145da7e10627769fb221c74fbf7a0 | Apache-2.0 | read and port with attribution | rust-v0.162.1 (commit 2026-10-09) is older than the pin (2026-10-11) |
+| goose | 3bd852002903e016ff30947e973f76e2fcfcf90f | Apache-2.0 | read and port with attribution | v1.54.0 (commit 2026-10-08) is older than the pin (2026-10-09) |
+| opencode | d21b0790a6c146815f28fea604e41e922f009590 | MIT | read and port with attribution | v1.19.0 (commit 2026-10-11 01:39Z) is older than the pin (09:27Z) |
+| rquickjs | a4e45effc347d63c58c2efc3020566e6095cc94f | MIT | read and port with attribution | no GitHub release; tag v0.14.0 (commit 2026-09-18) is older than the pin (2026-10-05) |
+| rmcp | c1a8eea312613519b93f53b89a1dc74dc993f5b0 | Apache-2.0 (MIT legacy parts) | read and port with attribution | rmcp-v3.5.1 (commit 2026-10-05) is older than the pin (2026-10-10) |
+| vscode-samples | 65c1c44800eeac6fb065a54823ee5ae62c79540a | MIT | read and port with attribution | no release and no tags |
+| excalidraw | e65eca999e071503efb893d3379a29fb96ff37c4 | MIT | read and port with attribution | v0.18.1 (commit 2026-04-20) is older than the pin (2026-10-10) |
+| tldraw | 7937be360bcb8239d89e420850843f81313fc07b | tldraw licence | DOCS ONLY, never port | v5.5.2 (commit 2026-10-02) is older than the pin (2026-10-09) |
+
+No repository has a release at or after its pin, so every pin stays at the guide's SHA (C6).
+
+## Compatibility decisions
+
+- **C1: Rust 1.98.1 becomes 1.99.0.** The stable channel of 2026-10-01 ships Rust 1.99.0 (`b940084d7`, 2026-09-28), and
+  Prompt 1 had pinned the release before it. The MSRV (`rust-version`) moves to 1.99 with it, because the repository
+  only tests the pinned toolchain. Clippy with `-D warnings` and the workspace tests pass on 1.99.0.
+- **C2: @types/node moves from 26.6.5 to 24.19.2.** The catalog had pinned the Node 26 line, but the runtime is Node 24
+  (`.nvmrc`). Types for a newer runtime admit APIs that do not exist where the code runs.
+- **C3: TypeScript 7.0.2 becomes 5.9.3.** TypeScript 7 is the guide's first choice. dependency-cruiser 18.5.0 refuses it
+  (`typescript: >=2.0.0 <7.0.0`) and then cruises zero modules, so the dependency rules would pass without checking
+  anything. The guide's fallback applies: the newest 5.x. `scripts/check-deps.sh` also fails when dependency-cruiser
+  reads no TypeScript. Revisit when dependency-cruiser supports TypeScript 7.
+- **C4: Node stays on the 24 line.** `.nvmrc` pins `24`, which is the LTS line. The newest LTS patch on 2026-10-11 is
+  24.21.0, the version installed here. Node is not in a lockfile, so the line is the pin.
+- **C5: cargo-deny 0.20.2.** `cargo deny check` runs all four checks, advisories included, and needs the network.
+  `pnpm deps:check` runs bans, licences and sources only, which need no network.
+- **C6: Reference pins stay.** The rule was: re-pin to the newest release at or after the pin, and keep the pin where
+  there is none. Every release is older than its pin (table above), so all 15 pins are unchanged. `refs.tsv` is the
+  single record of them.
+- **C7: Installed engines are not dependencies.** Claude Code 2.1.296 and Codex CLI 0.162.1 are the newest in their lines
+  at scaffold. The versions Vellum tests against are pinned per release in ADR-007 (Prompts 36 and 37).
+- **C8: @types/vscode 1.140.0.** The VS Code API types current at scaffold. The extension's minimum `engines.vscode` is
+  set in Prompt 55.
+- **C9: @pen.dev/cli 0.3.11 is a design-tool dependency only** (Prompt 3, `scripts/design-snapshot`). It is never shipped
+  or imported by product code, and this file records only its published version.
+- **C10: dependency-cruiser 18.5.0** is a root devDependency with an exact pin, as guide §5 asks. Its rules live in
+  `.dependency-cruiser.cjs`.
+- **C11: shadcn 4.21.4** is recorded for the CLI. It generates source into the repository and is not a dependency.
+  Nothing is generated yet.
+- **C12: canvaskit-wasm 0.42.0** is recorded and not installed. ADR-001 (Prompt 4) decides whether it is used.
+- **C13: Lines not yet installed** (Vite, Tailwind, Zustand, Zod, i18next, Electron builder, vsce, Playwright, Storybook,
+  better-auth, drizzle-orm, Hono, the MCP SDK and the unused Rust crates) are recorded at their resolved versions. The
+  prompt that adds one installs the recorded version and updates this file in the same change.
+- **C14: Unchanged from Prompt 1:** pnpm 12.11.2, Turborepo 2.11.7, Biome 2.5.15, React 19.3.0, Vitest 5.0.3, Next.js
+  16.4.0, Electron 44.7.0, serde 1.0.229, serde_json 1.0.154, schemars 1.2.2, ts-rs 12.0.1 and clap 4.6.7. Each is still the
+  newest stable patch of its line.
+
+## What the reference clones are for
+
+`pnpm refs` clones the 15 repositories (about 2 GB on disk: goose 655 MB, penpot 509 MB, opencode 240 MB, the rest
+under 170 MB each) and checks that every path named in guide §3.2 and §3.3 exists. It needs the network, so it runs on a developer machine and not in CI. Nothing in `refs/` is committed or
+edited.

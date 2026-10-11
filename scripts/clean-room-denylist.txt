@@ -1,0 +1,7 @@
+# Clean-room denylist (guide Prompt 2, Invariant 14). scripts/check-clean-room.sh fails if any file in the
+# repository contains one of these strings. One string per line; lines starting with '#' are comments.
+#
+# Human-maintained. Add distinctive strings that must never appear in this repository: code, prompts, skill
+# text, API wording or asset names copied from pen.dev, or from Penpot (MPL-2.0) or tldraw (commercial).
+# Pick strings that are distinctive, not common words, so the check does not fire on ordinary prose.
+# The list is empty until a person adds entries: nothing here is taken from the sources it protects against.

@@ -29,6 +29,11 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
+      - name: Dependency, licence and source policy (deny.toml, advisories included)
+        run: cargo deny check
       - name: Specification unchanged by build and test
         run: node scripts/spec-checksums.mjs check
 
@@ -49,7 +54,7 @@ jobs:
         run: node scripts/spec-checksums.mjs check
 
   repo:
-    name: Repo checks (wasm build, generated types, specification checksums)
+    name: Repo checks (script tests, dependency rules, clean room, copy, specification checksums)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +67,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
       - run: pnpm test:scripts
+      - run: pnpm deps:check
+      - run: pnpm clean-room
+      - run: pnpm copy-lint
       - name: Specification unchanged by build and test
         run: node scripts/spec-checksums.mjs check

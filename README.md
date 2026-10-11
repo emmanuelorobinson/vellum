@@ -11,15 +11,16 @@ Vellum is a working codename.
 
 ## Status
 
-Scaffold only (Prompt 1 of the build guide). Every crate, package and app exists as a shell with a
-smoke test. There is no document model, no editor and no daemon behaviour yet.
+Prompt 2 of the build guide: the reference repositories, the version baseline, and the dependency,
+clean-room and copy checks. Every crate, package and app still exists as a shell with a smoke test. There is
+no document model, no editor and no daemon behaviour yet.
 
 ## Requirements
 
 - Node 24 and pnpm 12 (`packageManager` pins pnpm; recent pnpm switches to it automatically)
 - Rust, installed through [rustup](https://rustup.rs); `rust-toolchain.toml` pins the toolchain and the
   wasm targets and rustup installs them on first use
-- `cargo-deny` (used from Prompt 2 onwards)
+- `cargo-deny` 0.20.2 for `pnpm cargo:deny`: `cargo install cargo-deny --locked --version 0.20.2`
 - Docker, only for the cloud apps' dev services (`docker compose -f docker-compose.dev.yml up -d`)
 
 ## Quick start
@@ -31,7 +32,9 @@ pnpm test
 ```
 
 See `AGENTS.md` for every command and the rules for working in this repo, and
-`docs/implementation/vellum-implementation-guide.md` for the build plan.
+`docs/implementation/vellum-implementation-guide.md` for the build plan. The versions in use are recorded in
+`docs/architecture/version-baseline.md`. `pnpm refs` clones the reference repositories into `refs/` (optional,
+about 2 GB, needs the network); `docs/reference/REFERENCE-INDEX.md` says what to read in them.
 
 ## Layout
 

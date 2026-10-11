@@ -17,9 +17,12 @@
     "test:watch": "turbo watch test",
     "format": "biome format --write . && cargo fmt --all",
     "format:check": "biome format . && cargo fmt --all --check",
-    "refs": "bash scripts/refs.sh",
+    "refs": "bash scripts/refs.sh && node scripts/reference-index.mjs --check",
+    "refs:index": "node scripts/reference-index.mjs",
     "deps:check": "bash scripts/check-deps.sh",
     "clean-room": "bash scripts/check-clean-room.sh",
+    "copy-lint": "node scripts/copy-lint.mjs",
+    "cargo:deny": "cargo deny check",
     "types:gen": "node scripts/types-gen.mjs",
     "layout-oracle": "bash scripts/gen-layout-oracle.sh",
     "design:open": "bash scripts/design-open",
@@ -33,12 +36,13 @@
     "cargo:check": "cargo check --workspace --all-targets",
     "cargo:test": "cargo test --workspace",
     "wasm:build": "cargo build -p vellum-wasm --target wasm32-unknown-unknown",
-    "lint:ts": "biome check .",
+    "lint:ts": "biome check . && node scripts/copy-lint.mjs",
     "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
     "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\""
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "dependency-cruiser": "18.5.0",
     "turbo": "2.11.7",
     "typescript": "catalog:"
   }

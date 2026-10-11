@@ -1,0 +1,20 @@
+# Reference repositories (guide §3). scripts/refs.sh clones each one into refs/ at its pinned SHA.
+# Pins were verified on 2026-10-11. No repository has a release tag at or after its pin (version-baseline.md),
+# so every pin stays. Columns are tab-separated; "-" means empty. Changing a pin changes the guide, this file,
+# version-baseline.md and, if a path moves, docs/reference/REFERENCE-INDEX.md (pnpm refs:index).
+name	url	sha	licence	use
+penpot	https://github.com/penpot/penpot	10955f17e27943429a10e90360d0404e3f56e27c	MPL-2.0	READ ONLY, never port
+graphite	https://github.com/GraphiteEditor/Graphite	7477cd2fab315494e4c2613bc446c707733e6e7b	Apache-2.0/MIT	-
+loro	https://github.com/loro-dev/loro	4f60d921d820de3522624a436de77f994a6622b8	MIT	-
+taffy	https://github.com/DioxusLabs/taffy	7d33901cc383489d9945ae796a1ceed0a935ef66	MIT	-
+parley	https://github.com/linebender/parley	46fcad316d4ff05dc0d5647fda2d15def7be896e	Apache-2.0/MIT	-
+vello	https://github.com/linebender/vello	235739c4f08eb48d900e1512459d453a9ab77f96	Apache-2.0/MIT	-
+kurbo	https://github.com/linebender/kurbo	9366cda80ebb56f41e5d09509a89dbfe81bc4f5b	Apache-2.0/MIT	-
+codex	https://github.com/openai/codex	8c0f7011674145da7e10627769fb221c74fbf7a0	Apache-2.0	-
+goose	https://github.com/block/goose	3bd852002903e016ff30947e973f76e2fcfcf90f	Apache-2.0	-
+opencode	https://github.com/sst/opencode	d21b0790a6c146815f28fea604e41e922f009590	MIT	-
+rquickjs	https://github.com/DelSkayn/rquickjs	a4e45effc347d63c58c2efc3020566e6095cc94f	MIT	-
+rmcp	https://github.com/modelcontextprotocol/rust-sdk	c1a8eea312613519b93f53b89a1dc74dc993f5b0	Apache-2.0 (MIT legacy parts)	-
+vscode-samples	https://github.com/microsoft/vscode-extension-samples	65c1c44800eeac6fb065a54823ee5ae62c79540a	MIT	-
+excalidraw	https://github.com/excalidraw/excalidraw	e65eca999e071503efb893d3379a29fb96ff37c4	MIT	-
+tldraw	https://github.com/tldraw/tldraw	7937be360bcb8239d89e420850843f81313fc07b	tldraw license	DOCS ONLY, never port
