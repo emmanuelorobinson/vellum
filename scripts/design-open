@@ -1,5 +1,55 @@
 #!/usr/bin/env bash
-# Placeholder. Real implementation: Prompt 3 (design source).
+# Copies the read-only design specification to .design-cache/vellum.readonly.pen and opens that copy in
+# pen.dev, so an agent can never write to docs/design/vellum.pen (guide §2.1).
+#
+#   scripts/design-open [--no-open] [--root <dir>]
+#
+# VELLUM_DESIGN_OPENER overrides the command that opens the copy (default: `open -a Pen` on macOS,
+# `xdg-open` elsewhere). The copy is replaced on every run, so an edited or stale copy never survives.
 set -euo pipefail
-. "$(dirname "$0")/lib/not-implemented.sh"
-not_implemented "scripts/design-open" "3 (design source)"
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+open_it=1
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-open) open_it=0 ;;
+    --root) shift; root="$(cd "${1:?--root needs a directory}" && pwd)" ;;
+    *) echo "usage: design-open [--no-open] [--root <dir>]" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+source_pen="$root/docs/design/vellum.pen"
+cache="$root/.design-cache"
+copy="$cache/vellum.readonly.pen"
+
+if [ ! -f "$source_pen" ]; then
+  echo "docs/design/vellum.pen is missing. Add the design file first (see docs/runbooks/design-mcp.md)." >&2
+  exit 1
+fi
+
+mkdir -p "$cache"
+# A previous copy is read-only, so make it writable before replacing it.
+[ -e "$copy" ] && chmod u+w "$copy"
+cp "$source_pen" "$copy"
+chmod a-w "$copy"
+
+if [ -d "$root/docs/design/assets" ]; then
+  rm -rf "$cache/assets"
+  cp -R "$root/docs/design/assets" "$cache/assets"
+fi
+
+if [ "$open_it" -eq 1 ]; then
+  if [ -n "${VELLUM_DESIGN_OPENER:-}" ]; then
+    # shellcheck disable=SC2086  # the override is a command line, split on purpose
+    $VELLUM_DESIGN_OPENER "$copy"
+  elif [ "$(uname -s)" = "Darwin" ]; then
+    open -a Pen "$copy"
+  else
+    xdg-open "$copy"
+  fi
+fi
+
+echo "Read-only design copy: $copy"
+echo "Next: in your agent session call get_app_state and confirm the active document is that path."
+echo "If it is any other document, stop and ask (AGENTS.md, Reading the design)."

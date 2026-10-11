@@ -10,11 +10,12 @@ lives in `@vellum/config` and `vellum-types::brand` only.
 ## Read, in this order
 
 1. This file.
-2. `docs/implementation/vellum-implementation-guide.md` (the canonical build guide). One session
+2. `reports.md` (what earlier prompts left open, decided or could not verify; "Needs a person" first).
+3. `docs/implementation/vellum-implementation-guide.md` (the canonical build guide). One session
    builds one prompt. §11 is the global TDD contract; §4 is the fourteen product invariants.
-3. The sources the prompt names: `docs/product/PRODUCT.md`, `docs/design/DESIGN.md`,
+4. The sources the prompt names: `docs/product/PRODUCT.md`, `docs/design/DESIGN.md`,
    `docs/architecture/ARCHITECTURE.md`.
-4. The reference-repo paths in guide §3.2 for any hard problem the prompt lists (see "Reference code").
+5. The reference-repo paths in guide §3.2 for any hard problem the prompt lists (see "Reference code").
 
 Source priority when documents disagree is guide §2: PRODUCT, DESIGN.md, `vellum.pen`,
 DESIGN-DECISIONS, ARCHITECTURE, ADRs, format spec, the guide, tests, code. Where guide §8 and
@@ -122,6 +123,19 @@ make it pass. Preserve unrelated changes. Tests that need a GPU, Chrome, VS Code
 engine or the network are tagged and say what they need. Scripts that belong to a later prompt exit
 non-zero with "not implemented yet" rather than pretending to pass.
 
+## Reports
+
+`reports.md` is the running hand-off for the person who owns the repo.
+Update `reports.md` at the end of each prompt, before saying the prompt is done:
+
+- add a `## Prompt N` entry: what was built, what differs from the guide, what failed, was skipped or could not
+  be verified (say so plainly), and the exact commands that passed;
+- add anything only a human can do or decide to "Needs a person", and remove items that are now done;
+- add things the person should know as you go, not only at the end (a failed check, a surprising file, a decision
+  you had to make).
+
+Keep it factual and short. Do not record secrets, and do not paste design content.
+
 ## Commands
 
 | Command | Does |
@@ -141,7 +155,10 @@ non-zero with "not implemented yet" rather than pretending to pass.
 | `pnpm cargo:deny` | `cargo deny check`, all four checks; advisories need the network |
 | `pnpm clean-room` | no file contains a string from `scripts/clean-room-denylist.txt`, and every `ported-from:` header has an MIT or Apache-2.0 row in `THIRD_PARTY_NOTICES.md` |
 | `pnpm copy-lint` | `@vellum/config` holds exactly the guide's Appendix B strings, and no UI code repeats them |
-| `pnpm design:*` `layout-oracle` `fixtures:record` | later prompts; exit non-zero until then |
+| `pnpm design:open` | copy `docs/design/vellum.pen` to `.design-cache/vellum.readonly.pen` (no write bit) and open that copy in pen.dev; `--no-open` only copies |
+| `pnpm design:snapshot` | regenerate `docs/design/snapshots/` (PNG at 1x and 2x, `inventory.json`) with the pen CLI on the read-only copy. Needs `pen login` or `PEN_CLI_KEY`; run locally, not in CI |
+| `pnpm design:check` | no pen.dev needed: the snapshots match `vellum.pen`'s checksum, every screen, theme and width DESIGN.md asks for exists, names follow the file's convention. Runs in CI |
+| `layout-oracle` `fixtures:record` | later prompts; exit non-zero until then |
 
 ## Layout
 

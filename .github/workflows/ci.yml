@@ -74,5 +74,7 @@ jobs:
       - run: pnpm deps:check
       - run: pnpm clean-room
       - run: pnpm copy-lint
+      - name: Design snapshots are current and complete (no pen.dev needed)
+        run: pnpm design:check
       - name: Specification unchanged by build and test
         run: node scripts/spec-checksums.mjs check

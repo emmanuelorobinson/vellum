@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Placeholder. Real implementation: Prompt 3 (design source).
+# CI check, no pen.dev needed: are the committed design snapshots current and complete, and do names
+# follow the convention? Logic: scripts/design-check.mjs.
 set -euo pipefail
-. "$(dirname "$0")/lib/not-implemented.sh"
-not_implemented "scripts/design-check" "3 (design source)"
+exec node "$(dirname "$0")/design-check.mjs" "$@"

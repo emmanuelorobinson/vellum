@@ -1,0 +1,131 @@
+// Ties the design tooling to the files it depends on: the rules design-check hard-codes must still be
+// what DESIGN.md says, the committed inventory must pass, and the two design files must have their shape.
+import assert from "node:assert/strict";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { test } from "node:test";
+import {
+  componentFamilies,
+  HIGH_CONTRAST_IDS,
+  NARROW_IDS,
+  parseGaps,
+  requiredFrames,
+  WIDE_IDS,
+} from "../lib/design-check.mjs";
+import { at, bash, read } from "./helpers.mjs";
+
+const designMd = () => read("docs", "design", "DESIGN.md");
+
+test("DESIGN.md still asks for the high-contrast, 1512 and S13 widths that design-check hard-codes", () => {
+  const md = designMd();
+  assert.match(md, /C03, C05 and C10 also in high contrast/);
+  assert.match(md, /plus C03 and C05 at 1512×982 and S13 at 960×640 and 760×640/);
+  assert.deepEqual(HIGH_CONTRAST_IDS, ["C03", "C05", "C10"]);
+  assert.deepEqual(WIDE_IDS, ["C03", "C05"]);
+  assert.deepEqual(NARROW_IDS, { S13: [960, 760] });
+});
+
+test("DESIGN.md numbers 38 editor screens, 6 desktop, 3 web and 16 edge states", () => {
+  const ids = new Set(requiredFrames(designMd()).map((r) => r.id));
+  const count = (letter) => [...ids].filter((id) => id.startsWith(letter)).length;
+  assert.deepEqual([count("C"), count("A"), count("W"), count("S")], [38, 6, 3, 16]);
+});
+
+test("only the v1.1 screens are optional", () => {
+  const optional = new Set(
+    requiredFrames(designMd())
+      .filter((r) => r.optional)
+      .map((r) => r.id),
+  );
+  assert.deepEqual([...optional].sort(), ["C31", "C32"]);
+});
+
+test("every Component library entry is found, aliased or recorded as a gap", () => {
+  const aliases = JSON.parse(read("scripts", "design-component-aliases.json"));
+  const families = componentFamilies(designMd());
+  assert.ok(families.length >= 40, `expected the full Component library, got ${families.length}`);
+  for (const alias of Object.keys(aliases))
+    assert.ok(
+      families.includes(alias),
+      `design-component-aliases.json names "${alias}", which DESIGN.md does not list`,
+    );
+});
+
+test("the committed inventory passes design-check and covers the whole design file", () => {
+  const result = bash("design-check");
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.stdout, /design check passed/);
+  const inv = JSON.parse(read("docs", "design", "snapshots", "inventory.json"));
+  assert.equal(inv.version, 1);
+  assert.ok(inv.frames.length > 300);
+  const files = new Set(readdirSync(at("docs", "design", "snapshots")));
+  for (const f of inv.frames.filter((x) => x.snapshots))
+    for (const file of Object.values(f.snapshots)) assert.ok(files.has(file), `${file} is missing`);
+});
+
+test("snapshots are PNG files", () => {
+  const dir = at("docs", "design", "snapshots");
+  const png = readdirSync(dir).filter((f) => f.endsWith(".png"));
+  assert.ok(png.length > 0);
+  for (const name of png.slice(0, 10)) {
+    const head = readFileSync(at("docs", "design", "snapshots", name)).subarray(0, 8);
+    assert.deepEqual(
+      [...head],
+      [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      `${name} is not a PNG`,
+    );
+  }
+});
+
+test("DESIGN-DECISIONS.md is Appendix G with every choice UNDECIDED", () => {
+  const text = read("docs", "design", "DESIGN-DECISIONS.md");
+  const guide = read("docs", "implementation", "vellum-implementation-guide.md");
+  const appendix = guide.slice(guide.indexOf("# Appendix G"));
+  const open = appendix.indexOf("```markdown") + "```markdown\n".length;
+  const template = appendix.slice(open, appendix.indexOf("\n```", open));
+  assert.equal(
+    text.trim(),
+    template.trim(),
+    "DESIGN-DECISIONS.md differs from the Appendix G template",
+  );
+  const rows = text
+    .split("\n")
+    .filter((l) => l.startsWith("| ") && !l.startsWith("| Decision") && !l.startsWith("|---"));
+  assert.equal(rows.length, 10);
+  for (const row of rows) assert.match(row, /\| UNDECIDED \| \| \|$/, row);
+});
+
+test("DESIGN-GAPS.md has a header, a line format and one dated line per gap", () => {
+  const text = read("docs", "design", "DESIGN-GAPS.md");
+  assert.match(text, /^# Design gaps \(append-only\)/);
+  assert.match(text, /Line format:/);
+  const lines = text.split("\n").filter((l) => l.startsWith("- 2"));
+  assert.ok(lines.length >= 10);
+  for (const line of lines) {
+    assert.match(
+      line,
+      /^- \d{4}-\d{2}-\d{2} · [^·]+ · (?:DESIGN\.md|guide[^:]*) says: .+ · vellum\.pen has: /,
+      line,
+    );
+  }
+  const keys = parseGaps(text);
+  assert.ok(keys.has("component-family:Script node"));
+  assert.ok(keys.has("variable-name:vellum-ink"));
+  for (const key of keys) assert.ok(!key.includes(";") && key.length < 80, `odd gap key: ${key}`);
+});
+
+test("the runbook exists and covers setup, the session rules and the unavailable-MCP case", () => {
+  assert.ok(existsSync(at("docs", "runbooks", "design-mcp.md")));
+  const text = read("docs", "runbooks", "design-mcp.md");
+  for (const needle of [
+    "Settings",
+    "MCP",
+    "scripts/design-open",
+    "get_app_state",
+    "read_skill",
+    "design:snapshot",
+    "design:check",
+    "PEN_CLI_KEY",
+    "snapshots",
+  ])
+    assert.ok(text.includes(needle), `runbook lacks "${needle}"`);
+});

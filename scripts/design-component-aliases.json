@@ -1,0 +1,22 @@
+{
+  "Inline prompt": ["Prompt panel"],
+  "Permission card": ["Component / Permission /"],
+  "Paint editor": ["Fill editor"],
+  "effect rows": ["Stroke and effects"],
+  "stroke section": ["Stroke and effects"],
+  "Theme section": ["Frame theme override"],
+  "theme axis columns": ["Themes / axes"],
+  "Scale panel": ["C38 / Scale"],
+  "Library list": ["C36 / Libraries"],
+  "paste dialogs": ["Paste library components", "Paste variable conflicts"],
+  "provider status row": ["Provider / Status rows"],
+  "Agent Presence": ["Component / Presence /", "Component / Lease /", "Component / Cursor /"],
+  "Change Ledger": ["Component / Ledger /"],
+  "Actor Marker": ["Component / Actor /"],
+  "Floating chrome": ["Component / Toolbar /"],
+  "Layers row": ["Component / Layer /"],
+  "property controls": ["Component / Properties /"],
+  "component property row": ["Property row"],
+  "diff list": ["Component / Diff /"],
+  "Desktop home": ["Component / Desktop /"]
+}

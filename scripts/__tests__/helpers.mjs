@@ -28,7 +28,10 @@ export function run(command, args, options = {}) {
 
 // Runs a bash script from the repository's scripts/ directory.
 export function bash(script, args = [], options = {}) {
-  return run("bash", [at("scripts", script), ...args], { cwd: options.cwd ?? repo });
+  return run("bash", [at("scripts", script), ...args], {
+    cwd: options.cwd ?? repo,
+    ...(options.env ? { env: options.env } : {}),
+  });
 }
 
 // Parses a tab-separated file with one header line and '#' comment lines (scripts/refs.tsv).
