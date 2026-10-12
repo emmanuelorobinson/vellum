@@ -10,10 +10,10 @@ use vellum_types::{
     StarNode, TextNode, VectorNode,
 };
 
-use crate::error::CodecError;
 use crate::locate::{Index, offset_of, position};
 use crate::migrate::Migrations;
 use crate::tree::{Step, render_path};
+use vellum_core::ports::CodecError;
 
 const BYTE_ORDER_MARK: &[u8] = &[0xEF, 0xBB, 0xBF];
 

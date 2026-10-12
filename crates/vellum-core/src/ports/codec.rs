@@ -1,6 +1,22 @@
-//! What can go wrong reading or writing a file, in the words DESIGN S04 and S05 need.
+//! The file format port (ARCHITECTURE §3.1). Today: single-file JSON; later maybe a directory of files or binary.
+//! `CodecError` says what can go wrong reading or writing a file, in the words DESIGN S04 and S05 need.
 
 use std::fmt;
+
+use vellum_types::Document;
+
+/// File format. Deterministic: the same document always becomes the same bytes (Invariant 5).
+///
+/// ARCHITECTURE's sketch has `encode` return the bytes; it returns a `Result` here, because a number that is
+/// not finite cannot be written and a document in another format version must not be written as this one.
+pub trait Codec {
+    /// The codec's name in the registry of codecs. Stable.
+    fn id(&self) -> &'static str;
+    /// The document in `bytes`, migrated to the current format version.
+    fn decode(&self, bytes: &[u8]) -> Result<Document, CodecError>;
+    /// The canonical bytes of `doc`.
+    fn encode(&self, doc: &Document) -> Result<Vec<u8>, CodecError>;
+}
 
 /// A place in the text of a file. Both numbers start at 1, and the column counts characters, not bytes, as an
 /// editor does.

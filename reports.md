@@ -8,6 +8,19 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the port signatures that differ from ARCHITECTURE §3.1** (Prompt 10). Only a person edits ARCHITECTURE.md.
+  `Codec::encode` returns a `Result` (done: Prompt 9's open item). `FontSource::resolve` takes a weight as well as a
+  style (a text run has both). `PathOps::bounds` returns `Option<Rect>` (a path can draw nothing) and takes a resolved
+  `StrokeStyle`, not the file's `Stroke`, whose widths can still be variables. `DocStore` gains `adapter_id()` and
+  `cursor()` (`export_updates` needs a cursor to be given); `undo`/`redo` take `&ActorId`. `SpatialIndex::query_point`
+  takes `x, y`. `AssetStore::put` takes `&[u8]`, not owned bytes, and there is no `bytes` crate in core. `ScriptApi` and
+  `ScriptValue` are minimal (Prompt 26 fills in the functions).
+- **Prompt 11 replaces `Op`, `OpErrorKind` and `Origin` in `vellum_core::ports::doc_store`** (Prompt 10). Prompt 10
+  needed a transaction to test `DocStore`, so it defines the smallest vocabulary: `Insert`, `Update`, `Delete`, an opaque
+  `ActorId`/`SessionId`/`TurnId`, and `Origin { actor: ActorId, session, turn }`. Invariant 2 wants `Actor` to be an enum
+  (person/agent/file/system); Prompt 11 owns it, with `ActorId` as the key an `Actor` maps to. `Op::Insert` boxes its
+  node (clippy `large_enum_variant`). Invariant 1 (`apply` reachable only from ops, trybuild) is Prompt 11's too: today
+  anything can call `DocStore::apply`.
 - **Decide the open numeric units and the decode limits the codec assumes** (Prompt 9). ARCHITECTURE and the guide give
   units for positions, sizes, ratios, opacities, gradient stops and angles only. I read the rest as: transform and crop
   entries, mesh coordinates, `innerRadius` (a ratio of the radius, per its doc comment) and `zoom` are ratios (1/1000);
@@ -15,10 +28,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   variable values and number prop defaults are written exactly, because they can be a length, a ratio or a count.
   `quantization_table.rs` fails when a number is added to the types without a decision. If a crop of a large image
   needs finer than 1/1000, say so now.
-- **The `Codec` port needs a fallible `encode`** (Prompt 9). ARCHITECTURE §3 shows `fn encode(&self, doc) -> Vec<u8>`.
-  `JsonCodec::encode` returns `Result`, because a NaN or infinite number cannot be written as JSON and a document in
-  another format version must not be written as this one (`CodecError::NotFinite`, `WrongVersion`). Prompt 10 defines
-  the port and should take the `Result`. `CodecError` lives in `vellum-codec-json` for now; Prompt 10 may move it.
 - **A newer file is refused, not shown read-only** (Prompt 9). Invariant 5 and DESIGN S04 say a newer format "opens
   read-only" with a banner. `decode` returns `CodecError::NewerFormat { found, supported }` for it, which is enough for
   the banner, but there is no lenient reader that would show the content: the types refuse fields they do not know. A
@@ -501,7 +510,7 @@ Not verified: the two new CI steps on GitHub (Ubuntu). The generated schema and 
 
 ## Prompt 9: JSON codec, deterministic bytes, quantization, migrations
 
-Not committed. Prompt 8 is committed (`1f6b77f`).
+Committed (`2061cc8`).
 
 Built (`crates/adapters/codec-json`, package `vellum-codec-json`):
 - **`JsonCodec`, `encode`, `decode`.** The bytes are 2-space indent, LF, one key or item per line, a trailing newline.
@@ -551,7 +560,7 @@ when already canonical, and decodes in 32 ms. Ten thousand trivial nodes already
 threshold because every array item gets its own line; the threshold is "10,000 nodes or 4 MB", so it fires on size.
 
 Differs from the guide, or limits:
-- `encode` is fallible (Needs a person).
+- `encode` is fallible; the `Codec` port takes the `Result` (Prompt 10), and `CodecError` and `Position` moved to `vellum_core::ports`.
 - **Nesting limit.** serde_json stops at 128 levels of JSON, and a nested node costs two (the object and its `children`
   array), so about 60 frames inside frames. A deeper file is refused with a recursion-limit message. `encode` has no such
   limit unless rounding changed something. Real designs are far shallower; say if you want the limit raised (it needs
@@ -578,3 +587,59 @@ string `Vellum 0.0.0`, inputs like `1.005` that are below the tie in binary, an 
 `null` version read as missing, and an unknown-field path that serde_path_to_error ends at the field); each was fixed by
 correcting the test or the code, not by loosening what it checks. The property tests passed the first time; to see them
 fail I switched off the settle pass by hand and two failed.
+
+## Prompt 10: Ports, fakes, contract suites
+
+Not committed. Prompt 9 is committed (`2061cc8`).
+
+Built:
+- **The twelve ports** in `crates/vellum-core/src/ports/`: `DocStore`, `LayoutEngine`, `TextEngine`, `FontSource`,
+  `SpatialIndex`, `PathOps`, `Codec`, `AssetStore`, `Clock`, `IdGen`, `ScriptRuntime`, `ShaderCompiler`, with the data
+  types their signatures need (`Rect`, `Extent`, `RichText`, `LayoutTree`, `Path`, `ChangeSet`, `AssetHash`, ...).
+  `vellum-core` still depends on `vellum-types` alone, and `pnpm deps:check` passes; scripts/__tests__/deps.test.mjs
+  already proves that loro or tokio in core fails the build. Coordinates are `f64`, times `i64` ms. `IdGen` has `node_id`
+  and provided `page_id`, `component_id`, `variable_id` and `style_id` (same alphabet).
+- **`CodecError` and `Position` moved** from `vellum-codec-json` into `vellum_core::ports` (the codec re-exports them);
+  `JsonCodec` implements `Codec`. `Node::children_mut` was added to `vellum-types` (no TypeScript change).
+- **`crates/contracts`**: a generic suite per port in `suites/` (a function that panics naming the rule) and a fake per
+  port in `fakes/`: `InMemoryDocStore` (per-actor undo and redo as inverse steps, sync by replaying a step log),
+  `FixedMetricText` (0.6 em per glyph, 1.2 em lines, greedy wrap at spaces), `StackLayout` (row/column, fixed/hug/fill,
+  gap, padding, justify, align, ADR-002 rows 3, 5 and 7), `NaiveSpatialIndex`, `IdentityPathOps` (returns `a`; bounds from
+  control points), `FakeJsonCodec`, `InMemoryAssets`, `ManualClock`, `SequentialIds`, `StaticFonts`, `NoopScriptRuntime`,
+  `PassthroughShaderCompiler`. `samples` holds the shared `TEST DATA` document.
+- **Every fake passes its suite** (`tests/fakes_pass_their_suites.rs`), the real `JsonCodec` passes the `Codec` suite on
+  the five fixture documents (`codec-json/tests/contract.rs`), and **every suite rejects a deliberately broken
+  implementation** (`tests/suites_catch_broken_implementations.rs`, 17 cases, each `should_panic` on the rule's message).
+  That second file is what shows the suites check something.
+- `vellum-core/tests/ports.rs` tests the small types (closed rectangle edges, hash alphabet, origins, dirty sets).
+
+Differs from the guide, or limits:
+- **The suites for `PathOps`, `ScriptRuntime` and `ShaderCompiler` are short on purpose.** The guide's fakes are identity,
+  no-op and passthrough, which cannot satisfy a suite that asks for real booleans, a syntax error or an escape attempt.
+  They ask what every sound implementation does (bounds hold the shape and its stroke, a boolean stays inside its inputs,
+  the same script gives the same result, empty source does not compile). Prompt 12 adds boolean semantics and Prompt 25
+  the sandbox corpus as extra suites the real adapters run.
+- **The `DocStore` suite does not test concurrent edits converging**, or undo across dependent changes (Invariant 3's
+  property test). The fake replays steps in arrival order, so two stores editing at once would not converge. Prompt 14
+  adds both for Loro. The suite does test one-way and back-and-forth sync, importing twice, a foreign adapter and damaged bytes.
+- The layout suite covers only what Chrome and Vellum agree on; Prompt 18 adds text wrapping, grid and stroke-in-layout.
+  `StackLayout` treats a grid as a column and ignores the dirty set (the suite checks that a dirty-set layout equals a
+  full one, which it passes trivially).
+- `Op::Update` goes through `serde_json` in the fake (merge the patch into the node's JSON, read it back as a `Node`),
+  because core has no serde. Prompt 11 must decide where patch application lives; `vellum-types` is the natural place.
+- Empty text with at least one run measures as one empty line; a transaction with no ops is refused (`OpErrorKind::Empty`).
+  Both are my choices; the suites encode them for the fakes only where every implementation should agree (the empty
+  transaction, an empty string's width of 0).
+
+Verified (each exited 0):
+- `cargo test -p vellum-core -p vellum-contracts` (core 9, contracts 31), `cargo test -p vellum-codec-json` (87),
+  `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`.
+- `pnpm deps:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm checksum`, `pnpm format:check`, `pnpm lint`,
+  `pnpm type-check`.
+- Failed: `pnpm test:scripts`, 148 passed, 1 failed, 1 skipped: the same pre-existing REFERENCE-INDEX test (Needs a person).
+
+Test order: the twelve suites and `fakes_pass_their_suites.rs` were written first and did not compile (no fakes). All
+twelve fakes then passed on the first run, so I wrote the broken-implementation tests next to show the suites bite; one
+(`store_whose_undo_is_not_per_actor`) first failed on a different assertion than intended, and I changed the saboteur
+(and added a message to the undo-attribution assertion) so it fails on the rule it names. Clippy then asked for a boxed
+`Node` in `Op::Insert` and the fake's `Step`.

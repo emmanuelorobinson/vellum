@@ -11,7 +11,6 @@
 //! `CodecError::NewerFormat` (S04).
 
 mod decode;
-mod error;
 mod locate;
 mod migrate;
 mod print;
@@ -20,9 +19,9 @@ mod tree;
 
 use vellum_types::Document;
 
-pub use error::{CodecError, Position};
 pub use migrate::{Migration, MigrationError, Migrations, RegistryError};
 pub use quantize::{EXACT_NUMBER_KEYS, Quantum, quantize, quantum_of};
+pub use vellum_core::ports::{Codec, CodecError, Position};
 
 /// The Cargo package name, used by the smoke test and by diagnostics.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
@@ -100,4 +99,18 @@ pub fn encode(doc: &Document) -> Result<Vec<u8>, CodecError> {
 /// [`JsonCodec::decode`] with the standard registry.
 pub fn decode(bytes: &[u8]) -> Result<Document, CodecError> {
     JsonCodec::new().decode(bytes)
+}
+
+impl Codec for JsonCodec {
+    fn id(&self) -> &'static str {
+        JsonCodec::id(self)
+    }
+
+    fn decode(&self, bytes: &[u8]) -> Result<Document, CodecError> {
+        JsonCodec::decode(self, bytes)
+    }
+
+    fn encode(&self, doc: &Document) -> Result<Vec<u8>, CodecError> {
+        JsonCodec::encode(self, doc)
+    }
 }

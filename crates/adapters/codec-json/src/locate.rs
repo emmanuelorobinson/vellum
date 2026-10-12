@@ -6,8 +6,8 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 
-use crate::error::Position;
 use crate::tree::Step;
+use vellum_core::ports::Position;
 
 /// Deeper than any file serde reads (its limit is 128), so a file that got this far never hits it.
 const MAX_DEPTH: usize = 256;

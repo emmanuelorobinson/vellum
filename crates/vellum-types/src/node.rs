@@ -669,4 +669,14 @@ impl Node {
             _ => &[],
         }
     }
+
+    /// The node's children for editing; none for kinds that cannot hold any.
+    pub fn children_mut(&mut self) -> Option<&mut Vec<Node>> {
+        match self {
+            Self::Frame(n) => Some(&mut n.children),
+            Self::Group(n) => Some(&mut n.children),
+            Self::Boolean(n) => Some(&mut n.children),
+            _ => None,
+        }
+    }
 }
