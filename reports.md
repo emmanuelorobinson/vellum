@@ -8,6 +8,18 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Decide how a component prop reaches a node** (Prompt 8, ADR-010). A prop is declared (`boolean`, `text` or `number`,
+  with a default) and set on an instance, but nothing in the format says which node it changes. ARCHITECTURE is silent.
+  The two options ADR-010 lists are a `{"$prop": "<name>"}` reference beside `$var` (it widens `Value<T>`, and a text
+  run's characters are not a `Value` yet) or a binding on each prop that names a node path and a property. Prompt 17
+  needs it, and the format changes if it adds one, so it is worth deciding before v1.
+- **Review ADR-010 and update ARCHITECTURE §4.1 and §4.4** (Prompt 8). The ADR makes three decisions that differ from
+  ARCHITECTURE: a `$var` (and an alias) names a variable by its id, not its name path, so the example
+  `{"$var": "color/primary"}` now describes a name, not the file; variants are override sets on the component's one tree,
+  not separate trees; and an override is one of `props`, `replace` or `children`, with props checked against the node
+  property names. Only a person edits ARCHITECTURE.md. The ADR lists the costs and the things it leaves undecided.
+- **Confirm the two CI steps added in Prompt 8 pass on GitHub**: `pnpm types:check` and `pnpm format-spec:check`. Both
+  pass on this Mac; the generated schema and bindings have not been checked on the Ubuntu runner.
 - **Review the Prompt 7 choices where ARCHITECTURE §4.1 was silent or contradicted itself** (Prompt 7). Only a person
   edits ARCHITECTURE.md, so these live in the code until you say otherwise: (1) an `icon` node's icon name is `icon`,
   not `name`, because `name` is already the layer name on every node; (2) a frame gets `cornerRadius` (the table gives it
@@ -18,7 +30,8 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   mesh paint is `columns` x `rows` points row by row, each with a colour and optional four handles, also my reading;
   (7) padding is `n`, `[vertical, horizontal]` or `[top, right, bottom, left]`, corner radius `n` or four values, and a
   stroke width `n` or four values; (8) node structs are named `FrameNode`, `TextNode` and so on, so the TypeScript
-  names do not shadow `Boolean`, `Text` or `Image`.
+  names do not shadow `Boolean`, `Text` or `Image`. Item (3) is decided by Prompt 8: a reference names a variable by
+  its id (ADR-010), so the name path in the examples is the variable's name.
 - **Decide whether `proptest` stays** (Prompt 7). It is now a dev-dependency of `vellum-types` and on the allowlist
   (version-baseline C18). The guide asks for property tests in Prompts 7, 9, 10, 14 and later; the alternative is a
   hand-rolled generator, which loses shrinking.
@@ -347,7 +360,7 @@ Verified: `cargo test -p vellum-testkit --test layout_oracle` (6), `VELLUM_LANES
 
 ## Prompt 7: vellum-types I, nodes, paints, strokes, effects, sizing
 
-Not committed. Prompt 6 is committed (`374767d`). Everything is in `crates/vellum-types` (new modules `ids`, `value`,
+Committed as `2452a26`. Prompt 6 was committed as `374767d`. Everything is in `crates/vellum-types` (new modules `ids`, `value`,
 `color`, `geometry`, `enums`, `paint`, `stroke`, `effect`, `text`, `node`, `defaults`) plus a fix to
 `scripts/types-gen.mjs` and the regenerated `packages/types-ts`.
 
@@ -395,3 +408,73 @@ Verified: `cargo test -p vellum-types` (79 unit/export tests, 10 ids, 13 paints,
 values), `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`, `pnpm test` (33 tasks),
 `pnpm type-check`, `pnpm lint`, `pnpm format:check`, `pnpm types:gen` then `node --test scripts/__tests__/types-gen.test.mjs`,
 `pnpm deps:check`, `pnpm checksum`, `pnpm clean-room`, `pnpm copy-lint`.
+
+## Prompt 8: vellum-types II, the document, variables, components, schema and TypeScript
+
+Not committed. The working tree has the change; Prompt 7 is committed (`2452a26`). ADR-010 records the model decisions.
+
+Built:
+- The document (`document.rs`): meta (`formatVersion`, `name`, `createdWith`, `kind` document or library), `imports`,
+  `themes`, `variables`, `styles`, `fonts`, `components`, and `pages` in order (canvas or slides). `Document::new(name)`.
+- Variables (`variable.rs`): one kind per type (`color`, `number`, `string`, `boolean`), each reading its literals as
+  that type. An entry is a literal (`value`) or an alias (`$alias`), with an optional `when`. Choosing the entry that
+  applies is resolution (Prompt 16).
+- Styles and fonts (`style.rs`): text styles (a text run's settings without its characters), effect styles, and font
+  faces keyed by the asset that holds the file.
+- Components (`component.rs`): a name, typed props (`boolean`, `text`, `number`, each with a default of its type), the
+  root tree, and variants. Overrides are `props`, `replace` or `children`. `NodePatch` checks its keys against the node
+  property names and refuses `id` and `children`.
+- Instances and scripts (`node.rs`): an instance takes a variant choice, prop values (`Scalar`), overrides and slot
+  content. `ScriptInput` is now `Scalar`, shared with instance props. `NODE_PROPERTIES` lists the property names, and a
+  test checks them against the schema.
+- The schema and the TypeScript: `examples/format-schema.rs` prints the schema. `scripts/gen-format.mjs` writes
+  `docs/format/vellum.schema.json` and a reference page, `docs/format/README.md`, rendered by
+  `scripts/lib/format-spec.mjs`. `packages/types-ts` is regenerated (101 types). CI runs `pnpm types:check` and
+  `pnpm format-spec:check`. AGENTS.md has the command rows.
+- Tests: four new Rust test files (`document`, `variables`, `components`, `styles`), a property test for variables, and
+  a Node test for the renderer and the drift check. Samples in five existing tests now use ids for `$var`.
+
+Decided on the way (ADR-010 has the reasons and the costs):
+- **A reference names a variable by its id**, `{"$var": "<id>"}`, not by its name path. The name lives in the variable's
+  entry. A rename or a merge of a rename does not leave a dangling reference (merge driver, Loro, multiplayer). Every
+  other reference in the file is an id too. This is the open question Prompt 7 left, and it departs from ARCHITECTURE's
+  example.
+- **Variants are override sets on the component's one tree**, applied when an instance's variant equals the variant's
+  values. The first draft was a whole tree per variant; that duplicated the tree.
+- **Overrides are typed by form, but the props are a checked JSON object.** Typing every property of every node kind
+  would be a parallel struct for each of 18 kinds. Keys are checked now; values are checked at apply time (Prompt 17).
+- **Pages are a list; every other collection is a map sorted by id** (the same bytes for the same document).
+- Fixed for the build: ts-rs warned about `#[serde(transparent)]` and enum-level `deny_unknown_fields`, so `NodePatch`
+  is written by hand and `PropDef` became three structs. `Override::Replace` is boxed (clippy `large_enum_variant`).
+  Doc comments that ts-rs copies into TypeScript no longer hold rustdoc links (`VarRef`, and `SizeRepr` from Prompt 7).
+- `EmptyVarRef` is gone; a bad reference is an `IdError`, like any bad id.
+
+Not done, or differs from the guide or ARCHITECTURE:
+- **Props do not reach nodes yet.** The declaration and the values are typed; the binding is not decided (Needs a person).
+- **Overrides are not typed per node kind** (see above). The schema says `props` is an object of node property names.
+- **Validation is not here.** Aliases resolving to the right type, alias cycles, unique names, variant axes, and default
+  types are for Prompts 10, 11 and 16. The types only say what each entry is.
+- **Schema names for generic instances** come out as `Value2`, `VariableValue3` and so on, because schemars numbers
+  them. The reference page shows those names as they are.
+- Appendix E does not list ADR-010; it is added here because it records a change to ARCHITECTURE.
+
+Found along the way:
+- **I ran `pnpm checksum:update` by mistake** while listing gates. It is a human step, and it rewrote
+  `scripts/spec-checksums.json` with the same three hashes. `git diff` is empty for that file, so nothing changed.
+
+Verified (each exited 0 unless noted):
+- `cargo test --workspace`: 263 passed, 0 failed, with every test file of this prompt in place.
+- `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`.
+- `cargo deny check licenses bans sources` and `cargo deny check advisories` (the wrapper warnings from Prompt 2 remain).
+- `pnpm test:scripts`: 150 tests, 149 passed, 0 failed, 1 skipped. The skipped one is the design-check test that runs
+  only when snapshot PNGs are absent, and it was skipped before this prompt too.
+- `pnpm test` (33 turbo tasks), `pnpm type-check` (32), `pnpm lint`, `pnpm format:check`, `pnpm exec biome check .`.
+- `pnpm deps:check`, `pnpm clean-room`, `pnpm copy-lint`, `pnpm checksum` (3 files intact), `pnpm types:check`
+  (101 types), `pnpm format-spec:check` (2 files), `pnpm design:check` (11 recorded gaps).
+- In `packages/types-ts`: `tsc --noEmit` and `vitest run` (4 passed).
+
+Test order: the new Rust test files and the Node renderer test were written first and failed to compile or to load
+(the types, the functions and the `format-spec` module did not exist). The variable property tests passed the first
+time, so they have not been seen failing.
+
+Not verified: the two new CI steps on GitHub (Ubuntu). The generated schema and bindings come from macOS.

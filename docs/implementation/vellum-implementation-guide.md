@@ -323,7 +323,7 @@ commit where a project has no tags) and record the SHAs in `docs/architecture/ve
 |---|---|---|---|
 | R1 | A Rust renderer compiled to WASM and driven from a web UI | penpot `render-wasm/docs/rendering_architecture.md`, `tile_rendering.md`, `serialization.md`, `render-wasm/src/render.rs`, `src/render/{surfaces,shape_renderer,fills,strokes,shadows,filters,text}.rs`, `src/tiles.rs`; graphite `frontend/wrapper/src/{editor_wrapper,editor_commands,wasm_value}.rs` | P4, P22, P45 |
 | R2 | Text layout, rich text, editing and font fallback | parley `parley/src/layout/`, `parley/src/editing/{editor,cursor,selection}.rs`, `fontique/src/{fallback,matching,source_cache}.rs`, `examples/editor/src/main.rs`; penpot `render-wasm/docs/texts.md`, `docs/text_editor.md` | P5, P19, P47 |
-| R3 | Flexbox/grid that matches the browser | taffy `src/compute/flexbox.rs`, `src/compute/grid/`, `docs/style-properties.md`; **Chrome-generated fixtures**: `scripts/gentest/` (`src/main.rs`, `test_helper.js`, `test_base_style.css`), `test_fixtures/` | P6, P18 |
+| R3 | Flexbox/grid that matches the browser | taffy `src/compute/flexbox.rs`, `src/compute/grid/`, `docs/style-properties.md`; **Chrome-generated fixtures**: `scripts/gentest/` (`main.rs`, `test_helper.js`, `test_base_style.css`), `test_fixtures/` | P6, P18 |
 | R4 | Tree CRDT with moves, undo per peer, compact sync | loro `context/tree-events.md`, `context/loro-js-tree-diff.md`, `context/tree-checkout-window.md`, `crates/loro-internal/src/undo.rs`, `src/handler/tree.rs`, `src/state/tree_state.rs`, `docs/encoding.md`, `docs/shallow-snapshot-concurrency.md` | P5, P14, P63 |
 | R5 | Editor tool state machines, input mapping, snapping, transform cages | graphite `editor/src/messages/tool/tool_messages/{select,pen,path,shape,text,gradient}_tool.rs`, `tool/common_functionality/{snapping,transformation_cage,resize,shape_editor}.rs`, `input_mapper/input_mappings.rs`, `website/content/volunteer/guide/codebase-overview/editor-structure.md` | P44, P46 |
 | R6 | Document history and diffs | graphite `editor/src/messages/portfolio/document/{document_history,document_diff}.rs`; excalidraw `packages/excalidraw/history.ts`, `packages/element/src/{store,delta}.ts` | P14, P15, P53 |
@@ -502,6 +502,11 @@ loro                       1.16.x
 taffy                      0.14.x
 parley / fontique          0.12.x
 skia-safe                  0.153.x      (features: textlayout, svg, pdf; gl or vulkan off for headless)
+                                        BUILT FROM SOURCE, not rust-skia's prebuilt binaries (D7, found in
+                                        Prompt 5): the prebuilt macOS binaries only use CoreText and can't load
+                                        the colour emoji font. scripts/build-native.sh builds it and applies one
+                                        patch to generated bindings for the macOS 27 SDK. Prompt 22 decides how
+                                        binaries are distributed (ADR-010).
 vello                      0.11.x       (later, behind a flag)
 kurbo                      0.13.x
 i_overlay                  9.0.x        (boolean ops)
@@ -554,7 +559,10 @@ pen.dev (design tool)      desktop app current release + @pen.dev/cli 0.3.x (Nod
    golden suite re-run; never mid-prompt.
 5. Installed-engine versions (Claude Code, Codex) are tested ranges, not dependencies; a new
    major gets its own prompt with the engine fixture suite re-recorded (Prompts 36–37).
-7. A pen.dev version change that alters snapshots is reviewed like a design change: regenerate
+7. Native Skia is built from source with a pinned skia-safe version, pinned Skia build flags and
+   the patches in `patches/skia-bindings/`. Bumping skia-safe, the macOS SDK or Xcode is its own
+   prompt: rebuild, re-run the golden suite, and drop any patch upstream has made unnecessary.
+8. A pen.dev version change that alters snapshots is reviewed like a design change: regenerate
    snapshots in their own PR (Prompt 3's script) and re-run the UI goldens.
 6. Electron major, Loro major and the `.vellum` format version each get their own reviewed prompt.
 
@@ -564,7 +572,7 @@ pen.dev (design tool)      desktop app current release + @pen.dev/cli 0.3.x (Nod
 
 ## 6.1 Verified deltas from ARCHITECTURE.md
 
-The reference research on 2026-10-11 changed or sharpened six decisions. Prompt 2 writes each as
+The reference research on 2026-10-11 changed or sharpened six decisions, and Prompt 5 added a seventh. Prompt 2 writes each as
 an ADR with status "Proposed"; the prompt named in brackets confirms or rejects it.
 
 **D1 — Consider one Rust renderer everywhere: skia-safe compiled to WASM.** [Prompt 4 → ADR-001]
@@ -604,6 +612,22 @@ models get types, as those projects do.
 Codex's rollout/thread-store and Goose's session manager (R16) confirm the append-only event log
 per session in ARCHITECTURE §7.6. Vellum keeps SQLite for the index and events, with thumbnails
 in a content-addressed cache.
+
+**D7 — Native Skia is built from source, and the native renderer never uses system font
+managers.** [Found in Prompt 5; decided in Prompt 22 → ADR-010]
+Prompt 5 found that rust-skia's prebuilt macOS binaries only use CoreText, which couldn't load the
+colour emoji font, and that one line of generated bindings breaks on the macOS 27 SDK.
+`scripts/build-native.sh` now builds Skia from source and patches that line. Two consequences:
+- **Fonts come only from `FontSource`.** The native renderer (and the WASM one) is built with a
+  font manager that loads typefaces from data we hand it (FreeType-based), not CoreText,
+  DirectWrite or fontconfig. Parley already shapes text and picks fonts; Skia just draws glyphs from
+  the typefaces we give it. This makes the same document render the same on macOS, Windows, Linux
+  and in WASM (Invariant 6), and makes colour emoji work everywhere.
+- **Bundle a colour emoji font** (an open-licensed COLRv1/CBDT font) as the emoji fallback, so
+  exports don't depend on which emoji font the machine has. System emoji fonts may still be used in
+  the editor if the person picks them explicitly, and the golden suite covers both.
+- **Distribution is a build-pipeline decision**, not a product one: build in CI on every run, or
+  publish our own prebuilt binaries. Prompt 22 decides (ADR-010) using the criteria listed there.
 
 ## 6.2 In
 
@@ -963,7 +987,7 @@ compatibility decision to docs/architecture/version-baseline.md. Reject canary/b
 - copy-lint skeleton: @vellum/config exports Appendix B strings; UI packages may not duplicate them
 
 ## ADR
-docs/architecture/decisions/ADR-000-deltas.md: D1–D6 from §6.1, status "Proposed", with the
+docs/architecture/decisions/ADR-000-deltas.md: D1–D7 from §6.1 (D7 already evidenced by Prompt 5), status "Proposed", with the
 confirming prompt for each.
 
 ## TDD FIRST
@@ -1428,7 +1452,49 @@ cargo test layout_check:: display_list::
 # PROMPT 22 — Renderer I: Editor + Native Path, Solids, Strokes, Text, Images
 
 ```text
-Read: ADR-001; refs/penpot/render-wasm/src/render/{surfaces,shape_renderer,strokes,text,images}.rs.
+Read: ADR-001; guide §6.1 D7; scripts/build-native.sh and the Prompt 5 notes in ADR-001/ADR-004;
+refs/penpot/render-wasm/src/render/{surfaces,shape_renderer,strokes,text,images}.rs;
+rust-skia README (build from source, offline builds, custom binaries location, feature flags).
+
+## DECIDE FIRST: HOW NATIVE SKIA IS BUILT AND SHIPPED (ADR-010)
+
+Prompt 5 established that native Skia must be built from source (CoreText-only prebuilt macOS
+binaries can't load the colour emoji font; one generated-bindings line breaks on the macOS 27 SDK).
+Choose between:
+
+  A. Build in CI on every run. Simple and always consistent with the source, but slow (a cold
+     Skia build per target is long) and every contributor and agent session pays it locally.
+  B. Publish our own prebuilt binaries. A dedicated workflow builds Skia once per
+     (skia-safe version × target × feature set × patch hash), publishes the archives with
+     checksums (GitHub Releases or R2), and normal builds download them through rust-skia's
+     custom binaries location; building from source stays the fallback.
+
+Recommended default: B, with A kept as the fallback path that the binaries workflow itself uses.
+Decide with measurements, and record in ADR-010:
+- cold and cached build times per target (macOS arm64/x64, Windows x64/arm64, Linux x64/arm64)
+- local dev experience: time from fresh clone to `cargo test -p render-skia`
+- CI minutes per PR under each option
+- archive sizes; where they're hosted; how checksums are verified before use
+- how the macOS 27 bindings patch is applied and when it's removed (see below)
+- licence notices for Skia, FreeType, HarfBuzz (if linked), the bundled emoji font
+
+Whichever is chosen:
+- the binaries key includes skia-safe version, target, enabled features, Skia build flags and the
+  sha256 of patches/skia-bindings/; any change produces a new key, never an overwrite
+- downloaded archives are verified against a checksum committed in the repo before linking
+- `VELLUM_SKIA_FROM_SOURCE=1` forces a local source build (for debugging and for the binaries job)
+- the patch lives in patches/skia-bindings/ with a comment naming the SDK and the upstream issue;
+  a test fails once the unpatched bindings compile on the pinned SDK, so the patch gets removed
+- an upstream issue (or PR) is filed with rust-skia for the SDK break and linked in ADR-010
+- the WASM renderer (if ADR-001 chose skia-wasm) uses the same pipeline, keys and font policy
+
+## FONT POLICY (D7)
+- build Skia with a data-backed font manager (no CoreText / DirectWrite / fontconfig lookups);
+  render-skia receives typefaces only from FontSource
+- bundle an open-licensed colour emoji font as the emoji fallback; add it to THIRD_PARTY_NOTICES
+- tests: colour emoji fixture renders identically on macOS, Windows, Linux and WASM within
+  tolerance; a fixture proves no system font is consulted (font manager with an empty system set
+  still renders every fixture)
 
 ## TDD FIRST
 - render-skia (native): PNG, multi-page PDF, SVG via the core's SVG writer
@@ -1438,7 +1504,8 @@ Read: ADR-001; refs/penpot/render-wasm/src/render/{surfaces,shape_renderer,strok
 - Renderer contract suite (TS) and render-skia tests
 
 ## FINAL
-render tests (gpu lane) · Renderer contract
+render tests (gpu lane) on all six native targets · Renderer contract · ADR-010 · binaries
+workflow (if B) green with checksums committed
 ```
 
 ---
@@ -2387,6 +2454,8 @@ TDD: PDF page order and page sizes match frames; presenting never mutates the do
 - ci.yml: fmt · clippy · cargo test · deny · deps rules · clean-room · types:gen diff · schema diff ·
   design-check (snapshots and tokens current) · pnpm lint/type-check/test · layout oracle · golden
   suite (gpu lane) · parity suite · canary · engines lane (nightly) · vscode lane · electron lane
+- skia binaries workflow (per ADR-010): builds on a skia-safe, SDK, flags or patch change; publishes
+  versioned archives with checksums; release builds refuse unverified archives
 - release: signed CLI/daemon binaries (macOS, Windows, Linux; x64 + arm64), signed Electron builds,
   VSIX per platform to Marketplace + Open VSX, npm wrapper @vellum/cli, Homebrew tap
 
@@ -2407,6 +2476,8 @@ TDD: PDF page order and page sizes match frames; presenting never mutates the do
 - any screen missing its explicit edge states, or any UI golden failing against the design snapshots
 - stale design snapshots or tokens (design-check), or an open DESIGN-GAPS.md entry marked blocking
 - any clean-room check failure
+- any release artifact linked against unverified Skia binaries, or a native renderer that reads
+  system fonts
 ```
 
 ---
@@ -2543,7 +2614,7 @@ Security        zero release blockers; canary clean; clean-room clean
 # Appendix E — ADR List Expected By The End
 
 ```text
-ADR-000  Deltas D1–D6 from ARCHITECTURE.md (P2; closed by P4, P6, P25–27, P34, P36–37)
+ADR-000  Deltas D1–D7 from ARCHITECTURE.md (P2; closed by P4, P6, P25–27, P34, P36–37)
 ADR-001  Renderer: skia-wasm everywhere vs CanvasKit in TS (P4, text results appended in P5)
 ADR-002  Layout oracle and sizing semantics (P6)
 ADR-003  Daemon lifecycle and the stdio bridge (P27)
@@ -2553,6 +2624,7 @@ ADR-006  Session storage (P34)
 ADR-007  Installed engines: Goose-derived adapters, Codex app-server (P36, P37)
 ADR-008  Shader dialect and GLSL import (P67)
 ADR-009  Stock image provider and licence (P42)
+ADR-010  Native Skia: build from source, binary distribution, font manager, emoji font (P22; evidence from P5)
 ```
 
 # Appendix F — Final Engineering Principle

@@ -5,7 +5,7 @@ import type { NodeId } from "./NodeId";
 import type { Paint } from "./Paint";
 import type { Position } from "./Position";
 import type { Prototype } from "./Prototype";
-import type { ScriptInput } from "./ScriptInput";
+import type { Scalar } from "./Scalar";
 import type { Size } from "./Size";
 import type { Stroke } from "./Stroke";
 import type { Value } from "./Value";
@@ -95,7 +95,7 @@ src: string,
 /**
  * Values for the script's declared inputs, by name.
  */
-inputs?: { [key in string]: Value<ScriptInput> }, 
+inputs?: { [key in string]: Value<Scalar> }, 
 /**
  * Clips the output to the node's box.
  */

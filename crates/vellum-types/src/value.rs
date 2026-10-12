@@ -1,22 +1,23 @@
 //! `Value<T>`: a literal or a reference to a variable. Every bindable property in the file takes one
 //! (ARCHITECTURE §4.1: "Every property can be a literal or a variable reference").
 
-use std::fmt;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// A reference to a variable, written `{"$var": "color/primary"}`.
+use crate::ids::{IdError, VariableId};
+
+/// A reference to a variable, written `{"$var": "<variable id>"}`.
 ///
-/// The key is opaque text for now: Prompt 8 defines variables and decides whether it names a
-/// variable by id or by its name path.
+/// It names the variable by its id, as every other reference in the file does (`componentId`, `asset`,
+/// `textStyle`). A rename changes the variable's name and nothing else, and two branches that rename and
+/// use a variable merge without leaving a dangling name. The name is for people and tools, and it lives in
+/// the variable's own entry (see `Variable`).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct VarRef {
     #[serde(rename = "$var")]
-    #[schemars(length(min = 1))]
-    var: String,
+    var: VariableId,
 }
 
 impl<'de> Deserialize<'de> for VarRef {
@@ -25,38 +26,28 @@ impl<'de> Deserialize<'de> for VarRef {
         #[serde(deny_unknown_fields)]
         struct Raw {
             #[serde(rename = "$var")]
-            var: String,
+            var: VariableId,
         }
         let Raw { var } = Raw::deserialize(deserializer)?;
-        Self::new(var).map_err(serde::de::Error::custom)
+        Ok(Self { var })
     }
 }
-
-/// Why a variable reference was refused.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EmptyVarRef;
-
-impl fmt::Display for EmptyVarRef {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a variable reference cannot be empty")
-    }
-}
-
-impl std::error::Error for EmptyVarRef {}
 
 impl VarRef {
-    /// A reference to the variable `var`.
-    pub fn new(var: impl Into<String>) -> Result<Self, EmptyVarRef> {
-        let var = var.into();
-        if var.is_empty() {
-            Err(EmptyVarRef)
-        } else {
-            Ok(Self { var })
-        }
+    /// A reference to the variable with id `id`. Ids are checked the way every id is (guide §9).
+    pub fn new(id: impl Into<String>) -> Result<Self, IdError> {
+        Ok(Self {
+            var: VariableId::new(id)?,
+        })
     }
 
-    /// The variable's key.
-    pub fn as_str(&self) -> &str {
+    /// A reference to `variable`.
+    pub fn to(variable: VariableId) -> Self {
+        Self { var: variable }
+    }
+
+    /// The id of the variable this refers to.
+    pub fn id(&self) -> &VariableId {
         &self.var
     }
 }
@@ -92,4 +83,17 @@ impl<T: Default> Default for Value<T> {
     fn default() -> Self {
         Self::Literal(T::default())
     }
+}
+
+/// A plain value: `true`, a number or a string. Script inputs and instance props take one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(untagged)]
+#[ts(export)]
+pub enum Scalar {
+    /// `true` or `false`.
+    Bool(bool),
+    /// A number.
+    Number(f64),
+    /// A string.
+    Text(String),
 }

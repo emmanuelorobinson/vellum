@@ -146,7 +146,8 @@ Keep it factual and short. Do not record secrets, and do not paste design conten
 | `pnpm type-check` | `cargo check` plus `tsc --noEmit` per package |
 | `pnpm lint` | Biome, the copy lint (guide Appendix B), and `cargo clippy -D warnings` |
 | `pnpm format` / `pnpm format:check` | Biome and rustfmt |
-| `pnpm types:gen` | regenerate `packages/types-ts` from `vellum-types` (ts-rs) |
+| `pnpm types:gen` | regenerate `packages/types-ts` from `vellum-types` (ts-rs); `pnpm types:check` fails when it differs (CI) |
+| `pnpm format-spec:gen` | regenerate `docs/format/` (the JSON Schema and the reference page) from `vellum-types`; `pnpm format-spec:check` fails when it differs (CI) |
 | `pnpm checksum` | prove the read-only specification is unchanged |
 | `pnpm clean` | remove build output (never `node_modules`, `refs/`, `.design-cache/`) |
 | `pnpm refs` | clone the 15 reference repositories at their pins into `refs/` (about 2 GB, needs the network), then check that `docs/reference/REFERENCE-INDEX.md` is current and every path it names exists. Local only, not in CI |

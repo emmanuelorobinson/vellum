@@ -5,16 +5,18 @@ import type { Effect } from "./Effect";
 import type { Node } from "./Node";
 import type { NodeId } from "./NodeId";
 import type { NodeIdPath } from "./NodeIdPath";
+import type { Override } from "./Override";
 import type { Paint } from "./Paint";
 import type { Position } from "./Position";
 import type { Prototype } from "./Prototype";
+import type { Scalar } from "./Scalar";
 import type { Size } from "./Size";
 import type { Stroke } from "./Stroke";
 import type { Value } from "./Value";
 import type { JsonValue } from "./serde_json/JsonValue";
 
 /**
- * An instance of a component. Prompt 8 gives variants, props and overrides their full types.
+ * An instance of a component: the component's tree, with this instance's choices applied.
  */
 export type InstanceNode = { 
 /**
@@ -94,17 +96,17 @@ metadata?: { [key in string]: JsonValue },
  */
 componentId: ComponentId, 
 /**
- * Variant choices, by property.
+ * The axis values chosen, by axis (`{"State": "hover"}`). The variant whose values equal these applies.
  */
 variant?: { [key in string]: string }, 
 /**
- * Component property values. Placeholder JSON until Prompt 8.
+ * The values of the component's props. A prop without one takes its default.
  */
-props?: { [key in string]: JsonValue }, 
+props?: { [key in string]: Scalar }, 
 /**
- * Overrides by node id path. Placeholder JSON until Prompt 8.
+ * Changes to nodes inside the component's tree, by id path from its root.
  */
-overrides?: { [key in NodeIdPath]: JsonValue }, 
+overrides?: { [key in NodeIdPath]: Override }, 
 /**
  * What fills each of the component's slots, by slot node id.
  */

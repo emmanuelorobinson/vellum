@@ -4,6 +4,6 @@ import type { SizeWithFallback } from "./SizeWithFallback";
 import type { Value } from "./Value";
 
 /**
- * The spellings of a [`Size`] in the file.
+ * The spellings of a `Size` in the file.
  */
 export type SizeRepr = Value<number> | SizeKeyword | SizeWithFallback;

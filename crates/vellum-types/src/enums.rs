@@ -248,3 +248,29 @@ string_enum!(
         SlideDown = "slide-down",
     }
 );
+
+string_enum!(
+    /// Whether a file is a document or a library other documents import (`*.lib.vellum`).
+    DocumentKind default Document {
+        Document = "document",
+        Library = "library",
+    }
+);
+
+string_enum!(
+    /// What a page holds: a canvas to draw on, or slides in presenting order.
+    PageKind default Canvas {
+        Canvas = "canvas",
+        Slides = "slides",
+    }
+);
+
+string_enum!(
+    /// A variable's type. The words are the `type` tag of a variable in the file.
+    VariableType {
+        Color = "color",
+        Number = "number",
+        String = "string",
+        Boolean = "boolean",
+    }
+);

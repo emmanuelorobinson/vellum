@@ -72,7 +72,7 @@ pub enum Size {
     },
 }
 
-/// The spellings of a [`Size`] in the file.
+/// The spellings of a `Size` in the file.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(untagged)]
 #[ts(export)]

@@ -1,13 +1,76 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { BlendMode, Document, Effect, Node, NodeId, Paint, Size, Value } from "./index";
+import type {
+  BlendMode,
+  Document,
+  Effect,
+  Node,
+  NodeId,
+  Override,
+  Paint,
+  PropDef,
+  Size,
+  Style,
+  Value,
+  Variable,
+} from "./index";
 
 const read = (relative: string) => readFileSync(new URL(relative, import.meta.url), "utf8");
 
 describe("@vellum/types-ts", () => {
-  it("exports the placeholder Document type generated from vellum-types", () => {
-    const doc: Document = { meta: { formatVersion: 1 } };
+  // The literals below are the canonical JSON forms from crates/vellum-types/tests. tsc checks them against
+  // the generated types, so a change to the Rust shape that the TypeScript side misses fails type-check.
+  it("types a document: meta, themes, variables, styles, components and pages", () => {
+    const frame: Node = {
+      type: "frame",
+      id: "btn000001",
+      name: "Button",
+      width: "hug",
+      height: "hug",
+      children: [],
+    };
+    const colour: Variable = {
+      type: "color",
+      name: "color/primary",
+      values: [{ value: "#1A2B3C" }, { value: "#E0E8F0", when: { Mode: "dark" } }],
+    };
+    const alias: Variable = {
+      type: "color",
+      name: "color/accent",
+      values: [{ $alias: "va000001" }],
+    };
+    const heading: Style = { type: "text", name: "Heading", font: "Geist", size: 32 };
+    const doc: Document = {
+      meta: { formatVersion: 1, name: "Launch", createdWith: "Vellum 0.1.0" },
+      themes: { Mode: ["light", "dark"] },
+      variables: { va000001: colour, va000002: alias },
+      styles: { st000001: heading },
+      components: {
+        comp000001: {
+          name: "Button",
+          props: { label: { type: "text", default: "Save" } },
+          root: frame,
+        },
+      },
+      pages: [{ id: "page000001" as NodeId, name: "Canvas", children: [frame] }],
+    };
     expect(doc.meta.formatVersion).toBe(1);
+    expect(doc.pages[0]?.kind).toBeUndefined();
+  });
+
+  it("types overrides and prop defaults as the file spells them", () => {
+    const overrides: Override[] = [
+      { props: { fills: [{ type: "solid", color: "#336699" }] } },
+      { replace: { type: "rect", id: "rect00001", name: "Rule", width: "fill", height: 1 } },
+      { children: [] },
+    ];
+    const props: PropDef[] = [
+      { type: "boolean", default: true },
+      { type: "text", default: "Save" },
+      { type: "number", default: 3 },
+    ];
+    expect(overrides).toHaveLength(3);
+    expect(props).toHaveLength(3);
   });
 
   it("marks the generated bindings as generated", () => {
@@ -15,12 +78,10 @@ describe("@vellum/types-ts", () => {
     expect(read("./index.ts")).toMatch(/@generated/);
   });
 
-  // These literals are the canonical JSON forms from crates/vellum-types/tests; tsc checks them against
-  // the generated types, so a change to the Rust shape that the TypeScript side misses fails type-check.
   it("types the node union, sizes, values, paints and effects", () => {
     const id = "frame00001" as NodeId;
-    const sizes: Size[] = [120, "hug", "fill", { hug: 40 }, { fill: 8 }, { $var: "size/card" }];
-    const opacity: Value<number> = { $var: "opacity/muted" };
+    const sizes: Size[] = [120, "hug", "fill", { hug: 40 }, { fill: 8 }, { $var: "va000003" }];
+    const opacity: Value<number> = { $var: "va000004" };
     const paint: Paint = { type: "solid", color: "#336699" };
     const effect: Effect = { type: "drop-shadow", x: 0, y: 4, blur: 8, color: "#00000040" };
     const blend: BlendMode = "color-burn";

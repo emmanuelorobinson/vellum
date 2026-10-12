@@ -12,13 +12,13 @@ fn brand_constants_are_the_canonical_ones() {
 }
 
 #[test]
-fn placeholder_document_serialises_as_camel_case_json() {
-    let json = serde_json::to_string(&Document::new()).expect("serialise");
-    assert_eq!(json, r#"{"meta":{"formatVersion":1}}"#);
+fn a_new_document_is_at_the_current_format_version() {
+    let json = serde_json::to_value(Document::new("Launch")).expect("serialise");
+    assert_eq!(json["meta"]["formatVersion"], FORMAT_VERSION);
 }
 
 #[test]
-fn placeholder_document_has_a_json_schema() {
+fn the_document_has_a_json_schema() {
     let schema = schemars::schema_for!(Document);
     let text = serde_json::to_string(&schema).expect("serialise schema");
     assert!(text.contains("formatVersion"), "schema was: {text}");

@@ -1,0 +1,4299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Document",
+  "description": "A `.vellum` file.",
+  "type": "object",
+  "properties": {
+    "components": {
+      "description": "Components by id.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Component"
+      }
+    },
+    "fonts": {
+      "description": "Custom fonts, keyed by the asset that holds each font file.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/FontFace"
+      }
+    },
+    "imports": {
+      "description": "The libraries this document uses: alias → relative path of a `*.lib.vellum` file.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "meta": {
+      "description": "The format version, the name, what made the file and whether it is a library.",
+      "$ref": "#/$defs/DocumentMeta"
+    },
+    "pages": {
+      "description": "The pages, in order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Page"
+      }
+    },
+    "styles": {
+      "description": "Text and effect styles by id.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Style"
+      }
+    },
+    "themes": {
+      "description": "Theme axes and their values. The first value of each axis is the default.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "variables": {
+      "description": "Variables by id.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Variable"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "pages"
+  ],
+  "$defs": {
+    "AliasEntry": {
+      "description": "An alias to another variable's value and the theme axis values it applies under.",
+      "type": "object",
+      "properties": {
+        "$alias": {
+          "description": "The variable whose value this takes, by id.",
+          "$ref": "#/$defs/VariableId"
+        },
+        "when": {
+          "description": "Theme axis values this entry needs; empty means always.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "$alias"
+      ]
+    },
+    "Align": {
+      "description": "Alignment across a frame's main axis.",
+      "type": "string",
+      "enum": [
+        "start",
+        "center",
+        "end"
+      ]
+    },
+    "AssetId": {
+      "description": "An asset's id: the content hash of the file beside the document (`<name>.assets/`).",
+      "type": "string"
+    },
+    "BlendMode": {
+      "description": "How a layer's colour combines with what is beneath it.",
+      "type": "string",
+      "enum": [
+        "normal",
+        "darken",
+        "multiply",
+        "color-burn",
+        "linear-burn",
+        "lighten",
+        "screen",
+        "color-dodge",
+        "linear-dodge",
+        "overlay",
+        "soft-light",
+        "hard-light",
+        "difference",
+        "exclusion",
+        "hue",
+        "saturation",
+        "color",
+        "luminosity"
+      ]
+    },
+    "BoolOp": {
+      "description": "How a boolean node combines its children.",
+      "type": "string",
+      "enum": [
+        "union",
+        "subtract",
+        "intersect",
+        "exclude"
+      ]
+    },
+    "Color": {
+      "description": "An sRGB colour with alpha. Printed as `#RRGGBB` when opaque and `#RRGGBBAA` otherwise, in upper\ncase; read in either case.",
+      "type": "string"
+    },
+    "Component": {
+      "description": "A component, listed in the document's `components` by id.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The name shown in the components list.",
+          "type": "string"
+        },
+        "props": {
+          "description": "The props an instance can set, by name.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/PropDef"
+          }
+        },
+        "root": {
+          "description": "The default node tree; its root is the component's own frame.",
+          "$ref": "#/$defs/Node"
+        },
+        "variants": {
+          "description": "The variants. Each lists a value for every variant axis; the one whose values equal an instance's\nchoice applies its overrides to the tree.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Variant"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "root"
+      ]
+    },
+    "ComponentId": {
+      "description": "A component's id.",
+      "type": "string"
+    },
+    "CornerRadius": {
+      "description": "Corner radius: one value for every corner, or four (top-left, top-right, bottom-right, bottom-left).",
+      "anyOf": [
+        {
+          "description": "Every corner.",
+          "$ref": "#/$defs/Value"
+        },
+        {
+          "description": "Top-left, top-right, bottom-right, bottom-left.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "maxItems": 4,
+          "minItems": 4
+        }
+      ]
+    },
+    "DocumentKind": {
+      "description": "Whether a file is a document or a library other documents import (`*.lib.vellum`).",
+      "type": "string",
+      "enum": [
+        "document",
+        "library"
+      ]
+    },
+    "DocumentMeta": {
+      "description": "The meta block of a document.",
+      "type": "object",
+      "properties": {
+        "createdWith": {
+          "description": "The app and version that created the file, such as `Vellum 0.1.0`.",
+          "type": "string"
+        },
+        "formatVersion": {
+          "description": "The `.vellum` format version the file is written in.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "A document, or a library other documents import.",
+          "$ref": "#/$defs/DocumentKind"
+        },
+        "name": {
+          "description": "The document's name.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "formatVersion",
+        "name",
+        "createdWith"
+      ]
+    },
+    "Effect": {
+      "description": "An effect. The `type` tag says which.",
+      "oneOf": [
+        {
+          "description": "A shadow behind the layer.",
+          "type": "object",
+          "properties": {
+            "blendMode": {
+              "description": "How the shadow combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "blur": {
+              "description": "Blur radius.",
+              "$ref": "#/$defs/Value"
+            },
+            "color": {
+              "description": "The shadow colour.",
+              "$ref": "#/$defs/Value2"
+            },
+            "spread": {
+              "description": "How far the shadow grows beyond the shape; 0 when absent.",
+              "$ref": "#/$defs/Value"
+            },
+            "type": {
+              "type": "string",
+              "const": "drop-shadow"
+            },
+            "visible": {
+              "description": "False hides the effect without removing it.",
+              "type": "boolean"
+            },
+            "x": {
+              "description": "Horizontal offset.",
+              "$ref": "#/$defs/Value"
+            },
+            "y": {
+              "description": "Vertical offset.",
+              "$ref": "#/$defs/Value"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "x",
+            "y",
+            "blur",
+            "color"
+          ]
+        },
+        {
+          "description": "A shadow inside the layer's edge.",
+          "type": "object",
+          "properties": {
+            "blendMode": {
+              "description": "How the shadow combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "blur": {
+              "description": "Blur radius.",
+              "$ref": "#/$defs/Value"
+            },
+            "color": {
+              "description": "The shadow colour.",
+              "$ref": "#/$defs/Value2"
+            },
+            "spread": {
+              "description": "How far the shadow grows beyond the shape; 0 when absent.",
+              "$ref": "#/$defs/Value"
+            },
+            "type": {
+              "type": "string",
+              "const": "inner-shadow"
+            },
+            "visible": {
+              "description": "False hides the effect without removing it.",
+              "type": "boolean"
+            },
+            "x": {
+              "description": "Horizontal offset.",
+              "$ref": "#/$defs/Value"
+            },
+            "y": {
+              "description": "Vertical offset.",
+              "$ref": "#/$defs/Value"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "x",
+            "y",
+            "blur",
+            "color"
+          ]
+        },
+        {
+          "description": "Blurs the layer.",
+          "type": "object",
+          "properties": {
+            "radius": {
+              "description": "Blur radius.",
+              "$ref": "#/$defs/Value"
+            },
+            "type": {
+              "type": "string",
+              "const": "layer-blur"
+            },
+            "visible": {
+              "description": "False hides the effect without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "radius"
+          ]
+        },
+        {
+          "description": "Blurs what is behind the layer.",
+          "type": "object",
+          "properties": {
+            "radius": {
+              "description": "Blur radius.",
+              "$ref": "#/$defs/Value"
+            },
+            "type": {
+              "type": "string",
+              "const": "background-blur"
+            },
+            "visible": {
+              "description": "False hides the effect without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "radius"
+          ]
+        },
+        {
+          "description": "A runtime shader that can sample the layer's own rendering.",
+          "type": "object",
+          "properties": {
+            "src": {
+              "description": "The shader file, relative to the document.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "shader"
+            },
+            "uniforms": {
+              "description": "Values for the shader's uniforms, by name.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Value3"
+              }
+            },
+            "visible": {
+              "description": "False hides the effect without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "src"
+          ]
+        }
+      ]
+    },
+    "FillRule": {
+      "description": "How a vector's path decides what is inside it.",
+      "type": "string",
+      "enum": [
+        "nonzero",
+        "evenodd"
+      ]
+    },
+    "FontFace": {
+      "description": "A custom font the document carries. The font file is an asset, keyed by its content hash in the\ndocument's `fonts`. Text names the family; this says which weight and style the file is.",
+      "type": "object",
+      "properties": {
+        "family": {
+          "description": "The family name that text runs use.",
+          "type": "string"
+        },
+        "style": {
+          "description": "Roman or italic.",
+          "$ref": "#/$defs/FontStyle"
+        },
+        "weight": {
+          "description": "100 to 900; 400 when absent.",
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "family"
+      ]
+    },
+    "FontStyle": {
+      "description": "Roman or italic.",
+      "type": "string",
+      "enum": [
+        "normal",
+        "italic"
+      ]
+    },
+    "GradientKind": {
+      "description": "The shape of a gradient.",
+      "type": "string",
+      "enum": [
+        "linear",
+        "radial",
+        "angular"
+      ]
+    },
+    "GradientStop": {
+      "description": "One stop of a gradient.",
+      "type": "object",
+      "properties": {
+        "color": {
+          "description": "The colour at this stop.",
+          "$ref": "#/$defs/Value2"
+        },
+        "position": {
+          "description": "Where the stop sits, from 0 to 1.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "color",
+        "position"
+      ]
+    },
+    "ImageFit": {
+      "description": "How an image fills its box.",
+      "type": "string",
+      "enum": [
+        "fill",
+        "fit",
+        "stretch"
+      ]
+    },
+    "Justify": {
+      "description": "Distribution along a frame's main axis.",
+      "type": "string",
+      "enum": [
+        "start",
+        "center",
+        "end",
+        "space-between",
+        "space-around"
+      ]
+    },
+    "Layout": {
+      "description": "How a frame lays out its children.",
+      "type": "string",
+      "enum": [
+        "none",
+        "row",
+        "column",
+        "grid"
+      ]
+    },
+    "LiteralEntry": {
+      "description": "A literal value and the theme axis values it applies under.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The value.",
+          "$ref": "#/$defs/Color"
+        },
+        "when": {
+          "description": "Theme axis values this entry needs (`{\"Mode\": \"dark\"}`); empty means always.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "LiteralEntry2": {
+      "description": "A literal value and the theme axis values it applies under.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The value.",
+          "type": "number",
+          "format": "double"
+        },
+        "when": {
+          "description": "Theme axis values this entry needs (`{\"Mode\": \"dark\"}`); empty means always.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "LiteralEntry3": {
+      "description": "A literal value and the theme axis values it applies under.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The value.",
+          "type": "string"
+        },
+        "when": {
+          "description": "Theme axis values this entry needs (`{\"Mode\": \"dark\"}`); empty means always.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "LiteralEntry4": {
+      "description": "A literal value and the theme axis values it applies under.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The value.",
+          "type": "boolean"
+        },
+        "when": {
+          "description": "Theme axis values this entry needs (`{\"Mode\": \"dark\"}`); empty means always.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "MeshHandles": {
+      "description": "The four handles of a mesh point, as offsets from the point.",
+      "type": "object",
+      "properties": {
+        "down": {
+          "description": "Towards the next row.",
+          "$ref": "#/$defs/Point"
+        },
+        "left": {
+          "description": "Towards the previous column.",
+          "$ref": "#/$defs/Point"
+        },
+        "right": {
+          "description": "Towards the next column.",
+          "$ref": "#/$defs/Point"
+        },
+        "up": {
+          "description": "Towards the previous row.",
+          "$ref": "#/$defs/Point"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "left",
+        "right",
+        "up",
+        "down"
+      ]
+    },
+    "MeshPoint": {
+      "description": "A point of a mesh gradient.",
+      "type": "object",
+      "properties": {
+        "color": {
+          "description": "The colour at this point.",
+          "$ref": "#/$defs/Value2"
+        },
+        "handles": {
+          "description": "Bezier handles that bend the mesh lines through this point.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MeshHandles"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "x": {
+          "description": "Position across the shape, 0 to 1.",
+          "type": "number",
+          "format": "double"
+        },
+        "y": {
+          "description": "Position down the shape, 0 to 1.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "color"
+      ]
+    },
+    "Node": {
+      "description": "A node. The `type` tag says which kind.",
+      "oneOf": [
+        {
+          "description": "A container with optional auto-layout.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "align": {
+              "description": "Alignment across the main axis.",
+              "$ref": "#/$defs/Align"
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "children": {
+              "description": "Back to front.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Node"
+              }
+            },
+            "clip": {
+              "description": "Clips children to the frame.",
+              "type": "boolean"
+            },
+            "columns": {
+              "description": "Grid only: the number of equal columns. ARCHITECTURE gives a grid no track fields; this is\nthe shape the layout oracle uses, to be settled in Prompt 18.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "cornerRadius": {
+              "description": "Rounds the frame's corners (and its clip).",
+              "$ref": "#/$defs/CornerRadius"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "gap": {
+              "description": "Space between children.",
+              "$ref": "#/$defs/Value"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "justify": {
+              "description": "Distribution along the main axis.",
+              "$ref": "#/$defs/Justify"
+            },
+            "layout": {
+              "description": "`none`, `row`, `column` or `grid`.",
+              "$ref": "#/$defs/Layout"
+            },
+            "layoutIncludesStroke": {
+              "description": "Whether the stroke takes part in layout. ARCHITECTURE does not define it; undefined until\nPrompt 18.",
+              "type": "boolean"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "padding": {
+              "description": "Space inside the edge.",
+              "$ref": "#/$defs/Padding"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "rows": {
+              "description": "Grid only: the number of equal rows; as many as the children need when absent.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "slot": {
+              "description": "Marks the frame as a slot instances can fill.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Slot"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "theme": {
+              "description": "Theme values this subtree uses, by axis (`{\"Mode\": \"Dark\"}`).",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "frame"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height"
+          ]
+        },
+        {
+          "description": "A plain container with no layout of its own.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "children": {
+              "description": "Back to front.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Node"
+              }
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "group"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height"
+          ]
+        },
+        {
+          "description": "A rectangle.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "cornerRadius": {
+              "description": "One radius, or four.",
+              "$ref": "#/$defs/CornerRadius"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "rect"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height"
+          ]
+        },
+        {
+          "description": "An ellipse, ring, arc or pie slice.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "innerRadius": {
+              "description": "The hole, as a ratio of the radius: 0 is solid, towards 1 is a thin ring.",
+              "type": "number",
+              "format": "double"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "startAngle": {
+              "description": "Where the arc starts, in degrees clockwise from the right.",
+              "type": "number",
+              "format": "double"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sweepAngle": {
+              "description": "How far the arc runs, in degrees; 360 is a full ellipse.",
+              "type": "number",
+              "format": "double"
+            },
+            "type": {
+              "type": "string",
+              "const": "ellipse"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height"
+          ]
+        },
+        {
+          "description": "A regular polygon.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "cornerRadius": {
+              "description": "Rounds the corners.",
+              "$ref": "#/$defs/Value"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "sides": {
+              "description": "Three or more.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "polygon"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "sides"
+          ]
+        },
+        {
+          "description": "A star.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "innerRatio": {
+              "description": "Inner radius over outer radius, 0 to 1.",
+              "type": "number",
+              "format": "double"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "points": {
+              "description": "Two or more.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "star"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "points",
+            "innerRatio"
+          ]
+        },
+        {
+          "description": "A line.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "line"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height"
+          ]
+        },
+        {
+          "description": "A path.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fillRule": {
+              "description": "Which regions are inside.",
+              "$ref": "#/$defs/FillRule"
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "path": {
+              "description": "SVG path data.",
+              "type": "string"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "vector"
+            },
+            "viewBox": {
+              "description": "The rectangle the path is drawn in; the node's box is that rectangle scaled.",
+              "$ref": "#/$defs/ViewBox"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "path",
+            "viewBox"
+          ]
+        },
+        {
+          "description": "A boolean combination of its children.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "children": {
+              "description": "Back to front; subtract takes the first away from the rest.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Node"
+              }
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "op": {
+              "description": "Union, subtract, intersect or exclude.",
+              "$ref": "#/$defs/BoolOp"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "op"
+          ]
+        },
+        {
+          "description": "Text.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "align": {
+              "description": "Horizontal alignment.",
+              "$ref": "#/$defs/TextAlign"
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "content": {
+              "description": "Runs in reading order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TextRun"
+              }
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "resize": {
+              "description": "What changes when the text does not fit.",
+              "$ref": "#/$defs/TextResize"
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "textStyle": {
+              "description": "A shared text style.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StyleId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "text"
+            },
+            "verticalAlign": {
+              "description": "Vertical alignment.",
+              "$ref": "#/$defs/VerticalAlign"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "content"
+          ]
+        },
+        {
+          "description": "An image.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "asset": {
+              "description": "The image in the document's assets.",
+              "$ref": "#/$defs/AssetId"
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "crop": {
+              "description": "Crops and moves the image.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Transform"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "fit": {
+              "description": "How the image fills the box.",
+              "$ref": "#/$defs/ImageFit"
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "image"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "asset"
+          ]
+        },
+        {
+          "description": "An icon from a library.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fill": {
+              "description": "Filled rather than outlined.",
+              "type": "boolean"
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "icon": {
+              "description": "The icon's name in that library; a string variable can decide. Called `icon` because `name`\nis the layer's own name, which ARCHITECTURE §4.1 also lists as `name`.",
+              "$ref": "#/$defs/Value5"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "library": {
+              "description": "The icon library.",
+              "type": "string"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "icon"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "weight": {
+              "description": "Stroke weight, 100 to 700.",
+              "type": "integer",
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "library",
+            "icon",
+            "weight"
+          ]
+        },
+        {
+          "description": "An instance of a component.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "componentId": {
+              "description": "The component this is an instance of.",
+              "$ref": "#/$defs/ComponentId"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "overrides": {
+              "description": "Changes to nodes inside the component's tree, by id path from its root.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Override"
+              }
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "props": {
+              "description": "The values of the component's props. A prop without one takes its default.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Scalar"
+              }
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "slotContent": {
+              "description": "What fills each of the component's slots, by slot node id.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Node"
+                }
+              }
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "instance"
+            },
+            "variant": {
+              "description": "The axis values chosen, by axis (`{\"State\": \"hover\"}`). The variant whose values equal these applies.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "componentId"
+          ]
+        },
+        {
+          "description": "A script whose output renders inside the node.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "clip": {
+              "description": "Clips the output to the node's box.",
+              "type": "boolean"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "inputs": {
+              "description": "Values for the script's declared inputs, by name.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Value6"
+              }
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "src": {
+              "description": "The `.js` file, relative to the document.",
+              "type": "string"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "script"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "src"
+          ]
+        },
+        {
+          "description": "A sticky note for people.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "color": {
+              "description": "The note colour.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Value2"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "content": {
+              "description": "The note text.",
+              "type": "string"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "note"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "content"
+          ]
+        },
+        {
+          "description": "Instructions for agents placed on the canvas.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "content": {
+              "description": "The instructions.",
+              "type": "string"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "pointsAt": {
+              "description": "The node it points at; otherwise it applies to the frame it sits in.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/NodeId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "context"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "content"
+          ]
+        },
+        {
+          "description": "A saved request.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "content": {
+              "description": "The request.",
+              "type": "string"
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "engine": {
+              "description": "Which engine runs it.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "model": {
+              "description": "Which model.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "prompt"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "content"
+          ]
+        },
+        {
+          "description": "A live web view (typed now, gated to v1.1).",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "device": {
+              "description": "The device frame, by name.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "radius": {
+              "description": "Rounds the view's corners.",
+              "$ref": "#/$defs/Value"
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "scroll": {
+              "description": "How far the page is scrolled.",
+              "$ref": "#/$defs/Point"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "embed"
+            },
+            "url": {
+              "description": "The page to show.",
+              "type": "string"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "zoom": {
+              "description": "1 is actual size.",
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height",
+            "url"
+          ]
+        }
+      ]
+    },
+    "NodeId": {
+      "description": "A node's id, unique within its document and never reused.",
+      "type": "string"
+    },
+    "NodePatch": {
+      "description": "Property values to set on one node: a JSON object whose keys are node properties (`fills`, `visible`,\n`content` and so on). Every key must be a property some node has, and a patch cannot set the node's id\nor its children (a children override does that). The values are checked when the patch is applied to a\nnode, because only then is its kind known: the result must read back as that node.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "Override": {
+      "description": "What an instance does to one node inside its component's tree. Written as a single key: `props`,\n`replace` or `children`.",
+      "oneOf": [
+        {
+          "description": "Sets properties of the node. It keeps its id, its type and its children.",
+          "type": "object",
+          "properties": {
+            "props": {
+              "$ref": "#/$defs/NodePatch"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "props"
+          ]
+        },
+        {
+          "description": "Replaces the node with this one. Boxed because a node is much larger than the other two.",
+          "type": "object",
+          "properties": {
+            "replace": {
+              "$ref": "#/$defs/Node"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "replace"
+          ]
+        },
+        {
+          "description": "Replaces the node's children with these.",
+          "type": "object",
+          "properties": {
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Node"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "children"
+          ]
+        }
+      ]
+    },
+    "Padding": {
+      "description": "Padding: one value for all sides, two (vertical, then horizontal, as in CSS) or four (top, right,\nbottom, left).",
+      "anyOf": [
+        {
+          "description": "All four sides.",
+          "$ref": "#/$defs/Value"
+        },
+        {
+          "description": "Vertical, horizontal.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "maxItems": 2,
+          "minItems": 2
+        },
+        {
+          "description": "Top, right, bottom, left.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "maxItems": 4,
+          "minItems": 4
+        }
+      ]
+    },
+    "Page": {
+      "description": "A page: a canvas to draw on, or slides in presenting order.",
+      "type": "object",
+      "properties": {
+        "children": {
+          "description": "The page's nodes, back to front.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "id": {
+          "description": "The page's id.",
+          "$ref": "#/$defs/PageId"
+        },
+        "kind": {
+          "description": "A canvas, or slides.",
+          "$ref": "#/$defs/PageKind"
+        },
+        "name": {
+          "description": "The name shown in the page list.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "PageId": {
+      "description": "A page's id.",
+      "type": "string"
+    },
+    "PageKind": {
+      "description": "What a page holds: a canvas to draw on, or slides in presenting order.",
+      "type": "string",
+      "enum": [
+        "canvas",
+        "slides"
+      ]
+    },
+    "Paint": {
+      "description": "A paint. The `type` tag says which.",
+      "oneOf": [
+        {
+          "description": "One colour.",
+          "type": "object",
+          "properties": {
+            "color": {
+              "description": "The colour, or a colour variable.",
+              "$ref": "#/$defs/Value2"
+            },
+            "type": {
+              "type": "string",
+              "const": "solid"
+            },
+            "visible": {
+              "description": "False hides the paint without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "color"
+          ]
+        },
+        {
+          "description": "A linear, radial or angular gradient.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "description": "Linear, radial or angular.",
+              "$ref": "#/$defs/GradientKind"
+            },
+            "stops": {
+              "description": "Colour stops, by position from 0 to 1.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/GradientStop"
+              }
+            },
+            "transform": {
+              "description": "Maps the unit gradient onto the shape; the identity when absent.",
+              "$ref": "#/$defs/Transform"
+            },
+            "type": {
+              "type": "string",
+              "const": "gradient"
+            },
+            "visible": {
+              "description": "False hides the paint without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "kind",
+            "stops"
+          ]
+        },
+        {
+          "description": "A mesh gradient.",
+          "type": "object",
+          "properties": {
+            "columns": {
+              "description": "Points per row.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "points": {
+              "description": "`columns × rows` points, row by row.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/MeshPoint"
+              }
+            },
+            "rows": {
+              "description": "Points per column.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "type": {
+              "type": "string",
+              "const": "mesh"
+            },
+            "visible": {
+              "description": "False hides the paint without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "columns",
+            "rows",
+            "points"
+          ]
+        },
+        {
+          "description": "An image from the document's assets.",
+          "type": "object",
+          "properties": {
+            "asset": {
+              "description": "The image in the document's assets.",
+              "$ref": "#/$defs/AssetId"
+            },
+            "crop": {
+              "description": "Crops and moves the image; absent means uncropped.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Transform"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "fit": {
+              "description": "How the image fills the shape.",
+              "$ref": "#/$defs/ImageFit"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "type": {
+              "type": "string",
+              "const": "image"
+            },
+            "visible": {
+              "description": "False hides the paint without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "asset"
+          ]
+        },
+        {
+          "description": "A runtime shader.",
+          "type": "object",
+          "properties": {
+            "src": {
+              "description": "The shader file, relative to the document.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "shader"
+            },
+            "uniforms": {
+              "description": "Values for the shader's uniforms, by name.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/Value3"
+              }
+            },
+            "visible": {
+              "description": "False hides the paint without removing it.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "src"
+          ]
+        }
+      ]
+    },
+    "Point": {
+      "description": "A point or an offset, in model coordinates.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "description": "Horizontal.",
+          "type": "number",
+          "format": "double"
+        },
+        "y": {
+          "description": "Vertical, growing downward.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "Position": {
+      "description": "Where a node sits: left to its parent's layout, or at fixed coordinates.",
+      "oneOf": [
+        {
+          "description": "Placed by the parent's auto-layout; on a page, the origin.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "auto"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "description": "At these coordinates in the parent, outside any auto-layout flow.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "absolute"
+            },
+            "x": {
+              "description": "Horizontal.",
+              "type": "number",
+              "format": "double"
+            },
+            "y": {
+              "description": "Vertical, growing downward.",
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "x",
+            "y"
+          ]
+        }
+      ]
+    },
+    "PropDef": {
+      "description": "A prop a component declares. The `type` tag says what kind of value it takes, and the default has that\ntype too. Which node a prop drives is not in the format yet (Prompt 17).",
+      "oneOf": [
+        {
+          "description": "A switch, on or off.",
+          "type": "object",
+          "properties": {
+            "default": {
+              "description": "The value when an instance sets none.",
+              "type": "boolean"
+            },
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "default"
+          ]
+        },
+        {
+          "description": "A line of text.",
+          "type": "object",
+          "properties": {
+            "default": {
+              "description": "The value when an instance sets none.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "text"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "default"
+          ]
+        },
+        {
+          "description": "A number.",
+          "type": "object",
+          "properties": {
+            "default": {
+              "description": "The value when an instance sets none.",
+              "type": "number",
+              "format": "double"
+            },
+            "type": {
+              "type": "string",
+              "const": "number"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "default"
+          ]
+        }
+      ]
+    },
+    "Prototype": {
+      "description": "A prototype link: where to go and how.",
+      "type": "object",
+      "properties": {
+        "target": {
+          "description": "The frame to go to.",
+          "$ref": "#/$defs/NodeId"
+        },
+        "transition": {
+          "description": "How to get there.",
+          "$ref": "#/$defs/Transition"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "transition"
+      ]
+    },
+    "Scalar": {
+      "description": "A plain value: `true`, a number or a string. Script inputs and instance props take one.",
+      "anyOf": [
+        {
+          "description": "`true` or `false`.",
+          "type": "boolean"
+        },
+        {
+          "description": "A number.",
+          "type": "number",
+          "format": "double"
+        },
+        {
+          "description": "A string.",
+          "type": "string"
+        }
+      ]
+    },
+    "Size": {
+      "description": "One side of a layer's width or height.\n\nIn the file: a number or `{\"$var\": …}` is a fixed size, `\"hug\"` and `\"fill\"` are the keywords, and\n`{\"hug\": 40}` / `{\"fill\": 40}` carry a fallback for when there is nothing to hug or fill. Each value\nhas one spelling. ADR-002 defines what hug, fill and the fallbacks mean.",
+      "anyOf": [
+        {
+          "description": "`120` or `{\"$var\": …}`.",
+          "$ref": "#/$defs/Value"
+        },
+        {
+          "description": "`\"hug\"` or `\"fill\"`.",
+          "$ref": "#/$defs/SizeKeyword"
+        },
+        {
+          "description": "`{\"hug\": 40}` or `{\"fill\": 40}`.",
+          "$ref": "#/$defs/SizeWithFallback"
+        }
+      ]
+    },
+    "SizeKeyword": {
+      "description": "`\"hug\"` or `\"fill\"`.",
+      "oneOf": [
+        {
+          "description": "Size to the content.",
+          "type": "string",
+          "const": "hug"
+        },
+        {
+          "description": "Fill the parent.",
+          "type": "string",
+          "const": "fill"
+        }
+      ]
+    },
+    "SizeWithFallback": {
+      "description": "`{\"hug\": 40}` or `{\"fill\": 40}`.",
+      "oneOf": [
+        {
+          "description": "Size to the content, or this when there is none.",
+          "type": "object",
+          "properties": {
+            "hug": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "hug"
+          ]
+        },
+        {
+          "description": "Fill the parent, or this when there is none.",
+          "type": "object",
+          "properties": {
+            "fill": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "fill"
+          ]
+        }
+      ]
+    },
+    "Slot": {
+      "description": "A frame's slot marker.",
+      "type": "object",
+      "properties": {
+        "suggested": {
+          "description": "Components that usually go here. Suggestions guide people and agents and never restrict.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ComponentId"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Stroke": {
+      "description": "The outline of a shape.",
+      "type": "object",
+      "properties": {
+        "align": {
+          "description": "Inside, centred on or outside the edge.",
+          "$ref": "#/$defs/StrokeAlign"
+        },
+        "cap": {
+          "description": "The end of an open stroke.",
+          "$ref": "#/$defs/StrokeCap"
+        },
+        "dash": {
+          "description": "Alternating dash and gap lengths; empty means solid.",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "join": {
+          "description": "The corner of a stroke.",
+          "$ref": "#/$defs/StrokeJoin"
+        },
+        "paints": {
+          "description": "Painted in order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Paint"
+          }
+        },
+        "width": {
+          "description": "One width, or one per side.",
+          "$ref": "#/$defs/StrokeWidth"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "paints",
+        "width"
+      ]
+    },
+    "StrokeAlign": {
+      "description": "Where a stroke sits on the edge of its shape.",
+      "type": "string",
+      "enum": [
+        "inside",
+        "center",
+        "outside"
+      ]
+    },
+    "StrokeCap": {
+      "description": "The end of an open stroke.",
+      "type": "string",
+      "enum": [
+        "butt",
+        "round",
+        "square"
+      ]
+    },
+    "StrokeJoin": {
+      "description": "The corner of a stroke.",
+      "type": "string",
+      "enum": [
+        "miter",
+        "round",
+        "bevel"
+      ]
+    },
+    "StrokeWidth": {
+      "description": "A stroke's width: one value, or one per side (top, right, bottom, left).",
+      "anyOf": [
+        {
+          "description": "Every side.",
+          "$ref": "#/$defs/Value"
+        },
+        {
+          "description": "Top, right, bottom, left.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "maxItems": 4,
+          "minItems": 4
+        }
+      ]
+    },
+    "Style": {
+      "description": "A shared style, listed in the document's `styles` by id. The `type` tag says which kind.",
+      "oneOf": [
+        {
+          "description": "Font, size and spacing for text.",
+          "type": "object",
+          "properties": {
+            "font": {
+              "description": "Font family.",
+              "type": "string"
+            },
+            "letterSpacing": {
+              "description": "Extra space between letters in pixels.",
+              "$ref": "#/$defs/Value"
+            },
+            "lineHeight": {
+              "description": "Line height in pixels; the font's own when absent.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Value"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "name": {
+              "description": "The name shown in the styles list.",
+              "type": "string"
+            },
+            "size": {
+              "description": "Font size in pixels.",
+              "$ref": "#/$defs/Value"
+            },
+            "strikethrough": {
+              "description": "Struck through.",
+              "type": "boolean"
+            },
+            "style": {
+              "description": "Roman or italic.",
+              "$ref": "#/$defs/FontStyle"
+            },
+            "type": {
+              "type": "string",
+              "const": "text"
+            },
+            "underline": {
+              "description": "Underlined.",
+              "type": "boolean"
+            },
+            "weight": {
+              "description": "100 to 900; 400 when absent.",
+              "type": "integer",
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name",
+            "font",
+            "size"
+          ]
+        },
+        {
+          "description": "Effects for any layer.",
+          "type": "object",
+          "properties": {
+            "effects": {
+              "description": "The effects, applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "name": {
+              "description": "The name shown in the styles list.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "effect"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name",
+            "effects"
+          ]
+        }
+      ]
+    },
+    "StyleId": {
+      "description": "A text or effect style's id.",
+      "type": "string"
+    },
+    "TextAlign": {
+      "description": "Horizontal text alignment.",
+      "type": "string",
+      "enum": [
+        "left",
+        "center",
+        "right",
+        "justify"
+      ]
+    },
+    "TextResize": {
+      "description": "What changes when the text does not fit.",
+      "type": "string",
+      "enum": [
+        "auto-width",
+        "auto-height",
+        "fixed"
+      ]
+    },
+    "TextRun": {
+      "description": "A stretch of text with one set of font settings. A text node holds runs in reading order.",
+      "type": "object",
+      "properties": {
+        "font": {
+          "description": "Font family.",
+          "type": "string"
+        },
+        "letterSpacing": {
+          "description": "Extra space between letters in pixels.",
+          "$ref": "#/$defs/Value"
+        },
+        "lineHeight": {
+          "description": "Line height in pixels; the font's own when absent.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "link": {
+          "description": "A link target.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size": {
+          "description": "Font size in pixels.",
+          "$ref": "#/$defs/Value"
+        },
+        "strikethrough": {
+          "description": "Struck through.",
+          "type": "boolean"
+        },
+        "style": {
+          "description": "Roman or italic.",
+          "$ref": "#/$defs/FontStyle"
+        },
+        "text": {
+          "description": "The characters.",
+          "type": "string"
+        },
+        "underline": {
+          "description": "Underlined.",
+          "type": "boolean"
+        },
+        "weight": {
+          "description": "100 to 900; 400 when absent.",
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "font",
+        "size"
+      ]
+    },
+    "Transform": {
+      "description": "A 2×3 affine transform `[a, b, c, d, e, f]`, used in the file only for image crops and gradients.\nThe default is the identity.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "format": "double"
+      },
+      "maxItems": 6,
+      "minItems": 6
+    },
+    "Transition": {
+      "description": "A prototype transition.",
+      "type": "object",
+      "properties": {
+        "durationMs": {
+          "description": "Length in milliseconds; 0 when absent.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "type": {
+          "description": "How the new frame arrives.",
+          "$ref": "#/$defs/TransitionKind"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ]
+    },
+    "TransitionKind": {
+      "description": "How a prototype link animates.",
+      "type": "string",
+      "enum": [
+        "instant",
+        "dissolve",
+        "slide-left",
+        "slide-right",
+        "slide-up",
+        "slide-down"
+      ]
+    },
+    "Uniform": {
+      "description": "A shader uniform's value: a number, boolean, colour or a vector of two to four numbers.",
+      "anyOf": [
+        {
+          "description": "`true` or `false`.",
+          "type": "boolean"
+        },
+        {
+          "description": "A number.",
+          "type": "number",
+          "format": "double"
+        },
+        {
+          "description": "A colour string.",
+          "$ref": "#/$defs/Color"
+        },
+        {
+          "description": "Two numbers.",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 2,
+          "minItems": 2
+        },
+        {
+          "description": "Three numbers.",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 3,
+          "minItems": 3
+        },
+        {
+          "description": "Four numbers.",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 4,
+          "minItems": 4
+        }
+      ]
+    },
+    "Value": {
+      "description": "A literal `T`, or a reference to a variable of the matching type.",
+      "anyOf": [
+        {
+          "description": "A reference. Listed first so `{\"$var\": …}` is never mistaken for a structured literal.",
+          "$ref": "#/$defs/VarRef"
+        },
+        {
+          "description": "The value itself.",
+          "type": "number",
+          "format": "double"
+        }
+      ]
+    },
+    "Value2": {
+      "description": "A literal `T`, or a reference to a variable of the matching type.",
+      "anyOf": [
+        {
+          "description": "A reference. Listed first so `{\"$var\": …}` is never mistaken for a structured literal.",
+          "$ref": "#/$defs/VarRef"
+        },
+        {
+          "description": "The value itself.",
+          "$ref": "#/$defs/Color"
+        }
+      ]
+    },
+    "Value3": {
+      "description": "A literal `T`, or a reference to a variable of the matching type.",
+      "anyOf": [
+        {
+          "description": "A reference. Listed first so `{\"$var\": …}` is never mistaken for a structured literal.",
+          "$ref": "#/$defs/VarRef"
+        },
+        {
+          "description": "The value itself.",
+          "$ref": "#/$defs/Uniform"
+        }
+      ]
+    },
+    "Value4": {
+      "description": "A literal `T`, or a reference to a variable of the matching type.",
+      "anyOf": [
+        {
+          "description": "A reference. Listed first so `{\"$var\": …}` is never mistaken for a structured literal.",
+          "$ref": "#/$defs/VarRef"
+        },
+        {
+          "description": "The value itself.",
+          "type": "boolean"
+        }
+      ]
+    },
+    "Value5": {
+      "description": "A literal `T`, or a reference to a variable of the matching type.",
+      "anyOf": [
+        {
+          "description": "A reference. Listed first so `{\"$var\": …}` is never mistaken for a structured literal.",
+          "$ref": "#/$defs/VarRef"
+        },
+        {
+          "description": "The value itself.",
+          "type": "string"
+        }
+      ]
+    },
+    "Value6": {
+      "description": "A literal `T`, or a reference to a variable of the matching type.",
+      "anyOf": [
+        {
+          "description": "A reference. Listed first so `{\"$var\": …}` is never mistaken for a structured literal.",
+          "$ref": "#/$defs/VarRef"
+        },
+        {
+          "description": "The value itself.",
+          "$ref": "#/$defs/Scalar"
+        }
+      ]
+    },
+    "VarRef": {
+      "description": "A reference to a variable, written `{\"$var\": \"<variable id>\"}`.\n\nIt names the variable by its id, as every other reference in the file does (`componentId`, `asset`,\n`textStyle`). A rename changes the variable's name and nothing else, and two branches that rename and\nuse a variable merge without leaving a dangling name. The name is for people and tools, and it lives in\nthe variable's own entry (see `Variable`).",
+      "type": "object",
+      "properties": {
+        "$var": {
+          "$ref": "#/$defs/VariableId"
+        }
+      },
+      "required": [
+        "$var"
+      ]
+    },
+    "Variable": {
+      "description": "A variable. The `type` tag says which kind; each kind reads its literals as that type, so a string\nvariable keeps `#ff0000` as the text it is.",
+      "oneOf": [
+        {
+          "description": "A colour: `#RRGGBB` or `#RRGGBBAA` literals.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name, by convention a path such as `color/primary`. People and tools use names; references use\nthe variable's id.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "color"
+            },
+            "values": {
+              "description": "The values in order. The last entry whose condition matches is the one that applies.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/VariableValue"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name",
+            "values"
+          ]
+        },
+        {
+          "description": "A number.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name, by convention a path such as `color/primary`. People and tools use names; references use\nthe variable's id.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "number"
+            },
+            "values": {
+              "description": "The values in order. The last entry whose condition matches is the one that applies.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/VariableValue2"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name",
+            "values"
+          ]
+        },
+        {
+          "description": "A string, kept exactly as written.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name, by convention a path such as `color/primary`. People and tools use names; references use\nthe variable's id.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "string"
+            },
+            "values": {
+              "description": "The values in order. The last entry whose condition matches is the one that applies.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/VariableValue3"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name",
+            "values"
+          ]
+        },
+        {
+          "description": "`true` or `false`.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name, by convention a path such as `color/primary`. People and tools use names; references use\nthe variable's id.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "values": {
+              "description": "The values in order. The last entry whose condition matches is the one that applies.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/VariableValue4"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name",
+            "values"
+          ]
+        }
+      ]
+    },
+    "VariableId": {
+      "description": "A variable's id.",
+      "type": "string"
+    },
+    "VariableValue": {
+      "description": "One value of a variable: a literal, or an alias to another variable of the same type. It applies when\nevery axis in `when` has the value it names; with no `when`, it always applies.",
+      "anyOf": [
+        {
+          "description": "A value of the variable's own type.",
+          "$ref": "#/$defs/LiteralEntry"
+        },
+        {
+          "description": "The value of another variable of the same type.",
+          "$ref": "#/$defs/AliasEntry"
+        }
+      ]
+    },
+    "VariableValue2": {
+      "description": "One value of a variable: a literal, or an alias to another variable of the same type. It applies when\nevery axis in `when` has the value it names; with no `when`, it always applies.",
+      "anyOf": [
+        {
+          "description": "A value of the variable's own type.",
+          "$ref": "#/$defs/LiteralEntry2"
+        },
+        {
+          "description": "The value of another variable of the same type.",
+          "$ref": "#/$defs/AliasEntry"
+        }
+      ]
+    },
+    "VariableValue3": {
+      "description": "One value of a variable: a literal, or an alias to another variable of the same type. It applies when\nevery axis in `when` has the value it names; with no `when`, it always applies.",
+      "anyOf": [
+        {
+          "description": "A value of the variable's own type.",
+          "$ref": "#/$defs/LiteralEntry3"
+        },
+        {
+          "description": "The value of another variable of the same type.",
+          "$ref": "#/$defs/AliasEntry"
+        }
+      ]
+    },
+    "VariableValue4": {
+      "description": "One value of a variable: a literal, or an alias to another variable of the same type. It applies when\nevery axis in `when` has the value it names; with no `when`, it always applies.",
+      "anyOf": [
+        {
+          "description": "A value of the variable's own type.",
+          "$ref": "#/$defs/LiteralEntry4"
+        },
+        {
+          "description": "The value of another variable of the same type.",
+          "$ref": "#/$defs/AliasEntry"
+        }
+      ]
+    },
+    "Variant": {
+      "description": "One combination of variant axis values, and the overrides it applies to the component's tree.",
+      "type": "object",
+      "properties": {
+        "overrides": {
+          "description": "The overrides applied to the tree when this variant is chosen, by id path from its root.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Override"
+          }
+        },
+        "properties": {
+          "description": "The axis values that select this variant (`{\"State\": \"hover\", \"Size\": \"large\"}`).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ]
+    },
+    "VerticalAlign": {
+      "description": "Vertical text alignment inside the node.",
+      "type": "string",
+      "enum": [
+        "top",
+        "middle",
+        "bottom"
+      ]
+    },
+    "ViewBox": {
+      "description": "The rectangle an SVG path is drawn in.",
+      "type": "object",
+      "properties": {
+        "height": {
+          "description": "Height.",
+          "type": "number",
+          "format": "double"
+        },
+        "width": {
+          "description": "Width.",
+          "type": "number",
+          "format": "double"
+        },
+        "x": {
+          "description": "Left.",
+          "type": "number",
+          "format": "double"
+        },
+        "y": {
+          "description": "Top.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    }
+  }
+}

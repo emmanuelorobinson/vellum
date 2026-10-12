@@ -35,8 +35,9 @@ fn arb_node_id() -> impl Strategy<Value = NodeId> {
     arb_id_text().prop_map(|s| NodeId::new(s).expect("valid"))
 }
 
+/// A reference names its variable by id (guide §9: ids never hold a slash).
 fn arb_var() -> impl Strategy<Value = VarRef> {
-    "[a-z]{1,6}(/[a-z]{1,6}){0,2}".prop_map(|s| VarRef::new(s).expect("non-empty"))
+    arb_id_text().prop_map(|s| VarRef::new(s).expect("valid id"))
 }
 
 fn arb_value<T: std::fmt::Debug + 'static>(
@@ -121,6 +122,38 @@ fn arb_json() -> impl Strategy<Value = Json> {
             btree_map(arb_text(), inner, 0..4).prop_map(|m| Json::Object(m.into_iter().collect())),
         ]
     })
+}
+
+fn arb_scalar() -> impl Strategy<Value = Scalar> {
+    prop_oneof![
+        any::<bool>().prop_map(Scalar::Bool),
+        arb_f64().prop_map(Scalar::Number),
+        arb_text().prop_map(Scalar::Text),
+    ]
+}
+
+/// The property names a props override may set: every node property except the id and the children,
+/// which have their own rules (ARCHITECTURE §4.1, [`NodePatch`]).
+fn arb_patch_key() -> impl Strategy<Value = String> {
+    let names: Vec<&'static str> = NODE_PROPERTIES
+        .iter()
+        .copied()
+        .filter(|name| !matches!(*name, "id" | "children"))
+        .collect();
+    prop::sample::select(names).prop_map(str::to_owned)
+}
+
+/// One of the three ways an instance overrides a node: properties, a replacement node or new children.
+fn arb_override(
+    node: impl Strategy<Value = Node> + Clone + 'static,
+) -> impl Strategy<Value = Override> {
+    prop_oneof![
+        btree_map(arb_patch_key(), arb_json(), 0..3)
+            .prop_map(|map| Override::Props(NodePatch::new(map).expect("listed names"))),
+        node.clone()
+            .prop_map(|node| Override::Replace(Box::new(node))),
+        vec(node, 0..3).prop_map(Override::Children),
+    ]
 }
 
 fn arb_uniforms() -> impl Strategy<Value = BTreeMap<String, Value<Uniform>>> {
@@ -516,15 +549,7 @@ fn arb_leaf() -> impl Strategy<Value = Node> {
         (
             arb_common(),
             arb_text(),
-            btree_map(
-                arb_text(),
-                arb_value(prop_oneof![
-                    any::<bool>().prop_map(ScriptInput::Bool),
-                    arb_f64().prop_map(ScriptInput::Number),
-                    arb_text().prop_map(ScriptInput::Text),
-                ]),
-                0..3
-            ),
+            btree_map(arb_text(), arb_value(arb_scalar()), 0..3),
             any::<bool>()
         )
             .prop_map(|(c, src, inputs, clip)| Node::Script(build!(
@@ -664,14 +689,14 @@ fn arb_node() -> impl Strategy<Value = Node> {
                 arb_common(),
                 arb_id_text(),
                 btree_map("[A-Za-z]{1,6}", "[A-Za-z]{1,6}", 0..3),
-                btree_map("[a-z]{1,6}", arb_json(), 0..3),
+                btree_map("[a-z]{1,6}", arb_scalar(), 0..3),
                 btree_map(
                     vec(arb_node_id(), 1..4).prop_map(|ids| {
                         let mut it = ids.into_iter();
                         let first = NodeIdPath::from(it.next().expect("one id"));
                         it.fold(first, NodeIdPath::join)
                     }),
-                    arb_json(),
+                    arb_override(inner.clone()),
                     0..3,
                 ),
                 btree_map(arb_node_id(), vec(inner, 0..3), 0..3),

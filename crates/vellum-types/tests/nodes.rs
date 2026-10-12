@@ -85,7 +85,7 @@ fn common_fields_round_trip() {
     let node = canonical(with(
         "rect",
         json!({
-            "visible": {"$var": "flag/show-card"},
+            "visible": {"$var": "va000001"},
             "locked": true,
             "opacity": 0.5,
             "rotation": 90.0,
@@ -147,10 +147,10 @@ fn padding_takes_one_two_or_four_values_and_corner_radius_one_or_four() {
     canonical(with("frame", json!({"padding": 8.0})));
     canonical(with("frame", json!({"padding": [8.0, 16.0]})));
     canonical(with("frame", json!({"padding": [1.0, 2.0, 3.0, 4.0]})));
-    canonical(with("frame", json!({"padding": {"$var": "space/md"}})));
+    canonical(with("frame", json!({"padding": {"$var": "va000002"}})));
     canonical(with(
         "frame",
-        json!({"padding": [{"$var": "space/md"}, 4.0]}),
+        json!({"padding": [{"$var": "va000002"}, 4.0]}),
     ));
     canonical(with("rect", json!({"cornerRadius": [1.0, 2.0, 3.0, 4.0]})));
     for bad in [
@@ -222,7 +222,7 @@ fn text_has_rich_runs_alignment_and_resize() {
                     "font": "Inter",
                     "weight": 700,
                     "style": "italic",
-                    "size": {"$var": "type/body"},
+                    "size": {"$var": "va000003"},
                     "lineHeight": 24.0,
                     "letterSpacing": 0.2,
                     "underline": true,
@@ -262,15 +262,15 @@ fn image_icon_and_instance_round_trip() {
     ));
     canonical(with(
         "icon",
-        json!({"library": "lucide", "icon": {"$var": "icon/main"}, "weight": 400}),
+        json!({"library": "lucide", "icon": {"$var": "va000004"}, "weight": 400}),
     ));
     canonical(with(
         "instance",
         json!({
             "componentId": "comp000001",
             "variant": {"Size": "Large"},
-            "props": {"label": "Save", "count": 3},
-            "overrides": {"aaaaaaaaaa/bbbbbbbbbb": {"fills": []}},
+            "props": {"label": "Save", "count": 3.0},
+            "overrides": {"aaaaaaaaaa/bbbbbbbbbb": {"props": {"fills": []}}},
             "slotContent": {"slot000001": [with("rect", json!({"id": "child000001"}))]}
         }),
     ));
@@ -283,7 +283,7 @@ fn script_note_context_prompt_and_embed_round_trip() {
         "script",
         json!({
             "src": "scripts/grid.js",
-            "inputs": {"columns": 3.0, "label": "Hi", "dense": false, "gap": {"$var": "space/md"}},
+            "inputs": {"columns": 3.0, "label": "Hi", "dense": false, "gap": {"$var": "va000002"}},
             "clip": true
         }),
     ));

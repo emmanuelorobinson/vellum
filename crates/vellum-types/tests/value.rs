@@ -12,11 +12,8 @@ fn a_value_is_a_literal_or_a_variable_reference() {
     let literal: Value<f64> = parse("0.5");
     assert_eq!(literal, Value::Literal(0.5));
 
-    let var: Value<f64> = parse(r#"{"$var":"opacity/muted"}"#);
-    assert_eq!(
-        var,
-        Value::Var(VarRef::new("opacity/muted").expect("var ref"))
-    );
+    let var: Value<f64> = parse(r#"{"$var":"va000001"}"#);
+    assert_eq!(var, Value::Var(VarRef::new("va000001").expect("var ref")));
 }
 
 #[test]
@@ -26,20 +23,25 @@ fn a_value_prints_the_same_way_it_was_read() {
         json!(true)
     );
     assert_eq!(
-        serde_json::to_value(Value::<f64>::Var(
-            VarRef::new("color/primary").expect("var")
-        ))
-        .expect("ser"),
-        json!({"$var": "color/primary"})
+        serde_json::to_value(Value::<f64>::Var(VarRef::new("va000002").expect("var")))
+            .expect("ser"),
+        json!({"$var": "va000002"})
     );
 }
 
 #[test]
-fn a_variable_reference_is_not_empty_and_has_no_other_keys() {
+fn a_variable_reference_is_an_id_and_has_no_other_keys() {
     assert!(VarRef::new("").is_err());
     assert!(serde_json::from_str::<Value<f64>>(r#"{"$var":""}"#).is_err());
     assert!(serde_json::from_str::<Value<f64>>(r#"{"$var":"a","extra":1}"#).is_err());
     assert!(serde_json::from_str::<Value<f64>>(r#"{"var":"a"}"#).is_err());
+}
+
+#[test]
+fn a_variable_reference_names_its_variable_by_id_not_by_path() {
+    // Ids never hold a slash (guide §9), so a reference that does is a path and is refused.
+    assert!(VarRef::new("color/primary").is_err());
+    assert!(serde_json::from_str::<Value<f64>>(r#"{"$var":"color/primary"}"#).is_err());
 }
 
 #[test]
@@ -98,8 +100,8 @@ fn a_colour_rejects_anything_else() {
 fn sizes_have_four_forms() {
     assert_eq!(parse::<Size>("120"), Size::Fixed(Value::Literal(120.0)));
     assert_eq!(
-        parse::<Size>(r#"{"$var":"size/card"}"#),
-        Size::Fixed(Value::Var(VarRef::new("size/card").expect("var")))
+        parse::<Size>(r#"{"$var":"va000003"}"#),
+        Size::Fixed(Value::Var(VarRef::new("va000003").expect("var")))
     );
     assert_eq!(parse::<Size>(r#""hug""#), Size::Hug { fallback: None });
     assert_eq!(parse::<Size>(r#""fill""#), Size::Fill { fallback: None });

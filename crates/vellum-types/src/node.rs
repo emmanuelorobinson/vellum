@@ -12,6 +12,7 @@ use serde_json::Value as Json;
 use ts_rs::TS;
 
 use crate::color::Color;
+use crate::component::Override;
 use crate::defaults::{
     full_sweep, is_default, is_false, is_full_sweep, is_opaque, is_visible, opaque, visible,
 };
@@ -25,7 +26,81 @@ use crate::ids::{AssetId, ComponentId, NodeId, NodeIdPath, StyleId};
 use crate::paint::Paint;
 use crate::stroke::Stroke;
 use crate::text::TextRun;
-use crate::value::Value;
+use crate::value::{Scalar, Value};
+
+/// Every property a node can have, in the file's spelling. The `type` tag is not one of them: it names the
+/// kind. A props override (`NodePatch`) may set any of these except the id and the children. A test checks
+/// this list against the node schemas, so the two cannot drift apart.
+pub const NODE_PROPERTIES: &[&str] = &[
+    "id",
+    "name",
+    "visible",
+    "locked",
+    "opacity",
+    "rotation",
+    "flipX",
+    "flipY",
+    "position",
+    "width",
+    "height",
+    "fills",
+    "stroke",
+    "effects",
+    "blendMode",
+    "agentNotes",
+    "prototype",
+    "metadata",
+    "layout",
+    "columns",
+    "rows",
+    "gap",
+    "padding",
+    "justify",
+    "align",
+    "layoutIncludesStroke",
+    "clip",
+    "cornerRadius",
+    "theme",
+    "slot",
+    "children",
+    "innerRadius",
+    "startAngle",
+    "sweepAngle",
+    "sides",
+    "points",
+    "innerRatio",
+    "path",
+    "viewBox",
+    "fillRule",
+    "op",
+    "content",
+    "verticalAlign",
+    "resize",
+    "textStyle",
+    "asset",
+    "fit",
+    "crop",
+    "library",
+    "icon",
+    "weight",
+    "fill",
+    "componentId",
+    "variant",
+    "props",
+    "overrides",
+    "slotContent",
+    "src",
+    "inputs",
+    "color",
+    "pointsAt",
+    "engine",
+    "model",
+    "url",
+    "device",
+    "zoom",
+    "scroll",
+    "radius",
+];
 
 /// Declares a node struct: the fields common to every node, then the ones for this kind.
 macro_rules! node_struct {
@@ -319,19 +394,19 @@ node_struct!(
 );
 
 node_struct!(
-    /// An instance of a component. Prompt 8 gives variants, props and overrides their full types.
+    /// An instance of a component: the component's tree, with this instance's choices applied.
     InstanceNode {
         /// The component this is an instance of.
         component_id: ComponentId,
-        /// Variant choices, by property.
+        /// The axis values chosen, by axis (`{"State": "hover"}`). The variant whose values equal these applies.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
         variant: BTreeMap<String, String>,
-        /// Component property values. Placeholder JSON until Prompt 8.
+        /// The values of the component's props. A prop without one takes its default.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-        props: BTreeMap<String, Json>,
-        /// Overrides by node id path. Placeholder JSON until Prompt 8.
+        props: BTreeMap<String, Scalar>,
+        /// Changes to nodes inside the component's tree, by id path from its root.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-        overrides: BTreeMap<NodeIdPath, Json>,
+        overrides: BTreeMap<NodeIdPath, Override>,
         /// What fills each of the component's slots, by slot node id.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
         slot_content: BTreeMap<NodeId, Vec<Node>>,
@@ -346,7 +421,7 @@ node_struct!(
         src: String,
         /// Values for the script's declared inputs, by name.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-        inputs: BTreeMap<String, Value<ScriptInput>>,
+        inputs: BTreeMap<String, Value<Scalar>>,
         /// Clips the output to the node's box.
         #[serde(default, skip_serializing_if = "is_false")]
         clip: bool,
@@ -417,19 +492,6 @@ pub struct Slot {
     /// Components that usually go here. Suggestions guide people and agents and never restrict.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub suggested: Vec<ComponentId>,
-}
-
-/// A script input: a boolean, number or string.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(untagged)]
-#[ts(export)]
-pub enum ScriptInput {
-    /// `true` or `false`.
-    Bool(bool),
-    /// A number.
-    Number(f64),
-    /// A string.
-    Text(String),
 }
 
 /// A prototype link: where to go and how.

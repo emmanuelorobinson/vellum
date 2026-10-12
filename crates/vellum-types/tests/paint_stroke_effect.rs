@@ -62,7 +62,7 @@ fn there_are_eighteen_blend_modes_in_the_documented_order() {
 fn a_solid_paint_is_a_colour_or_a_variable() {
     canonical::<Paint>(json!({"type": "solid", "color": "#336699"}));
     canonical::<Paint>(json!({"type": "solid", "color": "#33669980"}));
-    canonical::<Paint>(json!({"type": "solid", "color": {"$var": "color/primary"}}));
+    canonical::<Paint>(json!({"type": "solid", "color": {"$var": "va000101"}}));
 }
 
 #[test]
@@ -81,7 +81,7 @@ fn gradients_are_linear_radial_or_angular() {
             "kind": kind,
             "stops": [
                 {"color": "#000000", "position": 0.0},
-                {"color": {"$var": "color/accent"}, "position": 0.5},
+                {"color": {"$var": "va000102"}, "position": 0.5},
                 {"color": "#FFFFFF", "position": 1.0}
             ]
         }));
@@ -109,7 +109,7 @@ fn a_mesh_paint_has_a_grid_of_points_with_optional_handles() {
         "points": [
             {"x": 0.0, "y": 0.0, "color": "#FF0000"},
             {"x": 1.0, "y": 0.0, "color": "#00FF00"},
-            {"x": 0.0, "y": 1.0, "color": {"$var": "color/a"}},
+            {"x": 0.0, "y": 1.0, "color": {"$var": "va000103"}},
             {
                 "x": 1.0, "y": 1.0, "color": "#FFFFFF",
                 "handles": {
@@ -143,7 +143,7 @@ fn a_shader_paint_binds_uniforms_of_every_kind() {
             "offset": [1.0, 2.0],
             "light": [1.0, 2.0, 3.0],
             "rect": [1.0, 2.0, 3.0, 4.0],
-            "scale": {"$var": "number/scale"}
+            "scale": {"$var": "va000104"}
         }
     }));
     canonical::<Paint>(json!({"type": "shader", "src": "shaders/noise.sksl"}));
@@ -177,7 +177,7 @@ fn a_stroke_has_paints_width_align_cap_join_and_dash() {
             {"type": "solid", "color": "#000000"},
             {"type": "gradient", "kind": "linear", "stops": [], "visible": false}
         ],
-        "width": {"$var": "stroke/thin"},
+        "width": {"$var": "va000105"},
         "align": "outside",
         "cap": "round",
         "join": "bevel",
@@ -205,8 +205,8 @@ fn shadows_have_offset_blur_spread_colour_and_blend_mode() {
             "type": kind, "x": 0.0, "y": 4.0, "blur": 8.0, "color": "#00000040"
         }));
         canonical::<Effect>(json!({
-            "type": kind, "x": 1.0, "y": 2.0, "blur": {"$var": "blur/md"}, "spread": 3.0,
-            "color": {"$var": "color/shadow"}, "blendMode": "multiply", "visible": false
+            "type": kind, "x": 1.0, "y": 2.0, "blur": {"$var": "va000106"}, "spread": 3.0,
+            "color": {"$var": "va000107"}, "blendMode": "multiply", "visible": false
         }));
     }
 }
@@ -215,7 +215,7 @@ fn shadows_have_offset_blur_spread_colour_and_blend_mode() {
 fn blurs_and_shader_effects_round_trip() {
     canonical::<Effect>(json!({"type": "layer-blur", "radius": 4.0}));
     canonical::<Effect>(
-        json!({"type": "background-blur", "radius": {"$var": "blur/glass"}, "visible": false}),
+        json!({"type": "background-blur", "radius": {"$var": "va000108"}, "visible": false}),
     );
     canonical::<Effect>(json!({
         "type": "shader", "src": "shaders/glow.sksl", "uniforms": {"strength": 0.8}
