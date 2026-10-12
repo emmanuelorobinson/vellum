@@ -156,8 +156,8 @@ Keep it factual and short. Do not record secrets, and do not paste design conten
 | `pnpm clean-room` | no file contains a string from `scripts/clean-room-denylist.txt`, and every `ported-from:` header has an MIT or Apache-2.0 row in `THIRD_PARTY_NOTICES.md` |
 | `pnpm copy-lint` | `@vellum/config` holds exactly the guide's Appendix B strings, and no UI code repeats them |
 | `pnpm design:open` | copy `docs/design/vellum.pen` to `.design-cache/vellum.readonly.pen` (no write bit) and open that copy in pen.dev; `--no-open` only copies |
-| `pnpm design:snapshot` | regenerate `docs/design/snapshots/` (PNG at 1x and 2x, `inventory.json`) with the pen CLI on the read-only copy. Needs `pen login` or `PEN_CLI_KEY`; run locally, not in CI |
-| `pnpm design:check` | no pen.dev needed: the snapshots match `vellum.pen`'s checksum, every screen, theme and width DESIGN.md asks for exists, names follow the file's convention. Runs in CI |
+| `pnpm design:snapshot` | regenerate `docs/design/snapshots/` (PNG at 1x and 2x, `inventory.json`) with the pen CLI on the read-only copy. Needs `pen login` or `PEN_CLI_KEY`; run locally, not in CI. Only `inventory.json` is committed; the PNGs are gitignored |
+| `pnpm design:check` | no pen.dev needed: `inventory.json` matches `vellum.pen`'s checksum, every PNG it names exists when any are present locally, every screen, theme and width DESIGN.md asks for exists, names follow the file's convention. Runs in CI |
 | `layout-oracle` `fixtures:record` | later prompts; exit non-zero until then |
 
 ## Layout

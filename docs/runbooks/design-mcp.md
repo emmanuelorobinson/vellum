@@ -2,7 +2,8 @@
 
 The design is `docs/design/vellum.pen`, made in pen.dev. It is read-only specification. Agents read it
 through pen.dev's MCP server (it shows up as `pencil` in the agent's MCP list) on a read-only copy, and CI
-reads the committed snapshots and `inventory.json` instead. This page is the one place that says how to set
+reads the committed `inventory.json` instead. The snapshot PNGs are gitignored: `pnpm design:snapshot` makes them
+locally, and `pnpm design:check` checks them only when they are present. This page is the one place that says how to set
 that up and what to do when it does not work. The session rules come from guide §2.1 and AGENTS.md.
 
 ## Set up (once per machine)
@@ -95,7 +96,8 @@ missing snapshot can never be excused.
 
 The app is closed, you are not signed in, or you are in CI:
 
-1. Use `docs/design/snapshots/` and `inventory.json`. UI prompts do not start without at least the snapshots.
+1. Use `docs/design/snapshots/` and `inventory.json`. UI prompts do not start without at least the snapshots; the
+   PNGs are not in git, so if they are missing, run `pnpm design:snapshot` or ask a person to.
 2. Say so in the PR: "design read from snapshots, Pencil MCP unavailable".
 3. If `pnpm design:check` fails because the snapshots are stale, regenerate them first (above) or ask a person to.
 4. Do not fall back to reading `vellum.pen` as text. The file is encrypted and only the MCP or CLI reads it.

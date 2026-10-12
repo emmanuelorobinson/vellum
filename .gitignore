@@ -28,3 +28,6 @@ coverage/
 Thumbs.db
 .idea/
 *.swp
+
+# Design snapshot PNGs: regenerated locally by pnpm design:snapshot. Only inventory.json is committed.
+docs/design/snapshots/*.png

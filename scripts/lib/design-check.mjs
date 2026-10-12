@@ -179,5 +179,11 @@ export function checkDesign({
     );
   }
 
+  if (!snapshotExists) {
+    warnings.push({
+      message:
+        "snapshot PNGs are not in this checkout (they are gitignored); only inventory.json was checked. Run pnpm design:snapshot to make them",
+    });
+  }
   return { errors, warnings };
 }

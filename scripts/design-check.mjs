@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// CI check for the design source. Needs no pen.dev: it reads the committed inventory and snapshots.
+// CI check for the design source. Needs no pen.dev: it reads the committed inventory, and the snapshot
+// PNGs when they are present locally (they are gitignored).
 //
 //   scripts/design-check [--root <dir>]
 //
@@ -8,7 +9,7 @@
 // Rules: scripts/lib/design-check.mjs. Known differences between the design file and the guide's
 // convention are recorded in docs/design/DESIGN-GAPS.md.
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkDesign } from "./lib/design-check.mjs";
@@ -42,7 +43,11 @@ const { errors, warnings } = checkDesign({
   gapsText: optional(at("docs/design/DESIGN-GAPS.md")),
   familyAliases:
     aliasPath && existsSync(aliasPath) ? JSON.parse(readFileSync(aliasPath, "utf8")) : {},
-  snapshotExists: (file) => existsSync(at("docs/design/snapshots", file)),
+  // The PNGs are gitignored (only inventory.json is committed), so CI has none and checks the inventory
+  // alone. Where any PNG is present, every one the inventory names must be.
+  snapshotExists: readdirSync(at("docs/design/snapshots")).some((f) => f.endsWith(".png"))
+    ? (file) => existsSync(at("docs/design/snapshots", file))
+    : null,
 });
 
 for (const w of warnings) console.log(`! ${w.message}`);

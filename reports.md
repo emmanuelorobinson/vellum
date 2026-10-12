@@ -27,9 +27,10 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   `~/.pencil` or Spotlight. After a save, the agent copies the file, runs `pnpm checksum:update` and
   `pnpm checksum --strict`, and regenerates the snapshots. `pnpm design:check` fails after a copy until they are
   regenerated.
-- **Decide how to keep `docs/design/snapshots/` in git** (Prompt 3). It is committed as it is in `b836d9c`: 505
-  files, 101 MB, 504 PNGs at 1x and 2x for 252 screen frames. Options: keep it, move it to Git LFS, or drop the
-  2x set.
+- **Snapshot PNGs are gitignored now, but still in history** (decided 2026-10-12). Only `inventory.json` is committed;
+  `pnpm design:snapshot` makes the PNGs locally, so a fresh clone has none until someone runs it (needs `pen login`).
+  The 504 PNGs (86 MB) committed in `b836d9c` stay in history, so clones stay large until history is rewritten
+  (`git filter-repo`) and `main` is force-pushed. That is your call.
 - **Run `pen login`, then `pnpm design:snapshot` once** (Prompt 3). The CLI path has only run against a fake
   `pen` in tests. If it works, the output should match the committed inventory byte for byte. If it does not,
   the likely cause is the `execute({ input: "<json string>" })` line format in `scripts/lib/pen-queries.mjs`.
@@ -119,7 +120,8 @@ Built:
   functions it uses are gone.
 - `docs/runbooks/design-mcp.md`, `docs/design/DESIGN-DECISIONS.md` (Appendix G, all UNDECIDED),
   `docs/design/DESIGN-GAPS.md` (14 lines), `scripts/design-component-aliases.json`.
-- `docs/design/snapshots/`: `inventory.json` (313 frames, 252 reusable components) and 504 PNGs.
+- `docs/design/snapshots/`: `inventory.json` (313 frames, 252 reusable components) and 504 PNGs (gitignored since
+  2026-10-12; `design:check` checks them only where present).
 - A CI step for `pnpm design:check`, AGENTS.md command rows, and this file.
 
 Things that differ from the guide or could not be done as written:

@@ -203,3 +203,12 @@ test("prose that mentions check=<key> outside a dated gap line excuses nothing",
 test("componentFamilies reads the bold entries of the Component library section only", () => {
   assert.deepEqual(componentFamilies(MINI_DESIGN_MD), ["Agent Panel", "Composer"]);
 });
+
+test("with no snapshot PNGs in the checkout (they are gitignored), the file check is skipped with a warning", () => {
+  const result = run(fixtureInventory(), { snapshotExists: null });
+  assert.deepEqual(messages(result), []);
+  assert.ok(
+    result.warnings.some((w) => w.message.startsWith("snapshot PNGs are not in this checkout")),
+    result.warnings.map((w) => w.message).join("\n"),
+  );
+});
