@@ -241,6 +241,11 @@ Things that differ from the guide, failed, or could not be verified:
 - **Loro on `wasm32-unknown-unknown` needs wasm-bindgen** (loro-internal enables it there), so the WASM numbers are on
   emscripten, ADR-001's target, where it needs neither.
 - **Undo is slow on large documents** (see "Needs a person").
+- **Smaller findings for later prompts** (details in the ADRs): Loro decodes lazily, so a peer's first remote import
+  after opening a document costs about 10x a later one (6.3 vs 0.5 ms at 10k; Prompt 14/63 should warm it up).
+  rquickjs on wasm32 imports one host clock function, `__rquickjs_host_now_us`; Prompt 25 decides what it returns,
+  since scripts must not read the wall clock. Noto Color Emoji is a bitmap font (CBDT), so large emoji look soft;
+  Prompt 19 should try the COLRv1 version.
 - **Only the M5 Pro.** Automerge and Yrs were not measured. Loro's WASM size without the scene generator was not
   separated.
 - **Test order:** the Rust text, Loro and QuickJS tests were written first and failed (compile errors on the missing
