@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA slots",
+    "createdWith": "tests"
+  },
+  "components": {
+    "comp000001": {
+      "name": "TEST DATA Card",
+      "root": {
+        "type": "frame",
+        "id": "croot00001",
+        "name": "TEST DATA Card",
+        "width": 100,
+        "height": 100,
+        "children": [
+          {
+            "type": "frame",
+            "id": "slot000001",
+            "name": "TEST DATA Slot",
+            "width": 80,
+            "height": 80,
+            "slot": {
+              "suggested": [
+                "comp000002"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "comp000002": {
+      "name": "TEST DATA Suggestion",
+      "root": {
+        "type": "frame",
+        "id": "suggestion",
+        "name": "TEST DATA Suggestion",
+        "width": 10,
+        "height": 10
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "canvas0001",
+      "name": "TEST DATA",
+      "children": [
+        {
+          "type": "instance",
+          "id": "inst000001",
+          "name": "TEST DATA instance",
+          "width": 100,
+          "height": 100,
+          "componentId": "comp000001",
+          "slotContent": {
+            "slot000001": [
+              {
+                "type": "rect",
+                "id": "ownrect001",
+                "name": "TEST DATA free choice",
+                "width": 10,
+                "height": 10
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

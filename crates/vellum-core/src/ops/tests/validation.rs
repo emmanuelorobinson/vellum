@@ -7,6 +7,7 @@ use vellum_types::{NodeKind, PageKind};
 
 use super::common::*;
 use crate::ops::{Container, Op, OpErrorKind, Transaction, apply};
+use crate::ports::DocStore;
 
 fn insert(to: crate::ops::Place, node: vellum_types::Node) -> Op {
     Op::Insert {
@@ -427,6 +428,112 @@ fn a_refused_batch_leaves_no_trace() {
     assert_eq!(error.kind, OpErrorKind::UnknownNode(id("rect000003")));
     assert_eq!(store.applied, 0, "the store never saw the batch");
     assert_eq!(store.doc, document());
+}
+
+#[test]
+fn changing_an_alias_target_type_rejects_the_whole_batch() {
+    let mut store = Store::new(document());
+    let mut ids = Ids::default();
+    apply(
+        &mut store,
+        &mut ids,
+        tx(vec![Op::SetVariables {
+            set: BTreeMap::from([(
+                var_id("color00002"),
+                variable(json!({
+                    "type": "color", "name": "TEST DATA alias", "values": [{"$alias": "color00001"}]
+                })),
+            )]),
+            remove: BTreeSet::new(),
+        }]),
+    )
+    .expect("the alias starts valid");
+    let before = store.snapshot();
+    let before_applied = store.applied;
+    let before_undo = store.undo.clone();
+    let error = apply(&mut store, &mut ids, tx(vec![
+        Op::Delete { id: id("rect000003") },
+        Op::SetVariables {
+            set: BTreeMap::from([(var_id("color00001"), variable(json!({
+                "type": "number", "name": "TEST DATA changed type", "values": [{"value": 16}]
+            })))]),
+            remove: BTreeSet::new(),
+        },
+    ])).expect_err("an unchanged color alias cannot refer to a number variable");
+    assert_eq!(error.op_index, 1);
+    assert_eq!(error.location(), "ops[1].set.color00001");
+    assert_eq!(
+        error.kind,
+        OpErrorKind::AliasType {
+            alias: var_id("color00001"),
+            expected: vellum_types::VariableType::Color,
+            found: vellum_types::VariableType::Number,
+        }
+    );
+    assert_eq!(store.snapshot(), before);
+    assert_eq!(store.applied, before_applied);
+    assert_eq!(store.undo, before_undo);
+}
+
+#[test]
+fn alias_and_target_can_change_type_together_and_be_undone() {
+    let mut store = Store::new(document());
+    let mut ids = Ids::default();
+    apply(&mut store, &mut ids, tx(vec![Op::SetVariables {
+        set: BTreeMap::from([(var_id("number0002"), variable(json!({
+            "type": "number", "name": "TEST DATA alias", "values": [{"$alias": "number0001"}]
+        })))]),
+        remove: BTreeSet::new(),
+    }])).expect("the alias starts valid");
+    let before = store.snapshot();
+    apply(&mut store, &mut ids, tx(vec![Op::SetVariables {
+        set: BTreeMap::from([
+            (var_id("number0001"), variable(json!({
+                "type": "boolean", "name": "TEST DATA target", "values": [{"value": true}]
+            }))),
+            (var_id("number0002"), variable(json!({
+                "type": "boolean", "name": "TEST DATA alias", "values": [{"$alias": "number0001"}]
+            }))),
+        ]),
+        remove: BTreeSet::new(),
+    }])).expect("the final definitions agree regardless of map order");
+    assert!(crate::ops::check_document(&store.snapshot()).is_empty());
+    store
+        .undo(&person(ALICE))
+        .expect("one undo step for both definitions");
+    assert_eq!(store.snapshot(), before);
+}
+
+#[test]
+fn an_alias_with_multiple_values_names_the_target_that_changed_type() {
+    let mut store = Store::new(document());
+    let mut ids = Ids::default();
+    apply(&mut store, &mut ids, tx(vec![Op::SetVariables {
+        set: BTreeMap::from([
+            (var_id("color00002"), variable(json!({
+                "type": "color", "name": "TEST DATA target", "values": [{"value": "#000000"}]
+            }))),
+            (var_id("color00003"), variable(json!({
+                "type": "color", "name": "TEST DATA alias",
+                "values": [{"$alias": "color00001"}, {"$alias": "color00002"}]
+            }))),
+        ]),
+        remove: BTreeSet::new(),
+    }])).expect("both alias values start valid");
+    let before = store.snapshot();
+    let error = apply(&mut store, &mut ids, tx(vec![Op::SetVariables {
+        set: BTreeMap::from([
+            (var_id("color00001"), variable(json!({
+                "type": "color", "name": "TEST DATA valid target", "values": [{"value": "#FFFFFF"}]
+            }))),
+            (var_id("color00002"), variable(json!({
+                "type": "number", "name": "TEST DATA invalid target", "values": [{"value": 16}]
+            }))),
+        ]),
+        remove: BTreeSet::new(),
+    }])).expect_err("the second target changed type");
+    assert_eq!(error.location(), "ops[0].set.color00002");
+    assert_eq!(store.snapshot(), before);
 }
 
 #[test]

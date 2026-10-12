@@ -64,6 +64,12 @@ pub struct StrokeStyle {
 pub trait PathOps {
     /// `a` combined with `b`. The result lies within the union of the inputs' bounds.
     fn boolean(&self, a: &Path, b: &Path, op: BoolOp) -> Path;
+    /// Expands the stroke geometry to a filled path. Adapters without stroking refuse explicitly.
+    /// Dash and per-side stroke geometry are not represented by StrokeStyle and must be refused by
+    /// the caller rather than silently outlined as a solid uniform stroke.
+    fn outline_stroke(&self, _path: &Path, _stroke: &StrokeStyle) -> Result<Path, String> {
+        Err("stroke outlining is not implemented by this adapter".into())
+    }
     /// The smallest rectangle holding the path, grown to hold its stroke when there is one. None for a path
     /// that draws nothing.
     fn bounds(&self, path: &Path, stroke: Option<&StrokeStyle>) -> Option<Rect>;

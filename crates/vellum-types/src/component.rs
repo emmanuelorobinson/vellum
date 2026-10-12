@@ -223,3 +223,10 @@ impl fmt::Display for PatchError {
 }
 
 impl std::error::Error for PatchError {}
+
+impl NodePatch {
+    /// Later properties win. Used to compose variant, instance and scale overrides.
+    pub fn overlay(&mut self, later: &NodePatch) {
+        self.0.extend(later.0.clone());
+    }
+}

@@ -6,8 +6,9 @@
 //! [`DocStore`] as a [`Commit`], which nothing outside this module can build, so `DocStore::apply` is reachable
 //! from here alone (the trybuild tests in `tests/write-path/` prove it).
 //!
-//! Prompt 11 holds the structural ops. Component, slot, scale, boolean, align and flip ops are Prompt 12's.
+//! Structural, component, slot and geometric operations all use this transaction path.
 
+mod advanced;
 mod check;
 mod edit;
 mod lower;
@@ -18,7 +19,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use vellum_types::{
-    Document, Node, NodeId, NodeKind, NodePatch, Origin, PageId, Variable, VariableId, VariableType,
+    BoolOp, ComponentId, Document, Node, NodeId, NodeIdPath, NodeKind, NodePatch, Origin, PageId,
+    Point, Variable, VariableId, VariableType,
 };
 
 pub use check::check_document;
@@ -43,6 +45,40 @@ pub struct Place {
     pub parent: Parent,
     /// The index; equal to the number of children appends.
     pub index: usize,
+}
+
+/// An axis in the parent's coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Axis {
+    /// Left to right.
+    Horizontal,
+    /// Top to bottom.
+    Vertical,
+}
+/// The edge or centre to align.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Alignment {
+    /// Left or top.
+    Start,
+    /// Centre.
+    Center,
+    /// Right or bottom.
+    End,
+}
+
+/// Derived geometry and resolved numbers supplied by the composition root. Bounds and paths are in
+/// the node's parent coordinates, before rotation/flip; callers resolve layout, themes and text.
+/// Missing derived data is refused, never guessed. Fixed literal boxes need no entry.
+#[derive(Default)]
+pub struct Inputs<'a> {
+    /// Measured boxes (needed for hug/fill and bound dimensions).
+    pub bounds: BTreeMap<NodeId, crate::ports::Rect>,
+    /// Theme-resolved numeric variables.
+    pub numbers: BTreeMap<VariableId, f64>,
+    /// Paths transformed into parent coordinates.
+    pub paths: BTreeMap<NodeId, crate::ports::Path>,
+    /// The path adapter used for booleans and outlines.
+    pub path_ops: Option<&'a dyn crate::ports::PathOps>,
 }
 
 /// One change to a document.
@@ -121,6 +157,93 @@ pub enum Op {
     /// effects go with it.
     Ungroup {
         /// The group: not rotated or flipped.
+        id: NodeId,
+    },
+    /// Makes a local component with a fresh definition tree and leaves an instance with the same id.
+    CreateComponent {
+        /// The source element.
+        id: NodeId,
+        /// The unused component id.
+        component_id: ComponentId,
+    },
+    /// Makes a component, or detaches its only instance and removes its definition. Refuses a
+    /// definition still referenced elsewhere.
+    ToggleComponent {
+        /// Element or instance.
+        id: NodeId,
+        /// New component id, or the instance's existing component id.
+        component_id: ComponentId,
+    },
+    /// Expands one instance; nested instances and variable bindings remain linked.
+    Detach {
+        /// The instance.
+        id: NodeId,
+    },
+    /// Replaces a descendant through an override, leaving the main component untouched.
+    ReplaceInInstance {
+        /// Instance.
+        id: NodeId,
+        /// Exact path from the component root.
+        path: NodeIdPath,
+        /// Replacement subtree.
+        node: Box<Node>,
+    },
+    /// Marks an empty, non-root frame in a component as a slot. Suggestions are advisory.
+    MakeSlot {
+        /// Empty frame.
+        id: NodeId,
+        /// Suggested local components.
+        suggested: Vec<ComponentId>,
+    },
+    /// Scales all lengths, with a normalized anchor in [0, 1]². Layout sizes become fixed.
+    Scale {
+        /// Subtree root.
+        id: NodeId,
+        /// Positive finite factor.
+        factor: f64,
+        /// Anchor in the root's untransformed box.
+        anchor: Point,
+    },
+    /// Combines sibling shapes in an editable boolean node; geometry is evaluated by PathOps.
+    Boolean {
+        /// At least two siblings, in document stacking order.
+        ids: Vec<NodeId>,
+        /// Id for the new boolean.
+        id: NodeId,
+        /// Combination.
+        op: BoolOp,
+    },
+    /// Replaces a stroked leaf with its stroke outline as a filled vector.
+    OutlineStroke {
+        /// Stroked leaf.
+        id: NodeId,
+    },
+    /// Aligns two or more absolute siblings to their collective bounds.
+    Align {
+        /// Siblings.
+        ids: Vec<NodeId>,
+        /// Axis.
+        axis: Axis,
+        /// Edge or centre.
+        alignment: Alignment,
+    },
+    /// Spaces three or more absolute siblings with equal edge gaps, keeping the extremes fixed.
+    Distribute {
+        /// Siblings.
+        ids: Vec<NodeId>,
+        /// Axis.
+        axis: Axis,
+    },
+    /// Mirrors a node about its own centre along the chosen axis.
+    Flip {
+        /// Node.
+        id: NodeId,
+        /// Axis.
+        axis: Axis,
+    },
+    /// Explicitly unavailable until the script output pipeline in Prompt 26.
+    ConvertScript {
+        /// Script node.
         id: NodeId,
     },
 }
@@ -239,6 +362,18 @@ pub enum OpErrorKind {
     },
     /// Aliases lead back to this variable.
     AliasCycle(VariableId),
+    /// No local component with this id.
+    UnknownComponent(ComponentId),
+    /// Component id is taken.
+    DuplicateComponent(ComponentId),
+    /// Component is still referenced.
+    ComponentInUse(ComponentId),
+    /// Invalid component/slot/geometry input, with a concrete reason.
+    InvalidInput(String),
+    /// A measured box, resolved value or geometry adapter is required.
+    MissingInput(String),
+    /// A later prompt owns this operation.
+    NotImplemented(&'static str),
 }
 
 fn container_name(container: Container) -> String {
@@ -251,6 +386,12 @@ fn container_name(container: Container) -> String {
 impl fmt::Display for OpErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::UnknownComponent(id) => write!(f, "there is no local component {id}."),
+            Self::DuplicateComponent(id) => write!(f, "component {id} already exists."),
+            Self::ComponentInUse(id) => write!(f, "component {id} is still used."),
+            Self::InvalidInput(reason) => f.write_str(reason),
+            Self::MissingInput(reason) => write!(f, "missing resolved input: {reason}"),
+            Self::NotImplemented(op) => write!(f, "{op}: not implemented yet"),
             Self::Empty => f.write_str("the change has nothing in it."),
             Self::UnknownPage(id) => write!(f, "there is no page {id}."),
             Self::UnknownNode(id) => write!(f, "there is no layer {id}."),
@@ -329,12 +470,22 @@ pub struct Plan {
     pub inverse: Vec<Edit>,
     /// What changes, attributed to the transaction's origin.
     pub changes: ChangeSet,
-    /// The id of each copy made, by the index of the op that made it.
+    /// The id of each copy or boolean container made, by the index of the op that made it.
     pub created: BTreeMap<usize, NodeId>,
 }
 
 /// Checks `tx` against `doc` and lowers it to edits. Reads only; nothing is applied anywhere.
 pub fn plan(doc: &Document, tx: &Transaction, ids: &mut dyn IdGen) -> Result<Plan, OpError> {
+    plan_with_inputs(doc, tx, ids, &Inputs::default())
+}
+
+/// As [`plan`], with derived geometry and resolved variable values from the engine.
+pub fn plan_with_inputs(
+    doc: &Document,
+    tx: &Transaction,
+    ids: &mut dyn IdGen,
+    inputs: &Inputs<'_>,
+) -> Result<Plan, OpError> {
     if tx.ops.is_empty() {
         return Err(OpError {
             op_index: 0,
@@ -345,12 +496,17 @@ pub fn plan(doc: &Document, tx: &Transaction, ids: &mut dyn IdGen) -> Result<Pla
     let mut planner = lower::Planner::new(doc.clone());
     for (op_index, op) in tx.ops.iter().enumerate() {
         planner
-            .lower(op_index, op, ids)
+            .lower(op_index, op, ids, inputs)
             .map_err(|(path, kind)| OpError {
                 op_index,
                 path,
                 kind,
             })?;
+        advanced::validate_references(&planner.doc).map_err(|kind| OpError {
+            op_index,
+            path: "id".into(),
+            kind,
+        })?;
     }
     Ok(planner.finish(tx.origin.clone()))
 }
@@ -360,7 +516,7 @@ pub fn plan(doc: &Document, tx: &Transaction, ids: &mut dyn IdGen) -> Result<Pla
 pub struct Applied {
     /// What changed, from the store.
     pub changes: ChangeSet,
-    /// The id of each copy made, by the index of the op that made it.
+    /// The id of each copy or boolean container made, by the index of the op that made it.
     pub created: BTreeMap<usize, NodeId>,
 }
 
@@ -371,7 +527,17 @@ pub fn apply<S: DocStore + ?Sized>(
     ids: &mut dyn IdGen,
     tx: Transaction,
 ) -> Result<Applied, OpError> {
-    let plan = plan(&store.snapshot(), &tx, ids)?;
+    apply_with_inputs(store, ids, tx, &Inputs::default())
+}
+
+/// The one write path with derived geometry, for scale, booleans and stroke outlines.
+pub fn apply_with_inputs<S: DocStore + ?Sized>(
+    store: &mut S,
+    ids: &mut dyn IdGen,
+    tx: Transaction,
+    inputs: &Inputs<'_>,
+) -> Result<Applied, OpError> {
+    let plan = plan_with_inputs(&store.snapshot(), &tx, ids, inputs)?;
     let commit = Commit::new(tx.origin, plan.edits, plan.inverse, plan.changes);
     let changes = store.apply(commit);
     Ok(Applied {

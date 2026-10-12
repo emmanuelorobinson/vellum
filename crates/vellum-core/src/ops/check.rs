@@ -1,7 +1,7 @@
 //! What "valid" means for a whole document, as far as the op layer keeps it so: ids are unique across pages
 //! and components, every node may sit in its parent, every `$var` names a variable of this document, and
 //! aliases name a variable of the same type without coming back. Invariant 1's property test checks every
-//! accepted batch against this. Instances naming a component that exists is Prompt 12's and 17's.
+//! accepted batch against this. Local component references, override paths and slot placement are checked too.
 
 use std::collections::BTreeSet;
 
@@ -60,6 +60,9 @@ pub fn check_document(doc: &Document) -> Vec<String> {
                 "variable {id} refers back to itself through aliases"
             ));
         }
+    }
+    if let Err(error) = super::advanced::validate_references(doc) {
+        problems.push(error.to_string());
     }
     problems
 }

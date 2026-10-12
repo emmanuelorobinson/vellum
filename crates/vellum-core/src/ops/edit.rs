@@ -1,14 +1,15 @@
-//! Edits: the five primitive changes every op lowers to and every store applies.
+//! Edits: the primitive changes every op lowers to and every store applies.
 //!
 //! An edit checks the shape of the tree itself (the target exists, the parent can hold the child, ids stay
 //! unique, nothing moves into itself or across a page/component boundary) and returns its exact inverse, so
 //! undo, redo and sync replay edits without going around those checks. What an op means (patches, variables,
-//! wrappers) is checked one level up, in `plan`.
+//! wrappers) is checked one level up, in `plan`. Component references are also checked after replay.
 
 use std::collections::BTreeSet;
 
 use vellum_types::{
-    ComponentId, Document, Node, NodeId, NodeKind, Origin, PageId, PageKind, Variable, VariableId,
+    Component, ComponentId, Document, Node, NodeId, NodeKind, Origin, PageId, PageKind, Variable,
+    VariableId,
 };
 
 use super::{OpErrorKind, Parent, Place};
@@ -40,6 +41,13 @@ pub enum Edit {
     Set {
         /// The node as it should read.
         node: Box<Node>,
+    },
+    /// Sets or removes a component definition. Node ids are checked against the rest of the document.
+    SetComponent {
+        /// The component id.
+        id: ComponentId,
+        /// Definition, or removal.
+        component: Option<Box<Component>>,
     },
     /// Sets a variable, or removes it with `None`.
     SetVariable {
@@ -221,6 +229,20 @@ pub(crate) fn find_mut<'a>(doc: &'a mut Document, id: &NodeId) -> Option<&'a mut
 pub(crate) fn subtree_ids(node: &Node, out: &mut Vec<NodeId>) {
     out.push(node.id().clone());
     node.children().iter().for_each(|c| subtree_ids(c, out));
+    if let Node::Instance(n) = node {
+        for value in n.overrides.values() {
+            match value {
+                vellum_types::Override::Replace(node) => subtree_ids(node, out),
+                vellum_types::Override::Children(nodes) => {
+                    nodes.iter().for_each(|n| subtree_ids(n, out))
+                }
+                vellum_types::Override::Props(_) => {}
+            }
+        }
+        for children in n.slot_content.values() {
+            children.iter().for_each(|n| subtree_ids(n, out));
+        }
+    }
 }
 
 /// Every node id in the document's pages and components, in tree order.
@@ -473,6 +495,53 @@ pub(crate) fn apply_one(
                 node: Box::new(before),
             })
         }
+        Edit::SetComponent { id, component } => {
+            if let Some(component) = component {
+                if component.root.kind() != NodeKind::Frame {
+                    return Err(OpErrorKind::WrongKind {
+                        expected: NodeKind::Frame,
+                        found: component.root.kind(),
+                    });
+                }
+                let mut without = doc.clone();
+                without.components.remove(id);
+                let mut taken: BTreeSet<_> = all_ids(&without).into_iter().collect();
+                let mut added = Vec::new();
+                subtree_ids(&component.root, &mut added);
+                for node_id in added {
+                    if !taken.insert(node_id.clone()) {
+                        return Err(OpErrorKind::DuplicateId(node_id));
+                    }
+                }
+                check_kinds(&component.root, Container::Node(NodeKind::Frame))?;
+            }
+            let before = match component {
+                Some(c) => doc.components.insert(id.clone(), (**c).clone()),
+                None => Some(
+                    doc.components
+                        .remove(id)
+                        .ok_or_else(|| OpErrorKind::UnknownComponent(id.clone()))?,
+                ),
+            };
+            if let Some(c) = &before {
+                let mut removed = Vec::new();
+                subtree_ids(&c.root, &mut removed);
+                for id in removed {
+                    touched.remove(id);
+                }
+            }
+            if let Some(c) = component {
+                let mut added = Vec::new();
+                subtree_ids(&c.root, &mut added);
+                for id in added {
+                    touched.insert(id);
+                }
+            }
+            Ok(Edit::SetComponent {
+                id: id.clone(),
+                component: before.map(Box::new),
+            })
+        }
         Edit::SetVariable { id, variable } => {
             let before = match variable {
                 Some(variable) => doc.variables.insert(id.clone(), (**variable).clone()),
@@ -507,6 +576,8 @@ pub fn apply_edits(
     for (index, edit) in edits.iter().enumerate() {
         inverse.push(apply_one(&mut work, edit, &mut touched).map_err(|kind| (index, kind))?);
     }
+    super::advanced::validate_references(&work)
+        .map_err(|kind| (edits.len().saturating_sub(1), kind))?;
     inverse.reverse();
     *doc = work;
     Ok((inverse, touched.into_change_set(origin)))

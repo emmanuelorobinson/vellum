@@ -108,11 +108,16 @@ fn op() -> impl Strategy<Value = Op> {
             }
         }),
         pick(IDS).prop_map(|n| Op::Ungroup { id: id(n) }),
-        (prop::option::of(pick(VARS)), prop::option::of(pick(VARS)), pick(VARS)).prop_map(
-            |(set, remove, alias)| Op::SetVariables {
+        (prop::option::of(pick(VARS)), prop::option::of(pick(VARS)), pick(VARS), 0..4u8).prop_map(
+            |(set, remove, alias, value_kind)| Op::SetVariables {
                 set: set
                     .map(|v| {
-                        let body = json!({"type": "color", "name": "TEST DATA", "values": [{"$alias": alias}]});
+                        let body = match value_kind {
+                            0 => json!({"type": "color", "name": "TEST DATA", "values": [{"$alias": alias}]}),
+                            1 => json!({"type": "color", "name": "TEST DATA", "values": [{"value": "#000000"}]}),
+                            2 => json!({"type": "number", "name": "TEST DATA", "values": [{"value": 16}]}),
+                            _ => json!({"type": "number", "name": "TEST DATA", "values": [{"$alias": alias}]}),
+                        };
                         BTreeMap::from([(var_id(v), variable(body))])
                     })
                     .unwrap_or_default(),
@@ -139,6 +144,9 @@ proptest! {
                     accepted += 1;
                     let problems = check_document(&store.doc);
                     prop_assert!(problems.is_empty(), "an accepted batch left {problems:?}");
+                    let json = serde_json::to_value(&store.doc).expect("serialise document");
+                    let decoded: vellum_types::Document = serde_json::from_value(json).expect("schema-valid document");
+                    prop_assert_eq!(&decoded, &store.doc, "accepted state must round-trip through the format types");
                 }
                 Err(error) => {
                     prop_assert_eq!(&store.doc, &before, "refused ({}) but changed", error);

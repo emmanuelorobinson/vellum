@@ -1,0 +1,5 @@
+error[E0063]: missing field `origin` in initializer of `Transaction`
+ --> tests/write-path/transaction_without_origin.rs:4:13
+  |
+4 |     let _ = Transaction { ops: vec![] };
+  |             ^^^^^^^^^^^ missing `origin`

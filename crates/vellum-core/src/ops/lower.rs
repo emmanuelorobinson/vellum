@@ -11,9 +11,9 @@ use super::edit::{Location, Touched, apply_one, find, locate};
 use super::{Edit, Op, OpErrorKind, Parent, Place, Plan};
 use crate::ports::IdGen;
 
-type Refusal = (String, OpErrorKind);
+pub(super) type Refusal = (String, OpErrorKind);
 
-fn at(path: impl Into<String>) -> impl FnOnce(OpErrorKind) -> Refusal {
+pub(super) fn at(path: impl Into<String>) -> impl FnOnce(OpErrorKind) -> Refusal {
     let path = path.into();
     move |kind| (path, kind)
 }
@@ -75,13 +75,27 @@ fn absolute(node: &Node) -> Option<Point> {
 }
 
 /// A copy of `node` with every id fresh.
-fn renumbered(node: &Node, ids: &mut dyn IdGen) -> Node {
+pub(super) fn renumbered(node: &Node, ids: &mut dyn IdGen) -> Node {
     let mut copy = node.clone();
     fn walk(node: &mut Node, ids: &mut dyn IdGen) {
         let fresh = ids.node_id();
         set_id(node, fresh);
         if let Some(children) = node.children_mut() {
             children.iter_mut().for_each(|child| walk(child, ids));
+        }
+        if let Node::Instance(n) = node {
+            for value in n.overrides.values_mut() {
+                match value {
+                    vellum_types::Override::Replace(node) => walk(node, ids),
+                    vellum_types::Override::Children(nodes) => {
+                        nodes.iter_mut().for_each(|n| walk(n, ids))
+                    }
+                    vellum_types::Override::Props(_) => {}
+                }
+            }
+            for children in n.slot_content.values_mut() {
+                children.iter_mut().for_each(|n| walk(n, ids));
+            }
         }
     }
     walk(&mut copy, ids);
@@ -90,7 +104,7 @@ fn renumbered(node: &Node, ids: &mut dyn IdGen) -> Node {
 
 // `Node` has no id setter on purpose (an id never changes); a copy is the one place a new node is made from an
 // old one.
-fn set_id(node: &mut Node, id: NodeId) {
+pub(super) fn set_id(node: &mut Node, id: NodeId) {
     macro_rules! each {
         ($($kind:ident),*) => {
             match node { $(Node::$kind(n) => n.id = id,)* }
@@ -103,11 +117,11 @@ fn set_id(node: &mut Node, id: NodeId) {
 }
 
 pub(super) struct Planner {
-    doc: Document,
+    pub(super) doc: Document,
     edits: Vec<Edit>,
     inverse: Vec<Edit>,
     touched: Touched,
-    created: BTreeMap<usize, NodeId>,
+    pub(super) created: BTreeMap<usize, NodeId>,
 }
 
 impl Planner {
@@ -132,14 +146,14 @@ impl Planner {
         }
     }
 
-    fn edit(&mut self, edit: Edit) -> Result<(), OpErrorKind> {
+    pub(super) fn edit(&mut self, edit: Edit) -> Result<(), OpErrorKind> {
         let inverse = apply_one(&mut self.doc, &edit, &mut self.touched)?;
         self.edits.push(edit);
         self.inverse.push(inverse);
         Ok(())
     }
 
-    fn located(&self, id: &NodeId, path: &str) -> Result<Location, Refusal> {
+    pub(super) fn located(&self, id: &NodeId, path: &str) -> Result<Location, Refusal> {
         let location = locate(&self.doc, id)
             .ok_or_else(|| (path.to_owned(), OpErrorKind::UnknownNode(id.clone())))?;
         if location.is_component_root() {
@@ -148,7 +162,11 @@ impl Planner {
         Ok(location)
     }
 
-    fn variables_exist(&self, refs: BTreeSet<VariableId>, path: &str) -> Result<(), Refusal> {
+    pub(super) fn variables_exist(
+        &self,
+        refs: BTreeSet<VariableId>,
+        path: &str,
+    ) -> Result<(), Refusal> {
         match refs
             .into_iter()
             .find(|id| !self.doc.variables.contains_key(id))
@@ -158,13 +176,14 @@ impl Planner {
         }
     }
 
-    fn insert(&mut self, to: Place, node: &Node, field: &str) -> Result<(), Refusal> {
+    pub(super) fn insert(&mut self, to: Place, node: &Node, field: &str) -> Result<(), Refusal> {
         self.edit(Edit::Insert {
             to,
             node: Box::new(node.clone()),
         })
         .map_err(|kind| (insert_path(&kind, field, node), kind))?;
-        self.variables_exist(referenced_variables(node), field)
+        self.variables_exist(referenced_variables(node), field)?;
+        super::advanced::validate_references(&self.doc).map_err(at(field))
     }
 
     pub(super) fn lower(
@@ -172,6 +191,7 @@ impl Planner {
         op_index: usize,
         op: &Op,
         ids: &mut dyn IdGen,
+        inputs: &super::Inputs<'_>,
     ) -> Result<(), Refusal> {
         match op {
             Op::Insert { to, node } => self.insert(to.clone(), node, "node"),
@@ -196,7 +216,8 @@ impl Planner {
                 self.edit(Edit::Set {
                     node: Box::new(next),
                 })
-                .map_err(at("id"))
+                .map_err(at("id"))?;
+                super::advanced::validate_references(&self.doc).map_err(at("patch"))
             }
             Op::Delete { id } => self.edit(Edit::Remove { id: id.clone() }).map_err(at("id")),
             Op::Move { id, to } => self
@@ -246,6 +267,7 @@ impl Planner {
             Op::WrapInFrame { ids, frame } => self.wrap(ids, frame, NodeKind::Frame, "frame"),
             Op::Group { ids, group } => self.wrap(ids, group, NodeKind::Group, "group"),
             Op::Ungroup { id } => self.ungroup(id),
+            _ => self.advanced(op_index, op, ids, inputs),
         }
     }
 
@@ -285,10 +307,40 @@ impl Planner {
         for (id, variable) in set {
             check_aliases(&self.doc, id, variable).map_err(at(format!("set.{id}")))?;
         }
+        // A changed target can invalidate an alias whose own definition was not in `set`.
+        // Check incoming edges against the final definitions, attributing a refusal to the changed target.
+        for (id, variable) in &self.doc.variables {
+            if set.contains_key(id) {
+                continue;
+            }
+            for alias in variable
+                .aliases()
+                .into_iter()
+                .filter(|alias| set.contains_key(*alias))
+            {
+                let target = self
+                    .doc
+                    .variables
+                    .get(alias)
+                    .expect("removing an alias target was refused");
+                let expected = variable.variable_type();
+                let found = target.variable_type();
+                if expected != found {
+                    return Err((
+                        format!("set.{alias}"),
+                        OpErrorKind::AliasType {
+                            alias: alias.clone(),
+                            expected,
+                            found,
+                        },
+                    ));
+                }
+            }
+        }
         Ok(())
     }
 
-    fn wrap(
+    pub(super) fn wrap(
         &mut self,
         targets: &[NodeId],
         wrapper: &Node,
@@ -395,7 +447,7 @@ impl Planner {
     }
 
     /// Shifts an absolutely placed node by (dx, dy); a node placed by layout stays where it is.
-    fn rebase(&mut self, id: &NodeId, dx: f64, dy: f64) -> Result<(), OpErrorKind> {
+    pub(super) fn rebase(&mut self, id: &NodeId, dx: f64, dy: f64) -> Result<(), OpErrorKind> {
         let node = find(&self.doc, id).expect("just moved");
         let Some(point) = absolute(node) else {
             return Ok(());

@@ -8,6 +8,10 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review Prompt 12's operation representation and path port addition**. The choices/limits below record the
+  off-page component representation, sparse instance inheritance, geometry inputs and unsupported outline styles.
+  `PathOps::outline_stroke` is needed by the new op and is absent from ARCHITECTURE's port signature. Only a person
+  edits ARCHITECTURE.md; no format/schema change was made.
 - **Review the port signatures that differ from ARCHITECTURE §3.1** (Prompt 10). Only a person edits ARCHITECTURE.md.
   `Codec::encode` returns a `Result` (done: Prompt 9's open item). `FontSource::resolve` takes a weight as well as a
   style (a text run has both). `PathOps::bounds` returns `Option<Rect>` (a path can draw nothing) and takes a resolved
@@ -662,7 +666,7 @@ twelve fakes then passed on the first run, so I wrote the broken-implementation 
 
 ## Prompt 11: Ops I, structural ops, validation, origins
 
-Not committed. Prompt 10 is committed (`eb529c5`).
+Committed as `fbf5f4d`. Prompt 10 is committed (`eb529c5`).
 
 Built:
 - **Origins in `vellum-types`** (`origin.rs`): `Actor` (person, agent, file, system), `Origin { actor, session?, turn? }`
@@ -719,3 +723,92 @@ need `points` and `innerRatio`), not on the code. The first property-test genera
 accepted nothing), so I biased it toward valid places and shorter batches. One contracts saboteur failed on the wrong
 assertion (its redo forgot to re-record the actor) and was fixed to fail on the rule it names.
 
+## Prompt 11: acceptance follow-up
+
+The existing implementation is committed in `fbf5f4d`; the old hand-off incorrectly said it was uncommitted.
+This follow-up is uncommitted.
+
+Built:
+- `SetVariables` checks unchanged aliases pointing to changed definitions, against the final definitions of the op.
+  A type change that breaks an alias rejects the entire batch, with the op index and the exact `set.<target>` path.
+  Changing the alias and its target to the same new type together remains valid and undo restores both definitions.
+- Three regression tests cover rejection without document/history changes, changing both definitions, and an alias
+  with multiple values whose second target fails. The 1,024-case property test now generates literal definitions and
+  type changes as well as aliases, and independently round-trips each accepted document through the format types.
+- Three compile-fail cases prove a transaction needs an origin, an origin needs an actor, and a transaction has no
+  default. The existing five write-path compile-fail cases still pass.
+
+Reference note (no code ported): Graphite retains capped snapshot stacks and a working-copy history cursor;
+Excalidraw represents inserted/deleted property deltas, reverses them for undo, and applies them through its store.
+Vellum keeps transaction edits and exact inverses, with mandatory origins for actor attribution. This follow-up adds
+validation only; the existing Prompt 11 design choices and Prompt 14 history/performance work remain as recorded above.
+Sibling projects were checked; their storage transactions and UI undo patterns do not provide a reusable pure document op layer.
+
+Verified (each exited 0):
+- `cargo test -p vellum-core ops::` (36), `cargo test -p vellum-core --test trybuild` (8 compile-fail cases),
+  `cargo test --workspace`, `cargo deny check` (advisories, bans, licences and sources; existing unused-wrapper warnings).
+- `bash scripts/check-deps.sh`, `pnpm deps:check`, `pnpm lint` (includes workspace clippy with `-D warnings`), `pnpm type-check`,
+  `pnpm format:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`, `git diff --check`.
+- Failed: `pnpm test`, only the pre-existing reference-index script test (`missing: R3 taffy: main.rs`);
+  script tests: 148 passed, 1 failed, 1 skipped. The full Rust suite passed independently.
+- Environment: sandboxed pnpm could not verify its registry signature, and sandboxed cargo-deny could not lock the
+  advisory cache. Both checks succeeded outside the sandbox; no verification was disabled.
+
+Test order: the alias-target regression failed on the original code because the invalid batch was accepted. After
+the initial fix, the multiple-value alias regression failed because the error named the first changed target rather
+than the one with the mismatched type. Both pass with the final validation. The new compiler cases first generated
+diagnostics showing the missing fields/default, which were reviewed and saved as their expected failures.
+
+## Prompt 12: component, slot and geometric ops
+
+Built:
+- `CreateComponent`, `ToggleComponent`, `Detach`, `ReplaceInInstance`, `MakeSlot`, `Scale`, `Boolean`,
+  `OutlineStroke`, `Align`, `Distribute`, `Flip`, and the explicit `ConvertScript` placeholder, through the existing
+  op/commit path. `SetComponent` edits include exact inverses and the fake store's sync wire format.
+- Detach applies variants, overrides and slot content while keeping nested instances and variable bindings.
+  Replacement addresses remain stable across variant replacements. Inherited layers cannot be moved into instances.
+  Local component references, cycles, override paths, owned payload ids and slot placement are checked on writes
+  and after edit replay, so generic insert/update cannot bypass the new operations' constraints.
+- Scale fixes measured Hug/Fill dimensions and numeric bindings; scales content, text, strokes/dashes, radii,
+  spacing, positions and effects; preserves dimensionless values and colour links. Instances receive overrides,
+  including nested instances, structural overrides and slot content. Anchor rotation/mirroring uses the box centre.
+- `fixtures/ops/{scale,slots}.vellum` are canonical TEST DATA documents. Twenty-six new core tests include exact
+  inverses, atomic refusals and 256 random mixed-operation sequences; one contract integration test covers component
+  create/sync/undo/redo. Existing Prompt 11 follow-up changes were present at session start and are preserved.
+
+Choices and limits:
+- Definitions live off-page in this format: create leaves an instance with the source id and creates a fresh-id
+  definition; non-frame sources become a frame around the original shape. Toggle back detaches the instance and
+  removes the definition only if otherwise unused. Sparse instance common properties inherit omitted defaults.
+- `plan_with_inputs` / `apply_with_inputs` accept measured boxes, resolved numbers and parent-coordinate paths.
+  Missing derived inputs are refused. Later resolver/layout/path-adapter prompts supply them; no vendor entered core.
+  Booleans retain editable children, use document stacking order, and subtract the first child from the rest as the
+  type documentation specifies. Alignment/distribution currently require absolute, unrotated, unflipped siblings.
+- `PathOps::outline_stroke` is new and defaults to an explicit adapter error. `StrokeStyle` cannot represent dash
+  patterns or per-side widths, so outlining those refuses rather than losing geometry. The real path adapter is
+  still a scaffold; tests verify delegation with a test double, not real curve boolean/stroke fidelity.
+- `convert_script` returns `NotImplemented("convert_script")` until Prompt 26. No UI or render goldens were required.
+  Validation still clones/read-walks documents; Prompt 11's performance question remains for Prompt 14.
+
+Reference note (no code ported): Graphite's resize helper transforms geometry around a chosen anchor and maps
+between viewport and document coordinates. Vellum keeps the anchor calculation in model coordinates and scales
+stored length properties, because bound lengths must become fixed and instances must carry overrides. Kurbo's
+bounded offset-curve machinery stays behind PathOps rather than entering the pure op layer. Sibling projects were
+searched; none provides a reusable Rust canvas component/scale operation layer.
+
+Verified (each exited 0):
+- `cargo test -p vellum-core ops::` (62); `cargo test -p vellum-contracts --test component_ops`;
+  `cargo test --workspace` (including all eight write-path compile-fail cases).
+- `cargo clippy --workspace --all-targets -- -D warnings`; `cargo deny check` (all four checks);
+  `pnpm deps:check`; `pnpm lint`; `pnpm type-check`; `pnpm format:check`; `pnpm types:check`;
+  `pnpm format-spec:check`; `pnpm clean-room`; `pnpm checksum`; `git diff --check`.
+- `cargo run -p vellum-codec-json --example canonicalize -- --check fixtures/ops/scale.vellum fixtures/ops/slots.vellum`.
+- Failed: `pnpm test:scripts`: 148 passed, 1 failed, 1 skipped; only the recorded REFERENCE-INDEX failure
+  (`missing: R3 taffy: main.rs`). No specification or reference-index file was modified.
+- Environment: sandboxed pnpm could not verify its registry signature. The pnpm gates passed outside the sandbox
+  with signature verification enabled; no verification was disabled.
+
+Test order: the acceptance tests failed to compile before the API existed. Subsequent regressions first failed
+on doubled instance scaling, duplicated style on non-frame components, generic-write bypasses, stale measured
+bounds and variant replacement addressing; the implementation was corrected for each. Initial scale assertions
+were corrected to compare floating-point JSON numbers rather than integers. Clippy requested collapsed conditionals.

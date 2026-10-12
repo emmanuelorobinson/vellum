@@ -686,3 +686,194 @@ impl Node {
         }
     }
 }
+
+impl Node {
+    /// All common properties, including defaults. Used to build conversions without repeating fields.
+    pub fn common_patch(&self) -> crate::NodePatch {
+        let map = on_each!(self, n => serde_json::json!({
+            "name":n.name,"visible":n.visible,"locked":n.locked,"opacity":n.opacity,
+            "rotation":n.rotation,"flipX":n.flip_x,"flipY":n.flip_y,"position":n.position,
+            "width":n.width,"height":n.height,"fills":n.fills,"stroke":n.stroke,
+            "effects":n.effects,"blendMode":n.blend_mode,"agentNotes":n.agent_notes,
+            "prototype":n.prototype,"metadata":n.metadata
+        }));
+        serde_json::from_value(map).expect("common node properties form a patch")
+    }
+
+    fn common_as(&self, kind: NodeKind, extra: Json) -> Self {
+        let mut map: serde_json::Map<String, Json> = self
+            .common_patch()
+            .properties()
+            .clone()
+            .into_iter()
+            .collect();
+        map.retain(|_, v| !v.is_null());
+        map.insert("id".into(), serde_json::to_value(self.id()).expect("id"));
+        map.insert("type".into(), Json::String(kind.as_str().into()));
+        if let Json::Object(extra) = extra {
+            map.extend(extra);
+        }
+        serde_json::from_value(Json::Object(map))
+            .expect("common fields and typed extras form a node")
+    }
+
+    /// A frame with this node's common properties.
+    pub fn as_frame(&self, children: Vec<Node>) -> Self {
+        self.common_as(NodeKind::Frame, serde_json::json!({"children":children}))
+    }
+    /// An instance with this node's common properties.
+    pub fn as_instance(&self, component_id: ComponentId) -> Self {
+        self.common_as(
+            NodeKind::Instance,
+            serde_json::json!({"componentId":component_id}),
+        )
+    }
+    /// An empty boolean with this node's common properties.
+    pub fn as_boolean(&self, op: BoolOp) -> Self {
+        self.common_as(NodeKind::Boolean, serde_json::json!({"op":op}))
+    }
+    /// A vector with this node's common properties.
+    pub fn as_vector(&self, path: String, view_box: ViewBox) -> Self {
+        self.common_as(
+            NodeKind::Vector,
+            serde_json::json!({"path":path,"viewBox":view_box}),
+        )
+    }
+    /// A patch that toggles one mirror flag.
+    pub fn flip_patch(&self, horizontal: bool) -> crate::NodePatch {
+        let map = if horizontal {
+            serde_json::json!({"flipX":!self.flip_x()})
+        } else {
+            serde_json::json!({"flipY":!self.flip_y()})
+        };
+        serde_json::from_value(map).expect("mirror flag")
+    }
+
+    /// Scales length properties only. Width/height are measured by the caller. Dimensionless values,
+    /// paints, paths (scaled by their view box), shader uniforms, metadata and variable colour links stay.
+    /// Children and instance content are handled by the op planner.
+    pub fn scaled_patch(
+        &self,
+        factor: f64,
+        width: f64,
+        height: f64,
+        number: &impl Fn(&crate::VariableId) -> Option<f64>,
+    ) -> Result<crate::NodePatch, String> {
+        fn length(
+            v: &mut Json,
+            factor: f64,
+            number: &impl Fn(&crate::VariableId) -> Option<f64>,
+        ) -> Result<(), String> {
+            if let Json::Array(values) = v {
+                for value in values {
+                    length(value, factor, number)?;
+                }
+                return Ok(());
+            }
+            let value = if let Some(n) = v.as_f64() {
+                n
+            } else {
+                let id = v
+                    .get("$var")
+                    .and_then(Json::as_str)
+                    .ok_or("length is not numeric")?;
+                let id = crate::VariableId::new(id).map_err(|e| e.to_string())?;
+                number(&id).ok_or_else(|| format!("number variable {id}"))?
+            };
+            let value = value * factor;
+            if !value.is_finite() {
+                return Err("scaled length is not finite".into());
+            }
+            *v = serde_json::json!(value);
+            Ok(())
+        }
+        if !factor.is_finite()
+            || factor <= 0.0
+            || !width.is_finite()
+            || !height.is_finite()
+            || width < 0.0
+            || height < 0.0
+        {
+            return Err("scale needs finite nonnegative sizes and a positive factor".into());
+        }
+        let Json::Object(mut map) = serde_json::to_value(self).map_err(|e| e.to_string())? else {
+            unreachable!()
+        };
+        for key in ["type", "id", "children", "overrides", "slotContent"] {
+            map.remove(key);
+        }
+        map.insert("width".into(), serde_json::json!(width));
+        map.insert("height".into(), serde_json::json!(height));
+        for key in ["cornerRadius", "gap", "padding"] {
+            if let Some(v) = map.get_mut(key) {
+                length(v, factor, number)?;
+            }
+        }
+        if let Some(stroke) = map.get_mut("stroke") {
+            length(&mut stroke["width"], factor, number)?;
+            if let Some(dash) = stroke.get_mut("dash") {
+                length(dash, factor, number)?;
+            }
+        }
+        if let Some(Json::Array(effects)) = map.get_mut("effects") {
+            for effect in effects {
+                for key in ["x", "y", "blur", "spread", "radius"] {
+                    if let Some(v) = effect.get_mut(key) {
+                        length(v, factor, number)?;
+                    }
+                }
+            }
+        }
+        if self.kind() == NodeKind::Text
+            && let Some(Json::Array(runs)) = map.get_mut("content")
+        {
+            for run in runs {
+                for key in ["size", "lineHeight", "letterSpacing"] {
+                    if let Some(v) = run.get_mut(key) {
+                        length(v, factor, number)?;
+                    }
+                }
+            }
+        }
+        crate::NodePatch::new(map.into_iter().collect()).map_err(|e| e.to_string())
+    }
+}
+
+impl Node {
+    /// Stored common properties only; omitted defaults inherit from the component definition.
+    pub fn common_sparse_patch(&self) -> crate::NodePatch {
+        let Json::Object(map) = serde_json::to_value(self).expect("node") else {
+            unreachable!()
+        };
+        let common = self.common_patch();
+        crate::NodePatch::new(
+            map.into_iter()
+                .filter(|(key, _)| common.properties().contains_key(key))
+                .collect(),
+        )
+        .expect("common properties")
+    }
+    /// Stored properties, without identity or children. Nested instance overrides travel with their props.
+    pub fn property_patch(&self) -> crate::NodePatch {
+        let Json::Object(mut map) = serde_json::to_value(self).expect("node") else {
+            unreachable!()
+        };
+        for key in ["id", "type", "children"] {
+            map.remove(key);
+        }
+        crate::NodePatch::new(map.into_iter().collect()).expect("node properties")
+    }
+    /// Fixed dimensions for a measured box.
+    pub fn box_patch(&self, width: f64, height: f64) -> crate::NodePatch {
+        serde_json::from_value(serde_json::json!({"width":width,"height":height}))
+            .expect("dimensions")
+    }
+    /// Paint only the outlined stroke, with no second stroke or inherited transformation.
+    pub fn outline_patch(&self, width: f64, height: f64, paints: Vec<Paint>) -> crate::NodePatch {
+        serde_json::from_value(serde_json::json!({"width":width,"height":height,"fills":paints,"stroke":null,"rotation":0,"flipX":false,"flipY":false})).expect("outline properties")
+    }
+    /// A container around a painted child must not paint or transform the same appearance twice.
+    pub fn container_patch(&self) -> crate::NodePatch {
+        serde_json::from_value(serde_json::json!({"fills":[],"stroke":null,"effects":[],"opacity":1,"blendMode":"normal","rotation":0,"flipX":false,"flipY":false})).expect("container properties")
+    }
+}

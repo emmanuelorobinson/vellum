@@ -1,0 +1,11 @@
+error[E0599]: no associated function or constant named `default` found for struct `Transaction` in the current scope
+ --> tests/write-path/default_transaction.rs:4:26
+  |
+4 |     let _ = Transaction::default();
+  |                          ^^^^^^^ associated function or constant not found in `Transaction`
+  |
+note: if you're trying to build a new `Transaction`, consider using `Transaction::new` which returns `Transaction`
+ --> src/ops/mod.rs
+  |
+  |     pub fn new(origin: Origin, ops: Vec<Op>) -> Self {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

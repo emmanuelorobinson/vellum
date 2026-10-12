@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use vellum_core::ops::{Edit, Parent, Place, apply_edits};
 use vellum_core::ports::{ChangeSet, Commit, DocStore, SyncCursor, SyncError, SyncPayload};
 use vellum_types::{
-    Actor, Document, Node, NodeId, Origin, PageId, Subsystem, Variable, VariableId,
+    Actor, Component, ComponentId, Document, Node, NodeId, Origin, PageId, Subsystem, Variable,
+    VariableId,
 };
 
 /// An edit as the fake writes it into sync payloads. `vellum-core` has no serde, so the fake keeps its own
@@ -28,6 +29,10 @@ enum Step {
     },
     Set {
         node: Box<Node>,
+    },
+    SetComponent {
+        id: ComponentId,
+        component: Option<Box<Component>>,
     },
     SetVariable {
         id: VariableId,
@@ -74,6 +79,7 @@ impl From<&Edit> for Step {
                 }
             }
             Edit::Set { node } => Self::Set { node },
+            Edit::SetComponent { id, component } => Self::SetComponent { id, component },
             Edit::SetVariable { id, variable } => Self::SetVariable { id, variable },
         }
     }
@@ -102,6 +108,7 @@ impl Step {
                 to: join(page, parent, index)?,
             },
             Self::Set { node } => Edit::Set { node },
+            Self::SetComponent { id, component } => Edit::SetComponent { id, component },
             Self::SetVariable { id, variable } => Edit::SetVariable { id, variable },
         })
     }
