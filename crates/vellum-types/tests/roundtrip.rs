@@ -1,0 +1,807 @@
+//! Property tests (guide Prompt 7 FINAL): any node the types can hold prints to JSON, parses back to
+//! an equal node, and prints the same bytes again. Unknown fields are refused wherever they land.
+
+use std::collections::BTreeMap;
+
+use proptest::collection::{btree_map, vec};
+use proptest::prelude::*;
+use proptest::test_runner::TestRunner;
+use serde_json::Value as Json;
+use vellum_types::*;
+
+// --- leaves -------------------------------------------------------------------------------------
+
+/// Finite numbers, with the defaults (0, 1, 360) over-represented: a field at its default is left out
+/// of the file, and that path only runs when the generator lands on the default.
+fn arb_f64() -> impl Strategy<Value = f64> {
+    prop_oneof![
+        3 => Just(0.0),
+        3 => Just(1.0),
+        1 => Just(360.0),
+        6 => -1.0e6..1.0e6_f64,
+        1 => prop::num::f64::NORMAL | prop::num::f64::SUBNORMAL | prop::num::f64::ZERO,
+    ]
+}
+
+fn arb_text() -> impl Strategy<Value = String> {
+    "\\PC{0,12}"
+}
+
+fn arb_id_text() -> impl Strategy<Value = String> {
+    "[A-Za-z0-9_-]{1,24}"
+}
+
+fn arb_node_id() -> impl Strategy<Value = NodeId> {
+    arb_id_text().prop_map(|s| NodeId::new(s).expect("valid"))
+}
+
+fn arb_var() -> impl Strategy<Value = VarRef> {
+    "[a-z]{1,6}(/[a-z]{1,6}){0,2}".prop_map(|s| VarRef::new(s).expect("non-empty"))
+}
+
+fn arb_value<T: std::fmt::Debug + 'static>(
+    literal: impl Strategy<Value = T> + 'static,
+) -> impl Strategy<Value = Value<T>> {
+    prop_oneof![3 => literal.prop_map(Value::Literal), 1 => arb_var().prop_map(Value::Var)]
+}
+
+fn arb_num() -> impl Strategy<Value = Value<f64>> {
+    arb_value(arb_f64())
+}
+
+fn arb_color() -> impl Strategy<Value = Color> {
+    (any::<u8>(), any::<u8>(), any::<u8>(), any::<u8>())
+        .prop_map(|(r, g, b, a)| Color::rgba(r, g, b, a))
+}
+
+fn arb_color_value() -> impl Strategy<Value = Value<Color>> {
+    arb_value(arb_color())
+}
+
+fn arb_point() -> impl Strategy<Value = Point> {
+    (arb_f64(), arb_f64()).prop_map(|(x, y)| Point { x, y })
+}
+
+fn arb_transform() -> impl Strategy<Value = Transform> {
+    prop_oneof![
+        1 => Just(Transform::IDENTITY),
+        3 => prop::array::uniform6(arb_f64()).prop_map(Transform),
+    ]
+}
+
+fn arb_size() -> impl Strategy<Value = Size> {
+    prop_oneof![
+        arb_num().prop_map(Size::Fixed),
+        Just(Size::Hug { fallback: None }),
+        Just(Size::Fill { fallback: None }),
+        arb_f64().prop_map(|f| Size::Hug { fallback: Some(f) }),
+        arb_f64().prop_map(|f| Size::Fill { fallback: Some(f) }),
+    ]
+}
+
+fn arb_position() -> impl Strategy<Value = Position> {
+    prop_oneof![
+        Just(Position::Auto),
+        arb_point().prop_map(Position::Absolute)
+    ]
+}
+
+fn arb_padding() -> impl Strategy<Value = Padding> {
+    prop_oneof![
+        arb_num().prop_map(Padding::All),
+        prop::array::uniform2(arb_num()).prop_map(Padding::Axes),
+        prop::array::uniform4(arb_num()).prop_map(Padding::Sides),
+    ]
+}
+
+fn arb_radius() -> impl Strategy<Value = CornerRadius> {
+    prop_oneof![
+        arb_num().prop_map(CornerRadius::All),
+        prop::array::uniform4(arb_num()).prop_map(CornerRadius::Corners),
+    ]
+}
+
+fn arb_enum<T: Copy + std::fmt::Debug + 'static, const N: usize>(
+    all: [T; N],
+) -> impl Strategy<Value = T> {
+    (0..N).prop_map(move |i| all[i])
+}
+
+fn arb_json() -> impl Strategy<Value = Json> {
+    let leaf = prop_oneof![
+        Just(Json::Null),
+        any::<bool>().prop_map(Json::from),
+        any::<i64>().prop_map(Json::from),
+        (-1.0e6..1.0e6_f64).prop_map(Json::from),
+        arb_text().prop_map(Json::from),
+    ];
+    leaf.prop_recursive(3, 16, 4, |inner| {
+        prop_oneof![
+            vec(inner.clone(), 0..4).prop_map(Json::Array),
+            btree_map(arb_text(), inner, 0..4).prop_map(|m| Json::Object(m.into_iter().collect())),
+        ]
+    })
+}
+
+fn arb_uniforms() -> impl Strategy<Value = BTreeMap<String, Value<Uniform>>> {
+    let uniform = prop_oneof![
+        any::<bool>().prop_map(Uniform::Bool),
+        arb_f64().prop_map(Uniform::Number),
+        arb_color().prop_map(Uniform::Color),
+        prop::array::uniform2(arb_f64()).prop_map(Uniform::Vec2),
+        prop::array::uniform3(arb_f64()).prop_map(Uniform::Vec3),
+        prop::array::uniform4(arb_f64()).prop_map(Uniform::Vec4),
+    ];
+    btree_map("[a-z]{1,6}", arb_value(uniform), 0..3)
+}
+
+// --- paints, strokes, effects -------------------------------------------------------------------
+
+fn arb_paint() -> impl Strategy<Value = Paint> {
+    let solid = (arb_color_value(), any::<bool>())
+        .prop_map(|(color, visible)| Paint::Solid(SolidPaint { color, visible }));
+    let gradient = (
+        arb_enum(GradientKind::ALL),
+        vec((arb_color_value(), arb_f64()), 0..4),
+        arb_transform(),
+        any::<bool>(),
+    )
+        .prop_map(|(kind, stops, transform, visible)| {
+            Paint::Gradient(GradientPaint {
+                kind,
+                stops: stops
+                    .into_iter()
+                    .map(|(color, position)| GradientStop { color, position })
+                    .collect(),
+                transform,
+                visible,
+            })
+        });
+    let handles = prop::option::of(
+        (arb_point(), arb_point(), arb_point(), arb_point()).prop_map(|(left, right, up, down)| {
+            MeshHandles {
+                left,
+                right,
+                up,
+                down,
+            }
+        }),
+    );
+    let mesh = (
+        1..5_u32,
+        1..5_u32,
+        vec((arb_f64(), arb_f64(), arb_color_value(), handles), 0..5),
+        any::<bool>(),
+    )
+        .prop_map(|(columns, rows, points, visible)| {
+            Paint::Mesh(MeshPaint {
+                columns,
+                rows,
+                points: points
+                    .into_iter()
+                    .map(|(x, y, color, handles)| MeshPoint {
+                        x,
+                        y,
+                        color,
+                        handles,
+                    })
+                    .collect(),
+                visible,
+            })
+        });
+    let image = (
+        arb_id_text(),
+        arb_enum(ImageFit::ALL),
+        prop::option::of(arb_transform()),
+        arb_num(),
+        any::<bool>(),
+    )
+        .prop_map(|(asset, fit, crop, opacity, visible)| {
+            Paint::Image(ImagePaint {
+                asset: AssetId::new(asset).expect("valid"),
+                fit,
+                crop,
+                opacity,
+                visible,
+            })
+        });
+    let shader =
+        (arb_text(), arb_uniforms(), any::<bool>()).prop_map(|(src, uniforms, visible)| {
+            Paint::Shader(ShaderPaint {
+                src,
+                uniforms,
+                visible,
+            })
+        });
+    prop_oneof![solid, gradient, mesh, image, shader]
+}
+
+fn arb_stroke() -> impl Strategy<Value = Stroke> {
+    let width = prop_oneof![
+        arb_num().prop_map(StrokeWidth::Uniform),
+        prop::array::uniform4(arb_num()).prop_map(StrokeWidth::PerSide),
+    ];
+    (
+        vec(arb_paint(), 0..3),
+        width,
+        arb_enum(StrokeAlign::ALL),
+        arb_enum(StrokeCap::ALL),
+        arb_enum(StrokeJoin::ALL),
+        vec(arb_f64(), 0..4),
+    )
+        .prop_map(|(paints, width, align, cap, join, dash)| Stroke {
+            paints,
+            width,
+            align,
+            cap,
+            join,
+            dash,
+        })
+}
+
+fn arb_effect() -> impl Strategy<Value = Effect> {
+    let shadow = (
+        arb_num(),
+        arb_num(),
+        arb_num(),
+        arb_num(),
+        arb_color_value(),
+        arb_enum(BlendMode::ALL),
+        any::<bool>(),
+    )
+        .prop_map(|(x, y, blur, spread, color, blend_mode, visible)| Shadow {
+            x,
+            y,
+            blur,
+            spread,
+            color,
+            blend_mode,
+            visible,
+        })
+        .boxed();
+    let blur = (arb_num(), any::<bool>())
+        .prop_map(|(radius, visible)| Blur { radius, visible })
+        .boxed();
+    let shader =
+        (arb_text(), arb_uniforms(), any::<bool>()).prop_map(|(src, uniforms, visible)| {
+            ShaderEffect {
+                src,
+                uniforms,
+                visible,
+            }
+        });
+    prop_oneof![
+        shadow.clone().prop_map(Effect::DropShadow),
+        shadow.prop_map(Effect::InnerShadow),
+        blur.clone().prop_map(Effect::LayerBlur),
+        blur.prop_map(Effect::BackgroundBlur),
+        shader.prop_map(Effect::Shader),
+    ]
+}
+
+fn arb_run() -> impl Strategy<Value = TextRun> {
+    (
+        (
+            arb_text(),
+            arb_text(),
+            1..=9_u16,
+            arb_enum(FontStyle::ALL),
+            arb_num(),
+        ),
+        (
+            prop::option::of(arb_num()),
+            arb_num(),
+            any::<bool>(),
+            any::<bool>(),
+            prop::option::of(arb_text()),
+        ),
+    )
+        .prop_map(
+            |(
+                (text, font, weight, style, size),
+                (line_height, letter_spacing, underline, strikethrough, link),
+            )| {
+                TextRun {
+                    text,
+                    font,
+                    weight: weight * 100,
+                    style,
+                    size,
+                    line_height,
+                    letter_spacing,
+                    underline,
+                    strikethrough,
+                    link,
+                }
+            },
+        )
+}
+
+fn arb_prototype() -> impl Strategy<Value = Prototype> {
+    (arb_node_id(), arb_enum(TransitionKind::ALL), any::<u32>()).prop_map(
+        |(target, kind, duration_ms)| Prototype {
+            target,
+            transition: Transition { kind, duration_ms },
+        },
+    )
+}
+
+// --- nodes --------------------------------------------------------------------------------------
+
+/// The fields every node has, generated once and stamped onto whichever kind is built.
+#[derive(Debug, Clone)]
+struct Common {
+    id: NodeId,
+    name: String,
+    visible: Value<bool>,
+    locked: bool,
+    opacity: Value<f64>,
+    rotation: Value<f64>,
+    flip_x: bool,
+    flip_y: bool,
+    position: Position,
+    width: Size,
+    height: Size,
+    fills: Vec<Paint>,
+    stroke: Option<Stroke>,
+    effects: Vec<Effect>,
+    blend_mode: BlendMode,
+    agent_notes: Option<String>,
+    prototype: Option<Prototype>,
+    metadata: BTreeMap<String, Json>,
+}
+
+prop_compose! {
+    fn arb_common()(
+        id in arb_node_id(),
+        name in arb_text(),
+        visible in arb_value(any::<bool>()),
+        locked in any::<bool>(),
+        opacity in arb_num(),
+        rotation in arb_num(),
+        flip_x in any::<bool>(),
+        flip_y in any::<bool>(),
+        position in arb_position(),
+    )(
+        width in arb_size(),
+        height in arb_size(),
+        fills in vec(arb_paint(), 0..3),
+        stroke in prop::option::of(arb_stroke()),
+        effects in vec(arb_effect(), 0..3),
+        blend_mode in arb_enum(BlendMode::ALL),
+        agent_notes in prop::option::of(arb_text()),
+        prototype in prop::option::of(arb_prototype()),
+        metadata in btree_map(arb_text(), arb_json(), 0..3),
+        id in Just(id), name in Just(name), visible in Just(visible), locked in Just(locked),
+        opacity in Just(opacity), rotation in Just(rotation), flip_x in Just(flip_x),
+        flip_y in Just(flip_y), position in Just(position),
+    ) -> Common {
+        Common {
+            id, name, visible, locked, opacity, rotation, flip_x, flip_y, position, width, height,
+            fills, stroke, effects, blend_mode, agent_notes, prototype, metadata,
+        }
+    }
+}
+
+/// `build!(Kind { field: value, .. }, common)`: a node struct with the common fields filled in.
+macro_rules! build {
+    ($kind:ident { $($field:ident : $value:expr),* $(,)? }, $c:expr) => {{
+        let c: Common = $c;
+        $kind {
+            id: c.id, name: c.name, visible: c.visible, locked: c.locked, opacity: c.opacity,
+            rotation: c.rotation, flip_x: c.flip_x, flip_y: c.flip_y, position: c.position,
+            width: c.width, height: c.height, fills: c.fills, stroke: c.stroke, effects: c.effects,
+            blend_mode: c.blend_mode, agent_notes: c.agent_notes, prototype: c.prototype,
+            metadata: c.metadata,
+            $($field: $value),*
+        }
+    }};
+}
+
+/// Every kind with no children.
+fn arb_leaf() -> impl Strategy<Value = Node> {
+    let shapes = prop_oneof![
+        (arb_common(), arb_radius()).prop_map(|(c, corner_radius)| Node::Rect(build!(
+            RectNode {
+                corner_radius: corner_radius
+            },
+            c
+        ))),
+        (arb_common(), arb_f64(), arb_f64(), arb_f64()).prop_map(
+            |(c, inner_radius, start_angle, sweep_angle)| {
+                Node::Ellipse(build!(
+                    EllipseNode {
+                        inner_radius: inner_radius,
+                        start_angle: start_angle,
+                        sweep_angle: sweep_angle
+                    },
+                    c
+                ))
+            }
+        ),
+        (arb_common(), any::<u32>(), arb_num()).prop_map(|(c, sides, corner_radius)| {
+            Node::Polygon(build!(
+                PolygonNode {
+                    sides: sides,
+                    corner_radius: corner_radius
+                },
+                c
+            ))
+        }),
+        (arb_common(), any::<u32>(), arb_f64()).prop_map(|(c, points, inner_ratio)| Node::Star(
+            build!(
+                StarNode {
+                    points: points,
+                    inner_ratio: inner_ratio
+                },
+                c
+            )
+        )),
+        arb_common().prop_map(|c| Node::Line(build!(LineNode {}, c))),
+        (
+            arb_common(),
+            arb_text(),
+            (arb_f64(), arb_f64(), arb_f64(), arb_f64()),
+            arb_enum(FillRule::ALL)
+        )
+            .prop_map(|(c, path, (x, y, width, height), fill_rule)| {
+                Node::Vector(build!(
+                    VectorNode {
+                        path: path,
+                        view_box: ViewBox {
+                            x,
+                            y,
+                            width,
+                            height
+                        },
+                        fill_rule: fill_rule
+                    },
+                    c
+                ))
+            }),
+    ];
+    let content = prop_oneof![
+        (
+            arb_common(),
+            vec(arb_run(), 0..3),
+            arb_enum(TextAlign::ALL),
+            arb_enum(VerticalAlign::ALL),
+            arb_enum(TextResize::ALL),
+            prop::option::of(arb_id_text()),
+        )
+            .prop_map(|(c, content, align, vertical_align, resize, style)| {
+                Node::Text(build!(
+                    TextNode {
+                        content: content,
+                        align: align,
+                        vertical_align: vertical_align,
+                        resize: resize,
+                        text_style: style.map(|s| StyleId::new(s).expect("valid")),
+                    },
+                    c
+                ))
+            }),
+        (
+            arb_common(),
+            arb_id_text(),
+            arb_enum(ImageFit::ALL),
+            prop::option::of(arb_transform())
+        )
+            .prop_map(|(c, asset, fit, crop)| {
+                Node::Image(build!(
+                    ImageNode {
+                        asset: AssetId::new(asset).expect("valid"),
+                        fit: fit,
+                        crop: crop
+                    },
+                    c
+                ))
+            }),
+        (
+            arb_common(),
+            arb_text(),
+            arb_value(arb_text()),
+            any::<u16>(),
+            any::<bool>()
+        )
+            .prop_map(|(c, library, icon, weight, fill)| Node::Icon(build!(
+                IconNode {
+                    library: library,
+                    icon: icon,
+                    weight: weight,
+                    fill: fill
+                },
+                c
+            ))),
+        (
+            arb_common(),
+            arb_text(),
+            btree_map(
+                arb_text(),
+                arb_value(prop_oneof![
+                    any::<bool>().prop_map(ScriptInput::Bool),
+                    arb_f64().prop_map(ScriptInput::Number),
+                    arb_text().prop_map(ScriptInput::Text),
+                ]),
+                0..3
+            ),
+            any::<bool>()
+        )
+            .prop_map(|(c, src, inputs, clip)| Node::Script(build!(
+                ScriptNode {
+                    src: src,
+                    inputs: inputs,
+                    clip: clip
+                },
+                c
+            ))),
+        (
+            arb_common(),
+            arb_text(),
+            prop::option::of(arb_color_value())
+        )
+            .prop_map(|(c, content, color)| Node::Note(build!(
+                NoteNode {
+                    content: content,
+                    color: color
+                },
+                c
+            ))),
+        (arb_common(), arb_text(), prop::option::of(arb_node_id())).prop_map(
+            |(c, content, points_at)| Node::Context(build!(
+                ContextNode {
+                    content: content,
+                    points_at: points_at
+                },
+                c
+            ))
+        ),
+        (
+            arb_common(),
+            arb_text(),
+            prop::option::of(arb_text()),
+            prop::option::of(arb_text())
+        )
+            .prop_map(|(c, content, engine, model)| Node::Prompt(build!(
+                PromptNode {
+                    content: content,
+                    engine: engine,
+                    model: model
+                },
+                c
+            ))),
+        (
+            arb_common(),
+            arb_text(),
+            prop::option::of(arb_text()),
+            arb_f64(),
+            arb_point(),
+            arb_num()
+        )
+            .prop_map(|(c, url, device, zoom, scroll, radius)| {
+                Node::Embed(build!(
+                    EmbedNode {
+                        url: url,
+                        device: device,
+                        zoom: zoom,
+                        scroll: scroll,
+                        radius: radius
+                    },
+                    c
+                ))
+            }),
+    ];
+    prop_oneof![shapes, content]
+}
+
+fn arb_node() -> impl Strategy<Value = Node> {
+    arb_leaf().prop_recursive(3, 24, 4, |inner| {
+        let children = vec(inner.clone(), 0..4);
+        prop_oneof![
+            (
+                arb_common(),
+                (
+                    arb_enum(Layout::ALL),
+                    prop::option::of(1..6_u32),
+                    prop::option::of(1..6_u32),
+                    arb_num(),
+                    arb_padding(),
+                    arb_enum(Justify::ALL),
+                    arb_enum(Align::ALL),
+                ),
+                (
+                    any::<bool>(),
+                    any::<bool>(),
+                    arb_radius(),
+                    btree_map("[A-Za-z]{1,6}", "[A-Za-z]{1,6}", 0..3),
+                    prop::option::of(vec(arb_id_text(), 0..3)),
+                    children.clone(),
+                ),
+            )
+                .prop_map(
+                    |(
+                        c,
+                        (layout, columns, rows, gap, padding, justify, align),
+                        (layout_includes_stroke, clip, corner_radius, theme, slot, children),
+                    )| {
+                        Node::Frame(build!(
+                            FrameNode {
+                                layout: layout,
+                                columns: columns,
+                                rows: rows,
+                                gap: gap,
+                                padding: padding,
+                                justify: justify,
+                                align: align,
+                                layout_includes_stroke: layout_includes_stroke,
+                                clip: clip,
+                                corner_radius: corner_radius,
+                                theme: theme,
+                                slot: slot.map(|ids| Slot {
+                                    suggested: ids
+                                        .into_iter()
+                                        .map(|i| ComponentId::new(i).expect("valid"))
+                                        .collect(),
+                                }),
+                                children: children,
+                            },
+                            c
+                        ))
+                    }
+                ),
+            (arb_common(), children.clone())
+                .prop_map(|(c, children)| Node::Group(build!(GroupNode { children: children }, c))),
+            (arb_common(), arb_enum(BoolOp::ALL), children).prop_map(|(c, op, children)| {
+                Node::Boolean(build!(
+                    BooleanNode {
+                        op: op,
+                        children: children
+                    },
+                    c
+                ))
+            }),
+            (
+                arb_common(),
+                arb_id_text(),
+                btree_map("[A-Za-z]{1,6}", "[A-Za-z]{1,6}", 0..3),
+                btree_map("[a-z]{1,6}", arb_json(), 0..3),
+                btree_map(
+                    vec(arb_node_id(), 1..4).prop_map(|ids| {
+                        let mut it = ids.into_iter();
+                        let first = NodeIdPath::from(it.next().expect("one id"));
+                        it.fold(first, NodeIdPath::join)
+                    }),
+                    arb_json(),
+                    0..3,
+                ),
+                btree_map(arb_node_id(), vec(inner, 0..3), 0..3),
+            )
+                .prop_map(|(c, component, variant, props, overrides, slot_content)| {
+                    Node::Instance(build!(
+                        InstanceNode {
+                            component_id: ComponentId::new(component).expect("valid"),
+                            variant: variant,
+                            props: props,
+                            overrides: overrides,
+                            slot_content: slot_content,
+                        },
+                        c
+                    ))
+                }),
+        ]
+    })
+}
+
+// --- properties ---------------------------------------------------------------------------------
+
+/// The node strategies are large tuples of nested strategies; building one in a debug build needs more
+/// than the 2 MiB a test thread gets. The properties run on a thread with room.
+fn on_a_big_stack(test: impl FnOnce() + Send + 'static) {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(test)
+        .expect("spawn")
+        .join()
+        .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+}
+
+fn runner() -> TestRunner {
+    TestRunner::new(ProptestConfig {
+        cases: 128,
+        ..ProptestConfig::default()
+    })
+}
+
+#[test]
+fn a_node_survives_a_trip_through_json() {
+    on_a_big_stack(|| {
+        runner()
+            .run(&arb_node(), |node| {
+                let text = serde_json::to_string(&node).expect("serialise");
+                let back: Node = serde_json::from_str(&text).expect("deserialise");
+                prop_assert_eq!(&back, &node);
+                prop_assert_eq!(serde_json::to_string(&back).expect("serialise again"), text);
+                Ok(())
+            })
+            .unwrap();
+    });
+}
+
+#[test]
+fn a_node_survives_pretty_printing() {
+    on_a_big_stack(|| {
+        runner()
+            .run(&arb_node(), |node| {
+                let text = serde_json::to_string_pretty(&node).expect("serialise");
+                let back: Node = serde_json::from_str(&text).expect("deserialise");
+                prop_assert_eq!(back, node);
+                Ok(())
+            })
+            .unwrap();
+    });
+}
+
+#[test]
+fn an_unknown_field_is_refused_wherever_it_lands() {
+    on_a_big_stack(|| {
+        runner()
+            .run(&(arb_node(), "zz[a-z]{1,6}"), |(node, key)| {
+                let mut json = serde_json::to_value(&node).expect("serialise");
+                json.as_object_mut()
+                    .expect("object")
+                    .insert(key.clone(), Json::Null);
+                prop_assert!(serde_json::from_value::<Node>(json).is_err());
+
+                // `metadata` is the one place an unknown key is welcome.
+                let mut json = serde_json::to_value(&node).expect("serialise");
+                json.as_object_mut()
+                    .expect("object")
+                    .entry("metadata")
+                    .or_insert_with(|| Json::Object(Default::default()))
+                    .as_object_mut()
+                    .expect("metadata is an object")
+                    .insert(key, Json::Null);
+                prop_assert!(serde_json::from_value::<Node>(json).is_ok());
+                Ok(())
+            })
+            .unwrap();
+    });
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig { cases: 128, ..ProptestConfig::default() })]
+
+    #[test]
+    fn an_id_survives_a_trip_and_never_holds_a_slash(text in arb_id_text(), other in "\\PC{0,8}") {
+        let id = NodeId::new(text.clone()).expect("valid");
+        let back: NodeId = serde_json::from_str(&serde_json::to_string(&id).expect("ser")).expect("de");
+        prop_assert_eq!(back, id);
+        let with_slash = format!("{text}/{other}");
+        prop_assert!(NodeId::new(with_slash).is_err());
+    }
+
+    #[test]
+    fn a_node_id_path_prints_and_parses_back(ids in vec(arb_id_text(), 1..6)) {
+        let text = ids.join("/");
+        let path: NodeIdPath = text.parse().expect("parse");
+        prop_assert_eq!(path.to_string(), text);
+        prop_assert_eq!(path.len(), ids.len());
+        let back: NodeIdPath = serde_json::from_str(&serde_json::to_string(&path).expect("ser")).expect("de");
+        prop_assert_eq!(back, path);
+    }
+
+    #[test]
+    fn a_colour_prints_and_parses_back(color in arb_color()) {
+        let text = color.to_string();
+        prop_assert!(text.len() == 7 || text.len() == 9);
+        prop_assert_eq!(text.parse::<Color>().expect("parse"), color);
+        prop_assert_eq!(text.to_uppercase(), text.clone());
+        prop_assert_eq!(text.to_lowercase().parse::<Color>().expect("parse lower case"), color);
+    }
+
+    #[test]
+    fn a_size_survives_a_trip_through_json(size in arb_size()) {
+        let back: Size = serde_json::from_str(&serde_json::to_string(&size).expect("ser")).expect("de");
+        prop_assert_eq!(back, size);
+    }
+}

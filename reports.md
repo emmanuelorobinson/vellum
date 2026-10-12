@@ -8,6 +8,20 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the Prompt 7 choices where ARCHITECTURE §4.1 was silent or contradicted itself** (Prompt 7). Only a person
+  edits ARCHITECTURE.md, so these live in the code until you say otherwise: (1) an `icon` node's icon name is `icon`,
+  not `name`, because `name` is already the layer name on every node; (2) a frame gets `cornerRadius` (the table gives it
+  to `rect` and `polygon` only); (3) a variable reference is `{"$var": "<key>"}` with an opaque non-empty key, and it is
+  not settled whether the key is a variable id (no `/` allowed) or a name path like `color/primary` (the examples use
+  that); Prompt 8 must decide; (4) text runs have no colour of their own, so a text node's `fills` colour the whole
+  node; (5) a prototype transition is `instant`, `dissolve` or four slides plus `durationMs`, which is my guess; (6) a
+  mesh paint is `columns` x `rows` points row by row, each with a colour and optional four handles, also my reading;
+  (7) padding is `n`, `[vertical, horizontal]` or `[top, right, bottom, left]`, corner radius `n` or four values, and a
+  stroke width `n` or four values; (8) node structs are named `FrameNode`, `TextNode` and so on, so the TypeScript
+  names do not shadow `Boolean`, `Text` or `Image`.
+- **Decide whether `proptest` stays** (Prompt 7). It is now a dev-dependency of `vellum-types` and on the allowlist
+  (version-baseline C18). The guide asks for property tests in Prompts 7, 9, 10, 14 and later; the alternative is a
+  hand-rolled generator, which loses shrinking.
 - **Review ADR-002** (Prompt 6). It accepts D2 and fixes Vellum's sizing rules where CSS's defaults disagree with
   hug, fill and fixed (15 rows, each with a fixture). Decisions worth a look: fill shares space equally and ignores its
   content (`flex-basis: 0`, `min-width: 0`); fixed and hug never shrink; fill on the main axis of a hugging parent uses
@@ -330,3 +344,54 @@ Verified: `cargo test -p vellum-testkit --test layout_oracle` (6), `VELLUM_LANES
 `pnpm run copy-lint`, `pnpm run clean-room`, `pnpm run deps:check`, `pnpm run checksum`, `pnpm run design:check`,
 `pnpm run type-check`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -D warnings`,
 `cargo fmt --all --check`, `cargo deny check`.
+
+## Prompt 7: vellum-types I, nodes, paints, strokes, effects, sizing
+
+Not committed. Prompt 6 is committed (`374767d`). Everything is in `crates/vellum-types` (new modules `ids`, `value`,
+`color`, `geometry`, `enums`, `paint`, `stroke`, `effect`, `text`, `node`, `defaults`) plus a fix to
+`scripts/types-gen.mjs` and the regenerated `packages/types-ts`.
+
+Built:
+- Typed ids `NodeId`, `PageId`, `VariableId`, `ComponentId`, `StyleId`, `AssetId` (1 to 128 characters of
+  `A-Za-z0-9_-`, so never a `/`) and `NodeIdPath` (prints and parses `a/b/c`, usable as a JSON object key).
+- `Value<T>` = literal or `{"$var": ...}`; `Color` (`#RRGGBB` / `#RRGGBBAA`, upper case out, either case in);
+  `Size` = fixed (number or var), `"hug"`, `"fill"`, `{"hug": n}`, `{"fill": n}` (one spelling each).
+- The 18-kind `Node` union with every common field, all kinds from the brief, `Paint` (solid, gradient, mesh, image,
+  shader), `Stroke`, `Effect` (drop and inner shadow, layer and background blur, shader), 18 `BlendMode`s.
+  A field at its default is left out when printing, so a value has one spelling; `deny_unknown_fields` everywhere except
+  `metadata`.
+- `Instance` has real `componentId`, `variant` and `slotContent`; `props` and `overrides` are placeholder JSON until
+  Prompt 8. A `script` node has no `children` field (derived output is never saved).
+- 80 TypeScript types generated into `packages/types-ts`, and a type-level test in its `index.test.ts`.
+
+Differs from the guide or ARCHITECTURE: see the first "Needs a person" item (icon field, frame corner radius, `$var`
+key, no run colour, transitions, mesh). Also: the common fields are repeated on each node struct by a macro, because
+serde cannot combine `flatten` with `deny_unknown_fields`; `proptest` joined the allowlist and `serde_json` got
+`float_roundtrip` (version-baseline C18); the sizing fallback is a plain number, not a variable.
+
+Found along the way:
+- **serde reads `{"word": null}` as the unit variant `"word"`**, a second spelling for every enum. The string enums and
+  `SizeKeyword` now have hand-written (de)serialisation, with a test (`a_word_has_one_spelling_not_two`). Ids, `Color`
+  and `Size` are hand-written too, because ts-rs warns on every build about `try_from`, `into` and `transparent`.
+- **`scripts/types-gen.mjs` ignored subdirectories.** ts-rs writes `serde_json/JsonValue.ts` (borrowed type), which the
+  node types import, so `pnpm type-check` failed. The script now walks subdirectories (drift, missing and stale
+  checks too), with three new tests.
+- **The property tests did not catch a wrong default at first.** Random floats never equal `1.0`, so a mutation of the
+  opacity default survived. The generators now favour 0, 1 and 360; mutating the opacity, ellipse sweep and weight
+  defaults is now caught (the identity-transform mutation is an equivalent mutant).
+- Debug builds overflow a 2 MiB test thread while building the node strategies, so those properties run on a 64 MiB
+  thread. Deserialising deep documents does not overflow: serde_json returns an error past its recursion limit, and
+  `a_document_nested_too_deeply_is_an_error_not_a_crash` pins that on a 2 MiB thread.
+
+Not verified or not done: the JSON Schema is only checked to build (Prompt 8 publishes it); the lenient numeric rules
+(a `weight` outside 100 to 700, `sides` under 3, a grid with no `columns`, a negative size) are not validated, because
+Prompt 10 owns validation; `Value<T>` for string-typed properties is used only for an icon's `icon`.
+
+Test order: the four example-based test files were written first and failed to compile (types missing); they passed
+after the implementation. The property tests (`roundtrip.rs`) were written after the types, because their strategies
+build the structs, so they were never seen failing on missing code; the mutation checks above stand in for that.
+
+Verified: `cargo test -p vellum-types` (79 unit/export tests, 10 ids, 13 paints, 20 nodes, 7 properties, 4 smoke, 10
+values), `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`, `pnpm test` (33 tasks),
+`pnpm type-check`, `pnpm lint`, `pnpm format:check`, `pnpm types:gen` then `node --test scripts/__tests__/types-gen.test.mjs`,
+`pnpm deps:check`, `pnpm checksum`, `pnpm clean-room`, `pnpm copy-lint`.

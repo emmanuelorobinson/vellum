@@ -50,7 +50,8 @@
 | emsdk (emscripten) | 4.0.6 | wasm32 + emscripten targets per ADR-001 | `spikes/renderer/scripts/emscripten-env.sh` (installed, not a dependency) | C15 |
 | png | 0.18.1 | dev tooling (not in §5) | `crates/vellum-testkit` | pixel-diff PNG read and write (Prompt 4) |
 | serde | 1.0.229 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
-| serde_json | 1.0.154 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
+| serde_json | 1.0.154 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest; `float_roundtrip` on since Prompt 7 (C18) |
+| proptest | 1.12.0 | dev dependency (not in §5) | `Cargo.toml` workspace.dependencies; `vellum-types` dev-dependencies | property tests (guide §11 and Prompts 7, 9, 10, 14); `scripts/rust-deps-allowlist.txt` (C18) |
 
 ## Node and JavaScript tooling
 
@@ -179,6 +180,14 @@ No repository has a release at or after its pin, so every pin stays at the guide
   by version in `.github/workflows/ci.yml`). The committed boxes, not the version, are the contract: `--check` passes
   under another Chrome as long as no box moves more than 0.5 px. taffy 0.14.0 on crates.io predates the `refs/taffy`
   pin and spells alignment constants `AlignItems::FLEX_START`, not the pin's `AlignItems::FlexStart`.
+
+- **C18: `proptest` joins the pure-crate allowlist as a dev-dependency; `serde_json` and `ts-rs` gain features** (Prompt 7).
+  The guide asks for property tests from Prompt 7 on, and `vellum-types` and `vellum-core` are the crates they cover, so
+  `proptest` (default features off, `std` only) is allowed on `vellum-types` in `scripts/rust-deps-allowlist.txt`; it
+  never reaches a normal build. `serde_json`'s `float_roundtrip` is on because without it the parser can be one ULP off
+  for some `f64`, and a model coordinate must read back as written. `ts-rs`'s `serde-json-impl` lets a node's free-form
+  `metadata` (and an instance's placeholder props) export as `JsonValue`. `vendor` entries in the allowlist still bar
+  `wasm-bindgen` and the rest from the closure; `pnpm deps:check` passes.
 
 ## What the reference clones are for
 

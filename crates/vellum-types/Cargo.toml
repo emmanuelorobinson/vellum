@@ -10,9 +10,10 @@ publish.workspace = true
 serde.workspace = true
 schemars.workspace = true
 ts-rs.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true
