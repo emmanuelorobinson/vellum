@@ -8,6 +8,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the Guard's reason strings and limits** (Prompt 13). Only "Frame leased by {agent}" is in Appendix B. The
+  others are mine, built on DESIGN.md's verbs: "Agents paused", "{agent} is paused", "Stopped by you", "Stopped by
+  you on this frame", "{count} changes at once · the limit is {limit}", "{count} new layers at once · the limit is
+  {limit}". They live in `@vellum/config` as `guardReasons` (outside the Appendix B `copy` object) and in
+  `vellum_core::guard::reasons`; a Rust test keeps them equal. The default limits (1,000 ops, 1,000 inserted nodes
+  per agent transaction) have no source; I matched the script output budget. Change either in both places.
+- **Guide Prompt 13's FINAL command does not run as written.** `cargo test guard:: lease::` fails with "unexpected
+  argument 'lease::'" (cargo takes one filter). The equivalent is `cargo test -p vellum-core -- guard:: lease::`.
+  The guide is read-only to me.
+
 - **Review Prompt 12's operation representation and path port addition**. The choices/limits below record the
   off-page component representation, sparse instance inheritance, geometry inputs and unsupported outline styles.
   `PathOps::outline_stroke` is needed by the new op and is absent from ARCHITECTURE's port signature. Only a person
@@ -812,3 +822,47 @@ Test order: the acceptance tests failed to compile before the API existed. Subse
 on doubled instance scaling, duplicated style on non-frame components, generic-write bypasses, stale measured
 bounds and variant replacement addressing; the implementation was corrected for each. Initial scale assertions
 were corrected to compare floating-point JSON numbers rather than integers. Clippy requested collapsed conditionals.
+
+## Prompt 13: Guard, leases, pause set, limits
+
+Built:
+- `vellum_core::lease`: the §10.2 machine (`LeaseState::next` over `Claim`, `Activity`, `Release`, `Expire`, `Stop`,
+  `PauseAll`), `Leases` (one per frame), `BlockedPairs` and `LEASE_IDLE_MS` (60 s). Time comes in as a `Timestamp`;
+  a lease whose expiry has come is free even before `expire` drops it.
+- `vellum_core::guard`: pure `guard(write, leases, pause_set, blocked_pairs, limits, now) -> Verdict` with a typed
+  `Rejection` (`Leased`, `AllPaused`, `Paused`, `Stopped`, `StoppedHere`, `TooManyOps`, `TooManyNodes`), each with a
+  `@vellum/config` key and a plain-language `message(name)`. `PauseSet`, `Limits`, `GuardState` and
+  `apply_guarded`, which checks the actor before validating, then plans, guards, commits and extends the agent's
+  own leases. `ops::commit` is a new `pub(crate)` helper shared with `ops::apply`.
+- `packages/config` exports `guardReasons`. 34 tests: a 22-row lease transition table (free, held, expired x every
+  event), an exhaustive 160-row guard table (person, agent, file, system x free, own, other's, other's expired
+  lease x running, Pause all, paused, stopped, other paused x blocked or not), each way of writing into a lease,
+  limits, messages, config parity and the guarded write path (Invariant 4: Pause all rejects the next agent write
+  and the store is untouched).
+
+Choices (in the code until you say otherwise):
+- The guide's signature has no document, but "inside a frame" needs the tree, so `guard` takes a `Write` built from
+  the document, the transaction and its plan; it reads the planned edits, so every op kind (including Prompt 12's)
+  is covered by one rule. A write is inside a frame when an edit sets, inserts under, removes or moves anything in
+  its subtree, or removes or moves the frame or an ancestor. Copying out of a frame is a read. Variables are outside
+  every frame. A lease on a component definition's node also blocks replacing or removing that definition.
+- Only agents are checked. People, file changes and subsystems always pass. Order for an agent: stopped, Pause all,
+  paused, op count, inserted nodes, frames it was stopped on, frames others hold.
+- Resume all lifts Pause all and individual pauses, not a Stop (a stopped turn is over; the next turn resumes the
+  agent). Pause all frees every lease and blocks nobody. Stop on a lease tab frees it and blocks the pair.
+- Recording a rejection in History and naming agents are the daemon's job (Prompts 30+); the Guard returns the
+  typed reason. No reference row covers the Guard in guide §3.2, so there is no reference note. Sibling projects
+  were not a source: none has an agent lease or pause model.
+
+Verified (each exited 0):
+- `cargo test -p vellum-core -- guard:: lease::` (34; see "Needs a person" for the guide's form); `cargo test --workspace`;
+  `cargo clippy --workspace --all-targets -- -D warnings`; `cargo fmt --all --check`.
+- `pnpm deps:check`, `pnpm lint`, `pnpm type-check`, `pnpm format:check`, `pnpm types:check`, `pnpm format-spec:check`,
+  `pnpm clean-room`, `pnpm checksum`, `pnpm copy-lint`, `pnpm --filter @vellum/config test`.
+- Failed: `pnpm test:scripts`: 148 passed, 1 failed, 1 skipped; only the recorded `missing: R3 taffy: main.rs`.
+
+Test order: the new tests failed to compile before the modules existed. After the first implementation passed,
+two mutations survived (removing an ancestor of a leased frame; replacing a component definition), so I added a
+test for each; both now fail under the mutation and pass on the code. A check against the document after the write
+was removed: no test could tell it apart, because the first edit reaching into a frame always names a node that was
+already there.

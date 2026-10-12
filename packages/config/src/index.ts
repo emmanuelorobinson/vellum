@@ -37,6 +37,18 @@ export const copy = {
   reviewReminder: "Review agent changes in History.",
 } as const;
 
+// The Guard's reasons for rejecting an agent's write. vellum-core's `guard::reasons` holds the same strings under
+// the same keys, and a Rust test reads this object to keep them equal. Only `leased` is in Appendix B.
+export const guardReasons = {
+  leased: copy.writeRejected,
+  agentsPaused: "Agents paused",
+  agentPaused: "{agent} is paused",
+  stopped: "Stopped by you",
+  stoppedHere: "Stopped by you on this frame",
+  tooManyChanges: "{count} changes at once · the limit is {limit}",
+  tooManyLayers: "{count} new layers at once · the limit is {limit}",
+} as const;
+
 export const brand = {
   name: "Vellum",
   tagline: copy.tagline,

@@ -13,7 +13,7 @@ mod check;
 mod edit;
 mod lower;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -538,10 +538,16 @@ pub fn apply_with_inputs<S: DocStore + ?Sized>(
     inputs: &Inputs<'_>,
 ) -> Result<Applied, OpError> {
     let plan = plan_with_inputs(&store.snapshot(), &tx, ids, inputs)?;
-    let commit = Commit::new(tx.origin, plan.edits, plan.inverse, plan.changes);
+    Ok(commit(store, tx.origin, plan))
+}
+
+/// Hands a checked plan to the store. Only callers that planned against the store's current document may use it:
+/// `apply` here and the Guard's `apply_guarded`.
+pub(crate) fn commit<S: DocStore + ?Sized>(store: &mut S, origin: Origin, plan: Plan) -> Applied {
+    let commit = Commit::new(origin, plan.edits, plan.inverse, plan.changes);
     let changes = store.apply(commit);
-    Ok(Applied {
+    Applied {
         changes,
         created: plan.created,
-    })
+    }
 }
