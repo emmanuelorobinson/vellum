@@ -8,8 +8,28 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Decide how to commit `docs/design/snapshots/`** (Prompt 3). It is 101 MB: 504 PNGs at 1x and 2x for 252
-  screen frames. Options: commit as is, Git LFS, or drop the 2x set. Nothing from Prompt 3 is committed yet.
+- **Measure the renderer spike on an M1 and a mid-range Windows laptop** (Prompt 4). ADR-001's frame and latency
+  numbers come from one Apple M5 Pro only; the guide asks for both machines (or a GPU CI lane, which does not exist).
+  Copy `spikes/renderer/web/` with its built `dist/` (or build it, see `docs/runbooks/renderer-spike.md`), run
+  `pnpm install`, then `node measure.mjs --frames-only` there. It writes `results/frames-<host>.json`. If B is slower
+  than A on either machine, ADR-001 says to revisit.
+- **Review ADR-001 and update ARCHITECTURE §3.2** (Prompt 4). ADR-001 accepts D1: skia-safe in WASM for the editor,
+  the same code natively for headless, no CanvasKit. ARCHITECTURE.md still describes CanvasKit in TypeScript; only a
+  person edits it.
+- **Decide where the gpu lane runs** (Prompt 4). The gpu-tagged test (`VELLUM_LANES=gpu`) needs Chrome with a real GPU,
+  emsdk 4.0.6 and ninja. CI has no such runner, so it has only run on this machine.
+- **Commit and push the Biome fix** (Prompt 3). CI on `b836d9c` failed at its Biome step. The fix is in the working
+  tree and is not committed. Nothing was committed or pushed in this session.
+- **Save the updated design in pen.dev, then say so** (Prompt 3). The file the app has open,
+  `~/.pencil/documents/2c247f85-6e53-4acd-be65-f3662ca89428/vellum.pen`, is byte-identical to
+  `docs/design/vellum.pen` (SHA-256 `d82995c9…`, 16,095,916 bytes, modified 20:22). The app state does not show
+  whether there are unsaved changes. No other copy turned up in `~/Documents`, `~/Downloads`, `~/Desktop`,
+  `~/.pencil` or Spotlight. After a save, the agent copies the file, runs `pnpm checksum:update` and
+  `pnpm checksum --strict`, and regenerates the snapshots. `pnpm design:check` fails after a copy until they are
+  regenerated.
+- **Decide how to keep `docs/design/snapshots/` in git** (Prompt 3). It is committed as it is in `b836d9c`: 505
+  files, 101 MB, 504 PNGs at 1x and 2x for 252 screen frames. Options: keep it, move it to Git LFS, or drop the
+  2x set.
 - **Run `pen login`, then `pnpm design:snapshot` once** (Prompt 3). The CLI path has only run against a fake
   `pen` in tests. If it works, the output should match the committed inventory byte for byte. If it does not,
   the likely cause is the `execute({ input: "<json string>" })` line format in `scripts/lib/pen-queries.mjs`.
@@ -18,13 +38,16 @@ Open items, newest first. Remove an item when it is done and say so in the promp
 - **Settle six Component library entries with no reusable component in `vellum.pen`** (Prompt 3): Script node,
   Script section, blend mode menu, Canvas nodes for collaboration, Notes for agents, Guidelines editor. Either
   add them to the design or change DESIGN.md. They are recorded in `docs/design/DESIGN-GAPS.md`.
-- **Decide the licence** (Prompt 1). ARCHITECTURE open question 11. There is no LICENSE file and no `license`
-  field until you do.
 - **Add distinctive strings to `scripts/clean-room-denylist.txt`** (Prompt 2): pen.dev, Penpot, tldraw. The file
   is empty, so that half of the clean-room check does nothing yet.
-- **Revisit TypeScript 7** (Prompt 2). The repo is on 5.9.3 because dependency-cruiser 18.5.0 cannot read 7.
-- **Push to a remote** (Prompt 2). CI has never run. It now runs cargo-deny, the dependency, clean-room and
-  copy checks, and `pnpm design:check`.
+- **Decide whether the reference clones run in CI** (Prompt 2). `pnpm refs` needs about 2 GB and the network. It
+  runs only on a developer machine, so the reference index check and its real-clone test never run in CI.
+- **Confirm the guide edit** (Prompt 2). §3.2 R3 now says `src/main.rs` instead of `main.rs`, because the path
+  check found the file in `scripts/gentest/src/`.
+- **Revisit TypeScript 7** (Prompt 2). The repo is on 5.9.3 because dependency-cruiser 18.5.0 cannot read 7. The
+  dependency check now fails if dependency-cruiser cruises zero modules.
+- **Decide the licence** (Prompt 1). ARCHITECTURE open question 11. There is no LICENSE file and no `license`
+  field until you do. The licence list in `deny.toml` follows from the decision, so update it then.
 
 ## Prompt 1: monorepo scaffold
 
@@ -35,23 +58,59 @@ Committed as `d3e46d9`. Entry written later from the session notes, so it is bri
 
 ## Prompt 2: dependencies, reference repositories, copy checks
 
-Committed as `498f6a8`. Entry written later from the session notes, so it is brief.
+Committed as `498f6a8`, and pushed: `origin/main` now has it. CI for `498f6a8` passed (run 38165213624) in all three
+jobs, including cargo-deny, `pnpm deps:check`, `pnpm clean-room` and `pnpm copy-lint`. The old "push to a remote"
+item is done and is removed from Needs a person. Entry written later from the session notes, so it is brief.
 
 - Version baseline and ADRs added under `docs/architecture/`. Dependency rules for Rust (allowlist, cargo-deny)
   and for `packages/` and `apps/` (dependency-cruiser). Clean-room check and copy lint.
-- Pins changed from Prompt 1: Rust 1.98.1 to 1.99.0 (C1) and `@types/node` 26.6.5 to 24.19.2 (C2).
-- TypeScript stayed at 5.9.3 instead of the guide's 7.0.x (C3).
+- Pins changed from Prompt 1: Rust 1.98.1 to 1.99.0 (C1), `@types/node` 26.6.5 to 24.19.2 (C2), and TypeScript
+  7.0.2 to 5.9.3 (C3).
 - The guide itself was edited once: §3.2 R3 `main.rs` became `src/main.rs`, because the path check found the file
   sits in `scripts/gentest/src/`.
 - `refs/` is cloned locally (about 2 GB, gitignored). `pnpm refs` needs the network and runs only locally.
-- cargo-deny warns about wrapper entries for adapters that do not exist yet. Expected until they land.
+- cargo-deny warns about wrapper entries for adapters that do not exist yet. Expected until they land. The wrapper
+  names match the adapter crates' package names (checked).
 - App tests import `brand` from `@vellum/config`, because the copy lint forbids repeating Appendix B strings.
+
+Decided on the way:
+
+- No reference repo was re-pinned. None of the 15 has a release at or after its pin (C6).
+- ADRs live in `docs/architecture/decisions/`, the guide's path. ARCHITECTURE §2.6 says `docs/adr/`.
+- cargo-deny allows workspace path dependencies (`allow-wildcard-paths`). All crates are `publish = false`.
+- The clean-room check skips `.pen` files. The design file is encrypted and is read only through the Pencil MCP.
+- Two bugs found while testing, both fixed: dependency-cruiser's `exclude` hid `node_modules`, so the vendor-SDK
+  rule could never fire; and the TypeScript 7 check cruised zero modules without failing.
+
+Verified on the Prompt 2 tree: `pnpm test`, `pnpm lint`, `pnpm type-check`, `pnpm format:check`, `pnpm checksum`,
+`pnpm deps:check`, `pnpm clean-room`, `pnpm copy-lint`, `pnpm refs`, `cargo deny check`. All exited 0. At that
+time the script suite had 64 tests, none skipped. CI confirmed the same checks on `498f6a8`.
+
+Not done or open:
+
+- Not in CI, by design: `pnpm refs` and the real-clone index test. That test skips in CI.
+- Not installed, by design: most lines of the version baseline (Vite, Tailwind, Zustand, Zod, i18next, Electron
+  builder and updater, vsce and ovsx, Playwright, Storybook, better-auth, drizzle, Hono, the MCP SDK, and most
+  Rust crates). Each prompt installs its own line and re-resolves it first.
+- Versions were resolved on 2026-10-11. They go stale, so re-resolve a line when a prompt first installs it.
+- No porting has happened yet, so the `ported-from:` rule has only fixture tests.
+- The clean-room denylist is empty, so that check cannot catch anything yet (see Needs a person).
+- The licence list in `deny.toml` is provisional until the licence is decided. At the last run cargo-deny warned
+  about 9 allowed licences nothing uses, 8 wrapper entries for adapters not yet written, and one duplicate `syn`
+  version. I did not investigate the duplicate.
+- The licences in `scripts/refs.tsv` match each repo's LICENSE file, checked 2026-10-11. rmcp is mid-transition
+  from MIT to Apache-2.0, which is why the guide says "Apache-2.0 (MIT legacy parts)".
 
 ## Prompt 3: design source
 
-Not committed. Verified: `pnpm test:scripts` (120 tests), Biome, `copy-lint`, `clean-room`, `deps:check`,
-`checksum --strict`, `design:check` (0 errors, 11 recorded warnings). Rust and TypeScript package gates were
-not re-run, because nothing there changed.
+Committed as `b836d9c`. CI for that commit failed in its TypeScript job at `pnpm exec biome check .`: Biome wanted
+`scripts/__tests__/reports.test.mjs` wrapped differently. The fix is formatting only. It is uncommitted in the
+working tree, and `biome check .` passes locally. The repo checks job in that run passed, including
+`pnpm design:check`.
+
+Verified before the commit: `pnpm test:scripts` (120 tests), Biome, `copy-lint`, `clean-room`, `deps:check`,
+`checksum --strict`, `design:check` (0 errors, 11 recorded warnings). Rust and TypeScript package gates were not
+re-run, because nothing there changed. Re-checked afterwards: `design:check` passes (11 recorded gaps).
 
 Built:
 - `scripts/design-open`, `design-snapshot` (+ `design-snapshot.mjs`), `design-check` (+ `design-check.mjs`), with
@@ -80,3 +139,48 @@ Things that differ from the guide or could not be done as written:
 - The pen.dev app still has `.design-cache/vellum.readonly.pen` open.
 - Two test bugs and one real defect were fixed along the way: `parseGaps` was reading prose in the gaps file's
   header as a recorded gap, and now only reads dated lines.
+
+## Prompt 4: Spike A, renderer (ADR-001)
+
+Not committed. Decision: **D1 accepted**, skia-safe compiled to WASM renders the editor and the same drawing code runs
+natively; see `docs/architecture/decisions/ADR-001-renderer.md` for every number.
+
+Built:
+- `vellum-testkit::pixel_diff` (TDD, 11 tests): RGBA8 images, PNG read and write, comparison with a channel and
+  differing-share tolerance, max / p95 / mean delta, and expected, actual and diff PNG artifacts on failure. Adds the
+  `png` 0.18.1 crate to vellum-testkit.
+- `spikes/renderer/`: a separate Cargo workspace (root `Cargo.toml` excludes `spikes`) and pnpm package
+  (`@vellum/spike-renderer`, added to `pnpm-workspace.yaml`). Generated documents of 1,000 / 5,000 / 10,000 nodes,
+  20 non-text fixtures, one display list; Renderer A (Rust display list, CanvasKit 0.42.0 in JS), Renderer B
+  (skia-safe in WASM over WebGL2 from Rust), the native PNG path; a spike page with pan, zoom, FPS meter and a
+  screenshot button; `measure.mjs`; a gpu-tagged test for fixture #1. Measurements in
+  `spikes/renderer/results/results.json` (31 KB, committed); the fixture captures and diffs (1.1 MB) are gitignored and
+  regenerated by `pnpm spike:measure`.
+- `docs/runbooks/renderer-spike.md`; version-baseline rows for skia-safe, canvaskit-wasm, wasm-bindgen, emsdk 4.0.6
+  and png (note C15); the `rust-toolchain.toml` comment; Biome ignores `spikes/*/results` (generated JSON).
+
+Headline numbers (M5 Pro, Chrome 155 headless, vsync off): B is 1.9x / 2.5x / 2.6x A's fps at 1k / 5k / 10k nodes
+(10k: 232 vs 88.5 fps, frame p95 10.9 vs 18.7 ms) and about half the drag latency at 5k and 10k. A and B are
+pixel-identical on all 20 fixtures. Native CPU raster vs WASM CPU raster: within 1. CPU raster vs the GPU: edge
+pixels only, max delta 85, p95 at most 1, at most 1.85% of pixels. Size gzip: A 3.02 MB, B 1.55 MB, B with text
+layout 2.65 MB. Cold load: A 243 ms, B 224 ms.
+
+Things that differ from the guide, failed, or could not be verified:
+- **Only one machine.** No M1, no Windows laptop, no GPU CI lane (see Needs a person). The ADR says so.
+- **Skia is built from source for emscripten.** rust-skia's prebuilt emscripten binaries do not link with Rust 1.99
+  (JS longjmp vs wasm exceptions). The build needs emsdk 4.0.6 (installed in `~/emsdk`) and ninja (installed with
+  Homebrew in this session). First build downloads about 1 GB of Skia sources.
+- **The documents' text uses Geist Regular from the installed `next` package** at runtime; no font is committed. Text
+  parity is Prompt 5.
+- **Test lanes:** there was no convention yet, so this prompt introduced `VELLUM_LANES` (comma-separated). Without
+  `gpu` in it the test reports as skipped. Its failure was confirmed (missing build) before it passed.
+- The spike uses plain C exports and `unsafe` FFI; the spike workspace does not inherit the product's
+  `unsafe_code = "deny"`.
+- `cargo fmt` in the spike workspace also formatted `crates/vellum-testkit` (a path dependency); only files from this
+  prompt changed.
+
+Verified: `cargo test -p vellum-testkit` (11 pixel-diff tests), `cargo clippy --workspace --all-targets -D warnings`,
+`cargo fmt --check`, `cargo test --workspace`, `cargo deny check advisories`, `pnpm deps:check`, `pnpm test:scripts`
+(122), `biome check .`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`; in `spikes/renderer`: `cargo test`,
+`cargo clippy -D warnings` (native and emscripten), `VELLUM_LANES=gpu node --test test/fixture1.gpu.test.mjs` (pass:
+both paths pixel-identical to native for fixture #1). `pnpm type-check` was not re-run: no TypeScript package changed.

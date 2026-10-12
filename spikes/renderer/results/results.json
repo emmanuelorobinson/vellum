@@ -1,0 +1,1241 @@
+{
+  "measuredAt": "2026-10-11T19:42:30.862Z",
+  "machine": {
+    "cpu": "Apple M5 Pro",
+    "platform": "darwin 27.0.0",
+    "memoryGb": 48
+  },
+  "method": {
+    "runs": 3,
+    "benchSeconds": 5,
+    "chrome": "headless=new, --disable-gpu-vsync --disable-frame-rate-limit",
+    "window": "1280 x 860, DPR 1"
+  },
+  "wasmSize": {
+    "a": {
+      "files": [
+        {
+          "file": "web/dist/spike_scene_wasm.wasm",
+          "raw": 37107,
+          "gzip": 14027
+        },
+        {
+          "file": "web/node_modules/canvaskit-wasm/bin/canvaskit.wasm",
+          "raw": 7317345,
+          "gzip": 2960611
+        },
+        {
+          "file": "web/node_modules/canvaskit-wasm/bin/canvaskit.js",
+          "raw": 120877,
+          "gzip": 37516
+        },
+        {
+          "file": "web/src/renderer-a.js",
+          "raw": 8953,
+          "gzip": 2891
+        }
+      ],
+      "raw": 7484282,
+      "gzip": 3015045
+    },
+    "b": {
+      "files": [
+        {
+          "file": "web/dist/skia_wasm.wasm",
+          "raw": 3920653,
+          "gzip": 1534382
+        },
+        {
+          "file": "web/dist/skia_wasm.js",
+          "raw": 61948,
+          "gzip": 14957
+        },
+        {
+          "file": "web/src/renderer-b.js",
+          "raw": 1844,
+          "gzip": 833
+        }
+      ],
+      "raw": 3984445,
+      "gzip": 1550172
+    },
+    "b with textlayout (size only)": {
+      "files": [
+        {
+          "file": "web/dist/textlayout/skia_wasm.wasm",
+          "raw": 6488432,
+          "gzip": 2636413
+        },
+        {
+          "file": "web/dist/textlayout/skia_wasm.js",
+          "raw": 62026,
+          "gzip": 14973
+        },
+        {
+          "file": "web/src/renderer-b.js",
+          "raw": 1844,
+          "gzip": 833
+        }
+      ],
+      "raw": 6552302,
+      "gzip": 2652219
+    },
+    "canvaskit-full (reference)": {
+      "files": [
+        {
+          "file": "web/node_modules/canvaskit-wasm/bin/full/canvaskit.wasm",
+          "raw": 8242911,
+          "gzip": 3314247
+        },
+        {
+          "file": "web/node_modules/canvaskit-wasm/bin/full/canvaskit.js",
+          "raw": 123707,
+          "gzip": 38218
+        }
+      ],
+      "raw": 8366618,
+      "gzip": 3352465
+    }
+  },
+  "pixels": {
+    "tolerance": {
+      "channel": 2
+    },
+    "summary": {
+      "native-vs-a": {
+        "identical": 5,
+        "withinChannel2": 11,
+        "worstMaxDelta": 85,
+        "worstP95": 1,
+        "worstDifferingFraction": 0.018478,
+        "meanDifferingFraction": 0.00334625
+      },
+      "native-vs-b": {
+        "identical": 5,
+        "withinChannel2": 11,
+        "worstMaxDelta": 85,
+        "worstP95": 1,
+        "worstDifferingFraction": 0.018478,
+        "meanDifferingFraction": 0.00334625
+      },
+      "a-vs-b": {
+        "identical": 20,
+        "withinChannel2": 20,
+        "worstMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "identical": 17,
+        "withinChannel2": 20,
+        "worstMaxDelta": 1,
+        "worstP95": 1,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      }
+    },
+    "rows": [
+      {
+        "name": "01-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "01-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "01-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "01-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "02-native-vs-a",
+        "passed": false,
+        "differing_pixels": 173,
+        "total_pixels": 65536,
+        "differing_fraction": 0.00264,
+        "max_channel_delta": 40,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0374,
+        "diff": "results/fixtures/diffs/02-native-vs-a.diff.png"
+      },
+      {
+        "name": "02-native-vs-b",
+        "passed": false,
+        "differing_pixels": 173,
+        "total_pixels": 65536,
+        "differing_fraction": 0.00264,
+        "max_channel_delta": 40,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0374,
+        "diff": "results/fixtures/diffs/02-native-vs-b.diff.png"
+      },
+      {
+        "name": "02-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "02-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "03-native-vs-a",
+        "passed": false,
+        "differing_pixels": 140,
+        "total_pixels": 65536,
+        "differing_fraction": 0.002136,
+        "max_channel_delta": 68,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0454,
+        "diff": "results/fixtures/diffs/03-native-vs-a.diff.png"
+      },
+      {
+        "name": "03-native-vs-b",
+        "passed": false,
+        "differing_pixels": 140,
+        "total_pixels": 65536,
+        "differing_fraction": 0.002136,
+        "max_channel_delta": 68,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0454,
+        "diff": "results/fixtures/diffs/03-native-vs-b.diff.png"
+      },
+      {
+        "name": "03-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "03-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "04-native-vs-a",
+        "passed": false,
+        "differing_pixels": 610,
+        "total_pixels": 65536,
+        "differing_fraction": 0.009308,
+        "max_channel_delta": 58,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.1925,
+        "diff": "results/fixtures/diffs/04-native-vs-a.diff.png"
+      },
+      {
+        "name": "04-native-vs-b",
+        "passed": false,
+        "differing_pixels": 610,
+        "total_pixels": 65536,
+        "differing_fraction": 0.009308,
+        "max_channel_delta": 58,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.1925,
+        "diff": "results/fixtures/diffs/04-native-vs-b.diff.png"
+      },
+      {
+        "name": "04-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "04-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "05-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0079,
+        "diff": ""
+      },
+      {
+        "name": "05-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0079,
+        "diff": ""
+      },
+      {
+        "name": "05-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "05-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "06-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0001,
+        "diff": ""
+      },
+      {
+        "name": "06-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0001,
+        "diff": ""
+      },
+      {
+        "name": "06-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "06-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "07-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.4375,
+        "diff": ""
+      },
+      {
+        "name": "07-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.4375,
+        "diff": ""
+      },
+      {
+        "name": "07-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "07-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "08-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.6602,
+        "diff": ""
+      },
+      {
+        "name": "08-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.6602,
+        "diff": ""
+      },
+      {
+        "name": "08-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "08-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "09-native-vs-a",
+        "passed": false,
+        "differing_pixels": 428,
+        "total_pixels": 65536,
+        "differing_fraction": 0.006531,
+        "max_channel_delta": 36,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.1104,
+        "diff": "results/fixtures/diffs/09-native-vs-a.diff.png"
+      },
+      {
+        "name": "09-native-vs-b",
+        "passed": false,
+        "differing_pixels": 428,
+        "total_pixels": 65536,
+        "differing_fraction": 0.006531,
+        "max_channel_delta": 36,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.1104,
+        "diff": "results/fixtures/diffs/09-native-vs-b.diff.png"
+      },
+      {
+        "name": "09-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "09-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "10-native-vs-a",
+        "passed": false,
+        "differing_pixels": 263,
+        "total_pixels": 65536,
+        "differing_fraction": 0.004013,
+        "max_channel_delta": 53,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.055,
+        "diff": "results/fixtures/diffs/10-native-vs-a.diff.png"
+      },
+      {
+        "name": "10-native-vs-b",
+        "passed": false,
+        "differing_pixels": 263,
+        "total_pixels": 65536,
+        "differing_fraction": 0.004013,
+        "max_channel_delta": 53,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.055,
+        "diff": "results/fixtures/diffs/10-native-vs-b.diff.png"
+      },
+      {
+        "name": "10-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "10-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "11-native-vs-a",
+        "passed": false,
+        "differing_pixels": 796,
+        "total_pixels": 65536,
+        "differing_fraction": 0.012146,
+        "max_channel_delta": 85,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.2974,
+        "diff": "results/fixtures/diffs/11-native-vs-a.diff.png"
+      },
+      {
+        "name": "11-native-vs-b",
+        "passed": false,
+        "differing_pixels": 796,
+        "total_pixels": 65536,
+        "differing_fraction": 0.012146,
+        "max_channel_delta": 85,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.2974,
+        "diff": "results/fixtures/diffs/11-native-vs-b.diff.png"
+      },
+      {
+        "name": "11-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "11-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "12-native-vs-a",
+        "passed": false,
+        "differing_pixels": 109,
+        "total_pixels": 65536,
+        "differing_fraction": 0.001663,
+        "max_channel_delta": 45,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0229,
+        "diff": "results/fixtures/diffs/12-native-vs-a.diff.png"
+      },
+      {
+        "name": "12-native-vs-b",
+        "passed": false,
+        "differing_pixels": 109,
+        "total_pixels": 65536,
+        "differing_fraction": 0.001663,
+        "max_channel_delta": 45,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0229,
+        "diff": "results/fixtures/diffs/12-native-vs-b.diff.png"
+      },
+      {
+        "name": "12-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "12-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "13-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "13-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "13-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "13-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.3516,
+        "diff": ""
+      },
+      {
+        "name": "14-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "14-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "14-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "14-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "15-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "15-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "15-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "15-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "16-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.0598,
+        "diff": ""
+      },
+      {
+        "name": "16-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.0598,
+        "diff": ""
+      },
+      {
+        "name": "16-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "16-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.0063,
+        "diff": ""
+      },
+      {
+        "name": "17-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "17-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "17-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "17-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "18-native-vs-a",
+        "passed": false,
+        "differing_pixels": 656,
+        "total_pixels": 65536,
+        "differing_fraction": 0.01001,
+        "max_channel_delta": 53,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.2915,
+        "diff": "results/fixtures/diffs/18-native-vs-a.diff.png"
+      },
+      {
+        "name": "18-native-vs-b",
+        "passed": false,
+        "differing_pixels": 656,
+        "total_pixels": 65536,
+        "differing_fraction": 0.01001,
+        "max_channel_delta": 53,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.2915,
+        "diff": "results/fixtures/diffs/18-native-vs-b.diff.png"
+      },
+      {
+        "name": "18-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "18-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "19-native-vs-a",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.311,
+        "diff": ""
+      },
+      {
+        "name": "19-native-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.311,
+        "diff": ""
+      },
+      {
+        "name": "19-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "19-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 1,
+        "p95_pixel_delta": 1,
+        "mean_pixel_delta": 0.3125,
+        "diff": ""
+      },
+      {
+        "name": "20-native-vs-a",
+        "passed": false,
+        "differing_pixels": 1211,
+        "total_pixels": 65536,
+        "differing_fraction": 0.018478,
+        "max_channel_delta": 50,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.2982,
+        "diff": "results/fixtures/diffs/20-native-vs-a.diff.png"
+      },
+      {
+        "name": "20-native-vs-b",
+        "passed": false,
+        "differing_pixels": 1211,
+        "total_pixels": 65536,
+        "differing_fraction": 0.018478,
+        "max_channel_delta": 50,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0.2982,
+        "diff": "results/fixtures/diffs/20-native-vs-b.diff.png"
+      },
+      {
+        "name": "20-a-vs-b",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      },
+      {
+        "name": "20-native-vs-b-raster",
+        "passed": true,
+        "differing_pixels": 0,
+        "total_pixels": 65536,
+        "differing_fraction": 0,
+        "max_channel_delta": 0,
+        "p95_pixel_delta": 0,
+        "mean_pixel_delta": 0,
+        "diff": ""
+      }
+    ]
+  },
+  "coldLoadMs": {
+    "a": {
+      "runs": [
+        244,
+        237,
+        243,
+        247,
+        208
+      ],
+      "median": 243
+    },
+    "b": {
+      "runs": [
+        162,
+        224,
+        242,
+        220,
+        244
+      ],
+      "median": 224
+    }
+  },
+  "gpu": {
+    "glRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)",
+    "canvas": "1280 x 735 device px",
+    "results": {
+      "a-1000": {
+        "renderer": "a",
+        "nodes": 1000,
+        "fps": 572.4,
+        "frameMsP50": 1.8,
+        "frameMsP95": 2.9,
+        "drawCallMsP50": 1.7,
+        "drawCallMsP95": 2.8,
+        "runs": [
+          533.3,
+          578.7,
+          572.4
+        ],
+        "latencyMsP50": 2,
+        "latencyMsP95": 2.4,
+        "latencySamples": 270
+      },
+      "b-1000": {
+        "renderer": "b",
+        "nodes": 1000,
+        "fps": 1100,
+        "frameMsP50": 0.8,
+        "frameMsP95": 2.1,
+        "drawCallMsP50": 0.8,
+        "drawCallMsP95": 2,
+        "runs": [
+          1074.6,
+          1100,
+          1111.3
+        ],
+        "latencyMsP50": 1.2,
+        "latencyMsP95": 3.8,
+        "latencySamples": 270
+      },
+      "a-5000": {
+        "renderer": "a",
+        "nodes": 5000,
+        "fps": 169.1,
+        "frameMsP50": 5.6,
+        "frameMsP95": 9.2,
+        "drawCallMsP50": 5.6,
+        "drawCallMsP95": 9.1,
+        "runs": [
+          169.5,
+          165.3,
+          169.1
+        ],
+        "latencyMsP50": 6.4,
+        "latencyMsP95": 7.6,
+        "latencySamples": 270
+      },
+      "b-5000": {
+        "renderer": "b",
+        "nodes": 5000,
+        "fps": 417.5,
+        "frameMsP50": 1.6,
+        "frameMsP95": 5.5,
+        "drawCallMsP50": 1.6,
+        "drawCallMsP95": 5.4,
+        "runs": [
+          418.8,
+          417,
+          417.5
+        ],
+        "latencyMsP50": 2.9,
+        "latencyMsP95": 3.6,
+        "latencySamples": 270
+      },
+      "a-10000": {
+        "renderer": "a",
+        "nodes": 10000,
+        "fps": 88.5,
+        "frameMsP50": 9.9,
+        "frameMsP95": 18.7,
+        "drawCallMsP50": 9.9,
+        "drawCallMsP95": 18.4,
+        "runs": [
+          87.9,
+          88.5,
+          88.7
+        ],
+        "latencyMsP50": 14.7,
+        "latencyMsP95": 15.9,
+        "latencySamples": 270
+      },
+      "b-10000": {
+        "renderer": "b",
+        "nodes": 10000,
+        "fps": 231.7,
+        "frameMsP50": 3,
+        "frameMsP95": 10.9,
+        "drawCallMsP50": 3,
+        "drawCallMsP95": 10.8,
+        "runs": [
+          230.7,
+          231.7,
+          231.7
+        ],
+        "latencyMsP50": 6.7,
+        "latencyMsP95": 7.3,
+        "latencySamples": 270
+      }
+    }
+  },
+  "software": {
+    "glRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+    "canvas": "1280 x 735 device px",
+    "results": {
+      "a-1000": {
+        "renderer": "a",
+        "nodes": 1000,
+        "fps": 368.4,
+        "frameMsP50": 2.1,
+        "frameMsP95": 7,
+        "drawCallMsP50": 2.1,
+        "drawCallMsP95": 6.9,
+        "runs": [
+          408.8,
+          368.4,
+          358.3
+        ]
+      },
+      "b-1000": {
+        "renderer": "b",
+        "nodes": 1000,
+        "fps": 400.7,
+        "frameMsP50": 1.8,
+        "frameMsP95": 6.8,
+        "drawCallMsP50": 1.7,
+        "drawCallMsP95": 6.8,
+        "runs": [
+          376.1,
+          402.5,
+          400.7
+        ]
+      },
+      "a-5000": {
+        "renderer": "a",
+        "nodes": 5000,
+        "fps": 120.7,
+        "frameMsP50": 5.1,
+        "frameMsP95": 28,
+        "drawCallMsP50": 5.2,
+        "drawCallMsP95": 27.9,
+        "runs": [
+          118.3,
+          120.7,
+          121.3
+        ]
+      },
+      "b-5000": {
+        "renderer": "b",
+        "nodes": 5000,
+        "fps": 119.8,
+        "frameMsP50": 4.6,
+        "frameMsP95": 28.6,
+        "drawCallMsP50": 4.7,
+        "drawCallMsP95": 28.1,
+        "runs": [
+          119.5,
+          120.8,
+          119.8
+        ]
+      },
+      "a-10000": {
+        "renderer": "a",
+        "nodes": 10000,
+        "fps": 60.6,
+        "frameMsP50": 9.5,
+        "frameMsP95": 51.6,
+        "drawCallMsP50": 9.6,
+        "drawCallMsP95": 50.9,
+        "runs": [
+          60.6,
+          60.8,
+          60
+        ]
+      },
+      "b-10000": {
+        "renderer": "b",
+        "nodes": 10000,
+        "fps": 62.2,
+        "frameMsP50": 8.4,
+        "frameMsP95": 51.2,
+        "drawCallMsP50": 9.2,
+        "drawCallMsP95": 50.7,
+        "runs": [
+          62.4,
+          62.1,
+          62.2
+        ]
+      }
+    }
+  }
+}

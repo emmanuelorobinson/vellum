@@ -1,0 +1,21 @@
+# Spike A (guide Prompt 4): renderer comparison for ADR-001. Spike quality; rewritten in Prompts 22-23.
+# A separate Cargo workspace so skia-safe and the emscripten build never enter the product dependency
+# graph. Nothing under crates/ or packages/ may depend on anything here.
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[workspace.dependencies]
+skia-safe = { version = "0.153.3", features = ["gl"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true

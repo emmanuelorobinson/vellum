@@ -1,0 +1,16 @@
+{
+  "name": "@vellum/spike-renderer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Spike A (guide Prompt 4): the renderer spike page and its measurements. Spike quality; rewritten in Prompts 22-23.",
+  "type": "module",
+  "scripts": {
+    "spike:build": "bash ../scripts/build.sh",
+    "spike:serve": "node server.mjs",
+    "spike:measure": "node measure.mjs",
+    "spike:test:gpu": "node --test \"test/*.gpu.test.mjs\""
+  },
+  "dependencies": {
+    "canvaskit-wasm": "0.42.0"
+  }
+}

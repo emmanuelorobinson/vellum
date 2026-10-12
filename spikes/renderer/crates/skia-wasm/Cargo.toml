@@ -1,0 +1,20 @@
+[package]
+name = "spike-skia-wasm"
+description = "Renderer B: skia-safe compiled to WASM with emscripten, drawing into WebGL2 from Rust."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "skia_wasm"
+path = "src/main.rs"
+
+[dependencies]
+spike-scene = { path = "../scene" }
+spike-skia-draw = { path = "../skia-draw" }
+skia-safe = { workspace = true }
+
+[features]
+# Size measurement only: Renderer B with Skia's paragraph layout (and embedded ICU data), as text needs.
+textlayout = ["skia-safe/textlayout"]

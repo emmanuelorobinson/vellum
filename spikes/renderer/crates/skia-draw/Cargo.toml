@@ -1,0 +1,11 @@
+[package]
+name = "spike-skia-draw"
+description = "Draws a spike display list onto a skia-safe canvas. Shared by the native and the WASM build."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+spike-scene = { path = "../scene" }
+skia-safe = { workspace = true }

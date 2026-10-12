@@ -1,0 +1,13 @@
+[package]
+name = "spike-skia-native"
+description = "The native skia-safe path: renders fixtures and documents to PNG and compares browser captures against them."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+spike-scene = { path = "../scene" }
+spike-skia-draw = { path = "../skia-draw" }
+skia-safe = { workspace = true }
+vellum-testkit = { path = "../../../../crates/vellum-testkit" }

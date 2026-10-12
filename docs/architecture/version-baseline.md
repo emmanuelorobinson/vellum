@@ -30,7 +30,7 @@
 | taffy | 0.14.0 | 0.14.x | not yet used | layout adapter (Prompt 18) |
 | parley | 0.12.0 | 0.12.x | not yet used | text adapter (Prompt 19) |
 | fontique | 0.12.0 | 0.12.x | not yet used | ships with parley; a direct dependency only if needed |
-| skia-safe | 0.153.3 | 0.153.x | not yet used | features textlayout, svg, pdf; gl and vulkan off for headless (ADR-001) |
+| skia-safe | 0.153.3 | 0.153.x | spike only: `spikes/renderer` (features gl; textlayout for a size build) | the renderer everywhere, native and emscripten (ADR-001, C15) |
 | vello | 0.11.0 | 0.11.x | not yet used | later, behind a flag |
 | kurbo | 0.13.1 | 0.13.x | not yet used | path geometry adapter |
 | i_overlay | 9.0.1 | 9.0.x | not yet used | boolean operations (Prompt 12) |
@@ -39,7 +39,7 @@
 | rmcp | 3.5.1 | 3.5.x | not yet used | MCP adapter (Prompt 29) |
 | schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |
 | ts-rs | 12.0.1 | 12.x | `Cargo.toml` workspace.dependencies | TypeScript bindings from vellum-types |
-| wasm-bindgen | 0.2.129 | 0.2.129+ | not yet used | only if ADR-001 picks wasm-bindgen over emscripten exports |
+| wasm-bindgen | 0.2.129 | 0.2.129+ | not yet used | ADR-001 uses emscripten C exports for the renderer; not needed there |
 | notify | 8.2.0 | 8.2.x | not yet used | file watcher (Prompt 28) |
 | rusqlite | 0.40.2 | 0.40.x | not yet used | session store, bundled SQLite (Prompt 34) |
 | keyring | 4.2.0 | 4.2.x | not yet used | SecretStore (Prompt 32) |
@@ -47,6 +47,8 @@
 | chromiumoxide | 0.9.1 | 0.9.x | not yet used | BrowserPort, v1.1 (Prompt 65) |
 | naga | 30.0.1 | 30.x | not yet used | shader translation, v1.1, only if ADR-008 uses it |
 | cargo-deny | 0.20.2 | 0.20.x | `scripts/check-deps.sh` and `pnpm cargo:deny` (installed, not a dependency) | C5 |
+| emsdk (emscripten) | 4.0.6 | wasm32 + emscripten targets per ADR-001 | `spikes/renderer/scripts/emscripten-env.sh` (installed, not a dependency) | C15 |
+| png | 0.18.1 | dev tooling (not in §5) | `crates/vellum-testkit` | pixel-diff PNG read and write (Prompt 4) |
 | serde | 1.0.229 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
 | serde_json | 1.0.154 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
 
@@ -86,7 +88,7 @@
 | @vscode/vsce | 4.0.0 | 4.0.x | not yet used | VS Code packaging (Prompt 56) |
 | ovsx | 1.2.0 | 1.2.x | not yet used | Open VSX publishing (Prompt 56) |
 | @types/vscode | 1.140.0 | VS Code API types (not in §5) | `pnpm-workspace.yaml` catalog | C8 |
-| canvaskit-wasm | 0.42.0 | 0.42.x, only if ADR-001 picks CanvasKit | not installed | C12 |
+| canvaskit-wasm | 0.42.0 | 0.42.x, only if ADR-001 picks CanvasKit | spike only: `spikes/renderer/web/package.json` | C12 |
 | @modelcontextprotocol/sdk | 1.32.1 | 1.32.x | not yet used | TypeScript side of the extension's MCP registration (Prompt 56) |
 | better-auth | 1.7.7 | 1.7.x | not yet used | wrapped by `@vellum/auth` (Prompt 61) |
 | drizzle-orm | 0.45.4 | 0.45.x | not yet used | account app database (Prompt 61) |
@@ -155,13 +157,17 @@ No repository has a release at or after its pin, so every pin stays at the guide
   `.dependency-cruiser.cjs`.
 - **C11: shadcn 4.21.4** is recorded for the CLI. It generates source into the repository and is not a dependency.
   Nothing is generated yet.
-- **C12: canvaskit-wasm 0.42.0** is recorded and not installed. ADR-001 (Prompt 4) decides whether it is used.
+- **C12: canvaskit-wasm 0.42.0** is installed only in the renderer spike (`spikes/renderer/web`), as Renderer A. ADR-001
+  (Prompt 4) chose skia-safe in WASM, so no product package depends on it.
 - **C13: Lines not yet installed** (Vite, Tailwind, Zustand, Zod, i18next, Electron builder, vsce, Playwright, Storybook,
   better-auth, drizzle-orm, Hono, the MCP SDK and the unused Rust crates) are recorded at their resolved versions. The
   prompt that adds one installs the recorded version and updates this file in the same change.
 - **C14: Unchanged from Prompt 1:** pnpm 12.11.2, Turborepo 2.11.7, Biome 2.5.15, React 19.3.0, Vitest 5.0.3, Next.js
   16.4.0, Electron 44.7.0, serde 1.0.229, serde_json 1.0.154, schemars 1.2.2, ts-rs 12.0.1 and clap 4.6.7. Each is still the
   newest stable patch of its line.
+- **C15: emsdk 4.0.6 and Skia from source for emscripten** (Prompt 4, ADR-001). 4.0.6 is the version Penpot pairs with
+  skia-safe 0.153.x. rust-skia's prebuilt emscripten binaries do not link with Rust 1.99 (JS longjmp vs wasm exceptions),
+  so the emscripten build compiles Skia from source with ninja; the native build keeps the prebuilt binaries.
 
 ## What the reference clones are for
 

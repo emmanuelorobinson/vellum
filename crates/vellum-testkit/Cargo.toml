@@ -6,5 +6,9 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[dependencies]
+# PNG read/write for golden images and diff artifacts (pixel_diff).
+png = "0.18.1"
+
 [lints]
 workspace = true

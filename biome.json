@@ -9,7 +9,8 @@
       "!refs",
       "!packages/types-ts/src/generated",
       "!packages/types-ts/src/index.ts",
-      "!pnpm-lock.yaml"
+      "!pnpm-lock.yaml",
+      "!spikes/*/results"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

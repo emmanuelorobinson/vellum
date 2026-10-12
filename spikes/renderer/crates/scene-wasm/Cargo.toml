@@ -1,0 +1,13 @@
+[package]
+name = "spike-scene-wasm"
+description = "Renderer A's Rust half: builds the display list in wasm32-unknown-unknown and exposes it as raw memory."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spike-scene = { path = "../scene" }

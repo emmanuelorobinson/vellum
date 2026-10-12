@@ -3,5 +3,5 @@ channel = "1.99.0"
 profile = "minimal"
 components = ["rustfmt", "clippy"]
 # wasm32-unknown-unknown: the browser target vellum-wasm builds for today.
-# wasm32-unknown-emscripten: kept installed until ADR-001 (Prompt 4) decides the renderer path.
+# wasm32-unknown-emscripten: the editor's renderer (skia-safe in WASM, ADR-001); the spike in spikes/renderer uses it now.
 targets = ["wasm32-unknown-unknown", "wasm32-unknown-emscripten"]

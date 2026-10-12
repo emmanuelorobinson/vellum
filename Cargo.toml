@@ -12,6 +12,8 @@ members = [
   "crates/vellum-testkit",
   "crates/adapters/*",
 ]
+# Spikes (guide Phase 1) are separate Cargo workspaces, outside the product dependency graph.
+exclude = ["spikes"]
 
 [workspace.package]
 version = "0.0.0"
