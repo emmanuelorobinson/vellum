@@ -39,3 +39,5 @@ proptest = { version = "1.12.0", default-features = false, features = ["std"] }
 trybuild = "1.0.122"
 serde_path_to_error = "0.1.20"
 clap = { version = "4.6.7", features = ["derive"] }
+# Only crates/adapters/doc-loro may depend on it (deny.toml wrappers).
+loro = "1.16.2"

@@ -34,6 +34,7 @@ fn codec() {
 #[test]
 fn doc_store() {
     suites::doc_store::run(InMemoryDocStore::new);
+    suites::doc_store::undo_is_yours(InMemoryDocStore::new, 0..200);
 }
 
 #[test]

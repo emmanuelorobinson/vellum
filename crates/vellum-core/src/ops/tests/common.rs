@@ -222,6 +222,10 @@ impl DocStore for Store {
         None
     }
 
+    fn undo_turn(&mut self, _turn: &vellum_types::TurnId, _by: &Actor) -> crate::ports::UndoTurn {
+        crate::ports::UndoTurn::Nothing
+    }
+
     fn cursor(&self) -> SyncCursor {
         SyncCursor::empty()
     }

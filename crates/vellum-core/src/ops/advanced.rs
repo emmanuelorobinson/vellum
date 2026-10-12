@@ -53,7 +53,7 @@ fn instances_in(node: &Node, out: &mut BTreeSet<ComponentId>) {
     });
 }
 /// Reference checks include owned override and slot payloads. Cyclic definitions cannot resolve.
-pub(super) fn validate_references(doc: &Document) -> Result<(), OpErrorKind> {
+pub(crate) fn validate_references(doc: &Document) -> Result<(), OpErrorKind> {
     let mut owned = BTreeSet::new();
     let mut error = None;
     let mut check = |node: &Node| {

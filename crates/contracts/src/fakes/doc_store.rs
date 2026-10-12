@@ -1,11 +1,14 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
+use vellum_core::history::{self, History, TurnUndo};
 use vellum_core::ops::{Edit, Parent, Place, apply_edits};
-use vellum_core::ports::{ChangeSet, Commit, DocStore, SyncCursor, SyncError, SyncPayload};
+use vellum_core::ports::{
+    ChangeSet, Commit, DocStore, SyncCursor, SyncError, SyncPayload, UndoTurn,
+};
 use vellum_types::{
-    Actor, Component, ComponentId, Document, Node, NodeId, Origin, PageId, Subsystem, Variable,
-    VariableId,
+    Actor, Component, ComponentId, Document, Node, NodeId, Origin, PageId, Subsystem, TurnId,
+    Variable, VariableId,
 };
 
 /// An edit as the fake writes it into sync payloads. `vellum-core` has no serde, so the fake keeps its own
@@ -127,17 +130,16 @@ struct Wire {
     entries: Vec<Entry>,
 }
 
-/// A document in memory, with per-actor undo and redo kept as lists of inverse edits, and sync by replaying a
-/// log of edits. It does what a CRDT does only for edits that arrive one after another: two stores that edit
-/// at the same time do not converge (Prompt 14's Loro store does).
+/// A document in memory, with undo from `vellum_core::history`, and sync by replaying a log of edits. It does
+/// what a CRDT does only for edits that arrive one after another: two stores that edit at the same time do not
+/// converge (the Loro store does).
 #[derive(Debug)]
 pub struct InMemoryDocStore {
     doc: Document,
     peer: u64,
     log: Vec<Entry>,
     seen: BTreeMap<u64, u64>,
-    undo: BTreeMap<Actor, Vec<Vec<Edit>>>,
-    redo: BTreeMap<Actor, Vec<Vec<Edit>>>,
+    history: History,
 }
 
 impl InMemoryDocStore {
@@ -149,8 +151,7 @@ impl InMemoryDocStore {
             peer,
             log: vec![],
             seen: BTreeMap::new(),
-            undo: BTreeMap::new(),
-            redo: BTreeMap::new(),
+            history: History::new(),
         }
     }
 
@@ -165,25 +166,13 @@ impl InMemoryDocStore {
         });
     }
 
-    fn step_back(&mut self, actor: &Actor, forward: bool) -> Option<ChangeSet> {
-        let (from, to) = if forward {
-            (&mut self.redo, &mut self.undo)
-        } else {
-            (&mut self.undo, &mut self.redo)
-        };
-        let edits = from.get_mut(actor)?.pop()?;
-        let origin = Origin::new(actor.clone());
-        match apply_edits(&mut self.doc, &edits, origin.clone()) {
-            Ok((inverse, changes)) => {
-                to.entry(actor.clone()).or_default().push(inverse);
-                self.record(&origin, &edits);
-                Some(changes)
-            }
-            Err(_) => {
-                from.entry(actor.clone()).or_default().push(edits);
-                None
-            }
+    fn logged(&mut self, step: Option<history::Step>) -> Option<ChangeSet> {
+        let step = step?;
+        if !step.edits.is_empty() {
+            let origin = step.changes.origin.clone();
+            self.record(&origin, &step.edits);
         }
+        Some(step.changes)
     }
 }
 
@@ -197,22 +186,32 @@ impl DocStore for InMemoryDocStore {
     }
 
     fn apply(&mut self, commit: Commit) -> ChangeSet {
-        let (origin, edits, inverse, changes) = commit.into_parts();
-        apply_edits(&mut self.doc, &edits, origin.clone())
+        let (origin, edits, _, changes) = commit.into_parts();
+        let (inverse, _) = apply_edits(&mut self.doc, &edits, origin.clone())
             .expect("a commit was checked against this document");
-        let actor = origin.actor.clone();
-        self.undo.entry(actor.clone()).or_default().push(inverse);
-        self.redo.remove(&actor);
+        self.history.record(&origin, &edits, inverse);
         self.record(&origin, &edits);
         changes
     }
 
     fn undo(&mut self, actor: &Actor) -> Option<ChangeSet> {
-        self.step_back(actor, false)
+        let step = self.history.undo(&mut self.doc, actor);
+        self.logged(step)
     }
 
     fn redo(&mut self, actor: &Actor) -> Option<ChangeSet> {
-        self.step_back(actor, true)
+        let step = self.history.redo(&mut self.doc, actor);
+        self.logged(step)
+    }
+
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> UndoTurn {
+        match self.history.undo_turn(&mut self.doc, turn, by) {
+            TurnUndo::Nothing => UndoTurn::Nothing,
+            TurnUndo::Revert(revert) => UndoTurn::Revert(revert),
+            TurnUndo::Undone(step) => {
+                UndoTurn::Undone(self.logged(Some(step)).expect("a step was given"))
+            }
+        }
     }
 
     fn cursor(&self) -> SyncCursor {
@@ -266,10 +265,11 @@ impl DocStore for InMemoryDocStore {
             },
             |e| e.origin.clone(),
         );
-        let (_, changes) = apply_edits(&mut self.doc, &edits, origin)
+        let before = self.doc.clone();
+        apply_edits(&mut self.doc, &edits, origin.clone())
             .map_err(|(index, kind)| SyncError::Malformed(format!("step {index}: {kind}")))?;
         self.seen = seen;
         self.log.extend(fresh);
-        Ok(changes)
+        Ok(self.history.record_remote(&before, &self.doc, origin))
     }
 }

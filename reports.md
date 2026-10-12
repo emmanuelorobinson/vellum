@@ -8,6 +8,24 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Schedule a fix for op planning cost** (Prompt 14). `ops::plan` re-checks every reference after each op and
+  lists every id for each insert, so a 200-op transaction on a 10,000-node document takes about 292 ms to plan (M5
+  Pro, release). The Loro store adds about 12 ms; undo of the same batch takes 14.5 ms, inside ADR-004's 16 ms frame
+  but with little room. An id index in `vellum-core`'s edit functions, and checking references once per transaction,
+  would cut both. Numbers and the test that measures them: ADR-004 "Prompt 14",
+  `crates/adapters/doc-loro/tests/undo_cost.rs` (ignored by default; run in release).
+- **Review the `DocStore` additions and the undo rules** (Prompt 14). Only a person edits ARCHITECTURE.md. New on
+  the port: `undo_turn(turn, by) -> UndoTurn` (`Nothing`, `Undone(ChangeSet)`, `Revert(Revert)`), `Revert` and
+  `Kept`, `SyncError::DifferentDocument`, and `vellum_core::ops::revert` to apply a `Revert` as a new transaction.
+  Rules I chose (ADR-004 "Prompt 14"): ⌘Z never returns a Revert; it takes the actor's latest change back as far as
+  it can and keeps what later work by others depends on, so pressing it again goes further back. "Undo this turn"
+  is undone outright only when nothing is kept; otherwise it returns a Revert and changes nothing. Setting a
+  property to the value it already has is not a change, so it is not protected from another actor's undo.
+  Changes from another store are attributed to the newest change's origin and cannot be reached by "Undo this turn"
+  here. `ops::revert` does not go through the Guard: a person asks for it.
+- **Guide Prompt 14's FINAL command does not run as written.** `cargo test -p doc-loro` fails ("did not match any
+  packages"); the package is `vellum-doc-loro`, as every adapter is `vellum-<dir>`. Use
+  `cargo test -p vellum-doc-loro`.
 - **Review the Guard's reason strings and limits** (Prompt 13). Only "Frame leased by {agent}" is in Appendix B. The
   others are mine, built on DESIGN.md's verbs: "Agents paused", "{agent} is paused", "Stopped by you", "Stopped by
   you on this frame", "{count} changes at once · the limit is {limit}", "{count} new layers at once · the limit is
@@ -50,7 +68,9 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   (7) `Move` and `Reorder` count the index where the node ends up, after it left its old place.
 - **Decide whether `ops::apply` may snapshot the whole document per transaction** (Prompt 11). It validates against
   `DocStore::snapshot()`, which clones the document. That is fine for the fake and for tests; for Loro (Prompt 14) a
-  10,000-node document would clone on every keystroke-sized edit. Prompt 14 may need a cheaper read view on the port.
+  10,000-node document would clone on every keystroke-sized edit. Prompt 14 kept the port as it is: the Loro store
+  keeps the document in our types beside Loro, so `snapshot()` is a clone, not a read from Loro. The clone is small
+  next to planning (see the planning-cost item above); a borrowed read view on the port is still open.
 - **Decide the open numeric units and the decode limits the codec assumes** (Prompt 9). ARCHITECTURE and the guide give
   units for positions, sizes, ratios, opacities, gradient stops and angles only. I read the rest as: transform and crop
   entries, mesh coordinates, `innerRadius` (a ratio of the radius, per its doc comment) and `zoom` are ratios (1/1000);
@@ -866,3 +886,60 @@ two mutations survived (removing an ancestor of a leased frame; replacing a comp
 test for each; both now fail under the mutation and pass on the code. A check against the document after the write
 was removed: no test could tell it apart, because the first edit reaching into a frame always names a node that was
 already there.
+
+## Prompt 14: DocStore on Loro, per-actor undo, undo this turn
+
+Built:
+- `crates/adapters/doc-loro`: `LoroDocStore` (loro 1.16.2). Pages and components are roots of one movable tree with
+  fractional indexes; each document node is one tree node whose meta map holds each property as a JSON string; the
+  rest of the document is in two maps. The store keeps the document in our types too, so `snapshot()` never reads
+  Loro, and reads Loro back whole after an import. Stores opened from the same document write it as the same
+  genesis peer (derived from its content), so they sync without duplicating it; updates from another document are
+  refused. Commits carry their origin as Loro's commit message. `read_back()` returns the document as Loro holds it.
+- `vellum_core::history` (pure): `History` records each commit's inverse and a footprint, and does per-actor undo and
+  redo and "Undo this turn". Undo keeps later work by others (properties they changed since, nodes they built on or
+  moved). Changes from other stores count as later work. Used by the Loro store and the in-memory fake.
+- Port: `DocStore::undo_turn`, `UndoTurn`, `Revert`, `Kept`, `SyncError::DifferentDocument`; `ops::revert`. `vellum-core`
+  now depends on `serde_json` (on its allowlist since Prompt 2) to restore node properties one by one.
+- Contract suite: undo keeps later work, redo keeps work done since, "Undo this turn" (clean and with later work), and
+  `undo_is_yours`, Invariant 3's property test (3 actors, 24 interleaved transactions of renames, opacity and rotation,
+  inserts, moves and deletes, then random undos and redos by Alice; 200 seeds on each store). A store that undoes
+  whole nodes fails it (`suites_catch_broken_implementations.rs`).
+- doc-loro tests: the contract suite and the property test; both again with Loro read back and compared after every
+  change; concurrent edits converge (different properties of one node, inserts, a move concurrent with a delete);
+  saved updates reopen; another document's updates are refused; a change from another device is kept by undo;
+  the fixture documents round-trip and take renames and undo; our ids map one-to-one onto live tree nodes; nothing
+  public names a Loro type.
+- ADR-004 gains a "Prompt 14" section (layout, genesis, undo outside Loro, rules, numbers, reference notes). The version
+  baseline row for loro now names the workspace and doc-loro.
+
+Differs from the guide:
+- Loro's `UndoManager` is not used: it is per peer, not per actor, has no turns, and grows with the document
+  (ADR-004). Undo runs on our own recorded inverses instead.
+- Guide FINAL says `cargo test -p doc-loro`; the package is `vellum-doc-loro` (see "Needs a person").
+- An ADR number was not added: Appendix E allots them, so the decision is a section of ADR-004.
+
+Not verified or not done:
+- Timing only on the M5 Pro, native, release; not at 50k nodes, not in WASM. Undo at 10k: 14.5 ms (budget 16).
+- Imports cost a full read of the document from Loro and a full comparison; Prompt 63 should read Loro's events.
+- Concurrent edits that leave an invalid document (an instance whose component was removed elsewhere) are read back
+  as they are; nothing reconciles them yet.
+- The history is session-scoped and never trimmed.
+
+Verified (each exited 0):
+- `cargo test -p vellum-doc-loro` (contract suite, property test, read-back, sync, mapping, public API);
+  `cargo test -p vellum-doc-loro --release --test undo_cost -- --ignored --nocapture` (prints the numbers above);
+  `cargo test -p vellum-contracts`; `cargo test -p vellum-core history::`; `cargo test --workspace`;
+  `cargo clippy --workspace --all-targets -- -D warnings`; `cargo fmt --all --check`.
+- `pnpm deps:check` (cargo-deny accepts loro's licences), `pnpm lint`, `pnpm type-check`, `pnpm format:check`,
+  `pnpm types:check`, `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`, `pnpm copy-lint`.
+- Failed: `pnpm test:scripts`: 148 passed, 1 failed; only the recorded `missing: R3 taffy: main.rs`.
+
+Test order: the new contract checks failed on the old fake first ("Alice's undo put back a property Bob changed
+after her"). The property test then found that a write setting a value it already has leaves no trace in the
+edits; I made that rule explicit (ADR-004, "Needs a person") rather than track op-level writes. The doc-loro tests
+were written before the adapter; once it compiled they passed, so I added the read-back wrapper and the component
+and variable round trips to make sure Loro's own state, not only the store's copy, was being checked. Two
+mutations of the undo rules: keeping a node someone built on is caught; not moving back a node someone moved since
+survived, so the suite now has a test for it, which fails under the mutation and passes on the code.
+

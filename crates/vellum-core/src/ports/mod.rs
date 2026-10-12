@@ -23,7 +23,9 @@ mod text;
 pub use assets::{AssetError, AssetHash, AssetHashError, AssetStore};
 pub use clock::{Clock, IdGen, Timestamp};
 pub use codec::{Codec, CodecError, Position};
-pub use doc_store::{ChangeSet, Commit, DocStore, SyncCursor, SyncError, SyncPayload};
+pub use doc_store::{
+    ChangeSet, Commit, DocStore, Kept, Revert, SyncCursor, SyncError, SyncPayload, UndoTurn,
+};
 pub use fonts::{FontHandle, FontSource};
 pub use geometry::{Extent, Rect};
 pub use layout::{

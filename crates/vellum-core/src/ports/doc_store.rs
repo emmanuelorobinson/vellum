@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use vellum_types::{Actor, Document, NodeId, Origin, VariableId};
+use vellum_types::{Actor, ComponentId, Document, NodeId, Origin, TurnId, VariableId};
 
 use crate::ops::Edit;
 
@@ -87,6 +87,68 @@ impl ChangeSet {
     }
 }
 
+/// Something a revert left as it is, because later work by someone else depends on it or changed it again.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Kept {
+    /// A node: a property someone changed since, a frame someone drew into, a node someone moved again.
+    Node(NodeId),
+    /// A variable someone changed since.
+    Variable(VariableId),
+    /// A component someone changed since.
+    Component(ComponentId),
+}
+
+/// A transaction that reverts earlier changes as a new change, attributed to whoever asked for it, and keeps
+/// what later work by others depends on. A store's `undo_turn` builds it and changes nothing; it takes effect
+/// only through `vellum_core::ops::revert`, which checks it against the document like any other transaction.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Revert {
+    origin: Origin,
+    edits: Vec<Edit>,
+    kept: Vec<Kept>,
+}
+
+impl Revert {
+    pub(crate) fn new(origin: Origin, edits: Vec<Edit>, kept: Vec<Kept>) -> Self {
+        Self {
+            origin,
+            edits,
+            kept,
+        }
+    }
+
+    /// Who reverts.
+    pub fn origin(&self) -> &Origin {
+        &self.origin
+    }
+
+    /// The edits that revert, in order.
+    pub fn edits(&self) -> &[Edit] {
+        &self.edits
+    }
+
+    /// What stays as it is, sorted. Not empty: a turn with nothing kept is undone outright.
+    pub fn kept(&self) -> &[Kept] {
+        &self.kept
+    }
+
+    pub(crate) fn into_parts(self) -> (Origin, Vec<Edit>) {
+        (self.origin, self.edits)
+    }
+}
+
+/// What "Undo this turn" did.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UndoTurn {
+    /// The turn has no change left to undo.
+    Nothing,
+    /// Nothing later depended on the turn: its transactions are undone and leave the history.
+    Undone(ChangeSet),
+    /// Later work by others depends on the turn. Nothing has changed yet: apply this with
+    /// `vellum_core::ops::revert` to revert what can be as a new, attributed transaction (Invariant 3).
+    Revert(Revert),
+}
+
 /// How far a store has seen. Opaque: only the adapter that made it can read it. The empty cursor means
 /// "nothing yet".
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -120,6 +182,8 @@ pub enum SyncError {
     },
     /// The bytes are not a valid payload.
     Malformed(String),
+    /// The updates belong to a store opened from another document.
+    DifferentDocument,
 }
 
 impl fmt::Display for SyncError {
@@ -130,6 +194,7 @@ impl fmt::Display for SyncError {
                 "These updates come from a different version of the engine ({found}, this one uses {expected}). Update to sync."
             ),
             Self::Malformed(why) => write!(f, "These updates are damaged: {why}"),
+            Self::DifferentDocument => f.write_str("These updates belong to a different document."),
         }
     }
 }
@@ -149,10 +214,14 @@ pub trait DocStore {
     /// `Document`.
     fn apply(&mut self, commit: Commit) -> ChangeSet;
     /// Reverts the actor's latest change that is not undone. None when there is nothing to undo.
-    /// Other actors' changes are never touched.
+    /// Other actors' changes are never touched: a property someone changed since keeps their value, and a node
+    /// someone has built on stays (Invariant 3).
     fn undo(&mut self, actor: &Actor) -> Option<ChangeSet>;
     /// Reapplies the actor's latest undone change. None when there is nothing to redo.
     fn redo(&mut self, actor: &Actor) -> Option<ChangeSet>;
+    /// "Undo this turn": reverts every transaction whose origin carries `turn`, asked for by `by`. When later
+    /// work by others depends on them, changes nothing and returns a [`Revert`] instead.
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> UndoTurn;
     /// How much this store has seen; pass it to a peer's `export_updates` to get what it lacks.
     fn cursor(&self) -> SyncCursor;
     /// Everything this store has that `since` has not seen.

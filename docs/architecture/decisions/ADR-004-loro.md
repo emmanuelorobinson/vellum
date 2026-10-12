@@ -169,3 +169,80 @@ running the same script again (each run gets its own function scope). The escape
   where the default wraps), and an interrupt handler; the wasm test drives a C-ABI cdylib from a host. The spike does
   the same and changes the interrupt from a wall-clock deadline to a call budget, because Vellum's logic must not read
   the clock. rquickjs is MIT; nothing was copied.
+
+## Prompt 14: the Loro store, and undo outside Loro
+
+- **Date:** 2026-10-12
+- **Written by:** Prompt 14 (DocStore on Loro).
+- **Evidence:** `crates/adapters/doc-loro/` (`src/backend.rs`, tests), `crates/vellum-core/src/history/`,
+  `crates/contracts/src/suites/doc_store.rs` (`undo_keeps_later_work`, `undo_turn*`, `undo_is_yours`),
+  `crates/adapters/doc-loro/tests/undo_cost.rs` (the timing below).
+
+### Decision
+
+1. **Layout in Loro.** One movable tree (`nodes`, fractional indexes, jitter 0). Its roots are the pages in order
+   and one root per component; every document node is one tree node whose meta map holds each property (children
+   aside) as a JSON string, so concurrent edits to different properties of one node merge. What no edit can change
+   (meta, imports, themes, styles, fonts) is one JSON string in the map `document`; variables are JSON strings in
+   the map `variables`. Nothing Loro is public: `LoroDocStore` hands out and takes our types only.
+2. **Same document, same genesis.** Each store writes the document it was opened from as a fixed peer derived from
+   the document's content (FNV-1a of its JSON, top bit set), then switches to its own peer (which must be below
+   2^63). Two stores opened from the same file share that first change byte for byte, so they sync without
+   duplicating the document; updates whose genesis peer differs are refused (`SyncError::DifferentDocument`).
+3. **Undo does not use Loro's `UndoManager`.** Loro's undo is per peer, while Vellum's is per actor (several people
+   and agents write through one store) and per turn; and it grows with the document (13 ms per batch at 10k, 109 ms
+   at 50k, above). `vellum_core::history` (pure, shared by every store) records each commit's inverse and a
+   footprint (properties set one by one, nodes made, removed and moved, containers whose children changed,
+   variables, components). Undo replays the inverse adjusted to the document as it is: a property someone changed
+   since keeps their value, a node someone built on is not removed, a node someone moved since is not moved back,
+   a variable or component someone changed since is not put back. Changes from other stores are recorded as the
+   state before and after, count as later work, and are never undone locally.
+4. **Undo this turn.** When nothing later depends on the turn it is undone outright and leaves the history. When
+   something does, the store changes nothing and returns a `Revert` (the adjusted edits, attributed to whoever
+   asked, plus what it keeps); `vellum_core::ops::revert` applies it as a new transaction, so ⌘Z can take it back.
+   ⌘Z itself never returns a Revert: it takes the actor's latest change back as far as it can, keeping later work,
+   so pressing it again goes further back instead of toggling.
+5. **A write that leaves a value as it was is not a change.** Edits carry whole nodes, so history sees which
+   properties changed, not which an op named. If Bob sets a property to the value it already has, Alice's undo of
+   her earlier change to it may still put the old value back. Invariant 3's property test uses the same rule.
+
+### Numbers
+
+Apple M5 Pro, release build, medians of 7, one page of 100 frames with 99 rectangles each (10,000 nodes). The batch
+is ADR-004's: 200 leaves, 150 positions set and 50 moved into another frame, with another person's edit before it.
+
+| | Time |
+|---|---:|
+| Plan the batch (`ops::plan`, Prompts 11–12) | 292 ms |
+| Apply it (plan + the Loro store) | 304 ms |
+| Undo it (Alice's, keeping Bob's work) | 14.5 ms |
+| Redo it | 14.3 ms |
+
+Undo fits in a frame at 10k, which is the bar this ADR set, but with little room: it copies the document once and
+walks it to find each node (about edits × nodes), in `vellum-core`'s edit functions as much as in history. An id index
+in the op layer would cut both. Planning is the real cost: `ops::plan` re-checks every reference after each op and
+lists every id for each insert, so a 200-op transaction at 10k nodes takes about 0.3 s. That predates this prompt
+and is recorded in `reports.md` for a person to schedule.
+
+### Not done
+
+- Not measured at 50k nodes, on M1 or Windows, or in WASM.
+- Imports read the whole document back from Loro and compare it with the previous one (cost grows with the
+  document). Reading only what Loro's events say changed is for Prompt 63, with sync.
+- Concurrent edits that leave an invalid document (an instance whose component was removed elsewhere) are read back
+  as they are; nothing reconciles them yet.
+- Changes from another store are attributed to the newest change's origin (from Loro's commit message), not split
+  per change, so "Undo this turn" does not reach a turn made on another device.
+
+### Reference reading
+
+- `refs/loro/crates/loro-internal/src/undo.rs`: the `UndoManager` keeps per-peer stacks of version spans and undoes
+  by diffing the document between versions and transforming the result past later remote changes. Vellum keeps the
+  idea of transforming an undo past later work, but works on its own edits and footprints, per actor and per turn,
+  and never asks Loro for a diff; nothing was ported.
+- `refs/loro/crates/loro-internal/src/handler/tree.rs` (`move_to`): the index of a move inside one parent is counted
+  after the node leaves its place, as in Vellum's `Edit::Move`, so the store passes indexes through unchanged.
+- `refs/loro/context/tree-events.md`, `loro-js-tree-diff.md` and `state/tree_state.rs`: tree events describe only the
+  alive tree, and a concurrent move out of a deleted subtree keeps the moved node alive. Vellum reads the alive tree
+  back whole after an import instead of applying events, and its test of a move concurrent with a delete expects
+  exactly that.

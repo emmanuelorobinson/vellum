@@ -8,9 +8,9 @@
 //!
 //! Structural, component, slot and geometric operations all use this transaction path.
 
-mod advanced;
+pub(crate) mod advanced;
 mod check;
-mod edit;
+pub(crate) mod edit;
 mod lower;
 #[cfg(test)]
 pub(crate) mod tests;
@@ -26,7 +26,7 @@ use vellum_types::{
 pub use check::check_document;
 pub use edit::{Container, Edit, Location, Tree, apply_edits, can_hold, find, locate};
 
-use crate::ports::{ChangeSet, Commit, DocStore, IdGen};
+use crate::ports::{ChangeSet, Commit, DocStore, IdGen, Revert};
 
 /// What holds a placed node: the top level of a page, or a container node.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -539,6 +539,32 @@ pub fn apply_with_inputs<S: DocStore + ?Sized>(
 ) -> Result<Applied, OpError> {
     let plan = plan_with_inputs(&store.snapshot(), &tx, ids, inputs)?;
     Ok(commit(store, tx.origin, plan))
+}
+
+/// Applies a [`Revert`] from a store's `undo_turn` as a new transaction attributed to whoever asked for it, or
+/// refuses it whole when the document has changed so that it no longer applies. A revert that keeps everything
+/// has nothing in it and is refused as empty.
+pub fn revert<S: DocStore + ?Sized>(store: &mut S, revert: Revert) -> Result<Applied, OpError> {
+    let (origin, edits) = revert.into_parts();
+    if edits.is_empty() {
+        return Err(OpError {
+            op_index: 0,
+            path: String::new(),
+            kind: OpErrorKind::Empty,
+        });
+    }
+    let mut doc = store.snapshot();
+    let (inverse, changes) =
+        apply_edits(&mut doc, &edits, origin.clone()).map_err(|(op_index, kind)| OpError {
+            op_index,
+            path: String::new(),
+            kind,
+        })?;
+    let changes = store.apply(Commit::new(origin, edits, inverse, changes));
+    Ok(Applied {
+        changes,
+        created: BTreeMap::new(),
+    })
 }
 
 /// Hands a checked plan to the store. Only callers that planned against the store's current document may use it:

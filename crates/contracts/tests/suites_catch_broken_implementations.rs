@@ -10,7 +10,7 @@ use vellum_contracts::fakes::{
 use vellum_contracts::{samples, suites};
 use vellum_core::ops::apply_edits;
 use vellum_core::ports::*;
-use vellum_types::{Actor, BoolOp, Document, FontStyle, NodeId};
+use vellum_types::{Actor, BoolOp, Document, FontStyle, NodeId, TurnId};
 
 struct BackwardsClock(Cell<i64>);
 impl Clock for BackwardsClock {
@@ -110,6 +110,9 @@ impl DocStore for SharedUndo {
         self.1.push(actor.clone());
         Some(changes)
     }
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> UndoTurn {
+        self.0.undo_turn(turn, by)
+    }
     fn cursor(&self) -> SyncCursor {
         self.0.cursor()
     }
@@ -125,6 +128,64 @@ impl DocStore for SharedUndo {
 #[should_panic(expected = "touched Bob's work")]
 fn store_whose_undo_is_not_per_actor() {
     suites::doc_store::run(|doc, peer| SharedUndo(InMemoryDocStore::new(doc, peer), Vec::new()));
+}
+
+/// Undo per actor, but each undo puts back whole nodes as they were, over whatever others did since.
+struct WholeNodeUndo {
+    doc: Document,
+    undo: Vec<(Actor, Vec<vellum_core::ops::Edit>)>,
+}
+impl DocStore for WholeNodeUndo {
+    fn adapter_id(&self) -> &'static str {
+        "whole-node-undo"
+    }
+    fn snapshot(&self) -> Document {
+        self.doc.clone()
+    }
+    fn apply(&mut self, commit: Commit) -> ChangeSet {
+        let (origin, edits, inverse, changes) = commit.into_parts();
+        apply_edits(&mut self.doc, &edits, origin.clone()).expect("a commit applies");
+        self.undo.push((origin.actor, inverse));
+        changes
+    }
+    fn undo(&mut self, actor: &Actor) -> Option<ChangeSet> {
+        let at = self.undo.iter().rposition(|(a, _)| a == actor)?;
+        let (_, inverse) = self.undo.remove(at);
+        let origin = vellum_types::Origin::new(actor.clone());
+        apply_edits(&mut self.doc, &inverse, origin)
+            .ok()
+            .map(|(_, changes)| changes)
+    }
+    fn redo(&mut self, _: &Actor) -> Option<ChangeSet> {
+        None
+    }
+    fn undo_turn(&mut self, _: &TurnId, _: &Actor) -> UndoTurn {
+        UndoTurn::Nothing
+    }
+    fn cursor(&self) -> SyncCursor {
+        SyncCursor::empty()
+    }
+    fn export_updates(&self, _: &SyncCursor) -> SyncPayload {
+        SyncPayload {
+            adapter: self.adapter_id().into(),
+            bytes: vec![],
+        }
+    }
+    fn import_updates(&mut self, _: &SyncPayload) -> Result<ChangeSet, SyncError> {
+        Err(SyncError::Malformed("no sync".into()))
+    }
+}
+
+#[test]
+#[should_panic(expected = "Invariant 3")]
+fn store_whose_undo_overwrites_later_work() {
+    suites::doc_store::undo_is_yours(
+        |doc, _| WholeNodeUndo {
+            doc: doc.clone(),
+            undo: Vec::new(),
+        },
+        0..50,
+    );
 }
 
 /// A store that applies only the first edit of each commit. It cannot cut the commit down and pass it on (a
@@ -147,6 +208,9 @@ impl DocStore for FirstEditOnly {
     }
     fn redo(&mut self, _: &Actor) -> Option<ChangeSet> {
         None
+    }
+    fn undo_turn(&mut self, _: &TurnId, _: &Actor) -> UndoTurn {
+        UndoTurn::Nothing
     }
     fn cursor(&self) -> SyncCursor {
         SyncCursor::empty()

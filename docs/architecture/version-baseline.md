@@ -26,7 +26,7 @@
 | tokio | 1.53.2 | 1.53.x | not yet used | latest stable patch of the line |
 | axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
-| loro | 1.16.2 | 1.16.x | spike only: `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
+| loro | 1.16.2 | 1.16.x | workspace `Cargo.toml`, used by `crates/adapters/doc-loro` only (Prompt 14); also `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
 | taffy | 0.14.0 | 0.14.x | spike only: `spikes/layout` (Prompt 6, default features) | layout adapter (Prompt 18); ADR-002, C17 |
 | parley | 0.12.0 | 0.12.x | spike only: `spikes/renderer` (Prompt 5; no default features, `std`) | text adapter (Prompt 19); ADR-001's text decision |
 | fontique | 0.12.0 | 0.12.x | not yet used | ships with parley; a direct dependency only if needed |

@@ -8,9 +8,10 @@ publish.workspace = true
 
 [dependencies]
 vellum-types = { path = "../vellum-types" }
+# Node properties are JSON values (NodePatch); history compares and restores them one by one.
+serde_json.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
 proptest.workspace = true
 trybuild.workspace = true
 
