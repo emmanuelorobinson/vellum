@@ -2,12 +2,19 @@
 // an FPS meter, a screenshot button, and `window.__spike` for measure.mjs.
 //
 // Query: ?renderer=a|b&nodes=1000|5000|10000  or  ?renderer=a|b&fixture=1..20 (256 x 256, no pan/zoom)
+//        or ?renderer=a|b&text=1..30 (Prompt 5 text fixtures, 256 x 256, laid out by Parley in WASM)
 
 import { FIXTURE_SIZE, percentile } from "./stats.js";
 
 const params = new URLSearchParams(location.search);
 const which = params.get("renderer") === "b" ? "b" : "a";
-const fixture = params.has("fixture") ? Number(params.get("fixture")) : null;
+const textFixture = params.has("text") ? Number(params.get("text")) : null;
+const fixture = params.has("fixture")
+  ? Number(params.get("fixture"))
+  : textFixture !== null
+    ? textFixture
+    : null;
+const fixtureKind = textFixture !== null ? "text" : "fixture";
 const nodes = Number(params.get("nodes") ?? 1000);
 
 const canvas = document.getElementById("canvas");
@@ -19,8 +26,9 @@ const sceneSelect = document.getElementById("scene");
 rendererSelect.value = which;
 if (fixture === null) sceneSelect.value = `nodes:${nodes}`;
 else {
-  sceneSelect.append(new Option(`Fixture ${fixture}`, `fixture:${fixture}`));
-  sceneSelect.value = `fixture:${fixture}`;
+  const label = fixtureKind === "text" ? "Text fixture" : "Fixture";
+  sceneSelect.append(new Option(`${label} ${fixture}`, `${fixtureKind}:${fixture}`));
+  sceneSelect.value = `${fixtureKind}:${fixture}`;
 }
 const reload = () => {
   const [kind, value] = sceneSelect.value.split(":");
@@ -108,9 +116,21 @@ function syncGpu() {
 async function main() {
   sizeCanvas();
   const font = await (await fetch("/font.ttf")).arrayBuffer();
+  // The text fixtures' fonts, in FONT_FILES order (fonts.json); only fetched for text fixtures.
+  const glyphFonts =
+    textFixture === null
+      ? []
+      : await Promise.all(
+          (await (await fetch("/fonts.json")).json()).fonts.map(async (f) => {
+            const response = await fetch(`/fonts/${f.file}`);
+            if (!response.ok) throw new Error(`${f.file}: run node scripts/fetch-fonts.mjs`);
+            return response.arrayBuffer();
+          }),
+        );
   const module = which === "a" ? await import("./renderer-a.js") : await import("./renderer-b.js");
-  const renderer = await module.create(canvas, font);
-  if (fixture !== null) renderer.loadFixture(fixture);
+  const renderer = await module.create(canvas, font, glyphFonts);
+  if (textFixture !== null) renderer.loadTextFixture(textFixture);
+  else if (fixture !== null) renderer.loadFixture(fixture);
   else {
     renderer.loadDocument(nodes);
     attachPanZoom();
@@ -165,7 +185,7 @@ async function main() {
     const url = URL.createObjectURL(await capturePng());
     const a = Object.assign(document.createElement("a"), {
       href: url,
-      download: `spike-${which}-${fixture !== null ? `fixture-${fixture}` : `${nodes}`}.png`,
+      download: `spike-${which}-${fixture !== null ? `${fixtureKind}-${fixture}` : `${nodes}`}.png`,
     });
     a.click();
     URL.revokeObjectURL(url);

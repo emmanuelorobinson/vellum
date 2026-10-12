@@ -8,7 +8,18 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Measure the renderer spike on an M1 and a mid-range Windows laptop** (Prompt 4). ADR-001's frame and latency
+- **Review ADR-004 and ADR-001's new "Text" section** (Prompt 5). ADR-004 keeps Loro behind DocStore and sets the S06
+  directory-codec suggestion at 10,000 nodes or 4 MB of `.vellum` JSON. ADR-001 now says: Parley lays text out, Skia
+  only draws glyphs, no skia-safe `textlayout`, and every renderer uses Skia's FreeType font manager.
+- **Decide how the native FreeType Skia gets built** (Prompt 5). Matching text natively needs Skia built from source with
+  FreeType on macOS (rust-skia's prebuilt binaries have only CoreText), plus a one-line patch to bindgen output for the
+  macOS 27 SDK (`spikes/renderer/scripts/build-native.sh`). Prompt 22 should either publish Vellum's own binaries or
+  build them in CI. Windows was not tried.
+- **Undo cost grows with the document** (Prompt 5, ADR-004). Undoing a 200-node batch took 13 ms at 10k nodes and 109 ms
+  at 50k, while applying it took under 2 ms. Prompt 14 has to measure per-actor undo and get it under 16 ms at 10k, or
+  ADR-004 is revisited. Nothing for you to do now; it is here so it is not lost.
+- **Measure the renderer spike on an M1 and a mid-range Windows laptop** (Prompts 4 and 5). Prompt 5's text and
+  engine numbers are also from the M5 Pro only. ADR-001's frame and latency
   numbers come from one Apple M5 Pro only; the guide asks for both machines (or a GPU CI lane, which does not exist).
   Copy `spikes/renderer/web/` with its built `dist/` (or build it, see `docs/runbooks/renderer-spike.md`), run
   `pnpm install`, then `node measure.mjs --frames-only` there. It writes `results/frames-<host>.json`. If B is slower
@@ -16,10 +27,10 @@ Open items, newest first. Remove an item when it is done and say so in the promp
 - **Review ADR-001 and update ARCHITECTURE §3.2** (Prompt 4). ADR-001 accepts D1: skia-safe in WASM for the editor,
   the same code natively for headless, no CanvasKit. ARCHITECTURE.md still describes CanvasKit in TypeScript; only a
   person edits it.
-- **Decide where the gpu lane runs** (Prompt 4). The gpu-tagged test (`VELLUM_LANES=gpu`) needs Chrome with a real GPU,
-  emsdk 4.0.6 and ninja. CI has no such runner, so it has only run on this machine.
-- **Commit and push the Biome fix** (Prompt 3). CI on `b836d9c` failed at its Biome step. The fix is in the working
-  tree and is not committed. Nothing was committed or pushed in this session.
+- **Decide where the gpu lane runs** (Prompt 4). The gpu-tagged tests (`VELLUM_LANES=gpu`, plus `fonts` for the text
+  test) need Chrome with a real GPU, emsdk 4.0.6, ninja and the fixture fonts. CI has no such runner, so they have only
+  run on this machine. Prompt 5 added two more lanes, `fonts` (needs `pnpm spike:fonts`, network once) and `wasm`
+  (needs emsdk's clang); neither runs in CI either.
 - **Save the updated design in pen.dev, then say so** (Prompt 3). The file the app has open,
   `~/.pencil/documents/2c247f85-6e53-4acd-be65-f3662ca89428/vellum.pen`, is byte-identical to
   `docs/design/vellum.pen` (SHA-256 `d82995c9…`, 16,095,916 bytes, modified 20:22). The app state does not show
@@ -186,3 +197,65 @@ Verified: `cargo test -p vellum-testkit` (11 pixel-diff tests), `cargo clippy --
 (122), `biome check .`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`; in `spikes/renderer`: `cargo test`,
 `cargo clippy -D warnings` (native and emscripten), `VELLUM_LANES=gpu node --test test/fixture1.gpu.test.mjs` (pass:
 both paths pixel-identical to native for fixture #1). `pnpm type-check` was not re-run: no TypeScript package changed.
+
+## Prompt 5: Spike B, text parity, Loro at scale, QuickJS in WASM (ADR-004)
+
+Not committed. Prompt 4's work was committed and pushed before this session (`fde1998`, `96b6388`), including the Biome
+fix, so that item is gone from "Needs a person".
+
+Built:
+- **Text (renderer spike):** 30 text fixtures (`spikes/renderer/crates/scene/src/text_fixtures.rs`, TEST DATA): Latin,
+  Arabic, CJK, emoji, mixed bidi, wrapping. Parley 0.12.0 lays them out in Rust (`text.rs`, no system fonts) inside
+  each module; a new `GLYPHS` display-list op carries positioned glyphs; Renderer A draws them with CanvasKit
+  `drawGlyphs`, Renderer B and the native path with `draw_glyphs_at`. The native path also renders SkParagraph's layout
+  of the same text, as a layout cross-check. Fonts: five Noto files pinned by SHA-256 in `spikes/renderer/fonts.json`,
+  fetched by `scripts/fetch-fonts.mjs` (not committed, OFL-1.1). `measure-text.mjs` writes `results/text.json`.
+- **Loro and QuickJS:** a new spike workspace, `spikes/engine/` (pnpm package `@vellum/spike-engine`, added to
+  `pnpm-workspace.yaml`). `spike-loro` maps the generated documents onto a Loro movable tree and measures 1k to 50k
+  nodes natively; `loro-wasm` runs the same steps in a `wasm32-unknown-emscripten` module from Node. `spike-script`
+  runs rquickjs with a toy `doc` API, limits and an interrupt budget, natively and as a `wasm32-unknown-unknown`
+  cdylib that links vellum-wasm (the size baseline). Renderer B also got a size-only `quickjs` feature.
+- `docs/architecture/decisions/ADR-004-loro.md`; a "Text (Prompt 5)" section appended to ADR-001;
+  `docs/runbooks/engine-spike.md`; `docs/runbooks/renderer-spike.md` updated; version-baseline rows for loro, parley,
+  skia-safe, rquickjs and note C16.
+
+Headline numbers (M5 Pro):
+- Text: Renderer A and B are pixel-identical on all 30 fixtures; native CPU vs either on the GPU differs by at most 3 on
+  at most 1 pixel per fixture; native vs B's CPU raster in WASM by at most 1. Parley and SkParagraph agree on line
+  counts for all 30 but their pixels differ by up to 8.4%. B with Parley is 1.95 MB gzip (1.55 without text layout,
+  2.65 with Skia's own paragraph module). ADR-001 should prefer B for text, with Parley layout and no `textlayout`.
+- Loro at 10k nodes: open (load + first full read) 29 ms native / 56 ms WASM; 0.89 MB snapshot; about 3.8 MB heap; a
+  200-node batch applies in 0.63 ms native / 0.97 ms WASM.
+- QuickJS: the 500-op script runs in 0.22 ms in wasm32 with a new runtime, 0.11 ms on a kept one. It adds 444 KB gzip to
+  `vellum-wasm` (`wasm32-unknown-unknown`) and 356 KB gzip to Renderer B's emscripten module.
+
+Things that differ from the guide, failed, or could not be verified:
+- **Native Skia is now built from source** (with FreeType), not from rust-skia's prebuilt binaries. Without it, the
+  native path used CoreText, which could not load the colour emoji font at all. The build needs a patch to one line of
+  bindgen output (macOS 27 SDK); see "Needs a person". `scripts/build.sh` does it.
+- **SkParagraph first produced empty paragraphs** until the font provider was set as the collection's asset font
+  manager instead of its default one. Recorded in the code.
+- **Loro's output is not byte-stable across targets.** For the same document, native and WASM give equal content with
+  map keys in a different order, and different snapshot bytes (95,792 vs 94,896 at 1k). ADR-004 makes the codec own
+  key order; nothing outside the adapter may rely on Loro's.
+- **Loro on `wasm32-unknown-unknown` needs wasm-bindgen** (loro-internal enables it there), so the WASM numbers are on
+  emscripten, ADR-001's target, where it needs neither.
+- **Undo is slow on large documents** (see "Needs a person").
+- **Only the M5 Pro.** Automerge and Yrs were not measured. Loro's WASM size without the scene generator was not
+  separated.
+- **Test order:** the Rust text, Loro and QuickJS tests were written first and failed (compile errors on the missing
+  API) before the code. The kept-engine QuickJS test was added after the wasm run found the bug, and failed before the
+  fix. The gpu text test was written after the measurement harness; its failure was checked by removing the fonts
+  (it fails with the fetch instruction), not against missing code.
+- `cargo deny` was not run on the spike workspaces (as in Prompt 4); the product workspace's dependencies did not change.
+
+Verified: in `spikes/renderer`: `cargo test -p spike-scene` (8 passed, 5 ignored), `cargo test -p spike-scene --release
+-- --ignored` (5 layout tests, lane fonts), `cargo clippy -D warnings` for every crate (native, emscripten with and
+without `quickjs,textlayout`, wasm32-unknown-unknown), `cargo fmt --check`, `bash scripts/build.sh` from scratch,
+`VELLUM_LANES=gpu,fonts node --test "web/test/*.gpu.test.mjs"` (2 passed: fixture #1 and the 30 text fixtures),
+`node web/measure-text.mjs`; in `spikes/engine`: `cargo test` (14 passed), `cargo clippy --all-targets -D warnings`,
+`cargo fmt --check`, `bash scripts/build-wasm.sh`, `VELLUM_LANES=wasm node --test "test/*.wasm.test.mjs"` (1 passed),
+the three measurements; at the root: `biome check .`, `pnpm run copy-lint`, `pnpm run clean-room`, `pnpm run checksum`,
+`pnpm run deps:check`, `pnpm run test:scripts` (123), `pnpm run design:check`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets -D warnings`, `cargo fmt --check`. `pnpm type-check` was not re-run: no
+TypeScript package changed.

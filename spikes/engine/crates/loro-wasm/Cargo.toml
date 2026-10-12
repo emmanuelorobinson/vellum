@@ -1,0 +1,21 @@
+[package]
+name = "spike-loro-wasm"
+description = "The Loro measurements in WASM (wasm32-unknown-emscripten, as ADR-001's editor module), driven from Node."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# emscripten links binaries, not cdylibs (as Renderer B does): the exports live in the bin.
+[[bin]]
+name = "loro_wasm"
+path = "src/main.rs"
+
+[dependencies]
+loro = { workspace = true }
+spike-loro = { path = "../loro-bench" }
+spike-scene = { path = "../../../renderer/crates/scene" }
+
+# Not wasm32-unknown-unknown: there loro-internal turns on getrandom's `js` backend and wasm-bindgen
+# (cfg(all(wasm32, not(emscripten), not(wasi)))), so the module would need wasm-bindgen's JS glue.
+# On emscripten it needs neither.

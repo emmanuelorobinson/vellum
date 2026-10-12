@@ -3,6 +3,8 @@ packages:
   - "apps/*"
   # Spike A (Prompt 4): the renderer spike page. Not a product package; nothing may depend on it.
   - "spikes/renderer/web"
+  # Spike B (Prompt 5): Loro and QuickJS measurements. Not a product package either.
+  - "spikes/engine"
 
 # One place for every shared tool version (guide §5 version policy: exact, no ranges).
 catalog:

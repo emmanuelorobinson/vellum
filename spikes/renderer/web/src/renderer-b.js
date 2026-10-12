@@ -1,7 +1,7 @@
 // Renderer B: one emscripten module (dist/skia_wasm.{js,wasm}) holds the scene, the display list and
 // Skia. JS creates the WebGL2 context, then only passes the view transform once per frame.
 
-export async function create(canvas, fontBytes) {
+export async function create(canvas, fontBytes, glyphFonts = []) {
   const { default: createSkiaSpike } = await import("/dist/skia_wasm.js");
   const M = await createSkiaSpike({ locateFile: (file) => `/dist/${file}` });
   const handle = M.GL.createContext(canvas, {
@@ -20,6 +20,12 @@ export async function create(canvas, fontBytes) {
   const ptr = M._spike_alloc(fontBytes.byteLength);
   M.HEAPU8.set(new Uint8Array(fontBytes), ptr);
   M._spike_set_font(ptr, fontBytes.byteLength);
+  for (const bytes of glyphFonts) {
+    const at = M._spike_alloc(bytes.byteLength);
+    M.HEAPU8.set(new Uint8Array(bytes), at);
+    if (M._spike_add_glyph_font(at, bytes.byteLength) !== 0)
+      throw new Error("Skia rejected a font");
+  }
 
   return {
     name: "B: skia-safe in WASM",
@@ -37,6 +43,9 @@ export async function create(canvas, fontBytes) {
     },
     loadFixture(n) {
       M._spike_load_fixture(n);
+    },
+    loadTextFixture(n) {
+      M._spike_load_text_fixture(n);
     },
     resize(width, height) {
       M._spike_resize(width, height);

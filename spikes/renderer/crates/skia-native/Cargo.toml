@@ -9,5 +9,8 @@ publish.workspace = true
 [dependencies]
 spike-scene = { path = "../scene" }
 spike-skia-draw = { path = "../skia-draw" }
-skia-safe = { workspace = true }
+# textlayout (native only): SkParagraph lays the text fixtures out a second way, to compare with Parley.
+# Glyphs must be rasterized by FreeType, as in the emscripten build: scripts/native-env.sh builds Skia
+# with it (CoreText, the macOS default, rasterizes differently and cannot read CBDT colour emoji).
+skia-safe = { workspace = true, features = ["textlayout", "embed-freetype"] }
 vellum-testkit = { path = "../../../../crates/vellum-testkit" }

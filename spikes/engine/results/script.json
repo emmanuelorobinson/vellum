@@ -1,0 +1,49 @@
+{
+  "measuredAt": "2026-10-12T05:33:56.736Z",
+  "machine": {
+    "cpu": "Apple M5 Pro",
+    "platform": "darwin 27.0.0",
+    "node": "v24.21.0"
+  },
+  "method": "wasm32-unknown-unknown, Cargo's default release profile (as the product workspace); Node's V8. cold = new runtime + context + script; warm = script on a kept engine",
+  "size": {
+    "vellumWasm": {
+      "raw": 357,
+      "gzip": 291
+    },
+    "vellumWasmWithQuickjs": {
+      "raw": 1277716,
+      "gzip": 443833
+    },
+    "addedRaw": 1277359,
+    "addedGzip": 443542
+  },
+  "imports": [
+    "env.__rquickjs_host_now_us"
+  ],
+  "instantiateMs": 2.07,
+  "wasm": {
+    "cold": {
+      "medianMs": 0.224,
+      "p95Ms": 0.712,
+      "runs": 200
+    },
+    "warm": {
+      "medianMs": 0.111,
+      "p95Ms": 0.139,
+      "runs": 200
+    }
+  },
+  "native": {
+    "cold": {
+      "medianMs": 0.147,
+      "p95Ms": 0.222,
+      "runs": 200
+    },
+    "warm": {
+      "medianMs": 0.07,
+      "p95Ms": 0.082,
+      "runs": 200
+    }
+  }
+}

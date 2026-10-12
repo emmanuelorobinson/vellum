@@ -1,0 +1,35 @@
+{
+  "comment": "Fonts for the text fixtures (guide Prompt 5). Not committed: scripts/fetch-fonts.mjs downloads them into fonts/ and checks each SHA-256. All are SIL Open Font License 1.1. The order is the font stack and the font index every renderer uses (spike_scene::FONT_FILES).",
+  "fonts": [
+    {
+      "file": "NotoSans-Regular.ttf",
+      "family": "Noto Sans",
+      "url": "https://raw.githubusercontent.com/notofonts/notofonts.github.io/4690144b8523e3adfbd34f1a148576f32b95d848/fonts/NotoSans/unhinted/ttf/NotoSans-Regular.ttf",
+      "sha256": "f3961a9cde016d41a4879aecda1474d3a36d6bf54fa0e4643de029cc2248b0e8"
+    },
+    {
+      "file": "NotoSansArabic-Regular.ttf",
+      "family": "Noto Sans Arabic",
+      "url": "https://raw.githubusercontent.com/notofonts/notofonts.github.io/4690144b8523e3adfbd34f1a148576f32b95d848/fonts/NotoSansArabic/unhinted/ttf/NotoSansArabic-Regular.ttf",
+      "sha256": "bd86ca02f087d7f3c3788ba458fb6b73744c7639ed276b8d870dba6def6c40d0"
+    },
+    {
+      "file": "NotoSansHebrew-Regular.ttf",
+      "family": "Noto Sans Hebrew",
+      "url": "https://raw.githubusercontent.com/notofonts/notofonts.github.io/4690144b8523e3adfbd34f1a148576f32b95d848/fonts/NotoSansHebrew/unhinted/ttf/NotoSansHebrew-Regular.ttf",
+      "sha256": "04272f5600d0ec816d31d0df73b23aa8d3501ea359ebe820da31c11ffcf00853"
+    },
+    {
+      "file": "NotoSansSC-Regular.otf",
+      "family": "Noto Sans SC",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf",
+      "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9"
+    },
+    {
+      "file": "NotoColorEmoji.ttf",
+      "family": "Noto Color Emoji",
+      "url": "https://raw.githubusercontent.com/googlefonts/noto-emoji/e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/fonts/NotoColorEmoji.ttf",
+      "sha256": "15671215ab769fdc7162a045d56fd7d7e477c51b04e6b3c761d914d8fdd6cc44"
+    }
+  ]
+}

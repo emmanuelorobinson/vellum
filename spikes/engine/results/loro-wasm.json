@@ -1,0 +1,86 @@
+{
+  "measuredAt": "2026-10-12T05:33:54.937Z",
+  "machine": {
+    "cpu": "Apple M5 Pro",
+    "platform": "darwin 27.0.0",
+    "node": "v24.21.0"
+  },
+  "method": "wasm32-unknown-emscripten (emsdk 4.0.6, -O3 as rustc links it), Cargo's default release profile, Node's V8; the same steps as loro-bench; first remote import after load (the remote's state is decoded first)",
+  "module": {
+    "file": "loro_wasm.wasm (Loro plus the spike scene generator)",
+    "raw": 3047737,
+    "gzip": 1126922
+  },
+  "rows": [
+    {
+      "nodes": 1000,
+      "runs": 7,
+      "buildMs": 6.38,
+      "saveMs": 6.22,
+      "snapshotBytes": 94896,
+      "loadMs": 0.73,
+      "firstFullReadMs": 6.65,
+      "batchApplyMs": 1,
+      "batchExportUpdateMs": 0.21,
+      "batchUpdateBytes": 6447,
+      "batchRemoteImportMs": 2.19,
+      "wasmMemoryBytesAfterRun": 17039360
+    },
+    {
+      "nodes": 5000,
+      "runs": 7,
+      "buildMs": 22.75,
+      "saveMs": 18.29,
+      "snapshotBytes": 442830,
+      "loadMs": 2.61,
+      "firstFullReadMs": 27.69,
+      "batchApplyMs": 1.33,
+      "batchExportUpdateMs": 0.22,
+      "batchUpdateBytes": 6645,
+      "batchRemoteImportMs": 6.37,
+      "wasmMemoryBytesAfterRun": 24576000
+    },
+    {
+      "nodes": 10000,
+      "runs": 7,
+      "buildMs": 43.41,
+      "saveMs": 35.13,
+      "snapshotBytes": 883408,
+      "loadMs": 4.04,
+      "firstFullReadMs": 51.75,
+      "batchApplyMs": 0.97,
+      "batchExportUpdateMs": 0.14,
+      "batchUpdateBytes": 6695,
+      "batchRemoteImportMs": 10.97,
+      "wasmMemoryBytesAfterRun": 51314688
+    },
+    {
+      "nodes": 25000,
+      "runs": 7,
+      "buildMs": 96.51,
+      "saveMs": 74.99,
+      "snapshotBytes": 2200400,
+      "loadMs": 7.85,
+      "firstFullReadMs": 113.32,
+      "batchApplyMs": 1.14,
+      "batchExportUpdateMs": 0.12,
+      "batchUpdateBytes": 6714,
+      "batchRemoteImportMs": 23.04,
+      "wasmMemoryBytesAfterRun": 132907008
+    },
+    {
+      "nodes": 50000,
+      "runs": 7,
+      "buildMs": 201.4,
+      "saveMs": 169.64,
+      "snapshotBytes": 4409972,
+      "loadMs": 17.1,
+      "firstFullReadMs": 316.38,
+      "batchApplyMs": 1.95,
+      "batchExportUpdateMs": 0.14,
+      "batchUpdateBytes": 6701,
+      "batchRemoteImportMs": 52.52,
+      "wasmMemoryBytesAfterRun": 220200960
+    }
+  ]
+}

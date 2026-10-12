@@ -1,0 +1,18 @@
+# Spike B (guide Prompt 5), the engine half: Loro at scale and QuickJS in WASM, for ADR-004.
+# Spike quality; DocStore on Loro is Prompt 14 and ScriptRuntime is Prompt 25. A separate Cargo
+# workspace so loro and rquickjs never enter the product dependency graph before their adapters exist.
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[workspace.dependencies]
+loro = "1.16.2"
+rquickjs = { version = "0.14.0", default-features = false, features = ["std"] }
+
+# The product workspace's release profile is Cargo's default (no LTO); the size numbers use the same.

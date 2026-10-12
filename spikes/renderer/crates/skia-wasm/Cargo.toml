@@ -15,6 +15,12 @@ spike-scene = { path = "../scene" }
 spike-skia-draw = { path = "../skia-draw" }
 skia-safe = { workspace = true }
 
+# Size measurement only (Prompt 5): QuickJS in the editor module. No shipped bindings for emscripten,
+# so rquickjs generates them with bindgen (libclang).
+rquickjs = { version = "0.14.0", default-features = false, features = ["std", "bindgen"], optional = true }
+
 [features]
 # Size measurement only: Renderer B with Skia's paragraph layout (and embedded ICU data), as text needs.
 textlayout = ["skia-safe/textlayout"]
+# Size measurement only (Prompt 5): Renderer B plus QuickJS running a script.
+quickjs = ["dep:rquickjs"]

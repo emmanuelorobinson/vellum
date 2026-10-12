@@ -4,7 +4,8 @@
 //
 // Serves web/index.html and web/src, the build output in web/dist (scripts/build.sh), CanvasKit from
 // node_modules, and /font.ttf: Geist Regular (OFL-1.1) taken from the installed `next` package, so no
-// font is committed. Exports `startServer` for measure.mjs and the gpu test.
+// font is committed. Prompt 5 adds /fonts/ (the text-fixture fonts fetched by scripts/fetch-fonts.mjs)
+// and /fonts.json. Exports `startServer` for measure.mjs and the gpu test.
 
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -21,6 +22,7 @@ const types = {
   ".mjs": "text/javascript; charset=utf-8",
   ".wasm": "application/wasm",
   ".ttf": "font/ttf",
+  ".otf": "font/otf",
   ".png": "image/png",
   ".json": "application/json",
 };
@@ -42,10 +44,12 @@ function resolveRequest(url) {
   const path = decodeURIComponent(new URL(url, "http://localhost").pathname);
   if (path === "/" || path === "/index.html") return join(here, "index.html");
   if (path === "/font.ttf") return fontPath();
+  if (path === "/fonts.json") return join(here, "../fonts.json");
   const mounts = [
     ["/src/", join(here, "src")],
     ["/dist/", join(here, "dist")],
     ["/canvaskit/", canvaskitDir()],
+    ["/fonts/", resolve(here, "../fonts")],
   ];
   for (const [prefix, root] of mounts) {
     if (path.startsWith(prefix)) {

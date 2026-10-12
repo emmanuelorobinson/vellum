@@ -8,7 +8,9 @@
     "spike:build": "bash ../scripts/build.sh",
     "spike:serve": "node server.mjs",
     "spike:measure": "node measure.mjs",
-    "spike:test:gpu": "node --test \"test/*.gpu.test.mjs\""
+    "spike:test:gpu": "node --test \"test/*.gpu.test.mjs\"",
+    "spike:fonts": "node ../scripts/fetch-fonts.mjs",
+    "spike:measure:text": "node measure-text.mjs"
   },
   "dependencies": {
     "canvaskit-wasm": "0.42.0"

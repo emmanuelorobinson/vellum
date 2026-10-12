@@ -23,8 +23,12 @@ pub fn make_image(data: &ImageData) -> Image {
         .expect("raster image from RGBA8")
 }
 
+/// Prefers Skia's FreeType font manager, which the emscripten build always has and the native build
+/// has with `embed-freetype`, so both paths rasterize glyphs with the same code.
 pub fn make_typeface(font: &[u8]) -> Option<Typeface> {
-    FontMgr::new().new_from_data(Data::new_copy(font), None)
+    FontMgr::custom_empty()
+        .unwrap_or_default()
+        .new_from_data(Data::new_copy(font), None)
 }
 
 /// A display list plus the resources it references, ready to draw many times.
@@ -33,6 +37,9 @@ pub struct SkiaScene {
     pub images: Vec<Image>,
     pub fonts: Vec<Font>,
     typeface: Option<Typeface>,
+    /// One typeface per `FONT_FILES` entry, for `GLYPHS` (Prompt 5).
+    glyph_typefaces: Vec<Typeface>,
+    glyph_fonts: Vec<(u32, f32, Font)>,
 }
 
 impl SkiaScene {
@@ -42,7 +49,15 @@ impl SkiaScene {
             images,
             fonts: Vec::new(),
             typeface,
+            glyph_typefaces: Vec::new(),
+            glyph_fonts: Vec::new(),
         }
+    }
+
+    /// The typefaces `GLYPHS` ops index, in `FONT_FILES` order.
+    pub fn with_glyph_typefaces(mut self, typefaces: Vec<Typeface>) -> Self {
+        self.glyph_typefaces = typefaces;
+        self
     }
 
     pub fn draw(&mut self, canvas: &Canvas) {
@@ -128,11 +143,56 @@ impl SkiaScene {
                     };
                     canvas.draw_str(text, (x, y), font, &paint);
                 }
+            } else if code == op::GLYPHS {
+                let (index, size) = (ops[i] as u32, ops[i + 1]);
+                let mut paint = Paint::new(color(&ops[i + 2..i + 6]), None);
+                paint.set_anti_alias(true);
+                let n = ops[i + 6] as usize;
+                let at = i + 7;
+                i = at + n * 3;
+                let mut glyphs = Vec::with_capacity(n);
+                let mut positions = Vec::with_capacity(n);
+                for k in 0..n {
+                    let g = &ops[at + k * 3..at + k * 3 + 3];
+                    glyphs.push(g[0] as u16);
+                    positions.push(Point::new(g[1], g[2]));
+                }
+                let font = match self
+                    .glyph_fonts
+                    .iter()
+                    .position(|(f, s, _)| *f == index && *s == size)
+                {
+                    Some(k) => &self.glyph_fonts[k].2,
+                    None => {
+                        let typeface = self.glyph_typefaces[index as usize].clone();
+                        self.glyph_fonts
+                            .push((index, size, glyph_font(typeface, size)));
+                        &self.glyph_fonts.last().expect("just pushed").2
+                    }
+                };
+                canvas.draw_glyphs_at(
+                    &glyphs,
+                    positions.as_slice(),
+                    Point::default(),
+                    font,
+                    &paint,
+                );
             } else {
                 panic!("unknown display-list opcode {code} at {}", i - 1);
             }
         }
     }
+}
+
+/// The font settings every text path must share (CanvasKit's in `web/src/renderer-a.js` match):
+/// anti-aliased (no LCD), subpixel positioning, no hinting, so glyphs land where Parley put them.
+pub fn glyph_font(typeface: Typeface, size: f32) -> Font {
+    let mut font = Font::from_typeface(typeface, size);
+    font.set_edging(skia_safe::font::Edging::AntiAlias);
+    font.set_subpixel(true);
+    font.set_hinting(skia_safe::FontHinting::None);
+    font.set_linear_metrics(true);
+    font
 }
 
 fn rect(v: &[f32]) -> Rect {

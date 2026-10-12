@@ -6,7 +6,9 @@
 
 use std::cell::RefCell;
 
-use spike_scene::{CANVAS_BACKGROUND, DisplayList, Document, fixture, generate};
+use spike_scene::{
+    CANVAS_BACKGROUND, DisplayList, Document, TextEngine, fixture, generate, text_fixture,
+};
 use spike_skia_draw::skia_safe::{
     AlphaType, Color, ColorType, ImageInfo, Surface,
     gpu::{
@@ -27,6 +29,10 @@ struct State {
     node_count: usize,
     doc_size: (f32, f32),
     raster_pixels: Vec<u8>,
+    /// Fixture fonts in `FONT_FILES` order (Prompt 5), the Parley engine and the Skia typefaces.
+    glyph_fonts: Vec<Vec<u8>>,
+    engine: Option<TextEngine>,
+    glyph_typefaces: Vec<spike_skia_draw::skia_safe::Typeface>,
 }
 
 thread_local! {
@@ -76,7 +82,10 @@ fn load(doc: Document) {
         };
         state.node_count = doc.node_count();
         state.doc_size = (doc.width, doc.height);
-        state.scene = Some(SkiaScene::new(DisplayList::build(&doc), images, typeface));
+        state.scene = Some(
+            SkiaScene::new(DisplayList::build(&doc), images, typeface)
+                .with_glyph_typefaces(state.glyph_typefaces.clone()),
+        );
     });
 }
 
@@ -107,6 +116,9 @@ pub extern "C" fn spike_init(width: i32, height: i32) -> i32 {
             node_count: 0,
             doc_size: (0.0, 0.0),
             raster_pixels: Vec::new(),
+            glyph_fonts: Vec::new(),
+            engine: None,
+            glyph_typefaces: Vec::new(),
         })
     });
     0
@@ -120,6 +132,38 @@ pub extern "C" fn spike_init(width: i32, height: i32) -> i32 {
 pub unsafe extern "C" fn spike_set_font(ptr: *mut u8, len: usize) {
     let bytes = unsafe { Vec::from_raw_parts(ptr, len, len) };
     STATE.with_borrow_mut(|state| state.as_mut().expect("init first").font = bytes);
+}
+
+/// Takes ownership of `len` bytes at `ptr` (from `spike_alloc`) as the next fixture font.
+///
+/// # Safety
+/// `ptr` must come from `spike_alloc(len)` and must not be used again by the caller.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn spike_add_glyph_font(ptr: *mut u8, len: usize) -> i32 {
+    let bytes = unsafe { Vec::from_raw_parts(ptr, len, len) };
+    STATE.with_borrow_mut(|state| {
+        let state = state.as_mut().expect("init first");
+        let Some(typeface) = make_typeface(&bytes) else {
+            return 1;
+        };
+        state.glyph_typefaces.push(typeface);
+        state.glyph_fonts.push(bytes);
+        state.engine = None;
+        0
+    })
+}
+
+/// Lays out text fixture `n` with Parley inside this module and loads it.
+#[unsafe(no_mangle)]
+pub extern "C" fn spike_load_text_fixture(n: usize) -> usize {
+    let doc = STATE.with_borrow_mut(|state| {
+        let state = state.as_mut().expect("init first");
+        let fonts = &state.glyph_fonts;
+        let engine = state.engine.get_or_insert_with(|| TextEngine::new(fonts));
+        text_fixture(n, engine)
+    });
+    load(doc);
+    spike_node_count()
 }
 
 #[unsafe(no_mangle)]
@@ -234,5 +278,22 @@ pub extern "C" fn spike_paragraph_width() -> f32 {
         let mut paragraph = builder.build();
         paragraph.layout(1000.0);
         paragraph.max_intrinsic_width()
+    })
+}
+
+/// Size measurement only: evaluates a script with QuickJS so the `quickjs` build keeps the engine.
+/// Returns the script's numeric result.
+#[cfg(feature = "quickjs")]
+#[unsafe(no_mangle)]
+pub extern "C" fn spike_quickjs_eval_sum(n: i32) -> f64 {
+    let runtime = rquickjs::Runtime::new().expect("runtime");
+    runtime.set_max_stack_size(256 * 1024);
+    runtime.set_memory_limit(64 * 1024 * 1024);
+    let context = rquickjs::Context::full(&runtime).expect("context");
+    context.with(|ctx| {
+        ctx.eval::<f64, _>(format!(
+            "let s = 0; for (let i = 0; i < {n}; i++) s += i; s"
+        ))
+        .unwrap_or(-1.0)
     })
 }

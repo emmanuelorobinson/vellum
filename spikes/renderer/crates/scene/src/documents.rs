@@ -80,6 +80,14 @@ pub enum Node {
         color: Color,
         text: String,
     },
+    /// Positioned glyphs from Parley (`text.rs`): glyph id and baseline origin in document space.
+    /// `font` indexes `FONT_FILES`.
+    Glyphs {
+        font: u32,
+        size: f32,
+        color: Color,
+        glyphs: Vec<(u32, f32, f32)>,
+    },
     Image {
         x: f32,
         y: f32,

@@ -1,0 +1,15 @@
+[package]
+name = "spike-script"
+description = "rquickjs with a toy document API: the 500-op script, limits, and the wasm32 size added to vellum-wasm."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rquickjs = { workspace = true }
+# The size baseline: this cdylib is vellum-wasm plus the script runtime.
+vellum-wasm = { path = "../../../../crates/vellum-wasm" }

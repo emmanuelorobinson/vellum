@@ -16,6 +16,7 @@ const OP = {
   FILL_POLY: 14,
   IMAGE: 15,
   TEXT: 16,
+  GLYPHS: 17,
 };
 const PAINT = { SOLID: 0, LINEAR: 1, RADIAL: 2 };
 const BACKGROUND = [232 / 255, 232 / 255, 236 / 255, 1]; // spike_scene::CANVAS_BACKGROUND
@@ -31,7 +32,7 @@ function loadScript(src) {
   });
 }
 
-export async function create(canvas, fontBytes) {
+export async function create(canvas, fontBytes, glyphFonts = []) {
   const [, scene] = await Promise.all([
     loadScript("/canvaskit/canvaskit.js"),
     WebAssembly.instantiateStreaming(fetch("/dist/spike_scene_wasm.wasm"), {}),
@@ -42,6 +43,16 @@ export async function create(canvas, fontBytes) {
   let surface = CK.MakeWebGLCanvasSurface(canvas, CK.ColorSpace.SRGB, webgl);
   if (!surface) throw new Error("CanvasKit could not create a WebGL2 surface");
   const typeface = CK.Typeface.MakeTypefaceFromData(fontBytes);
+  // Parley (in the Rust module) lays the text fixtures out; it needs the same font bytes CanvasKit draws with.
+  const glyphTypefaces = glyphFonts.map((bytes) => {
+    const face = CK.Typeface.MakeTypefaceFromData(bytes);
+    if (!face) throw new Error("CanvasKit rejected a font");
+    const at = wasm.scene_alloc(bytes.byteLength);
+    new Uint8Array(wasm.memory.buffer, at, bytes.byteLength).set(new Uint8Array(bytes));
+    wasm.scene_add_font(at, bytes.byteLength);
+    return face;
+  });
+  const glyphFontCache = new Map();
 
   const fill = new CK.Paint();
   fill.setAntiAlias(true);
@@ -176,6 +187,21 @@ export async function create(canvas, fontBytes) {
     return font;
   }
 
+  // Must match spike_skia_draw::glyph_font: anti-aliased, subpixel, unhinted, linear metrics.
+  function glyphFont(index, size) {
+    const key = `${index}:${size}`;
+    let font = glyphFontCache.get(key);
+    if (!font) {
+      font = new CK.Font(glyphTypefaces[index], size);
+      font.setEdging(CK.FontEdging.AntiAlias);
+      font.setSubpixel(true);
+      font.setHinting(CK.FontHinting.None);
+      font.setLinearMetrics(true);
+      glyphFontCache.set(key, font);
+    }
+    return font;
+  }
+
   function draw(c) {
     let i = 0;
     let shader = null;
@@ -260,6 +286,21 @@ export async function create(canvas, fontBytes) {
           i += 8;
           break;
         }
+        case OP.GLYPHS: {
+          const n = ops[i + 6];
+          const ids = new Uint16Array(n);
+          const positions = new Float32Array(n * 2);
+          for (let k = 0; k < n; k++) {
+            const g = i + 7 + k * 3;
+            ids[k] = ops[g];
+            positions[k * 2] = ops[g + 1];
+            positions[k * 2 + 1] = ops[g + 2];
+          }
+          textPaint.setColorComponents(ops[i + 2], ops[i + 3], ops[i + 4], ops[i + 5]);
+          c.drawGlyphs(ids, positions, 0, 0, glyphFont(ops[i], ops[i + 1]), textPaint);
+          i += 7 + n * 3;
+          break;
+        }
         default:
           throw new Error(`unknown display-list opcode ${code} at ${i - 1}`);
       }
@@ -286,6 +327,9 @@ export async function create(canvas, fontBytes) {
     },
     loadFixture(n) {
       adopt(wasm.scene_build_fixture(n));
+    },
+    loadTextFixture(n) {
+      adopt(wasm.scene_build_text_fixture(n));
     },
     resize() {
       surface.delete();

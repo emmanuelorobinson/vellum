@@ -1,0 +1,14 @@
+{
+  "name": "@vellum/spike-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Spike B (guide Prompt 5), engine half: Loro at scale and QuickJS in wasm32, for ADR-004. Spike quality.",
+  "type": "module",
+  "scripts": {
+    "spike:build:wasm": "bash scripts/build-wasm.sh",
+    "spike:measure:loro": "cargo run --release -p spike-loro --bin loro-bench -- results/loro.json --runs 7",
+    "spike:measure:script": "node scripts/measure-script.mjs",
+    "spike:measure:loro-wasm": "node scripts/measure-loro-wasm.mjs",
+    "spike:test:wasm": "node --test \"test/*.wasm.test.mjs\""
+  }
+}

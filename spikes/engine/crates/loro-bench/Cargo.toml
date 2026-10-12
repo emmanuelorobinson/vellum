@@ -1,0 +1,12 @@
+[package]
+name = "spike-loro"
+description = "The 10k-node spike document as a Loro movable tree: load, save and batch-apply measurements."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+loro = { workspace = true }
+spike-scene = { path = "../../../renderer/crates/scene" }
+serde_json = "1.0.154"

@@ -4,3 +4,5 @@ target/
 artifacts/
 web/dist/
 results/fixtures/
+fonts/
+results/text-fixtures/

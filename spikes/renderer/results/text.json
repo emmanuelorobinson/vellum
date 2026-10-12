@@ -1,0 +1,2300 @@
+{
+  "measuredAt": "2026-10-12T05:32:27.955Z",
+  "machine": {
+    "cpu": "Apple M5 Pro",
+    "platform": "darwin 27.0.0"
+  },
+  "method": {
+    "fixtures": "30 text fixtures, 256 x 256, laid out by Parley 0.12.0 inside each module",
+    "font": "anti-aliased, subpixel positioning, no hinting, linear metrics; FreeType everywhere",
+    "tolerance": "a pixel differs when any channel moves by more than 2"
+  },
+  "summary": {
+    "native-vs-a": {
+      "fixtures": 30,
+      "identical": 0,
+      "withinChannel2": 28,
+      "worstMaxDelta": 3,
+      "medianMaxDelta": 1,
+      "worstP95": 1,
+      "worstDifferingFraction": 0.000015,
+      "meanDifferingFraction": 0.000001
+    },
+    "native-vs-b": {
+      "fixtures": 30,
+      "identical": 0,
+      "withinChannel2": 28,
+      "worstMaxDelta": 3,
+      "medianMaxDelta": 1,
+      "worstP95": 1,
+      "worstDifferingFraction": 0.000015,
+      "meanDifferingFraction": 0.000001
+    },
+    "a-vs-b": {
+      "fixtures": 30,
+      "identical": 30,
+      "withinChannel2": 30,
+      "worstMaxDelta": 0,
+      "medianMaxDelta": 0,
+      "worstP95": 0,
+      "worstDifferingFraction": 0,
+      "meanDifferingFraction": 0
+    },
+    "native-vs-b-raster": {
+      "fixtures": 30,
+      "identical": 25,
+      "withinChannel2": 30,
+      "worstMaxDelta": 1,
+      "medianMaxDelta": 0,
+      "worstP95": 0,
+      "worstDifferingFraction": 0,
+      "meanDifferingFraction": 0
+    },
+    "parley-vs-skparagraph": {
+      "fixtures": 30,
+      "identical": 0,
+      "withinChannel2": 0,
+      "worstMaxDelta": 254,
+      "medianMaxDelta": 237,
+      "worstP95": 53,
+      "worstDifferingFraction": 0.084244,
+      "meanDifferingFraction": 0.02146756666666667
+    }
+  },
+  "byCategory": {
+    "latin": {
+      "native-vs-a": {
+        "fixtures": 6,
+        "identical": 0,
+        "withinChannel2": 6,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b": {
+        "fixtures": 6,
+        "identical": 0,
+        "withinChannel2": 6,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "a-vs-b": {
+        "fixtures": 6,
+        "identical": 6,
+        "withinChannel2": 6,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "fixtures": 6,
+        "identical": 6,
+        "withinChannel2": 6,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "parley-vs-skparagraph": {
+        "fixtures": 6,
+        "identical": 0,
+        "withinChannel2": 0,
+        "worstMaxDelta": 237,
+        "medianMaxDelta": 237,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.024246,
+        "meanDifferingFraction": 0.013768333333333334
+      }
+    },
+    "arabic": {
+      "native-vs-a": {
+        "fixtures": 5,
+        "identical": 0,
+        "withinChannel2": 4,
+        "worstMaxDelta": 3,
+        "medianMaxDelta": 2,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.000015,
+        "meanDifferingFraction": 0.000003
+      },
+      "native-vs-b": {
+        "fixtures": 5,
+        "identical": 0,
+        "withinChannel2": 4,
+        "worstMaxDelta": 3,
+        "medianMaxDelta": 2,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.000015,
+        "meanDifferingFraction": 0.000003
+      },
+      "a-vs-b": {
+        "fixtures": 5,
+        "identical": 5,
+        "withinChannel2": 5,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "fixtures": 5,
+        "identical": 5,
+        "withinChannel2": 5,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "parley-vs-skparagraph": {
+        "fixtures": 5,
+        "identical": 0,
+        "withinChannel2": 0,
+        "worstMaxDelta": 238,
+        "medianMaxDelta": 236,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.039505,
+        "meanDifferingFraction": 0.0194794
+      }
+    },
+    "cjk": {
+      "native-vs-a": {
+        "fixtures": 5,
+        "identical": 0,
+        "withinChannel2": 5,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 1,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b": {
+        "fixtures": 5,
+        "identical": 0,
+        "withinChannel2": 5,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 1,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "a-vs-b": {
+        "fixtures": 5,
+        "identical": 5,
+        "withinChannel2": 5,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "fixtures": 5,
+        "identical": 5,
+        "withinChannel2": 5,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "parley-vs-skparagraph": {
+        "fixtures": 5,
+        "identical": 0,
+        "withinChannel2": 0,
+        "worstMaxDelta": 237,
+        "medianMaxDelta": 237,
+        "worstP95": 53,
+        "worstDifferingFraction": 0.084244,
+        "meanDifferingFraction": 0.033371200000000004
+      }
+    },
+    "emoji": {
+      "native-vs-a": {
+        "fixtures": 4,
+        "identical": 0,
+        "withinChannel2": 4,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b": {
+        "fixtures": 4,
+        "identical": 0,
+        "withinChannel2": 4,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "a-vs-b": {
+        "fixtures": 4,
+        "identical": 4,
+        "withinChannel2": 4,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "fixtures": 4,
+        "identical": 0,
+        "withinChannel2": 4,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "parley-vs-skparagraph": {
+        "fixtures": 4,
+        "identical": 0,
+        "withinChannel2": 0,
+        "worstMaxDelta": 254,
+        "medianMaxDelta": 253,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.02417,
+        "meanDifferingFraction": 0.02020275
+      }
+    },
+    "bidi": {
+      "native-vs-a": {
+        "fixtures": 7,
+        "identical": 0,
+        "withinChannel2": 6,
+        "worstMaxDelta": 3,
+        "medianMaxDelta": 2,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.000015,
+        "meanDifferingFraction": 0.0000021428571428571427
+      },
+      "native-vs-b": {
+        "fixtures": 7,
+        "identical": 0,
+        "withinChannel2": 6,
+        "worstMaxDelta": 3,
+        "medianMaxDelta": 2,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.000015,
+        "meanDifferingFraction": 0.0000021428571428571427
+      },
+      "a-vs-b": {
+        "fixtures": 7,
+        "identical": 7,
+        "withinChannel2": 7,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "fixtures": 7,
+        "identical": 6,
+        "withinChannel2": 7,
+        "worstMaxDelta": 1,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "parley-vs-skparagraph": {
+        "fixtures": 7,
+        "identical": 0,
+        "withinChannel2": 0,
+        "worstMaxDelta": 237,
+        "medianMaxDelta": 237,
+        "worstP95": 0,
+        "worstDifferingFraction": 0.038757,
+        "meanDifferingFraction": 0.014288571428571428
+      }
+    },
+    "wrap": {
+      "native-vs-a": {
+        "fixtures": 3,
+        "identical": 0,
+        "withinChannel2": 3,
+        "worstMaxDelta": 2,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b": {
+        "fixtures": 3,
+        "identical": 0,
+        "withinChannel2": 3,
+        "worstMaxDelta": 2,
+        "medianMaxDelta": 1,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "a-vs-b": {
+        "fixtures": 3,
+        "identical": 3,
+        "withinChannel2": 3,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "native-vs-b-raster": {
+        "fixtures": 3,
+        "identical": 3,
+        "withinChannel2": 3,
+        "worstMaxDelta": 0,
+        "medianMaxDelta": 0,
+        "worstP95": 0,
+        "worstDifferingFraction": 0,
+        "meanDifferingFraction": 0
+      },
+      "parley-vs-skparagraph": {
+        "fixtures": 3,
+        "identical": 0,
+        "withinChannel2": 0,
+        "worstMaxDelta": 237,
+        "medianMaxDelta": 237,
+        "worstP95": 10,
+        "worstDifferingFraction": 0.055862,
+        "meanDifferingFraction": 0.03877766666666666
+      }
+    }
+  },
+  "lineCounts": [
+    {
+      "fixture": 1,
+      "name": "latin-short",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 2,
+      "name": "latin-small",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 3,
+      "name": "latin-large",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 4,
+      "name": "latin-kerning",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 5,
+      "name": "latin-centered",
+      "parleyLines": 2,
+      "paragraphLines": 2
+    },
+    {
+      "fixture": 6,
+      "name": "latin-accents",
+      "parleyLines": 2,
+      "paragraphLines": 2
+    },
+    {
+      "fixture": 7,
+      "name": "arabic-short",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 8,
+      "name": "arabic-wrap",
+      "parleyLines": 3,
+      "paragraphLines": 3
+    },
+    {
+      "fixture": 9,
+      "name": "arabic-digits",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 10,
+      "name": "arabic-tashkeel",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 11,
+      "name": "arabic-large",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 12,
+      "name": "cjk-chinese",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 13,
+      "name": "cjk-wrap",
+      "parleyLines": 3,
+      "paragraphLines": 3
+    },
+    {
+      "fixture": 14,
+      "name": "cjk-japanese",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 15,
+      "name": "cjk-punctuation",
+      "parleyLines": 2,
+      "paragraphLines": 2
+    },
+    {
+      "fixture": 16,
+      "name": "cjk-mixed-latin",
+      "parleyLines": 2,
+      "paragraphLines": 2
+    },
+    {
+      "fixture": 17,
+      "name": "emoji-single",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 18,
+      "name": "emoji-inline",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 19,
+      "name": "emoji-zwj",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 20,
+      "name": "emoji-modifiers",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 21,
+      "name": "bidi-latin-arabic",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 22,
+      "name": "bidi-arabic-latin",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 23,
+      "name": "bidi-hebrew",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 24,
+      "name": "bidi-hebrew-numbers",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 25,
+      "name": "bidi-rtl-end",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 26,
+      "name": "bidi-wrap",
+      "parleyLines": 3,
+      "paragraphLines": 3
+    },
+    {
+      "fixture": 27,
+      "name": "bidi-emoji-cjk",
+      "parleyLines": 1,
+      "paragraphLines": 1
+    },
+    {
+      "fixture": 28,
+      "name": "wrap-paragraph",
+      "parleyLines": 4,
+      "paragraphLines": 4
+    },
+    {
+      "fixture": 29,
+      "name": "wrap-narrow",
+      "parleyLines": 5,
+      "paragraphLines": 5
+    },
+    {
+      "fixture": 30,
+      "name": "wrap-hard-breaks",
+      "parleyLines": 4,
+      "paragraphLines": 4
+    }
+  ],
+  "lineCountMismatches": 0,
+  "wasmSize": {
+    "a: scene module with Parley": {
+      "files": [
+        {
+          "file": "dist/spike_scene_wasm.wasm",
+          "raw": 1150570,
+          "gzip": 405297
+        }
+      ],
+      "raw": 1150570,
+      "gzip": 405297
+    },
+    "b: skia_wasm with Parley": {
+      "files": [
+        {
+          "file": "dist/skia_wasm.wasm",
+          "raw": 4902558,
+          "gzip": 1937084
+        },
+        {
+          "file": "dist/skia_wasm.js",
+          "raw": 62180,
+          "gzip": 15018
+        }
+      ],
+      "raw": 4964738,
+      "gzip": 1952102
+    },
+    "b: skia_wasm with Parley and rquickjs (size only)": {
+      "files": [
+        {
+          "file": "dist/quickjs/skia_wasm.wasm",
+          "raw": 5847150,
+          "gzip": 2292538
+        },
+        {
+          "file": "dist/quickjs/skia_wasm.js",
+          "raw": 63935,
+          "gzip": 15630
+        }
+      ],
+      "raw": 5911085,
+      "gzip": 2308168
+    },
+    "prompt 4 b (no Parley)": {
+      "files": [
+        {
+          "file": "web/dist/skia_wasm.wasm",
+          "raw": 3920653,
+          "gzip": 1534382
+        },
+        {
+          "file": "web/dist/skia_wasm.js",
+          "raw": 61948,
+          "gzip": 14957
+        },
+        {
+          "file": "web/src/renderer-b.js",
+          "raw": 1844,
+          "gzip": 833
+        }
+      ],
+      "raw": 3984445,
+      "gzip": 1550172
+    },
+    "prompt 4 b with textlayout (no Parley)": {
+      "files": [
+        {
+          "file": "web/dist/textlayout/skia_wasm.wasm",
+          "raw": 6488432,
+          "gzip": 2636413
+        },
+        {
+          "file": "web/dist/textlayout/skia_wasm.js",
+          "raw": 62026,
+          "gzip": 14973
+        },
+        {
+          "file": "web/src/renderer-b.js",
+          "raw": 1844,
+          "gzip": 833
+        }
+      ],
+      "raw": 6552302,
+      "gzip": 2652219
+    }
+  },
+  "rows": [
+    {
+      "name": "01-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0063,
+      "diff": ""
+    },
+    {
+      "name": "01-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0063,
+      "diff": ""
+    },
+    {
+      "name": "01-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "01-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "01-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 374,
+      "total_pixels": 65536,
+      "differing_fraction": 0.005707,
+      "max_channel_delta": 167,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.1619,
+      "diff": "results/text-fixtures/diffs/01-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "02-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0109,
+      "diff": ""
+    },
+    {
+      "name": "02-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0109,
+      "diff": ""
+    },
+    {
+      "name": "02-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "02-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "02-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 376,
+      "total_pixels": 65536,
+      "differing_fraction": 0.005737,
+      "max_channel_delta": 80,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0913,
+      "diff": "results/text-fixtures/diffs/02-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "03-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0105,
+      "diff": ""
+    },
+    {
+      "name": "03-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0105,
+      "diff": ""
+    },
+    {
+      "name": "03-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "03-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "03-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 774,
+      "total_pixels": 65536,
+      "differing_fraction": 0.01181,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.9381,
+      "diff": "results/text-fixtures/diffs/03-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "04-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0133,
+      "diff": ""
+    },
+    {
+      "name": "04-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0133,
+      "diff": ""
+    },
+    {
+      "name": "04-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "04-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "04-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1276,
+      "total_pixels": 65536,
+      "differing_fraction": 0.01947,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.5961,
+      "diff": "results/text-fixtures/diffs/04-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "05-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0204,
+      "diff": ""
+    },
+    {
+      "name": "05-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0204,
+      "diff": ""
+    },
+    {
+      "name": "05-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "05-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "05-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1589,
+      "total_pixels": 65536,
+      "differing_fraction": 0.024246,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.8604,
+      "diff": "results/text-fixtures/diffs/05-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "06-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0168,
+      "diff": ""
+    },
+    {
+      "name": "06-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0168,
+      "diff": ""
+    },
+    {
+      "name": "06-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "06-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "06-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1025,
+      "total_pixels": 65536,
+      "differing_fraction": 0.01564,
+      "max_channel_delta": 216,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.3827,
+      "diff": "results/text-fixtures/diffs/06-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "07-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0063,
+      "diff": ""
+    },
+    {
+      "name": "07-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0063,
+      "diff": ""
+    },
+    {
+      "name": "07-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "07-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "07-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 347,
+      "total_pixels": 65536,
+      "differing_fraction": 0.005295,
+      "max_channel_delta": 121,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.1306,
+      "diff": "results/text-fixtures/diffs/07-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "08-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0273,
+      "diff": ""
+    },
+    {
+      "name": "08-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0273,
+      "diff": ""
+    },
+    {
+      "name": "08-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "08-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "08-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 2589,
+      "total_pixels": 65536,
+      "differing_fraction": 0.039505,
+      "max_channel_delta": 238,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 2.9477,
+      "diff": "results/text-fixtures/diffs/08-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "09-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0076,
+      "diff": ""
+    },
+    {
+      "name": "09-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0076,
+      "diff": ""
+    },
+    {
+      "name": "09-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "09-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "09-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 749,
+      "total_pixels": 65536,
+      "differing_fraction": 0.011429,
+      "max_channel_delta": 236,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.8212,
+      "diff": "results/text-fixtures/diffs/09-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "10-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0118,
+      "diff": ""
+    },
+    {
+      "name": "10-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0118,
+      "diff": ""
+    },
+    {
+      "name": "10-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "10-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "10-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 665,
+      "total_pixels": 65536,
+      "differing_fraction": 0.010147,
+      "max_channel_delta": 154,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.2428,
+      "diff": "results/text-fixtures/diffs/10-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "11-native-vs-a",
+      "passed": false,
+      "differing_pixels": 1,
+      "total_pixels": 65536,
+      "differing_fraction": 0.000015,
+      "max_channel_delta": 3,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0082,
+      "diff": "results/text-fixtures/diffs/11-native-vs-a.diff.png"
+    },
+    {
+      "name": "11-native-vs-b",
+      "passed": false,
+      "differing_pixels": 1,
+      "total_pixels": 65536,
+      "differing_fraction": 0.000015,
+      "max_channel_delta": 3,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0082,
+      "diff": "results/text-fixtures/diffs/11-native-vs-b.diff.png"
+    },
+    {
+      "name": "11-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "11-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "11-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 2033,
+      "total_pixels": 65536,
+      "differing_fraction": 0.031021,
+      "max_channel_delta": 238,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 5.1152,
+      "diff": "results/text-fixtures/diffs/11-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "12-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0151,
+      "diff": ""
+    },
+    {
+      "name": "12-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0151,
+      "diff": ""
+    },
+    {
+      "name": "12-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "12-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "12-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1297,
+      "total_pixels": 65536,
+      "differing_fraction": 0.019791,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.5221,
+      "diff": "results/text-fixtures/diffs/12-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "13-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 1,
+      "mean_pixel_delta": 0.0572,
+      "diff": ""
+    },
+    {
+      "name": "13-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 1,
+      "mean_pixel_delta": 0.0572,
+      "diff": ""
+    },
+    {
+      "name": "13-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "13-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "13-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 5521,
+      "total_pixels": 65536,
+      "differing_fraction": 0.084244,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 53,
+      "mean_pixel_delta": 7.6119,
+      "diff": "results/text-fixtures/diffs/13-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "14-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0138,
+      "diff": ""
+    },
+    {
+      "name": "14-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0138,
+      "diff": ""
+    },
+    {
+      "name": "14-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "14-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "14-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1009,
+      "total_pixels": 65536,
+      "differing_fraction": 0.015396,
+      "max_channel_delta": 184,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.5371,
+      "diff": "results/text-fixtures/diffs/14-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "15-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0174,
+      "diff": ""
+    },
+    {
+      "name": "15-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0174,
+      "diff": ""
+    },
+    {
+      "name": "15-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "15-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "15-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1653,
+      "total_pixels": 65536,
+      "differing_fraction": 0.025223,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 2.2433,
+      "diff": "results/text-fixtures/diffs/15-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "16-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0175,
+      "diff": ""
+    },
+    {
+      "name": "16-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0175,
+      "diff": ""
+    },
+    {
+      "name": "16-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "16-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "16-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1455,
+      "total_pixels": 65536,
+      "differing_fraction": 0.022202,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.9387,
+      "diff": "results/text-fixtures/diffs/16-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "17-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0002,
+      "diff": ""
+    },
+    {
+      "name": "17-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0002,
+      "diff": ""
+    },
+    {
+      "name": "17-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "17-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0002,
+      "diff": ""
+    },
+    {
+      "name": "17-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1274,
+      "total_pixels": 65536,
+      "differing_fraction": 0.01944,
+      "max_channel_delta": 239,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.1731,
+      "diff": "results/text-fixtures/diffs/17-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "18-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.009,
+      "diff": ""
+    },
+    {
+      "name": "18-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.009,
+      "diff": ""
+    },
+    {
+      "name": "18-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "18-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0001,
+      "diff": ""
+    },
+    {
+      "name": "18-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1074,
+      "total_pixels": 65536,
+      "differing_fraction": 0.016388,
+      "max_channel_delta": 240,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.1457,
+      "diff": "results/text-fixtures/diffs/18-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "19-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0002,
+      "diff": ""
+    },
+    {
+      "name": "19-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0002,
+      "diff": ""
+    },
+    {
+      "name": "19-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "19-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0002,
+      "diff": ""
+    },
+    {
+      "name": "19-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1364,
+      "total_pixels": 65536,
+      "differing_fraction": 0.020813,
+      "max_channel_delta": 253,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.3304,
+      "diff": "results/text-fixtures/diffs/19-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "20-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0007,
+      "diff": ""
+    },
+    {
+      "name": "20-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0007,
+      "diff": ""
+    },
+    {
+      "name": "20-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "20-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0007,
+      "diff": ""
+    },
+    {
+      "name": "20-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1584,
+      "total_pixels": 65536,
+      "differing_fraction": 0.02417,
+      "max_channel_delta": 254,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.4288,
+      "diff": "results/text-fixtures/diffs/20-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "21-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0129,
+      "diff": ""
+    },
+    {
+      "name": "21-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0129,
+      "diff": ""
+    },
+    {
+      "name": "21-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "21-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "21-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 805,
+      "total_pixels": 65536,
+      "differing_fraction": 0.012283,
+      "max_channel_delta": 167,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.3216,
+      "diff": "results/text-fixtures/diffs/21-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "22-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0139,
+      "diff": ""
+    },
+    {
+      "name": "22-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0139,
+      "diff": ""
+    },
+    {
+      "name": "22-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "22-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "22-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 689,
+      "total_pixels": 65536,
+      "differing_fraction": 0.010513,
+      "max_channel_delta": 224,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.3105,
+      "diff": "results/text-fixtures/diffs/22-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "23-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.006,
+      "diff": ""
+    },
+    {
+      "name": "23-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.006,
+      "diff": ""
+    },
+    {
+      "name": "23-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "23-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "23-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 220,
+      "total_pixels": 65536,
+      "differing_fraction": 0.003357,
+      "max_channel_delta": 109,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0373,
+      "diff": "results/text-fixtures/diffs/23-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "24-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0074,
+      "diff": ""
+    },
+    {
+      "name": "24-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0074,
+      "diff": ""
+    },
+    {
+      "name": "24-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "24-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "24-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 644,
+      "total_pixels": 65536,
+      "differing_fraction": 0.009827,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.7371,
+      "diff": "results/text-fixtures/diffs/24-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "25-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0075,
+      "diff": ""
+    },
+    {
+      "name": "25-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0075,
+      "diff": ""
+    },
+    {
+      "name": "25-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "25-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "25-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 682,
+      "total_pixels": 65536,
+      "differing_fraction": 0.010406,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.765,
+      "diff": "results/text-fixtures/diffs/25-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "26-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0299,
+      "diff": ""
+    },
+    {
+      "name": "26-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0299,
+      "diff": ""
+    },
+    {
+      "name": "26-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "26-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "26-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 2540,
+      "total_pixels": 65536,
+      "differing_fraction": 0.038757,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 2.9493,
+      "diff": "results/text-fixtures/diffs/26-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "27-native-vs-a",
+      "passed": false,
+      "differing_pixels": 1,
+      "total_pixels": 65536,
+      "differing_fraction": 0.000015,
+      "max_channel_delta": 3,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0094,
+      "diff": "results/text-fixtures/diffs/27-native-vs-a.diff.png"
+    },
+    {
+      "name": "27-native-vs-b",
+      "passed": false,
+      "differing_pixels": 1,
+      "total_pixels": 65536,
+      "differing_fraction": 0.000015,
+      "max_channel_delta": 3,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0094,
+      "diff": "results/text-fixtures/diffs/27-native-vs-b.diff.png"
+    },
+    {
+      "name": "27-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "27-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "27-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 975,
+      "total_pixels": 65536,
+      "differing_fraction": 0.014877,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.054,
+      "diff": "results/text-fixtures/diffs/27-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "28-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0475,
+      "diff": ""
+    },
+    {
+      "name": "28-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 2,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0475,
+      "diff": ""
+    },
+    {
+      "name": "28-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "28-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "28-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 3661,
+      "total_pixels": 65536,
+      "differing_fraction": 0.055862,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 10,
+      "mean_pixel_delta": 3.6797,
+      "diff": "results/text-fixtures/diffs/28-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "29-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.023,
+      "diff": ""
+    },
+    {
+      "name": "29-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.023,
+      "diff": ""
+    },
+    {
+      "name": "29-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "29-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "29-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 1901,
+      "total_pixels": 65536,
+      "differing_fraction": 0.029007,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 1.829,
+      "diff": "results/text-fixtures/diffs/29-parley-vs-skparagraph.diff.png"
+    },
+    {
+      "name": "30-native-vs-a",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0267,
+      "diff": ""
+    },
+    {
+      "name": "30-native-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 1,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0.0267,
+      "diff": ""
+    },
+    {
+      "name": "30-a-vs-b",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "30-native-vs-b-raster",
+      "passed": true,
+      "differing_pixels": 0,
+      "total_pixels": 65536,
+      "differing_fraction": 0,
+      "max_channel_delta": 0,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 0,
+      "diff": ""
+    },
+    {
+      "name": "30-parley-vs-skparagraph",
+      "passed": false,
+      "differing_pixels": 2062,
+      "total_pixels": 65536,
+      "differing_fraction": 0.031464,
+      "max_channel_delta": 237,
+      "p95_pixel_delta": 0,
+      "mean_pixel_delta": 2.082,
+      "diff": "results/text-fixtures/diffs/30-parley-vs-skparagraph.diff.png"
+    }
+  ]
+}

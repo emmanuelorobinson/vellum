@@ -26,16 +26,16 @@
 | tokio | 1.53.2 | 1.53.x | not yet used | latest stable patch of the line |
 | axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
-| loro | 1.16.2 | 1.16.x | not yet used | behind DocStore (Prompt 14) |
+| loro | 1.16.2 | 1.16.x | spike only: `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
 | taffy | 0.14.0 | 0.14.x | not yet used | layout adapter (Prompt 18) |
-| parley | 0.12.0 | 0.12.x | not yet used | text adapter (Prompt 19) |
+| parley | 0.12.0 | 0.12.x | spike only: `spikes/renderer` (Prompt 5; no default features, `std`) | text adapter (Prompt 19); ADR-001's text decision |
 | fontique | 0.12.0 | 0.12.x | not yet used | ships with parley; a direct dependency only if needed |
-| skia-safe | 0.153.3 | 0.153.x | spike only: `spikes/renderer` (features gl; textlayout for a size build) | the renderer everywhere, native and emscripten (ADR-001, C15) |
+| skia-safe | 0.153.3 | 0.153.x | spike only: `spikes/renderer` (features gl; textlayout for a size build and the native SkParagraph comparison) | the renderer everywhere, native and emscripten (ADR-001, C15, C16) |
 | vello | 0.11.0 | 0.11.x | not yet used | later, behind a flag |
 | kurbo | 0.13.1 | 0.13.x | not yet used | path geometry adapter |
 | i_overlay | 9.0.1 | 9.0.x | not yet used | boolean operations (Prompt 12) |
 | rstar | 0.13.0 | 0.13.x | not yet used | spatial index (Prompt 20) |
-| rquickjs | 0.14.0 | 0.14.x | not yet used | ScriptRuntime (Prompt 25) |
+| rquickjs | 0.14.0 | 0.14.x | spike only: `spikes/engine`, and a size-only feature of `spikes/renderer` (Prompt 5) | ScriptRuntime (Prompt 25) |
 | rmcp | 3.5.1 | 3.5.x | not yet used | MCP adapter (Prompt 29) |
 | schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |
 | ts-rs | 12.0.1 | 12.x | `Cargo.toml` workspace.dependencies | TypeScript bindings from vellum-types |
@@ -168,6 +168,12 @@ No repository has a release at or after its pin, so every pin stays at the guide
 - **C15: emsdk 4.0.6 and Skia from source for emscripten** (Prompt 4, ADR-001). 4.0.6 is the version Penpot pairs with
   skia-safe 0.153.x. rust-skia's prebuilt emscripten binaries do not link with Rust 1.99 (JS longjmp vs wasm exceptions),
   so the emscripten build compiles Skia from source with ninja; the native build keeps the prebuilt binaries.
+- **C16: The native Skia build uses FreeType** (Prompt 5, ADR-001 "Text"). Text must rasterize the same natively as in
+  the emscripten build, and rust-skia's prebuilt macOS binaries have only CoreText, so the spike's native build also
+  compiles Skia from source (`SKIA_GN_ARGS="skia_use_freetype=true skia_use_system_freetype2=false
+  skia_enable_fontmgr_custom_empty=true"`) and patches one bindgen alias for the macOS 27 SDK
+  (`spikes/renderer/scripts/build-native.sh`). Fonts for the text fixtures are Noto files pinned by SHA-256 in
+  `spikes/renderer/fonts.json`, downloaded and not committed.
 
 ## What the reference clones are for
 

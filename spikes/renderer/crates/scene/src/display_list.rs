@@ -31,6 +31,8 @@ pub mod op {
     pub const IMAGE: f32 = 15.0;
     /// string x y size r g b a
     pub const TEXT: f32 = 16.0;
+    /// font size r g b a n (glyph x y)*n; font indexes `FONT_FILES`, positions are baseline origins
+    pub const GLYPHS: f32 = 17.0;
 }
 
 pub mod paint_kind {
@@ -223,6 +225,20 @@ impl DisplayList {
                 self.strings.push(text.clone());
                 self.push(&[op::TEXT, id, *x, *y, *size]);
                 self.color(*color);
+            }
+            Node::Glyphs {
+                font,
+                size,
+                color,
+                glyphs,
+            } => {
+                self.push(&[op::GLYPHS, *font as f32, *size]);
+                self.color(*color);
+                self.push(&[glyphs.len() as f32]);
+                for (id, x, y) in glyphs {
+                    // Glyph ids are below 2^16, exact in f32.
+                    self.push(&[*id as f32, *x, *y]);
+                }
             }
             Node::Image {
                 x,
