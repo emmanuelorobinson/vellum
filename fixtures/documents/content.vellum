@@ -1,0 +1,233 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: content",
+    "createdWith": "Vellum 0.0.0"
+  },
+  "variables": {
+    "va000002": {
+      "type": "string",
+      "name": "icon/primary",
+      "values": [
+        {
+          "value": "arrow-right"
+        }
+      ]
+    },
+    "va000003": {
+      "type": "color",
+      "name": "accent",
+      "values": [
+        {
+          "value": "#FF5500"
+        }
+      ]
+    }
+  },
+  "fonts": {
+    "fnt000001": {
+      "family": "Geist",
+      "weight": 600,
+      "style": "italic"
+    }
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Canvas",
+      "children": [
+        {
+          "type": "text",
+          "id": "text00001",
+          "name": "Title",
+          "width": "hug",
+          "height": "hug",
+          "fills": [
+            {
+              "type": "solid",
+              "color": "#111111"
+            }
+          ],
+          "content": [
+            {
+              "text": "Launch ",
+              "font": "Geist",
+              "weight": 700,
+              "size": 32,
+              "lineHeight": 40,
+              "letterSpacing": -0.5
+            },
+            {
+              "text": "plan",
+              "font": "Geist",
+              "style": "italic",
+              "size": 32,
+              "underline": true,
+              "link": "https://example.com/plan"
+            }
+          ],
+          "align": "center",
+          "verticalAlign": "middle",
+          "resize": "auto-height"
+        },
+        {
+          "type": "image",
+          "id": "img000001",
+          "name": "Photo",
+          "width": 200,
+          "height": 120,
+          "asset": "a0000001",
+          "fit": "fit",
+          "crop": [
+            1.2,
+            0,
+            0,
+            1.2,
+            -0.1,
+            -0.1
+          ]
+        },
+        {
+          "type": "rect",
+          "id": "rect000001",
+          "name": "Tile",
+          "width": 64,
+          "height": 64,
+          "fills": [
+            {
+              "type": "image",
+              "asset": "a0000001",
+              "fit": "stretch",
+              "crop": [
+                1,
+                0,
+                0,
+                1,
+                0,
+                0
+              ],
+              "opacity": 0.5
+            },
+            {
+              "type": "shader",
+              "src": "shaders/glow.sksl",
+              "uniforms": {
+                "radius": 0.4
+              }
+            }
+          ]
+        },
+        {
+          "type": "icon",
+          "id": "icon00001",
+          "name": "Arrow",
+          "width": 16,
+          "height": 16,
+          "library": "lucide",
+          "icon": "arrow-right",
+          "weight": 500,
+          "fill": true
+        },
+        {
+          "type": "icon",
+          "id": "icon00002",
+          "name": "Themed",
+          "width": 16,
+          "height": 16,
+          "library": "lucide",
+          "icon": {
+            "$var": "va000002"
+          },
+          "weight": 400
+        },
+        {
+          "type": "note",
+          "id": "note00001",
+          "name": "Remember",
+          "width": 160,
+          "height": 80,
+          "content": "Check contrast on the dark theme.",
+          "color": "#FFE08A"
+        },
+        {
+          "type": "context",
+          "id": "ctx000001",
+          "name": "Brief",
+          "width": 160,
+          "height": 80,
+          "content": "Audience: first-time visitors.",
+          "pointsAt": "text00001"
+        },
+        {
+          "type": "prompt",
+          "id": "prompt0001",
+          "name": "Ask",
+          "width": 200,
+          "height": 60,
+          "content": "Make the title shorter.",
+          "engine": "claude-code",
+          "model": "claude-opus-5-5"
+        },
+        {
+          "type": "embed",
+          "id": "embed0001",
+          "name": "Preview",
+          "width": 320,
+          "height": 200,
+          "url": "https://example.com",
+          "device": "iphone-15",
+          "zoom": 0.75,
+          "scroll": {
+            "x": 0,
+            "y": 120
+          },
+          "radius": 12
+        },
+        {
+          "type": "script",
+          "id": "script001",
+          "name": "Chart",
+          "width": 240,
+          "height": 120,
+          "src": "scripts/chart.js",
+          "inputs": {
+            "accent": {
+              "$var": "va000003"
+            },
+            "count": 7,
+            "label": "Visits",
+            "smooth": true
+          },
+          "clip": true
+        }
+      ]
+    },
+    {
+      "id": "page000002",
+      "name": "Deck",
+      "kind": "slides",
+      "children": [
+        {
+          "type": "frame",
+          "id": "slide00001",
+          "name": "Cover",
+          "width": 1920,
+          "height": 1080,
+          "fills": [
+            {
+              "type": "solid",
+              "color": "#000000"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "slide00002",
+          "name": "Agenda",
+          "width": 1920,
+          "height": 1080
+        }
+      ]
+    }
+  ]
+}

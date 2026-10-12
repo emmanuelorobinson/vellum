@@ -8,6 +8,26 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Decide the open numeric units and the decode limits the codec assumes** (Prompt 9). ARCHITECTURE and the guide give
+  units for positions, sizes, ratios, opacities, gradient stops and angles only. I read the rest as: transform and crop
+  entries, mesh coordinates, `innerRadius` (a ratio of the radius, per its doc comment) and `zoom` are ratios (1/1000);
+  blur, spread, font size, line height, letter spacing, dash lengths and `scroll` are lengths (1/100 px). Number
+  variable values and number prop defaults are written exactly, because they can be a length, a ratio or a count.
+  `quantization_table.rs` fails when a number is added to the types without a decision. If a crop of a large image
+  needs finer than 1/1000, say so now.
+- **The `Codec` port needs a fallible `encode`** (Prompt 9). ARCHITECTURE §3 shows `fn encode(&self, doc) -> Vec<u8>`.
+  `JsonCodec::encode` returns `Result`, because a NaN or infinite number cannot be written as JSON and a document in
+  another format version must not be written as this one (`CodecError::NotFinite`, `WrongVersion`). Prompt 10 defines
+  the port and should take the `Result`. `CodecError` lives in `vellum-codec-json` for now; Prompt 10 may move it.
+- **A newer file is refused, not shown read-only** (Prompt 9). Invariant 5 and DESIGN S04 say a newer format "opens
+  read-only" with a banner. `decode` returns `CodecError::NewerFormat { found, supported }` for it, which is enough for
+  the banner, but there is no lenient reader that would show the content: the types refuse fields they do not know. A
+  host can only show the banner until such a reader exists. Decide whether v1 needs one.
+- **`pnpm test:scripts` fails on a clean checkout** (found in Prompt 9, not caused by it). The test "REFERENCE-INDEX.md is
+  current and every path exists in refs/" reports `missing: R3 taffy: main.rs`: guide §3.2 row R3 names `main.rs` bare
+  inside `scripts/gentest/`, and the real file is `scripts/gentest/src/main.rs`. Reproduced on `HEAD` in a separate
+  worktree with this machine's `refs/`. The fix is in the guide row or in `scripts/reference-index.mjs`; I did not touch
+  either.
 - **Decide how a component prop reaches a node** (Prompt 8, ADR-010). A prop is declared (`boolean`, `text` or `number`,
   with a default) and set on an instance, but nothing in the format says which node it changes. ARCHITECTURE is silent.
   The two options ADR-010 lists are a `{"$prop": "<name>"}` reference beside `$var` (it widens `Value<T>`, and a text
@@ -411,7 +431,7 @@ values), `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --a
 
 ## Prompt 8: vellum-types II, the document, variables, components, schema and TypeScript
 
-Not committed. The working tree has the change; Prompt 7 is committed (`2452a26`). ADR-010 records the model decisions.
+Committed (`1f6b77f`). ADR-010 records the model decisions.
 
 Built:
 - The document (`document.rs`): meta (`formatVersion`, `name`, `createdWith`, `kind` document or library), `imports`,
@@ -478,3 +498,83 @@ Test order: the new Rust test files and the Node renderer test were written firs
 time, so they have not been seen failing.
 
 Not verified: the two new CI steps on GitHub (Ubuntu). The generated schema and bindings come from macOS.
+
+## Prompt 9: JSON codec, deterministic bytes, quantization, migrations
+
+Not committed. Prompt 8 is committed (`1f6b77f`).
+
+Built (`crates/adapters/codec-json`, package `vellum-codec-json`):
+- **`JsonCodec`, `encode`, `decode`.** The bytes are 2-space indent, LF, one key or item per line, a trailing newline.
+  A struct's keys come out in the order its type declares them; every map comes out sorted by key bytes (the serializer
+  sorts them itself, so a `HashMap` or a `serde_json` built with `preserve_order` elsewhere cannot change the file). To
+  keep struct order the codec builds its own ordered tree with a custom serde `Serializer` (`tree.rs`), because
+  `serde_json::Value` sorts every key. Whole numbers print without a fraction; other numbers print as the shortest text
+  that reads back (`float_roundtrip` is on); `-0` prints as `0`. Strings use only the escapes JSON requires.
+- **Quantization** (`quantize.rs`), in the codec only: lengths 1/100 px, ratios 1/1000, angles 1/100 degree. The unit
+  follows the field name, with two context rules: mesh `x`/`y` (under `points` or `handles`) are ratios, and anything
+  under `metadata`, `uniforms`, `inputs` or an instance's `props` is the user's and is written as is (a props override
+  inside `overrides` is a node patch and is rounded). Halves round away from zero on the binary value, so `1.005`
+  becomes `1.00`, not `1.01`; this is stable across platforms and I did not add decimal-aware rounding. Values too large
+  to have a fraction (past 2^50 steps) are left alone. `quantize` is idempotent (a property test over normal, subnormal and huge values, and unit tests at the extremes).
+- **A value that rounds to its type's default** (for example a `startAngle` of 0.004) would be left in by the type, which
+  judged the unrounded value, and then left out on the next save. When rounding changes anything, `encode` reads back
+  what it would write and writes that, so saving what was loaded is always the same bytes. The property test catches it
+  if this pass is switched off (checked by hand: two properties fail).
+- **Reading** accepts any key order, whitespace, CRLF and a UTF-8 byte order mark, and refuses unknown fields. The
+  version is read first (`serde` ignores the rest), so a newer file is `NewerFormat` whatever else it holds; a version
+  that is not a whole number from 1 is `Invalid` at `meta.formatVersion`. **Duplicate keys are refused** (`"va1"` twice
+  in `variables`): serde would keep the last without a word, which is what a bad textual merge leaves behind.
+- **S05 errors** carry a path (`pages[0].children[2].width`), a line and a column counted in characters. serde reports a
+  fault inside a node at the node, because a tagged enum is read through a buffer, so `decode.rs` reads the node again
+  as its own kind to find the field, and finds an unknown field by looking for the key whose siblings are all expected
+  ones (`locate.rs` indexes the text only when there is an error to explain). A file that was migrated first has a path
+  and no position, because its text is no longer what the user wrote. Only nodes are re-read; a wrong value inside a paint
+  or an effect is reported at the paint or effect.
+- **Migrations**: `Migration` (source version plus `migrate(&mut serde_json::Value)`), `Migrations` registry (steps must
+  be 1→2, 2→3, ... in order, none missing, none past the current version; the registry sets `meta.formatVersion` after each
+  step), `MigrationError`, `CodecError::Migration { from, .. }`. `FORMAT_VERSION` is 1, so the standard registry is empty.
+  The machinery is tested with a made-up chain in `tests/example-migrations/` (versions 1 to 3 never existed), and a test
+  walks the real registry and demands `fixtures/migrations/v{N}-to-v{N+1}/{before,after}.vellum` for every step. There are
+  none yet, so that test passes with nothing to check.
+- **Fixtures**: `fixtures/documents/` (five canonical files marked `TEST DATA`, 970 lines) use every node kind, paint, effect,
+  variable type, style type, override form, a library, and a slides page; a test checks that. The `canonicalize` example
+  rewrites or checks files.
+- **Fuzz target**: `crates/adapters/codec-json/fuzz/` (its own workspace, `cargo +nightly fuzz run decode`). It builds
+  (`cargo check`); it has not been run, because that needs nightly and cargo-fuzz. The same property runs on every
+  `cargo test` over 400 mutations of each fixture plus a hostile corpus (`robustness.rs`).
+- The Prompt 7 property-test generators moved to `crates/vellum-types/tests/common/strategies.rs` so the codec tests can
+  include them by path instead of copying 700 lines. `roundtrip.rs` is otherwise unchanged and passes.
+- New dependency: `serde_path_to_error` 0.1.20, in the adapter only (workspace dependency, MIT/Apache-2.0).
+
+Measured (release, this Mac): a document of 10,000 rects, 5.4 MB, encodes in 48 ms (rounding changes values), in 11 ms
+when already canonical, and decodes in 32 ms. Ten thousand trivial nodes already pass ADR-004's 4 MB suggestion
+threshold because every array item gets its own line; the threshold is "10,000 nodes or 4 MB", so it fires on size.
+
+Differs from the guide, or limits:
+- `encode` is fallible (Needs a person).
+- **Nesting limit.** serde_json stops at 128 levels of JSON, and a nested node costs two (the object and its `children`
+  array), so about 60 frames inside frames. A deeper file is refused with a recursion-limit message. `encode` has no such
+  limit unless rounding changed something. Real designs are far shallower; say if you want the limit raised (it needs
+  `serde_stacker` or an iterative reader).
+- Free-form JSON (`metadata`, patches) prints an integral float as `1`, not `1.0`, so `1.0` reads back as the integer `1`.
+  The bytes are stable after the first save; the in-memory value differs once.
+- Only nodes are re-read to find a field, as described above.
+
+Verified (each exited 0 unless noted):
+- `cargo test -p vellum-codec-json`: 85 tests (canonical 24, errors 31, fixtures 5, migrations 11, properties 8, quantization
+  table 3, robustness 2, smoke 1). `cargo test --workspace`: 347 passed, 0 failed.
+- `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`, `cargo build -p vellum-codec-json
+  --target wasm32-unknown-unknown`, `cargo check` of the fuzz crate.
+- `cargo deny check licenses bans sources` and `cargo deny check advisories`.
+- `pnpm deps:check`, `pnpm clean-room`, `pnpm copy-lint`, `pnpm checksum`, `pnpm types:check`, `pnpm format-spec:check`,
+  `pnpm design:check`, `pnpm format:check`, `pnpm lint`, `pnpm type-check`, `pnpm exec biome check .`.
+- The document properties re-run at 1500 cases each in release: all pass.
+- Failed: `pnpm test:scripts`, 148 passed, 1 failed, 1 skipped. The failure is the pre-existing REFERENCE-INDEX test
+  described in Needs a person; it fails the same way on a clean `HEAD`.
+
+Test order: every test file was written before any codec code existed, so they did not compile. After the code compiled,
+six tests failed for reasons in the tests themselves (a first-match search that found the page's `type`, `.0` found in the
+string `Vellum 0.0.0`, inputs like `1.005` that are below the tie in binary, an `auto` position that is never written, a
+`null` version read as missing, and an unknown-field path that serde_path_to_error ends at the field); each was fixed by
+correcting the test or the code, not by loosening what it checks. The property tests passed the first time; to see them
+fail I switched off the settle pass by hand and two failed.

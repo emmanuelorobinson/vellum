@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "formatVersion": 3,
+    "name": "TEST DATA migration",
+    "createdWith": "Vellum 0.0.1"
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Canvas"
+    }
+  ]
+}

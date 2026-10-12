@@ -1,0 +1,318 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: design system",
+    "createdWith": "Vellum 0.0.0"
+  },
+  "imports": {
+    "icons": "libs/icons.lib.vellum",
+    "system": "libs/system.lib.vellum"
+  },
+  "themes": {
+    "Density": [
+      "comfortable",
+      "compact"
+    ],
+    "Mode": [
+      "light",
+      "dark"
+    ]
+  },
+  "variables": {
+    "va000001": {
+      "type": "color",
+      "name": "surface/background",
+      "values": [
+        {
+          "value": "#FFFFFF"
+        },
+        {
+          "value": "#101014",
+          "when": {
+            "Mode": "dark"
+          }
+        }
+      ]
+    },
+    "va000002": {
+      "type": "color",
+      "name": "surface/card",
+      "values": [
+        {
+          "$alias": "va000001"
+        },
+        {
+          "$alias": "va000001",
+          "when": {
+            "Mode": "dark"
+          }
+        }
+      ]
+    },
+    "va000003": {
+      "type": "number",
+      "name": "space/md",
+      "values": [
+        {
+          "value": 16
+        },
+        {
+          "value": 12.5,
+          "when": {
+            "Density": "compact"
+          }
+        }
+      ]
+    },
+    "va000004": {
+      "type": "string",
+      "name": "font/body",
+      "values": [
+        {
+          "value": "Geist"
+        }
+      ]
+    },
+    "va000005": {
+      "type": "boolean",
+      "name": "feature/badges",
+      "values": [
+        {
+          "value": true
+        }
+      ]
+    }
+  },
+  "styles": {
+    "st000001": {
+      "type": "text",
+      "name": "Heading",
+      "font": "Geist",
+      "weight": 600,
+      "size": 24,
+      "lineHeight": 32,
+      "letterSpacing": -0.25
+    },
+    "st000002": {
+      "type": "effect",
+      "name": "Card shadow",
+      "effects": [
+        {
+          "type": "drop-shadow",
+          "x": 0,
+          "y": 2,
+          "blur": 6,
+          "color": "#00000033"
+        }
+      ]
+    }
+  },
+  "components": {
+    "comp000001": {
+      "name": "Button",
+      "props": {
+        "count": {
+          "type": "number",
+          "default": 3
+        },
+        "label": {
+          "type": "text",
+          "default": "Save"
+        },
+        "showIcon": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "root": {
+        "type": "frame",
+        "id": "btn000001",
+        "name": "Button",
+        "width": "hug",
+        "height": "hug",
+        "fills": [
+          {
+            "type": "solid",
+            "color": {
+              "$var": "va000002"
+            }
+          }
+        ],
+        "layout": "row",
+        "gap": {
+          "$var": "va000003"
+        },
+        "padding": [
+          8,
+          16
+        ],
+        "cornerRadius": 8,
+        "children": [
+          {
+            "type": "text",
+            "id": "lbl000001",
+            "name": "Label",
+            "width": "hug",
+            "height": "hug",
+            "content": [
+              {
+                "text": "Save",
+                "font": "Geist",
+                "size": 14
+              }
+            ],
+            "textStyle": "st000001"
+          },
+          {
+            "type": "frame",
+            "id": "slot00001",
+            "name": "Trailing",
+            "width": "hug",
+            "height": 16,
+            "slot": {
+              "suggested": [
+                "comp000002"
+              ]
+            }
+          }
+        ]
+      },
+      "variants": [
+        {
+          "properties": {
+            "Size": "large",
+            "State": "hover"
+          },
+          "overrides": {
+            "btn000001": {
+              "props": {
+                "fills": [
+                  {
+                    "color": "#E0E8F0",
+                    "type": "solid"
+                  }
+                ],
+                "opacity": 0.9,
+                "width": 120.5
+              }
+            },
+            "btn000001/lbl000001": {
+              "props": {
+                "visible": false
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "State": "disabled"
+          },
+          "overrides": {
+            "btn000001/lbl000001": {
+              "replace": {
+                "type": "text",
+                "id": "lbl000001",
+                "name": "Label",
+                "width": "hug",
+                "height": "hug",
+                "content": [
+                  {
+                    "text": "Off",
+                    "font": "Geist",
+                    "size": 14
+                  }
+                ]
+              }
+            },
+            "btn000001/slot00001": {
+              "children": [
+                {
+                  "type": "rect",
+                  "id": "dot000001",
+                  "name": "Dot",
+                  "width": 8,
+                  "height": 8
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "comp000002": {
+      "name": "Badge",
+      "root": {
+        "type": "frame",
+        "id": "badge0001",
+        "name": "Badge",
+        "width": 24,
+        "height": 16,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#FF3355"
+          }
+        ],
+        "cornerRadius": 8
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Usage",
+      "children": [
+        {
+          "type": "instance",
+          "id": "inst000001",
+          "name": "Primary",
+          "width": "hug",
+          "height": "hug",
+          "componentId": "comp000001",
+          "variant": {
+            "Size": "large",
+            "State": "hover"
+          },
+          "props": {
+            "count": 4,
+            "label": "Send",
+            "showIcon": false
+          },
+          "overrides": {
+            "btn000001/lbl000001": {
+              "props": {
+                "fills": [
+                  {
+                    "color": "#FFFFFF",
+                    "type": "solid"
+                  }
+                ],
+                "opacity": 0.95
+              }
+            }
+          },
+          "slotContent": {
+            "slot00001": [
+              {
+                "type": "instance",
+                "id": "inst000002",
+                "name": "New",
+                "width": "hug",
+                "height": "hug",
+                "componentId": "comp000002"
+              }
+            ]
+          }
+        },
+        {
+          "type": "instance",
+          "id": "inst000003",
+          "name": "Plain",
+          "width": "hug",
+          "height": "hug",
+          "componentId": "comp000001"
+        }
+      ]
+    }
+  ]
+}

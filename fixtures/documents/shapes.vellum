@@ -1,0 +1,365 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: shapes",
+    "createdWith": "Vellum 0.0.0"
+  },
+  "variables": {
+    "va000001": {
+      "type": "color",
+      "name": "brand/primary",
+      "values": [
+        {
+          "value": "#3366FF"
+        }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Shapes",
+      "children": [
+        {
+          "type": "frame",
+          "id": "frame00001",
+          "name": "Card",
+          "opacity": 0.85,
+          "rotation": -12.5,
+          "position": {
+            "type": "absolute",
+            "x": 24,
+            "y": 48.5
+          },
+          "width": 320,
+          "height": "hug",
+          "fills": [
+            {
+              "type": "solid",
+              "color": "#FFFFFF"
+            },
+            {
+              "type": "gradient",
+              "kind": "linear",
+              "stops": [
+                {
+                  "color": "#1A2B3C",
+                  "position": 0
+                },
+                {
+                  "color": "#FFFFFF80",
+                  "position": 0.5
+                },
+                {
+                  "color": {
+                    "$var": "va000001"
+                  },
+                  "position": 1
+                }
+              ],
+              "transform": [
+                0,
+                1,
+                -1,
+                0,
+                0.5,
+                0
+              ]
+            },
+            {
+              "type": "mesh",
+              "columns": 2,
+              "rows": 2,
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "color": "#FF0000"
+                },
+                {
+                  "x": 1,
+                  "y": 0,
+                  "color": "#00FF00"
+                },
+                {
+                  "x": 0,
+                  "y": 1,
+                  "color": "#0000FF"
+                },
+                {
+                  "x": 1,
+                  "y": 1,
+                  "color": "#FFFFFF",
+                  "handles": {
+                    "left": {
+                      "x": -0.1,
+                      "y": 0
+                    },
+                    "right": {
+                      "x": 0.1,
+                      "y": 0
+                    },
+                    "up": {
+                      "x": 0,
+                      "y": -0.1
+                    },
+                    "down": {
+                      "x": 0,
+                      "y": 0.1
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "stroke": {
+            "paints": [
+              {
+                "type": "solid",
+                "color": "#000000"
+              }
+            ],
+            "width": [
+              1,
+              2,
+              1,
+              2
+            ],
+            "align": "outside",
+            "cap": "round",
+            "join": "bevel",
+            "dash": [
+              4,
+              2
+            ]
+          },
+          "effects": [
+            {
+              "type": "drop-shadow",
+              "x": 0,
+              "y": 4,
+              "blur": 12.5,
+              "spread": 1,
+              "color": "#00000040",
+              "blendMode": "multiply"
+            },
+            {
+              "type": "inner-shadow",
+              "x": 1,
+              "y": 1,
+              "blur": 2,
+              "color": {
+                "$var": "va000001"
+              }
+            },
+            {
+              "type": "layer-blur",
+              "radius": 3.25
+            },
+            {
+              "type": "background-blur",
+              "radius": 8,
+              "visible": false
+            },
+            {
+              "type": "shader",
+              "src": "shaders/grain.sksl",
+              "uniforms": {
+                "amount": 0.35,
+                "offset": [
+                  0.25,
+                  0.75
+                ],
+                "on": true,
+                "tint": "#FFAA00"
+              }
+            }
+          ],
+          "blendMode": "overlay",
+          "agentNotes": "Keep the header sticky.",
+          "prototype": {
+            "target": "frame00002",
+            "transition": {
+              "type": "slide-left",
+              "durationMs": 250
+            }
+          },
+          "metadata": {
+            "reviewed": false,
+            "tags": [
+              "hero",
+              "card"
+            ],
+            "weight": 2.5
+          },
+          "layout": "column",
+          "gap": 12,
+          "padding": [
+            16,
+            24
+          ],
+          "justify": "space-between",
+          "align": "center",
+          "clip": true,
+          "cornerRadius": [
+            8,
+            8,
+            0,
+            0
+          ],
+          "children": [
+            {
+              "type": "rect",
+              "id": "rect000001",
+              "name": "Back",
+              "width": "fill",
+              "height": 48,
+              "cornerRadius": 6
+            },
+            {
+              "type": "ellipse",
+              "id": "ell000001",
+              "name": "Dial",
+              "width": 40,
+              "height": 40,
+              "innerRadius": 0.6,
+              "startAngle": 30,
+              "sweepAngle": 270
+            },
+            {
+              "type": "polygon",
+              "id": "poly00001",
+              "name": "Hex",
+              "width": 40,
+              "height": 40,
+              "sides": 6,
+              "cornerRadius": 2
+            },
+            {
+              "type": "star",
+              "id": "star00001",
+              "name": "Spark",
+              "width": 40,
+              "height": 40,
+              "points": 5,
+              "innerRatio": 0.4
+            },
+            {
+              "type": "line",
+              "id": "line00001",
+              "name": "Rule",
+              "width": {
+                "fill": 100
+              },
+              "height": 0,
+              "stroke": {
+                "paints": [
+                  {
+                    "type": "solid",
+                    "color": "#999999"
+                  }
+                ],
+                "width": 1
+              }
+            },
+            {
+              "type": "vector",
+              "id": "vec000001",
+              "name": "Mark",
+              "width": 24,
+              "height": 24,
+              "path": "M2 2 L22 22 M22 2 L2 22",
+              "viewBox": {
+                "x": 0,
+                "y": 0,
+                "width": 24,
+                "height": 24
+              },
+              "fillRule": "evenodd"
+            },
+            {
+              "type": "group",
+              "id": "group0001",
+              "name": "Pair",
+              "width": 80,
+              "height": 40,
+              "children": [
+                {
+                  "type": "rect",
+                  "id": "rect000002",
+                  "name": "A",
+                  "width": 40,
+                  "height": 40
+                },
+                {
+                  "type": "rect",
+                  "id": "rect000003",
+                  "name": "B",
+                  "position": {
+                    "type": "absolute",
+                    "x": 40,
+                    "y": 0
+                  },
+                  "width": 40,
+                  "height": 40
+                }
+              ]
+            },
+            {
+              "type": "boolean",
+              "id": "bool00001",
+              "name": "Cut",
+              "width": 60,
+              "height": 60,
+              "op": "subtract",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "ell000002",
+                  "name": "Outer",
+                  "width": 60,
+                  "height": 60
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ell000003",
+                  "name": "Inner",
+                  "width": 30,
+                  "height": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "frame00002",
+          "name": "Second",
+          "visible": false,
+          "locked": true,
+          "width": 320,
+          "height": {
+            "hug": 120
+          }
+        },
+        {
+          "type": "frame",
+          "id": "frame00003",
+          "name": "Grid",
+          "width": {
+            "fill": 200
+          },
+          "height": 200,
+          "layout": "grid",
+          "columns": 3,
+          "rows": 2,
+          "gap": 8,
+          "layoutIncludesStroke": true,
+          "theme": {
+            "Mode": "dark"
+          }
+        }
+      ]
+    }
+  ]
+}

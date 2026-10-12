@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: library",
+    "createdWith": "Vellum 0.0.0",
+    "kind": "library"
+  },
+  "variables": {
+    "va000001": {
+      "type": "color",
+      "name": "brand/ink",
+      "values": [
+        {
+          "value": "#0B0B0F"
+        }
+      ]
+    }
+  },
+  "components": {
+    "comp000001": {
+      "name": "Chip",
+      "root": {
+        "type": "frame",
+        "id": "chip00001",
+        "name": "Chip",
+        "width": "hug",
+        "height": 24,
+        "fills": [
+          {
+            "type": "solid",
+            "color": {
+              "$var": "va000001"
+            }
+          }
+        ],
+        "cornerRadius": 12
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Components"
+    }
+  ]
+}
