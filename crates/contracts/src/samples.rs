@@ -1,8 +1,8 @@
 //! Documents, nodes and actors the suites and fakes share. Everything here is `TEST DATA`.
 
 use serde_json::{Value as Json, json};
-use vellum_core::ports::{ActorId, Op, Origin, Transaction};
-use vellum_types::{Document, Node, NodeId, NodePatch, Page, PageId};
+use vellum_core::ops::{Op, Parent, Place, Transaction};
+use vellum_types::{Actor, DeviceId, Document, Node, NodeId, NodePatch, Origin, Page, PageId};
 
 /// A node of `kind` (`"frame"`, `"rect"`, …) with `id`, a name, and a size.
 pub fn node(kind: &str, id: &str) -> Node {
@@ -69,30 +69,33 @@ pub fn document() -> Document {
     doc
 }
 
-/// Alice's id.
-pub fn alice() -> ActorId {
-    ActorId::new("person:alice")
-}
-
-/// Bob's id.
-pub fn bob() -> ActorId {
-    ActorId::new("person:bob")
-}
-
-/// A transaction by `actor` with `ops`.
-pub fn tx(actor: &ActorId, ops: Vec<Op>) -> Transaction {
-    Transaction {
-        origin: Origin::new(actor.clone()),
-        ops,
+/// Alice, a person at her device.
+pub fn alice() -> Actor {
+    Actor::Person {
+        device: DeviceId::new("01JA0000000000000000000A11").expect("a ULID"),
     }
 }
 
-/// An op that adds `node` to `page`, inside `parent` or at the top level, at `index`.
+/// Bob, a person at his device.
+pub fn bob() -> Actor {
+    Actor::Person {
+        device: DeviceId::new("01JA0000000000000000000B0B").expect("a ULID"),
+    }
+}
+
+/// A transaction by `actor` with `ops`.
+pub fn tx(actor: &Actor, ops: Vec<Op>) -> Transaction {
+    Transaction::new(Origin::new(actor.clone()), ops)
+}
+
+/// An op that adds `node` inside `parent`, or at the top level of `page` when there is none, at `index`.
 pub fn insert_at(page: &str, parent: Option<&str>, index: usize, node: Node) -> Op {
+    let parent = match parent {
+        Some(parent) => Parent::Node(node_id(parent)),
+        None => Parent::Page(page_id(page)),
+    };
     Op::Insert {
-        page: page_id(page),
-        parent: parent.map(node_id),
-        index,
+        to: Place { parent, index },
         node: Box::new(node),
     }
 }

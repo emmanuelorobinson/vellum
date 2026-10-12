@@ -143,6 +143,62 @@ impl<'de> Deserialize<'de> for NodePatch {
     }
 }
 
+/// Why a patch could not be applied to a node: the result would not be a valid node of the same kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PatchApplyError {
+    /// The property at fault, in the file's spelling. Empty when no single property is (two properties that
+    /// are each valid alone but not together).
+    pub property: String,
+    /// What is wrong, from the reader of the file format.
+    pub message: String,
+}
+
+impl fmt::Display for PatchApplyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.property.is_empty() {
+            f.write_str(&self.message)
+        } else {
+            write!(f, "{}: {}", self.property, self.message)
+        }
+    }
+}
+
+impl std::error::Error for PatchApplyError {}
+
+fn with_properties<'a>(
+    node: &Node,
+    properties: impl IntoIterator<Item = (&'a String, &'a Json)>,
+) -> Result<Node, String> {
+    let mut json = serde_json::to_value(node).map_err(|e| e.to_string())?;
+    let Json::Object(map) = &mut json else {
+        return Err("a node is an object".into());
+    };
+    for (name, value) in properties {
+        if value.is_null() {
+            map.remove(name);
+        } else {
+            map.insert(name.clone(), value.clone());
+        }
+    }
+    serde_json::from_value(json).map_err(|e| e.to_string())
+}
+
+impl Node {
+    /// This node with `patch` applied. A `null` puts a property back to its default (and fails for one that
+    /// is required). The id, the kind and the children never change.
+    pub fn patched(&self, patch: &NodePatch) -> Result<Node, PatchApplyError> {
+        with_properties(self, patch.properties()).map_err(|message| {
+            let property = patch
+                .properties()
+                .iter()
+                .find(|entry| with_properties(self, [*entry]).is_err())
+                .map(|(name, _)| name.clone())
+                .unwrap_or_default();
+            PatchApplyError { property, message }
+        })
+    }
+}
+
 /// Why a property patch was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatchError {

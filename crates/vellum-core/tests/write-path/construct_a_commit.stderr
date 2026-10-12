@@ -1,0 +1,15 @@
+error[E0624]: associated function `new` is private
+ --> tests/write-path/construct_a_commit.rs:6:13
+  |
+6 |       Commit::new(origin, Vec::new(), Vec::new(), changes)
+  |               ^^^ private associated function
+  |
+ ::: src/ports/doc_store.rs
+  |
+  | /     pub(crate) fn new(
+  | |         origin: Origin,
+  | |         edits: Vec<Edit>,
+  | |         inverse: Vec<Edit>,
+  | |         changes: ChangeSet,
+  | |     ) -> Self {
+  | |_____________- private associated function defined here

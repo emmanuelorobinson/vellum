@@ -97,3 +97,31 @@ pub enum Scalar {
     /// A string.
     Text(String),
 }
+
+/// Every variable `value` refers to with `{"$var": …}`, sorted. Node metadata is free-form JSON for tools, so a
+/// `$var` inside it is not a reference and is skipped.
+pub fn referenced_variables<T: Serialize>(value: &T) -> std::collections::BTreeSet<VariableId> {
+    fn walk(json: &serde_json::Value, out: &mut std::collections::BTreeSet<VariableId>) {
+        match json {
+            serde_json::Value::Object(map) => {
+                if map.len() == 1
+                    && let Some(id) = map.get("$var").and_then(serde_json::Value::as_str)
+                    && let Ok(id) = VariableId::new(id)
+                {
+                    out.insert(id);
+                    return;
+                }
+                map.iter()
+                    .filter(|(key, _)| key.as_str() != "metadata")
+                    .for_each(|(_, v)| walk(v, out));
+            }
+            serde_json::Value::Array(items) => items.iter().for_each(|v| walk(v, out)),
+            _ => {}
+        }
+    }
+    let mut out = std::collections::BTreeSet::new();
+    if let Ok(json) = serde_json::to_value(value) {
+        walk(&json, &mut out);
+    }
+    out
+}

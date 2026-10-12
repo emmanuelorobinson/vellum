@@ -1,0 +1,13 @@
+error[E0308]: mismatched types
+ --> tests/write-path/apply_a_transaction.rs:6:17
+  |
+6 |     store.apply(tx);
+  |           ----- ^^ expected `Commit`, found `Transaction`
+  |           |
+  |           arguments to this method are incorrect
+  |
+note: method defined here
+ --> src/ports/doc_store.rs
+  |
+  |     fn apply(&mut self, commit: Commit) -> ChangeSet;
+  |        ^^^^^

@@ -5,5 +5,5 @@
 #
 # Adding a line is an architecture decision: record it in an ADR before changing this file.
 pure vellum-types serde schemars ts-rs serde_json proptest
-pure vellum-core vellum-types
+pure vellum-core vellum-types serde_json proptest trybuild
 vendor tokio axum interprocess loro taffy parley fontique skia-safe vello kurbo i_overlay rstar rquickjs rmcp notify rusqlite keyring chromiumoxide naga wasm-bindgen

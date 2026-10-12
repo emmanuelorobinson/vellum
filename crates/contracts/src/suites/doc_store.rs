@@ -1,14 +1,17 @@
 //! `DocStore`.
 //!
-//! The transaction vocabulary is Prompt 10's small one (insert, update, delete); Prompt 11 widens it. Two
-//! things are left to the adapters' own tests because they need a real CRDT: edits made on two stores at the
-//! same time converging (Prompt 14), and undo across dependent changes (Invariant 3's property test).
+//! A store is written to only through `vellum_core::ops::apply`, which checks each transaction against the
+//! store's document and hands it over as one commit. The suite writes the same way, so it covers the store and
+//! the write path together; the op layer's own tests (`vellum-core`, `ops::tests`) cover every op. Two things
+//! are left to the adapters' own tests because they need a real CRDT: edits made on two stores at the same
+//! time converging (Prompt 14), and undo across dependent changes (Invariant 3's property test).
 
 use serde_json::json;
-use vellum_core::ports::{
-    ActorId, DocStore, Op, OpErrorKind, Origin, SyncCursor, SyncError, SyncPayload, Transaction,
-};
-use vellum_types::Document;
+use vellum_core::ops::{self, Op, OpError, OpErrorKind, Transaction};
+use vellum_core::ports::{ChangeSet, DocStore, SyncCursor, SyncError, SyncPayload};
+use vellum_types::{Actor, Document, Origin};
+
+use crate::fakes::SequentialIds;
 
 use crate::samples::{
     alice, all_ids, bob, document, find, insert_at, node, node_id, node_with, page_id, patch,
@@ -23,11 +26,14 @@ fn ids(list: &[vellum_types::NodeId]) -> Vec<String> {
     list.iter().map(|id| id.to_string()).collect()
 }
 
+/// Writes `t` through the op layer, the only way in.
+fn write(store: &mut impl DocStore, t: Transaction) -> Result<ChangeSet, OpError> {
+    ops::apply(store, &mut SequentialIds::new(), t).map(|applied| applied.changes)
+}
+
 fn refused(store: &mut impl DocStore, t: Transaction) -> (usize, OpErrorKind) {
     let before = store.snapshot();
-    let error = store
-        .apply(t)
-        .expect_err("the transaction should have been refused");
+    let error = write(store, t).expect_err("the transaction should have been refused");
     assert_eq!(
         store.snapshot(),
         before,
@@ -64,13 +70,16 @@ fn reads_back_what_it_was_given<S: DocStore>(make: &impl Fn(&Document, u64) -> S
 
 fn insert<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     let mut store = fresh(make);
-    let origin = Origin::new(alice()).in_session(vellum_core::ports::SessionId::new("session"));
-    let changes = store
-        .apply(Transaction {
+    let origin = Origin::new(alice())
+        .in_session(vellum_types::SessionId::new("01JA00000000000000000SE551").expect("a ULID"));
+    let changes = write(
+        &mut store,
+        Transaction {
             origin: origin.clone(),
             ops: vec![insert_at("page00001", None, 2, node("rect", "new0000001"))],
-        })
-        .expect("insert at the end");
+        },
+    )
+    .expect("insert at the end");
     assert_eq!(
         changes.origin, origin,
         "DocStore: the change set lost its origin (Invariant 2)"
@@ -82,12 +91,14 @@ fn insert<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
         ["frame00001", "rect000003", "new0000001"]
     );
 
-    store
-        .apply(tx(
+    write(
+        &mut store,
+        tx(
             &alice(),
             vec![insert_at("page00001", None, 0, node("rect", "new0000002"))],
-        ))
-        .expect("insert at the start");
+        ),
+    )
+    .expect("insert at the start");
     assert_eq!(top_ids(&store.snapshot(), "page00001")[0], "new0000002");
 
     let group = node_with(
@@ -96,12 +107,14 @@ fn insert<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
         &[node("rect", "kid0000001"), node("rect", "kid0000002")],
         json!({}),
     );
-    let changes = store
-        .apply(tx(
+    let changes = write(
+        &mut store,
+        tx(
             &alice(),
             vec![insert_at("page00001", Some("frame00001"), 1, group)],
-        ))
-        .expect("insert a subtree into a frame");
+        ),
+    )
+    .expect("insert a subtree into a frame");
     assert_eq!(
         ids(&changes.inserted),
         ["group00001", "kid0000001", "kid0000002"],
@@ -120,13 +133,16 @@ fn insert<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
         "DocStore: the subtree went to the wrong place"
     );
 
-    let changes = store.apply(tx(
-        &alice(),
-        vec![
-            insert_at("page00002", None, 0, node("rect", "multi00001")),
-            insert_at("page00002", Some("multi00001"), 0, node("rect", "never")),
-        ],
-    ));
+    let changes = write(
+        &mut store,
+        tx(
+            &alice(),
+            vec![
+                insert_at("page00002", None, 0, node("rect", "multi00001")),
+                insert_at("page00002", Some("multi00001"), 0, node("rect", "never")),
+            ],
+        ),
+    );
     assert!(
         changes.is_err(),
         "DocStore: a rectangle cannot hold children"
@@ -135,9 +151,11 @@ fn insert<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
 
 fn update<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     let mut store = fresh(make);
-    let changes = store
-        .apply(tx(&alice(), vec![rename("rect000001", "Renamed")]))
-        .expect("rename");
+    let changes = write(
+        &mut store,
+        tx(&alice(), vec![rename("rect000001", "Renamed")]),
+    )
+    .expect("rename");
     assert_eq!(ids(&changes.updated), ["rect000001"]);
     assert!(changes.inserted.is_empty() && changes.removed.is_empty());
     assert_eq!(
@@ -145,15 +163,17 @@ fn update<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
         "Renamed"
     );
 
-    store
-        .apply(tx(
+    write(
+        &mut store,
+        tx(
             &alice(),
             vec![Op::Update {
                 id: node_id("frame00001"),
                 patch: patch(json!({ "locked": true })),
             }],
-        ))
-        .expect("lock the frame");
+        ),
+    )
+    .expect("lock the frame");
     let doc = store.snapshot();
     let frame = find(&doc, "frame00001").expect("frame");
     assert!(frame.locked());
@@ -163,16 +183,18 @@ fn update<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
         "DocStore: updating a frame lost its children"
     );
 
-    let two = store
-        .apply(tx(
+    let two = write(
+        &mut store,
+        tx(
             &alice(),
             vec![
                 rename("rect000001", "One"),
                 rename("rect000001", "Two"),
                 rename("rect000002", "Three"),
             ],
-        ))
-        .expect("several updates");
+        ),
+    )
+    .expect("several updates");
     assert_eq!(
         ids(&two.updated),
         ["rect000001", "rect000002"],
@@ -187,22 +209,25 @@ fn update<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
 
 fn delete<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     let mut store = fresh(make);
-    let changes = store
-        .apply(tx(
+    let changes = write(
+        &mut store,
+        tx(
             &alice(),
             vec![Op::Delete {
                 id: node_id("frame00001"),
             }],
-        ))
-        .expect("delete a frame");
+        ),
+    )
+    .expect("delete a frame");
     assert_eq!(
         ids(&changes.removed),
         ["frame00001", "rect000001", "rect000002"]
     );
     assert_eq!(all_ids(&store.snapshot()), ["rect000003"]);
 
-    let changes = store
-        .apply(tx(
+    let changes = write(
+        &mut store,
+        tx(
             &alice(),
             vec![
                 insert_at("page00002", None, 0, node("rect", "gone000001")),
@@ -210,8 +235,9 @@ fn delete<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
                     id: node_id("gone000001"),
                 },
             ],
-        ))
-        .expect("insert then delete in one transaction");
+        ),
+    )
+    .expect("insert then delete in one transaction");
     assert!(
         changes.inserted.is_empty() && changes.removed.is_empty(),
         "DocStore: a node made and removed in one transaction never existed: {changes:?}"
@@ -359,12 +385,14 @@ fn undo_and_redo<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     );
 
     let original = store.snapshot();
-    store
-        .apply(tx(
+    write(
+        &mut store,
+        tx(
             &a,
             vec![insert_at("page00001", None, 2, node("rect", "new0000001"))],
-        ))
-        .expect("insert");
+        ),
+    )
+    .expect("insert");
     let after = store.snapshot();
     let undone = store.undo(&a).expect("undo the insert");
     assert_eq!(ids(&undone.removed), ["new0000001"]);
@@ -392,23 +420,23 @@ fn undo_and_redo<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
 
     // Update and delete come back exactly: values, and position among siblings.
     store.undo(&a).expect("undo again");
-    store
-        .apply(tx(&a, vec![rename("rect000001", "Renamed")]))
-        .expect("rename");
+    write(&mut store, tx(&a, vec![rename("rect000001", "Renamed")])).expect("rename");
     store.undo(&a).expect("undo the rename");
     assert_eq!(
         store.snapshot(),
         original,
         "DocStore: undoing an update lost the old value"
     );
-    store
-        .apply(tx(
+    write(
+        &mut store,
+        tx(
             &a,
             vec![Op::Delete {
                 id: node_id("frame00001"),
             }],
-        ))
-        .expect("delete");
+        ),
+    )
+    .expect("delete");
     store.undo(&a).expect("undo the delete");
     assert_eq!(
         store.snapshot(),
@@ -417,13 +445,9 @@ fn undo_and_redo<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     );
 
     // A new change forgets what could have been redone.
-    store
-        .apply(tx(&a, vec![rename("rect000001", "First")]))
-        .expect("rename");
+    write(&mut store, tx(&a, vec![rename("rect000001", "First")])).expect("rename");
     store.undo(&a).expect("undo");
-    store
-        .apply(tx(&a, vec![rename("rect000001", "Second")]))
-        .expect("rename");
+    write(&mut store, tx(&a, vec![rename("rect000001", "Second")])).expect("rename");
     assert!(
         store.redo(&a).is_none(),
         "DocStore: a new change left the old redo"
@@ -432,22 +456,24 @@ fn undo_and_redo<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
 
 fn undo_is_per_actor<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     let mut store = fresh(make);
-    let (a, b): (ActorId, ActorId) = (alice(), bob());
-    store
-        .apply(tx(
+    let (a, b): (Actor, Actor) = (alice(), bob());
+    write(
+        &mut store,
+        tx(
             &a,
             vec![insert_at("page00002", None, 0, node("rect", "alice00001"))],
-        ))
-        .expect("alice");
-    store
-        .apply(tx(
+        ),
+    )
+    .expect("alice");
+    write(
+        &mut store,
+        tx(
             &b,
             vec![insert_at("page00002", None, 1, node("rect", "bob0000001"))],
-        ))
-        .expect("bob");
-    store
-        .apply(tx(&a, vec![rename("rect000001", "Alice's")]))
-        .expect("alice again");
+        ),
+    )
+    .expect("bob");
+    write(&mut store, tx(&a, vec![rename("rect000001", "Alice's")])).expect("alice again");
 
     store.undo(&a).expect("alice undoes her rename");
     assert_eq!(
@@ -479,13 +505,15 @@ fn sync<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     let mut right = make(&document(), 2);
     let a = alice();
 
-    left.apply(tx(
-        &a,
-        vec![insert_at("page00002", None, 0, node("rect", "synced0001"))],
-    ))
+    write(
+        &mut left,
+        tx(
+            &a,
+            vec![insert_at("page00002", None, 0, node("rect", "synced0001"))],
+        ),
+    )
     .expect("left insert");
-    left.apply(tx(&a, vec![rename("rect000001", "Synced")]))
-        .expect("left rename");
+    write(&mut left, tx(&a, vec![rename("rect000001", "Synced")])).expect("left rename");
 
     let payload = left.export_updates(&right.cursor());
     assert_eq!(
@@ -517,14 +545,16 @@ fn sync<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     assert_eq!(third.snapshot(), left.snapshot());
 
     // And the other way, one after the other.
-    right
-        .apply(tx(
+    write(
+        &mut right,
+        tx(
             &bob(),
             vec![Op::Delete {
                 id: node_id("rect000003"),
             }],
-        ))
-        .expect("right delete");
+        ),
+    )
+    .expect("right delete");
     left.import_updates(&right.export_updates(&left.cursor()))
         .expect("import into left");
     assert_eq!(

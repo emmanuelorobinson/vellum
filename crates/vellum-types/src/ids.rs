@@ -27,6 +27,8 @@ pub enum IdError {
     BadChar(char),
     /// A node id path had an empty segment (`a//b`, a leading or trailing `/`).
     EmptySegment,
+    /// Not a ULID: 26 upper-case Crockford base-32 characters, at most `7ZZZ…`.
+    NotUlid,
 }
 
 impl fmt::Display for IdError {
@@ -43,6 +45,9 @@ impl fmt::Display for IdError {
                 "an id uses only A-Z, a-z, 0-9, \"_\" and \"-\", not {c:?}"
             ),
             Self::EmptySegment => f.write_str("a node id path cannot have an empty segment"),
+            Self::NotUlid => f.write_str(
+                "this id is a ULID: 26 upper-case characters from 0-9 and A-Z without I, L, O and U",
+            ),
         }
     }
 }

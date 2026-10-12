@@ -1,125 +1,68 @@
 //! Document storage and history. Today: Loro. Alternatives: Automerge, Yrs, plain in-memory.
 //!
-//! The transaction vocabulary here is the smallest one the port needs to be testable: insert, update and
-//! delete. Prompt 11 owns the real op set, the validation and the `Actor` model behind [`ActorId`], and
-//! replaces `Op` and `OpErrorKind` then; the shape of the port does not change.
+//! A store applies [`Commit`]s: edits the op layer has already checked against this store's document, with
+//! their inverse for undo. Only `vellum_core::ops` can build a commit, so `DocStore::apply` is reachable from
+//! the op layer alone (Invariant 1); the trybuild tests in `tests/write-path/` hold that in place.
 
 use std::fmt;
 
-use vellum_types::{Document, Node, NodeId, NodePatch, PageId};
+use vellum_types::{Actor, Document, NodeId, Origin, VariableId};
 
-macro_rules! opaque_id {
-    ($(#[$doc:meta])* $name:ident) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        pub struct $name(String);
+use crate::ops::Edit;
 
-        impl $name {
-            /// Wraps `id`.
-            pub fn new(id: impl Into<String>) -> Self {
-                Self(id.into())
-            }
-
-            /// The id as text.
-            pub fn as_str(&self) -> &str {
-                &self.0
-            }
-        }
-
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(&self.0)
-            }
-        }
-    };
+/// A checked transaction, ready to apply: its origin, its edits, their inverse and what they change. It has no
+/// public constructor and cannot be cloned; `vellum_core::ops::apply` makes one and hands it to a store.
+#[derive(Debug)]
+pub struct Commit {
+    origin: Origin,
+    edits: Vec<Edit>,
+    inverse: Vec<Edit>,
+    changes: ChangeSet,
 }
 
-opaque_id!(
-    /// Who made a change: a person's device, an agent, the file watcher or the system. Undo is per actor.
-    ActorId
-);
-opaque_id!(
-    /// The agent session a change belongs to.
-    SessionId
-);
-opaque_id!(
-    /// The turn of a session a change belongs to; "Undo this turn" reverts by it.
-    TurnId
-);
-
-/// Where a transaction came from. A transaction cannot be built without one (Invariant 2).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Origin {
-    /// Who.
-    pub actor: ActorId,
-    /// The agent session, when there is one.
-    pub session: Option<SessionId>,
-    /// The turn, when there is one.
-    pub turn: Option<TurnId>,
-}
-
-impl Origin {
-    /// An origin with an actor and nothing else.
-    pub fn new(actor: ActorId) -> Self {
+impl Commit {
+    pub(crate) fn new(
+        origin: Origin,
+        edits: Vec<Edit>,
+        inverse: Vec<Edit>,
+        changes: ChangeSet,
+    ) -> Self {
         Self {
-            actor,
-            session: None,
-            turn: None,
+            origin,
+            edits,
+            inverse,
+            changes,
         }
     }
 
-    /// The same origin inside a session.
-    pub fn in_session(mut self, session: SessionId) -> Self {
-        self.session = Some(session);
-        self
-    }
-
-    /// The same origin inside a turn.
-    pub fn in_turn(mut self, turn: TurnId) -> Self {
-        self.turn = Some(turn);
-        self
-    }
-}
-
-/// One change to the document.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Op {
-    /// Adds `node` (and everything under it) to `page`, inside `parent` or at the page's top level, at
-    /// `index` among the siblings (`index == len` appends).
-    Insert {
-        /// The page.
-        page: PageId,
-        /// The container, or none for the page's top level.
-        parent: Option<NodeId>,
-        /// Position among the siblings, back to front.
-        index: usize,
-        /// The node to add. Its id must not exist yet, nor any id under it.
-        node: Box<Node>,
-    },
-    /// Sets properties of a node. The node must read back as the same node afterwards.
-    Update {
-        /// The node.
-        id: NodeId,
-        /// The properties to set.
-        patch: NodePatch,
-    },
-    /// Removes a node and everything under it.
-    Delete {
-        /// The node.
-        id: NodeId,
-    },
-}
-
-/// Changes applied together, all or nothing, as one undo step.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Transaction {
     /// Who made it.
-    pub origin: Origin,
-    /// What it does, in order.
-    pub ops: Vec<Op>,
+    pub fn origin(&self) -> &Origin {
+        &self.origin
+    }
+
+    /// The edits, in order.
+    pub fn edits(&self) -> &[Edit] {
+        &self.edits
+    }
+
+    /// The edits that undo it, in the order to apply them.
+    pub fn inverse(&self) -> &[Edit] {
+        &self.inverse
+    }
+
+    /// What it changes.
+    pub fn changes(&self) -> &ChangeSet {
+        &self.changes
+    }
+
+    /// Origin, edits, inverse and changes, for a store to keep.
+    pub fn into_parts(self) -> (Origin, Vec<Edit>, Vec<Edit>, ChangeSet) {
+        (self.origin, self.edits, self.inverse, self.changes)
+    }
 }
 
-/// What a transaction (or an undo, or an import) changed. Ids are sorted; a subtree counts every node in it.
+/// What a transaction (or an undo, or an import) changed. Ids are sorted; a subtree counts every node in it. A
+/// moved node counts as updated.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangeSet {
     /// Who made the change.
@@ -130,74 +73,19 @@ pub struct ChangeSet {
     pub updated: Vec<NodeId>,
     /// Nodes that no longer exist.
     pub removed: Vec<NodeId>,
+    /// Variables added, changed or removed.
+    pub variables: Vec<VariableId>,
 }
 
 impl ChangeSet {
     /// Whether nothing changed.
     pub fn is_empty(&self) -> bool {
-        self.inserted.is_empty() && self.updated.is_empty() && self.removed.is_empty()
+        self.inserted.is_empty()
+            && self.updated.is_empty()
+            && self.removed.is_empty()
+            && self.variables.is_empty()
     }
 }
-
-/// Why a transaction was refused. Nothing was applied.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OpError {
-    /// Which op, counting from 0. Zero for a fault in the transaction itself.
-    pub op_index: usize,
-    /// What is wrong.
-    pub kind: OpErrorKind,
-}
-
-/// What is wrong with an op.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OpErrorKind {
-    /// The transaction has no ops.
-    Empty,
-    /// No such page.
-    UnknownPage(PageId),
-    /// No such node.
-    UnknownNode(NodeId),
-    /// The parent cannot hold children.
-    NotAContainer(NodeId),
-    /// The id is taken.
-    DuplicateId(NodeId),
-    /// The index is past the end of the siblings.
-    IndexOutOfRange {
-        /// The index given.
-        index: usize,
-        /// How many siblings there are.
-        len: usize,
-    },
-    /// The patch does not leave a valid node.
-    InvalidPatch {
-        /// Why.
-        message: String,
-    },
-}
-
-impl fmt::Display for OpError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.kind {
-            OpErrorKind::Empty => f.write_str("The change has nothing in it."),
-            kind => {
-                write!(f, "Change {} was refused: ", self.op_index + 1)?;
-                match kind {
-                    OpErrorKind::Empty => unreachable!(),
-                    OpErrorKind::UnknownPage(id) => write!(f, "there is no page {id}."),
-                    OpErrorKind::UnknownNode(id) => write!(f, "there is no layer {id}."),
-                    OpErrorKind::NotAContainer(id) => write!(f, "layer {id} cannot hold layers."),
-                    OpErrorKind::DuplicateId(id) => write!(f, "the id {id} is already used."),
-                    OpErrorKind::IndexOutOfRange { index, len } => {
-                        write!(f, "position {index} is past the end ({len} layers).")
-                    }
-                    OpErrorKind::InvalidPatch { message } => write!(f, "{message}"),
-                }
-            }
-        }
-    }
-}
-
-impl std::error::Error for OpError {}
 
 /// How far a store has seen. Opaque: only the adapter that made it can read it. The empty cursor means
 /// "nothing yet".
@@ -250,20 +138,21 @@ impl std::error::Error for SyncError {}
 
 /// Document storage and history.
 ///
-/// Hands out and takes our types only (Invariant 1; ARCHITECTURE §2.3). Nothing from the CRDT leaks. Today
-/// anything can call `apply`; Prompt 11 makes it reachable from the op layer alone.
+/// Hands out and takes our types only (ARCHITECTURE §2.3). Nothing from the CRDT leaks.
 pub trait DocStore {
     /// The adapter's name, written into every [`SyncPayload`]. Stable.
     fn adapter_id(&self) -> &'static str;
     /// The document as it is now, in our types.
     fn snapshot(&self) -> Document;
-    /// Applies `tx` as one step, or refuses it whole and changes nothing. A success clears the actor's redo.
-    fn apply(&mut self, tx: Transaction) -> Result<ChangeSet, OpError>;
+    /// Applies `commit` whole as one undo step and clears its actor's redo. The commit was checked against this
+    /// store's document, so it applies; `vellum_core::ops::apply_edits` does the work for a store that keeps a
+    /// `Document`.
+    fn apply(&mut self, commit: Commit) -> ChangeSet;
     /// Reverts the actor's latest change that is not undone. None when there is nothing to undo.
     /// Other actors' changes are never touched.
-    fn undo(&mut self, actor: &ActorId) -> Option<ChangeSet>;
+    fn undo(&mut self, actor: &Actor) -> Option<ChangeSet>;
     /// Reapplies the actor's latest undone change. None when there is nothing to redo.
-    fn redo(&mut self, actor: &ActorId) -> Option<ChangeSet>;
+    fn redo(&mut self, actor: &Actor) -> Option<ChangeSet>;
     /// How much this store has seen; pass it to a peer's `export_updates` to get what it lacks.
     fn cursor(&self) -> SyncCursor;
     /// Everything this store has that `since` has not seen.

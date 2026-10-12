@@ -1,10 +1,8 @@
 //! The small types the ports carry (guide Prompt 10). The behaviour of the ports themselves is checked by the
 //! contract suites in `vellum-contracts`.
 
-use vellum_core::ports::{
-    ActorId, AssetHash, DirtySet, Extent, OpError, OpErrorKind, Origin, Rect, ScriptError,
-    SessionId, SyncCursor, TurnId,
-};
+use vellum_core::ops::{OpError, OpErrorKind};
+use vellum_core::ports::{AssetHash, DirtySet, Extent, Rect, ScriptError, SyncCursor};
 use vellum_types::NodeId;
 
 #[test]
@@ -54,17 +52,6 @@ fn an_asset_hash_is_lowercase_hex() {
 }
 
 #[test]
-fn an_origin_names_who_and_optionally_where() {
-    let origin = Origin::new(ActorId::new("agent:teal"))
-        .in_session(SessionId::new("s1"))
-        .in_turn(TurnId::new("t1"));
-    assert_eq!(origin.actor.as_str(), "agent:teal");
-    assert_eq!(origin.session.as_ref().map(SessionId::as_str), Some("s1"));
-    assert_eq!(origin.turn.as_ref().map(TurnId::as_str), Some("t1"));
-    assert_eq!(Origin::new(ActorId::new("x")).session, None);
-}
-
-#[test]
 fn dirty_sets_say_everything_or_these() {
     assert!(DirtySet::all().all);
     let id = NodeId::new("a").unwrap();
@@ -77,6 +64,7 @@ fn dirty_sets_say_everything_or_these() {
 fn errors_speak_plainly() {
     let error = OpError {
         op_index: 2,
+        path: "id".into(),
         kind: OpErrorKind::UnknownNode(NodeId::new("abc").unwrap()),
     };
     assert_eq!(
@@ -86,6 +74,7 @@ fn errors_speak_plainly() {
     assert_eq!(
         OpError {
             op_index: 0,
+            path: String::new(),
             kind: OpErrorKind::Empty
         }
         .to_string(),

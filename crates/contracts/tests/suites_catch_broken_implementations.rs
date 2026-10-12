@@ -8,8 +8,9 @@ use vellum_contracts::fakes::{
     SequentialIds, StackLayout,
 };
 use vellum_contracts::{samples, suites};
+use vellum_core::ops::apply_edits;
 use vellum_core::ports::*;
-use vellum_types::{BoolOp, Document, FontStyle, NodeId};
+use vellum_types::{Actor, BoolOp, Document, FontStyle, NodeId};
 
 struct BackwardsClock(Cell<i64>);
 impl Clock for BackwardsClock {
@@ -84,8 +85,8 @@ fn codec_that_is_not_deterministic() {
     suites::codec::run(&Unstable(Cell::new(0)), &[samples::document()]);
 }
 
-/// Every actor shares one undo history.
-struct SharedUndo(InMemoryDocStore);
+/// Every actor shares one undo history: undo reverts whoever changed something last.
+struct SharedUndo(InMemoryDocStore, Vec<Actor>);
 impl DocStore for SharedUndo {
     fn adapter_id(&self) -> &'static str {
         self.0.adapter_id()
@@ -93,25 +94,21 @@ impl DocStore for SharedUndo {
     fn snapshot(&self) -> Document {
         self.0.snapshot()
     }
-    fn apply(&mut self, mut tx: Transaction) -> Result<ChangeSet, OpError> {
-        let origin = tx.origin.clone();
-        tx.origin.actor = ActorId::new("everyone");
-        self.0.apply(tx).map(|mut changes| {
-            changes.origin = origin;
-            changes
-        })
+    fn apply(&mut self, commit: Commit) -> ChangeSet {
+        self.1.push(commit.origin().actor.clone());
+        self.0.apply(commit)
     }
-    fn undo(&mut self, actor: &ActorId) -> Option<ChangeSet> {
-        self.0.undo(&ActorId::new("everyone")).map(|mut changes| {
+    fn undo(&mut self, actor: &Actor) -> Option<ChangeSet> {
+        let last = self.1.pop()?;
+        self.0.undo(&last).map(|mut changes| {
             changes.origin.actor = actor.clone();
             changes
         })
     }
-    fn redo(&mut self, actor: &ActorId) -> Option<ChangeSet> {
-        self.0.redo(&ActorId::new("everyone")).map(|mut changes| {
-            changes.origin.actor = actor.clone();
-            changes
-        })
+    fn redo(&mut self, actor: &Actor) -> Option<ChangeSet> {
+        let changes = self.0.redo(actor)?;
+        self.1.push(actor.clone());
+        Some(changes)
     }
     fn cursor(&self) -> SyncCursor {
         self.0.cursor()
@@ -127,50 +124,48 @@ impl DocStore for SharedUndo {
 #[test]
 #[should_panic(expected = "touched Bob's work")]
 fn store_whose_undo_is_not_per_actor() {
-    suites::doc_store::run(|doc, peer| SharedUndo(InMemoryDocStore::new(doc, peer)));
+    suites::doc_store::run(|doc, peer| SharedUndo(InMemoryDocStore::new(doc, peer), Vec::new()));
 }
 
-/// A store that forgets nothing it should but lets a half-applied transaction through.
-struct NotAtomic(InMemoryDocStore);
-impl DocStore for NotAtomic {
+/// A store that applies only the first edit of each commit. It cannot cut the commit down and pass it on (a
+/// commit cannot be built outside the op layer), so it keeps its own document.
+struct FirstEditOnly(Document);
+impl DocStore for FirstEditOnly {
     fn adapter_id(&self) -> &'static str {
-        self.0.adapter_id()
+        "first-edit-only"
     }
     fn snapshot(&self) -> Document {
-        self.0.snapshot()
+        self.0.clone()
     }
-    fn apply(&mut self, tx: Transaction) -> Result<ChangeSet, OpError> {
-        let first = Transaction {
-            origin: tx.origin.clone(),
-            ops: tx.ops[..1.min(tx.ops.len())].to_vec(),
-        };
-        let result = self.0.apply(tx);
-        if result.is_err() {
-            let _ = self.0.apply(first);
-        }
-        result
+    fn apply(&mut self, commit: Commit) -> ChangeSet {
+        let first = &commit.edits()[..1];
+        let _ = apply_edits(&mut self.0, first, commit.origin().clone());
+        commit.changes().clone()
     }
-    fn undo(&mut self, actor: &ActorId) -> Option<ChangeSet> {
-        self.0.undo(actor)
+    fn undo(&mut self, _: &Actor) -> Option<ChangeSet> {
+        None
     }
-    fn redo(&mut self, actor: &ActorId) -> Option<ChangeSet> {
-        self.0.redo(actor)
+    fn redo(&mut self, _: &Actor) -> Option<ChangeSet> {
+        None
     }
     fn cursor(&self) -> SyncCursor {
-        self.0.cursor()
+        SyncCursor::empty()
     }
-    fn export_updates(&self, since: &SyncCursor) -> SyncPayload {
-        self.0.export_updates(since)
+    fn export_updates(&self, _: &SyncCursor) -> SyncPayload {
+        SyncPayload {
+            adapter: self.adapter_id().into(),
+            bytes: vec![],
+        }
     }
-    fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError> {
-        self.0.import_updates(payload)
+    fn import_updates(&mut self, _: &SyncPayload) -> Result<ChangeSet, SyncError> {
+        Err(SyncError::Malformed("no sync".into()))
     }
 }
 
 #[test]
-#[should_panic(expected = "refused transaction changed the document")]
-fn store_that_is_not_atomic() {
-    suites::doc_store::run(|doc, peer| NotAtomic(InMemoryDocStore::new(doc, peer)));
+#[should_panic(expected = "ops did not run in order")]
+fn store_that_applies_part_of_a_commit() {
+    suites::doc_store::run(|doc, _| FirstEditOnly(doc.clone()));
 }
 
 struct Shifted(StackLayout);

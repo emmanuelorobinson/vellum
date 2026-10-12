@@ -15,7 +15,7 @@ macro_rules! string_enum {
         }
     ) => {
         $(#[$meta])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema, TS)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, JsonSchema, TS)]
         #[ts(export)]
         pub enum $name {
             $( $(#[$vmeta])* #[schemars(rename = $text)] #[ts(rename = $text)] $variant, )+
@@ -272,5 +272,29 @@ string_enum!(
         Number = "number",
         String = "string",
         Boolean = "boolean",
+    }
+);
+
+string_enum!(
+    /// Why the file itself changed a document (`Actor::File`).
+    FileReason {
+        /// The file changed on disk: a checkout, an editor or an agent writing the file directly.
+        ExternalChange = "external-change",
+        /// A three-way merge (the merge driver).
+        Merge = "merge",
+        /// A recovery copy was restored.
+        Recovery = "recovery",
+    }
+);
+
+string_enum!(
+    /// The part of Vellum that made a change on nobody's behalf (`Actor::System`).
+    Subsystem {
+        /// An importer (SVG, image, clipboard) building nodes.
+        Importer = "importer",
+        /// A format migration.
+        Migration = "migration",
+        /// Updates merged in from another copy of the document.
+        Sync = "sync",
     }
 );

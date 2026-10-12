@@ -51,7 +51,8 @@
 | png | 0.18.1 | dev tooling (not in §5) | `crates/vellum-testkit` | pixel-diff PNG read and write (Prompt 4) |
 | serde | 1.0.229 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest |
 | serde_json | 1.0.154 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest; `float_roundtrip` on since Prompt 7 (C18) |
-| proptest | 1.12.0 | dev dependency (not in §5) | `Cargo.toml` workspace.dependencies; `vellum-types` dev-dependencies | property tests (guide §11 and Prompts 7, 9, 10, 14); `scripts/rust-deps-allowlist.txt` (C18) |
+| proptest | 1.12.0 | dev dependency (not in §5) | `Cargo.toml` workspace.dependencies; `vellum-types` and `vellum-core` dev-dependencies | property tests (guide §11 and Prompts 7, 9, 10, 14); `scripts/rust-deps-allowlist.txt` (C18, C19) |
+| trybuild | 1.0.122 | dev dependency (not in §5) | `Cargo.toml` workspace.dependencies; `vellum-core` dev-dependencies | compile-fail test for Invariant 1 (Prompt 11); C19 |
 
 ## Node and JavaScript tooling
 
@@ -188,6 +189,11 @@ No repository has a release at or after its pin, so every pin stays at the guide
   for some `f64`, and a model coordinate must read back as written. `ts-rs`'s `serde-json-impl` lets a node's free-form
   `metadata` (and an instance's placeholder props) export as `JsonValue`. `vendor` entries in the allowlist still bar
   `wasm-bindgen` and the rest from the closure; `pnpm deps:check` passes.
+- **C19: `vellum-core` may take `serde_json`, `proptest` and `trybuild` as dev-dependencies** (Prompt 11). Invariant 1
+  asks for a trybuild compile-fail test and a property test over op batches, and both live in `vellum-core`. The op
+  tests build sample documents from JSON, so `serde_json` comes too. All three are dev-only; `vellum-core`'s normal
+  dependencies are still `vellum-types` alone, and `pnpm deps:check` (which reads dev edges) passes. trybuild 1.0.122
+  was the newest release on 2026-10-12; it brings `toml`, `glob`, `target-tuple` and their dependencies, which `cargo deny` accepts.
 
 ## What the reference clones are for
 

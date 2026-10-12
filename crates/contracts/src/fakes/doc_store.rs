@@ -1,19 +1,18 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value as Json;
-use vellum_core::ports::{
-    ActorId, ChangeSet, DocStore, Op, OpError, OpErrorKind, Origin, SessionId, SyncCursor,
-    SyncError, SyncPayload, Transaction, TurnId,
+use vellum_core::ops::{Edit, Parent, Place, apply_edits};
+use vellum_core::ports::{ChangeSet, Commit, DocStore, SyncCursor, SyncError, SyncPayload};
+use vellum_types::{
+    Actor, Document, Node, NodeId, Origin, PageId, Subsystem, Variable, VariableId,
 };
-use vellum_types::{Document, Node, NodeId, PageId};
 
-/// The one thing the store knows how to do to a document. Every op, undo and import is a list of these, and
-/// each has an inverse, which is how undo works. Replace keeps the children the node has now.
+/// An edit as the fake writes it into sync payloads. `vellum-core` has no serde, so the fake keeps its own
+/// spelling and converts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum Step {
     Insert {
-        page: PageId,
+        page: Option<PageId>,
         parent: Option<NodeId>,
         index: usize,
         node: Box<Node>,
@@ -21,35 +20,90 @@ enum Step {
     Remove {
         id: NodeId,
     },
-    Replace {
+    Move {
+        id: NodeId,
+        page: Option<PageId>,
+        parent: Option<NodeId>,
+        index: usize,
+    },
+    Set {
         node: Box<Node>,
+    },
+    SetVariable {
+        id: VariableId,
+        variable: Option<Box<Variable>>,
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct WireOrigin {
-    actor: String,
-    session: Option<String>,
-    turn: Option<String>,
+fn split(place: &Place) -> (Option<PageId>, Option<NodeId>, usize) {
+    match &place.parent {
+        Parent::Page(page) => (Some(page.clone()), None, place.index),
+        Parent::Node(node) => (None, Some(node.clone()), place.index),
+    }
 }
 
-impl From<&Origin> for WireOrigin {
-    fn from(o: &Origin) -> Self {
-        Self {
-            actor: o.actor.to_string(),
-            session: o.session.as_ref().map(ToString::to_string),
-            turn: o.turn.as_ref().map(ToString::to_string),
+fn join(page: Option<PageId>, parent: Option<NodeId>, index: usize) -> Option<Place> {
+    let parent = match (page, parent) {
+        (_, Some(node)) => Parent::Node(node),
+        (Some(page), None) => Parent::Page(page),
+        (None, None) => return None,
+    };
+    Some(Place { parent, index })
+}
+
+impl From<&Edit> for Step {
+    fn from(edit: &Edit) -> Self {
+        match edit.clone() {
+            Edit::Insert { to, node } => {
+                let (page, parent, index) = split(&to);
+                Self::Insert {
+                    page,
+                    parent,
+                    index,
+                    node,
+                }
+            }
+            Edit::Remove { id } => Self::Remove { id },
+            Edit::Move { id, to } => {
+                let (page, parent, index) = split(&to);
+                Self::Move {
+                    id,
+                    page,
+                    parent,
+                    index,
+                }
+            }
+            Edit::Set { node } => Self::Set { node },
+            Edit::SetVariable { id, variable } => Self::SetVariable { id, variable },
         }
     }
 }
 
-impl From<&WireOrigin> for Origin {
-    fn from(o: &WireOrigin) -> Self {
-        Self {
-            actor: ActorId::new(o.actor.clone()),
-            session: o.session.clone().map(SessionId::new),
-            turn: o.turn.clone().map(TurnId::new),
-        }
+impl Step {
+    fn into_edit(self) -> Option<Edit> {
+        Some(match self {
+            Self::Insert {
+                page,
+                parent,
+                index,
+                node,
+            } => Edit::Insert {
+                to: join(page, parent, index)?,
+                node,
+            },
+            Self::Remove { id } => Edit::Remove { id },
+            Self::Move {
+                id,
+                page,
+                parent,
+                index,
+            } => Edit::Move {
+                id,
+                to: join(page, parent, index)?,
+            },
+            Self::Set { node } => Edit::Set { node },
+            Self::SetVariable { id, variable } => Edit::SetVariable { id, variable },
+        })
     }
 }
 
@@ -57,7 +111,7 @@ impl From<&WireOrigin> for Origin {
 struct Entry {
     peer: u64,
     seq: u64,
-    origin: WireOrigin,
+    origin: Origin,
     steps: Vec<Step>,
 }
 
@@ -66,210 +120,17 @@ struct Wire {
     entries: Vec<Entry>,
 }
 
-#[derive(Default)]
-struct Touch {
-    inserted: BTreeSet<NodeId>,
-    updated: BTreeSet<NodeId>,
-    removed: BTreeSet<NodeId>,
-}
-
-impl Touch {
-    fn insert(&mut self, id: NodeId) {
-        if self.removed.remove(&id) {
-            self.updated.insert(id);
-        } else {
-            self.inserted.insert(id);
-        }
-    }
-
-    fn remove(&mut self, id: NodeId) {
-        self.updated.remove(&id);
-        if !self.inserted.remove(&id) {
-            self.removed.insert(id);
-        }
-    }
-
-    fn update(&mut self, id: NodeId) {
-        if !self.inserted.contains(&id) {
-            self.updated.insert(id);
-        }
-    }
-
-    fn into_change_set(self, origin: Origin) -> ChangeSet {
-        ChangeSet {
-            origin,
-            inserted: self.inserted.into_iter().collect(),
-            updated: self.updated.into_iter().collect(),
-            removed: self.removed.into_iter().collect(),
-        }
-    }
-}
-
-fn subtree_ids(node: &Node, out: &mut Vec<NodeId>) {
-    out.push(node.id().clone());
-    node.children().iter().for_each(|c| subtree_ids(c, out));
-}
-
-fn all_ids(doc: &Document) -> BTreeSet<NodeId> {
-    let mut ids = Vec::new();
-    doc.pages
-        .iter()
-        .flat_map(|p| &p.children)
-        .for_each(|n| subtree_ids(n, &mut ids));
-    ids.into_iter().collect()
-}
-
-fn find_mut<'a>(nodes: &'a mut [Node], id: &NodeId) -> Option<&'a mut Node> {
-    for node in nodes {
-        if node.id() == id {
-            return Some(node);
-        }
-        if let Some(children) = node.children_mut()
-            && let Some(found) = find_mut(children, id)
-        {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn find_node_mut<'a>(doc: &'a mut Document, id: &NodeId) -> Option<&'a mut Node> {
-    doc.pages
-        .iter_mut()
-        .find_map(|p| find_mut(&mut p.children, id))
-}
-
-/// Where a node sits: its page, its parent and its index among the siblings.
-fn locate(doc: &Document, id: &NodeId) -> Option<(PageId, Option<NodeId>, usize)> {
-    fn walk(nodes: &[Node], parent: Option<&Node>, id: &NodeId) -> Option<(Option<NodeId>, usize)> {
-        for (i, node) in nodes.iter().enumerate() {
-            if node.id() == id {
-                return Some((parent.map(|p| p.id().clone()), i));
-            }
-            if let Some(found) = walk(node.children(), Some(node), id) {
-                return Some(found);
-            }
-        }
-        None
-    }
-    doc.pages
-        .iter()
-        .find_map(|p| walk(&p.children, None, id).map(|(parent, i)| (p.id.clone(), parent, i)))
-}
-
-/// Does one step; returns its inverse.
-fn apply_step(doc: &mut Document, step: &Step, touch: &mut Touch) -> Result<Step, OpErrorKind> {
-    match step {
-        Step::Insert {
-            page,
-            parent,
-            index,
-            node,
-        } => {
-            let mut new_ids = Vec::new();
-            subtree_ids(node, &mut new_ids);
-            let taken = all_ids(doc);
-            let mut seen = BTreeSet::new();
-            for id in &new_ids {
-                if taken.contains(id) || !seen.insert(id) {
-                    return Err(OpErrorKind::DuplicateId(id.clone()));
-                }
-            }
-            let page_ref = doc
-                .pages
-                .iter_mut()
-                .find(|p| &p.id == page)
-                .ok_or_else(|| OpErrorKind::UnknownPage(page.clone()))?;
-            let siblings = match parent {
-                None => &mut page_ref.children,
-                Some(parent) => {
-                    let container = find_mut(&mut page_ref.children, parent)
-                        .ok_or_else(|| OpErrorKind::UnknownNode(parent.clone()))?;
-                    container
-                        .children_mut()
-                        .ok_or_else(|| OpErrorKind::NotAContainer(parent.clone()))?
-                }
-            };
-            if *index > siblings.len() {
-                return Err(OpErrorKind::IndexOutOfRange {
-                    index: *index,
-                    len: siblings.len(),
-                });
-            }
-            siblings.insert(*index, (**node).clone());
-            new_ids.into_iter().for_each(|id| touch.insert(id));
-            Ok(Step::Remove {
-                id: node.id().clone(),
-            })
-        }
-        Step::Remove { id } => {
-            let (page, parent, index) =
-                locate(doc, id).ok_or_else(|| OpErrorKind::UnknownNode(id.clone()))?;
-            let page_ref = doc
-                .pages
-                .iter_mut()
-                .find(|p| p.id == page)
-                .expect("located on this page");
-            let siblings = match &parent {
-                None => &mut page_ref.children,
-                Some(parent) => find_mut(&mut page_ref.children, parent)
-                    .and_then(Node::children_mut)
-                    .expect("located inside this parent"),
-            };
-            let node = siblings.remove(index);
-            let mut gone = Vec::new();
-            subtree_ids(&node, &mut gone);
-            gone.into_iter().for_each(|id| touch.remove(id));
-            Ok(Step::Insert {
-                page,
-                parent,
-                index,
-                node: Box::new(node),
-            })
-        }
-        Step::Replace { node } => {
-            let target = find_node_mut(doc, node.id())
-                .ok_or_else(|| OpErrorKind::UnknownNode(node.id().clone()))?;
-            let before = target.clone();
-            let mut next = node.clone();
-            if let (Some(kids), Some(slot)) =
-                (Some(target.children().to_vec()), next.children_mut())
-            {
-                *slot = kids;
-            }
-            *target = *next;
-            touch.update(node.id().clone());
-            Ok(Step::Replace {
-                node: Box::new(before),
-            })
-        }
-    }
-}
-
-fn patched(node: &Node, patch: &vellum_types::NodePatch) -> Result<Node, OpErrorKind> {
-    let invalid = |message: String| OpErrorKind::InvalidPatch { message };
-    let mut json = serde_json::to_value(node).map_err(|e| invalid(e.to_string()))?;
-    if let Json::Object(map) = &mut json {
-        map.extend(patch.properties().clone());
-    }
-    let next: Node = serde_json::from_value(json).map_err(|e| invalid(e.to_string()))?;
-    if next.id() != node.id() || next.kind() != node.kind() {
-        return Err(invalid("a patch cannot change what a layer is".into()));
-    }
-    Ok(next)
-}
-
-/// A document in memory, with per-actor undo and redo kept as lists of inverse steps, and sync by replaying a
-/// log of steps. It does what a CRDT does only for edits that arrive one after another: two stores that edit at
-/// the same time do not converge (Prompt 14's Loro store does).
+/// A document in memory, with per-actor undo and redo kept as lists of inverse edits, and sync by replaying a
+/// log of edits. It does what a CRDT does only for edits that arrive one after another: two stores that edit
+/// at the same time do not converge (Prompt 14's Loro store does).
 #[derive(Debug)]
 pub struct InMemoryDocStore {
     doc: Document,
     peer: u64,
     log: Vec<Entry>,
     seen: BTreeMap<u64, u64>,
-    undo: BTreeMap<ActorId, Vec<Vec<Step>>>,
-    redo: BTreeMap<ActorId, Vec<Vec<Step>>>,
+    undo: BTreeMap<Actor, Vec<Vec<Edit>>>,
+    redo: BTreeMap<Actor, Vec<Vec<Edit>>>,
 }
 
 impl InMemoryDocStore {
@@ -286,57 +147,33 @@ impl InMemoryDocStore {
         }
     }
 
-    fn record(&mut self, origin: &Origin, steps: Vec<Step>) {
+    fn record(&mut self, origin: &Origin, edits: &[Edit]) {
         let seq = self.seen.get(&self.peer).copied().unwrap_or(0) + 1;
         self.seen.insert(self.peer, seq);
         self.log.push(Entry {
             peer: self.peer,
             seq,
-            origin: origin.into(),
-            steps,
+            origin: origin.clone(),
+            steps: edits.iter().map(Step::from).collect(),
         });
     }
 
-    /// Runs `steps` on a copy; on success returns the copy, what changed and the steps that reverse it, last
-    /// first.
-    fn run(&self, steps: &[Step]) -> Result<(Document, Touch, Vec<Step>), (usize, OpErrorKind)> {
-        let mut work = self.doc.clone();
-        let mut touch = Touch::default();
-        let mut inverses = Vec::new();
-        for (i, step) in steps.iter().enumerate() {
-            inverses.push(apply_step(&mut work, step, &mut touch).map_err(|kind| (i, kind))?);
-        }
-        inverses.reverse();
-        Ok((work, touch, inverses))
-    }
-
-    fn step_back(&mut self, actor: &ActorId, forward: bool) -> Option<ChangeSet> {
-        let stack = if forward {
-            &mut self.redo
+    fn step_back(&mut self, actor: &Actor, forward: bool) -> Option<ChangeSet> {
+        let (from, to) = if forward {
+            (&mut self.redo, &mut self.undo)
         } else {
-            &mut self.undo
+            (&mut self.undo, &mut self.redo)
         };
-        let steps = stack.get_mut(actor)?.pop()?;
-        match self.run(&steps) {
-            Ok((doc, touch, inverses)) => {
-                self.doc = doc;
-                let other = if forward {
-                    &mut self.undo
-                } else {
-                    &mut self.redo
-                };
-                other.entry(actor.clone()).or_default().push(inverses);
-                let origin = Origin::new(actor.clone());
-                self.record(&origin, steps);
-                Some(touch.into_change_set(origin))
+        let edits = from.get_mut(actor)?.pop()?;
+        let origin = Origin::new(actor.clone());
+        match apply_edits(&mut self.doc, &edits, origin.clone()) {
+            Ok((inverse, changes)) => {
+                to.entry(actor.clone()).or_default().push(inverse);
+                self.record(&origin, &edits);
+                Some(changes)
             }
             Err(_) => {
-                let stack = if forward {
-                    &mut self.redo
-                } else {
-                    &mut self.undo
-                };
-                stack.entry(actor.clone()).or_default().push(steps);
+                from.entry(actor.clone()).or_default().push(edits);
                 None
             }
         }
@@ -352,56 +189,22 @@ impl DocStore for InMemoryDocStore {
         self.doc.clone()
     }
 
-    fn apply(&mut self, tx: Transaction) -> Result<ChangeSet, OpError> {
-        if tx.ops.is_empty() {
-            return Err(OpError {
-                op_index: 0,
-                kind: OpErrorKind::Empty,
-            });
-        }
-        let mut work = self.doc.clone();
-        let mut touch = Touch::default();
-        let (mut forward, mut inverses) = (Vec::new(), Vec::new());
-        for (op_index, op) in tx.ops.iter().enumerate() {
-            let fail = |kind| OpError { op_index, kind };
-            let step = match op {
-                Op::Insert {
-                    page,
-                    parent,
-                    index,
-                    node,
-                } => Step::Insert {
-                    page: page.clone(),
-                    parent: parent.clone(),
-                    index: *index,
-                    node: node.clone(),
-                },
-                Op::Delete { id } => Step::Remove { id: id.clone() },
-                Op::Update { id, patch } => {
-                    let current = find_node_mut(&mut work, id)
-                        .ok_or_else(|| fail(OpErrorKind::UnknownNode(id.clone())))?;
-                    Step::Replace {
-                        node: Box::new(patched(current, patch).map_err(fail)?),
-                    }
-                }
-            };
-            inverses.push(apply_step(&mut work, &step, &mut touch).map_err(fail)?);
-            forward.push(step);
-        }
-        inverses.reverse();
-        self.doc = work;
-        let actor = tx.origin.actor.clone();
-        self.undo.entry(actor.clone()).or_default().push(inverses);
+    fn apply(&mut self, commit: Commit) -> ChangeSet {
+        let (origin, edits, inverse, changes) = commit.into_parts();
+        apply_edits(&mut self.doc, &edits, origin.clone())
+            .expect("a commit was checked against this document");
+        let actor = origin.actor.clone();
+        self.undo.entry(actor.clone()).or_default().push(inverse);
         self.redo.remove(&actor);
-        self.record(&tx.origin, forward);
-        Ok(touch.into_change_set(tx.origin))
+        self.record(&origin, &edits);
+        changes
     }
 
-    fn undo(&mut self, actor: &ActorId) -> Option<ChangeSet> {
+    fn undo(&mut self, actor: &Actor) -> Option<ChangeSet> {
         self.step_back(actor, false)
     }
 
-    fn redo(&mut self, actor: &ActorId) -> Option<ChangeSet> {
+    fn redo(&mut self, actor: &Actor) -> Option<ChangeSet> {
         self.step_back(actor, true)
     }
 
@@ -432,28 +235,34 @@ impl DocStore for InMemoryDocStore {
         }
         let wire: Wire = serde_json::from_slice(&payload.bytes)
             .map_err(|e| SyncError::Malformed(e.to_string()))?;
-        let mut work = self.doc.clone();
-        let mut touch = Touch::default();
-        let mut fresh = Vec::new();
         let mut seen = self.seen.clone();
+        let mut fresh = Vec::new();
+        let mut edits = Vec::new();
         for entry in wire.entries {
             if entry.seq <= seen.get(&entry.peer).copied().unwrap_or(0) {
                 continue;
             }
-            for step in &entry.steps {
-                apply_step(&mut work, step, &mut touch)
-                    .map_err(|kind| SyncError::Malformed(format!("{kind:?}")))?;
+            for step in entry.steps.iter().cloned() {
+                edits.push(
+                    step.into_edit()
+                        .ok_or_else(|| SyncError::Malformed("a step has no place".into()))?,
+                );
             }
             seen.insert(entry.peer, entry.seq);
             fresh.push(entry);
         }
         let origin = fresh.last().map_or_else(
-            || Origin::new(ActorId::new("sync")),
-            |e| Origin::from(&e.origin),
+            || {
+                Origin::new(Actor::System {
+                    subsystem: Subsystem::Sync,
+                })
+            },
+            |e| e.origin.clone(),
         );
-        self.doc = work;
+        let (_, changes) = apply_edits(&mut self.doc, &edits, origin)
+            .map_err(|(index, kind)| SyncError::Malformed(format!("step {index}: {kind}")))?;
         self.seen = seen;
         self.log.extend(fresh);
-        Ok(touch.into_change_set(origin))
+        Ok(changes)
     }
 }

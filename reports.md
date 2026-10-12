@@ -12,15 +12,31 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   `Codec::encode` returns a `Result` (done: Prompt 9's open item). `FontSource::resolve` takes a weight as well as a
   style (a text run has both). `PathOps::bounds` returns `Option<Rect>` (a path can draw nothing) and takes a resolved
   `StrokeStyle`, not the file's `Stroke`, whose widths can still be variables. `DocStore` gains `adapter_id()` and
-  `cursor()` (`export_updates` needs a cursor to be given); `undo`/`redo` take `&ActorId`. `SpatialIndex::query_point`
+  `cursor()` (`export_updates` needs a cursor to be given); `undo`/`redo` take `&Actor` (Prompt 11); `apply` takes a `Commit`, not a `Transaction` (Prompt 11). `SpatialIndex::query_point`
   takes `x, y`. `AssetStore::put` takes `&[u8]`, not owned bytes, and there is no `bytes` crate in core. `ScriptApi` and
   `ScriptValue` are minimal (Prompt 26 fills in the functions).
-- **Prompt 11 replaces `Op`, `OpErrorKind` and `Origin` in `vellum_core::ports::doc_store`** (Prompt 10). Prompt 10
-  needed a transaction to test `DocStore`, so it defines the smallest vocabulary: `Insert`, `Update`, `Delete`, an opaque
-  `ActorId`/`SessionId`/`TurnId`, and `Origin { actor: ActorId, session, turn }`. Invariant 2 wants `Actor` to be an enum
-  (person/agent/file/system); Prompt 11 owns it, with `ActorId` as the key an `Actor` maps to. `Op::Insert` boxes its
-  node (clippy `large_enum_variant`). Invariant 1 (`apply` reachable only from ops, trybuild) is Prompt 11's too: today
-  anything can call `DocStore::apply`.
+- **Review the Prompt 11 choices that the guide or ARCHITECTURE leave open** (Prompt 11). Only a person edits
+  ARCHITECTURE.md and the guide, so these live in the code until you say otherwise:
+  (1) Invariant 1 says `DocStore::apply` is "`pub(crate)` to `vellum-core::ops`". A trait method cannot be, and
+  adapters live in other crates, so `apply` takes a `Commit` that only the op layer can build (private fields, a
+  `pub(crate)` constructor, no `Clone` or `Default`). The trybuild cases in `crates/vellum-core/tests/write-path/` show
+  that a transaction, a hand-built commit and a copied commit do not compile.
+  (2) `Actor`'s inner words are mine: `FileReason` is `external-change`, `merge` or `recovery`; `Subsystem` is
+  `importer`, `migration` or `sync`. A person is known by a `DeviceId`; `DeviceId`, `AgentId`, `SessionId` and `TurnId`
+  are ULIDs (upper-case Crockford, as guide §9 says for ids outside the file).
+  (3) Parent kinds: frames, groups and canvas pages hold anything; a boolean holds rect, ellipse, polygon, star,
+  line, vector, boolean, text and group; a slides page holds frames, notes, context and prompts at its top level.
+  Nothing in ARCHITECTURE says this; tell me if a kind is wrong.
+  (4) Page boundaries: a node may move between pages, but not between a page and a component, nor between components.
+  A component's root cannot be moved or deleted by these ops (Prompt 12's component ops will).
+  (5) Wrap, group and ungroup rebase absolute positions by the wrapper's position and refuse a rotated or flipped
+  wrapper or group (positions cannot be kept through a rotation without baking it into each child). Ungroup drops the
+  group's opacity, blend mode and effects. A wrapper at `auto` leaves its children's coordinates as they were.
+  (6) In an `Update`, `null` puts a property back to its default (and fails for a required one such as `width`).
+  (7) `Move` and `Reorder` count the index where the node ends up, after it left its old place.
+- **Decide whether `ops::apply` may snapshot the whole document per transaction** (Prompt 11). It validates against
+  `DocStore::snapshot()`, which clones the document. That is fine for the fake and for tests; for Loro (Prompt 14) a
+  10,000-node document would clone on every keystroke-sized edit. Prompt 14 may need a cheaper read view on the port.
 - **Decide the open numeric units and the decode limits the codec assumes** (Prompt 9). ARCHITECTURE and the guide give
   units for positions, sizes, ratios, opacities, gradient stops and angles only. I read the rest as: transform and crop
   entries, mesh coordinates, `innerRadius` (a ratio of the radius, per its doc comment) and `zoom` are ratios (1/1000);
@@ -590,7 +606,7 @@ fail I switched off the settle pass by hand and two failed.
 
 ## Prompt 10: Ports, fakes, contract suites
 
-Not committed. Prompt 9 is committed (`2061cc8`).
+Committed as `eb529c5`.
 
 Built:
 - **The twelve ports** in `crates/vellum-core/src/ports/`: `DocStore`, `LayoutEngine`, `TextEngine`, `FontSource`,
@@ -643,3 +659,63 @@ twelve fakes then passed on the first run, so I wrote the broken-implementation 
 (`store_whose_undo_is_not_per_actor`) first failed on a different assertion than intended, and I changed the saboteur
 (and added a message to the undo-attribution assertion) so it fails on the rule it names. Clippy then asked for a boxed
 `Node` in `Op::Insert` and the fake's `Step`.
+
+## Prompt 11: Ops I, structural ops, validation, origins
+
+Not committed. Prompt 10 is committed (`eb529c5`).
+
+Built:
+- **Origins in `vellum-types`** (`origin.rs`): `Actor` (person, agent, file, system), `Origin { actor, session?, turn? }`
+  with no default, and the ULID ids `SessionId`, `TurnId`, `AgentId`, `DeviceId`, with TypeScript bindings. `FileReason`
+  and `Subsystem` are string enums. `ActorId` is gone; undo is keyed by `Actor`.
+- **`vellum-types` helpers the op layer needs** (core has no serde): `Node::patched` (applies a `NodePatch`, names the
+  property at fault), `Node::set_position`, `Variable::aliases`, `referenced_variables` (every `$var`, skipping
+  `metadata`).
+- **`vellum_core::ops`**: `Transaction`, the eleven ops (insert, update, delete, move, copy, replace, set_variables,
+  reorder, wrap_in_frame, group, ungroup), `plan` (checks a batch against a copy, each op seeing the ones before it) and
+  `apply` (the one write path). Errors carry the op index, a path inside the op (`to.parent`, `node.children[1]`,
+  `patch.opacity`, `set.<id>`) and a kind; `OpError::location()` prints `ops[2].patch.opacity`. Ops lower to five
+  `Edit`s (insert, remove, move, set, set-variable), each of which checks the tree (ids unique across pages and
+  components, parent kinds, cycles, boundaries, index) and returns its exact inverse. `apply_edits` is what stores use
+  for commits, undo, redo and sync. `check_document` is the whole-document validator the property test uses.
+- **`DocStore` port**: `apply(Commit) -> ChangeSet` (infallible: the commit was checked against this store);
+  `ChangeSet` gains `variables`; `undo`/`redo` take `&Actor`.
+- **`vellum-contracts`**: the fake store applies commits with `apply_edits` and keeps its own serde spelling of edits
+  for sync; the suite writes through `ops::apply`. The "not atomic" saboteur became "applies part of a commit" (a store
+  can no longer cut a commit down), and the shared-undo saboteur now pops whoever wrote last.
+- Dev-dependencies `serde_json`, `proptest`, `trybuild` (1.0.122) on `vellum-core`, allowlisted, recorded as C19 in the
+  version baseline.
+
+Reference note (no code ported): Graphite's `document_history.rs` keeps whole-document snapshots in capped undo and
+redo stacks; Excalidraw's `delta.ts`/`store.ts` keep per-change deltas with `inverse`, `applyTo` and `squash`, committed
+by the store. Vellum follows the delta approach (each op lowers to edits with their exact inverse), because undo is
+per actor and must revert one transaction without rolling back others; whole snapshots cannot do that. There is no
+squash yet; Prompt 14 decides how undo steps merge in Loro.
+
+Differs from the guide, or limits:
+- Invariant 1's `pub(crate)` wording is met with a witness type instead (see "Needs a person").
+- Not validated yet: an instance naming a component that exists, variable type matches at bind time (Prompt 16), alias
+  cycles at resolution (Prompt 16 still owns the typed error; `set_variables` refuses cycles now). A `$var` must name a
+  variable of the same document (ADR-010), and removing a variable still in use is refused.
+- A `$var` introduced in an op must exist when that op runs; put `SetVariables` first in a batch.
+- The property test (1,024 cases, up to 9 batches of 1-2 random ops on a sample document) accepts at least one batch
+  in a little over half the cases; most random batches are refused, which also exercises "refused leaves no trace".
+- I could not run the trybuild cases before the code existed (they need the `Commit` type to fail in the right way);
+  before Prompt 11 the first case, calling `DocStore::apply` with a transaction, compiled.
+
+Verified (each exited 0):
+- `cargo test -p vellum-core ops::` (33), `cargo test -p vellum-core --test trybuild` (5 compile-fail cases),
+  `cargo test -p vellum-types` (incl. new `origin` 5, `patching` 4), `cargo test -p vellum-contracts` (31),
+  `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`.
+- `pnpm types:gen` (8 new files), `pnpm types:check`, `pnpm format-spec:check`, `pnpm deps:check` (same cargo-deny
+  warnings as before), `pnpm checksum`, `pnpm format:check`, `pnpm lint`, `pnpm type-check`, `pnpm clean-room`,
+  `pnpm copy-lint`.
+- Failed: `pnpm test:scripts`, 148 passed, 1 failed, 1 skipped: the same pre-existing REFERENCE-INDEX test.
+
+Test order: the types tests (`origin`, `patching`) failed to compile first, then passed. The op tests (structural,
+validation, inverse, Invariant 1) were written against the planned API and failed to compile; after the
+implementation the first runs failed on my own fixtures (text runs need `font` and `size`, booleans need `op`, stars
+need `points` and `innerRatio`), not on the code. The first property-test generator was nearly vacuous (83% of runs
+accepted nothing), so I biased it toward valid places and shorter batches. One contracts saboteur failed on the wrong
+assertion (its redo forgot to re-record the actor) and was fixed to fail on the rule it names.
+

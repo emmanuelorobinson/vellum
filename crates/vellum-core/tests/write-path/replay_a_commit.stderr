@@ -1,0 +1,13 @@
+error[E0308]: mismatched types
+ --> tests/write-path/replay_a_commit.rs:5:5
+  |
+4 | fn keep(commit: &Commit) -> Commit {
+  |                             ------ expected `Commit` because of return type
+5 |     commit.clone()
+  |     ^^^^^^^^^^^^^^ expected `Commit`, found `&Commit`
+  |
+note: `Commit` does not implement `Clone`, so `&Commit` was cloned instead
+ --> tests/write-path/replay_a_commit.rs:5:5
+  |
+5 |     commit.clone()
+  |     ^^^^^^

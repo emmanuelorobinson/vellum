@@ -1,0 +1,5 @@
+error[E0599]: no associated function or constant named `default` found for struct `Commit` in the current scope
+ --> tests/write-path/default_commit.rs:5:13
+  |
+5 |     Commit::default()
+  |             ^^^^^^^ associated function or constant not found in `Commit`

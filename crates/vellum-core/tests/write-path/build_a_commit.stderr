@@ -1,0 +1,13 @@
+error[E0451]: fields `origin`, `edits`, `inverse` and `changes` of struct `Commit` are private
+  --> tests/write-path/build_a_commit.rs:7:9
+   |
+ 6 |     Commit {
+   |     ------ in this type
+ 7 |         origin,
+   |         ^^^^^^ private field
+ 8 |         edits: Vec::new(),
+   |         ^^^^^ private field
+ 9 |         inverse: Vec::new(),
+   |         ^^^^^^^ private field
+10 |         changes,
+   |         ^^^^^^^ private field

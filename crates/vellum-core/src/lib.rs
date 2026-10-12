@@ -6,6 +6,7 @@
 //! This crate is pure (ARCHITECTURE §2.1): no file system, network, clock or randomness, and no dependency but
 //! `vellum-types`. `scripts/check-deps.sh` enforces that.
 
+pub mod ops;
 pub mod ports;
 
 /// The Cargo package name, used by the smoke test and by diagnostics.

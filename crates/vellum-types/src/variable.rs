@@ -88,6 +88,25 @@ impl Variable {
         }
     }
 
+    /// The variables this one aliases, in entry order (a variable may alias the same one twice).
+    pub fn aliases(&self) -> Vec<&VariableId> {
+        fn of<T>(body: &VariableBody<T>) -> Vec<&VariableId> {
+            body.values
+                .iter()
+                .filter_map(|entry| match entry {
+                    VariableValue::Alias(alias) => Some(&alias.alias),
+                    VariableValue::Literal(_) => None,
+                })
+                .collect()
+        }
+        match self {
+            Self::Color(body) => of(body),
+            Self::Number(body) => of(body),
+            Self::String(body) => of(body),
+            Self::Boolean(body) => of(body),
+        }
+    }
+
     /// The variable's name.
     pub fn name(&self) -> &str {
         match self {

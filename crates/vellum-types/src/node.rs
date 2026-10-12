@@ -615,6 +615,12 @@ impl Node {
         on_each!(self, n => &n.position)
     }
 
+    /// Places the node, the one common property the op layer sets directly (it rebases positions when it wraps
+    /// and ungroups).
+    pub fn set_position(&mut self, position: Position) {
+        on_each!(self, n => n.position = position)
+    }
+
     /// The node's width.
     pub fn width(&self) -> &Size {
         on_each!(self, n => &n.width)
