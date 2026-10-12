@@ -1,0 +1,103 @@
+{
+  "fixture": "row_hug_child_frames",
+  "root": {
+    "box": {
+      "height": 28,
+      "width": 59,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 28,
+          "width": 36,
+          "x": 0,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 10,
+              "width": 20,
+              "x": 3,
+              "y": 3
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 10,
+              "width": 20
+            }
+          },
+          {
+            "box": {
+              "height": 10,
+              "width": 30,
+              "x": 3,
+              "y": 15
+            },
+            "children": [],
+            "id": "0.0.1",
+            "props": {
+              "height": 10,
+              "width": 30
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "gap": 2,
+          "height": "hug",
+          "layout": "column",
+          "padding": [
+            3
+          ],
+          "width": "hug"
+        }
+      },
+      {
+        "box": {
+          "height": 17,
+          "width": 19,
+          "x": 40,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 15,
+              "width": 15,
+              "x": 2,
+              "y": 1
+            },
+            "children": [],
+            "id": "0.1.0",
+            "props": {
+              "height": 15,
+              "width": 15
+            }
+          }
+        ],
+        "id": "0.1",
+        "props": {
+          "height": "hug",
+          "layout": "row",
+          "padding": [
+            1,
+            2
+          ],
+          "width": "hug"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 4,
+      "height": "hug",
+      "layout": "row",
+      "width": "hug"
+    }
+  },
+  "title": "Row: hugging child frames size to their own children"
+}

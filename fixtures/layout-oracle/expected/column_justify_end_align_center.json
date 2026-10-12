@@ -1,0 +1,51 @@
+{
+  "fixture": "column_justify_end_align_center",
+  "root": {
+    "box": {
+      "height": 150,
+      "width": 100,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 30,
+          "y": 96
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 30,
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 70,
+          "x": 15,
+          "y": 130
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": 70
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "center",
+      "gap": 4,
+      "height": 150,
+      "justify": "end",
+      "layout": "column",
+      "width": 100
+    }
+  },
+  "title": "Column: justify end and align center"
+}

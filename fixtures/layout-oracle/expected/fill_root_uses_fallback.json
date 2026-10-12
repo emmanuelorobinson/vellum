@@ -1,0 +1,36 @@
+{
+  "fixture": "fill_root_uses_fallback",
+  "root": {
+    "box": {
+      "height": 50,
+      "width": 150,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 150,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": "fill",
+      "heightFallback": 50,
+      "layout": "row",
+      "width": "fill",
+      "widthFallback": 150
+    }
+  },
+  "title": "Fill on a top-level frame uses its fallback"
+}

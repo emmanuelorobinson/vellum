@@ -1,0 +1,52 @@
+{
+  "fixture": "row_fill_cross_axis",
+  "root": {
+    "box": {
+      "height": 80,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 68,
+          "width": 40,
+          "x": 6,
+          "y": 6
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": "fill",
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 40,
+          "x": 46,
+          "y": 30
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": 40
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "center",
+      "height": 80,
+      "layout": "row",
+      "padding": [
+        6
+      ],
+      "width": 200
+    }
+  },
+  "title": "Row: fill on the cross axis stretches to the row's height minus padding"
+}

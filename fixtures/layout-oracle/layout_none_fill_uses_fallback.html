@@ -1,0 +1,6 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Frame without auto-layout: a fill child uses its fallback</title>
+<div data-width="150" data-height="100">
+  <div data-x="10" data-y="10" data-width="fill" data-width-fallback="60" data-height="25"></div>
+</div>

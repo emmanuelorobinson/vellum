@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Grid: two equal columns, rows from content</title>
+<div data-layout="grid" data-columns="2" data-width="200" data-height="hug">
+  <div data-width="fill" data-height="30"></div>
+  <div data-width="fill" data-height="20"></div>
+  <div data-width="fill" data-height="40"></div>
+</div>

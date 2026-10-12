@@ -1,0 +1,53 @@
+{
+  "fixture": "hug_layout_none_uses_fallback",
+  "root": {
+    "box": {
+      "height": 30,
+      "width": 70,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 30,
+          "width": 70,
+          "x": 0,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 100,
+              "width": 200,
+              "x": 10,
+              "y": 5
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 100,
+              "width": 200,
+              "x": 10,
+              "y": 5
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "height": "hug",
+          "heightFallback": 30,
+          "width": "hug",
+          "widthFallback": 70
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": "hug",
+      "layout": "row",
+      "width": "hug"
+    }
+  },
+  "title": "Hug on a frame without auto-layout uses its fallback"
+}

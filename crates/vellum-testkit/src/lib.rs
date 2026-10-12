@@ -1,7 +1,8 @@
 //! Stub model endpoint, fake engines, fixture documents, Chrome layout oracle runner, clocks.
 //!
-//! So far: the pixel-diff helper for golden images (Prompt 4). The rest lands in the prompts that own it.
+//! So far: the pixel-diff helper for golden images (Prompt 4) and the layout oracle loader (Prompt 6). The rest lands in the prompts that own it.
 
+pub mod layout_oracle;
 pub mod pixel_diff;
 
 /// The Cargo package name, used by the smoke test and by diagnostics.

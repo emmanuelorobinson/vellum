@@ -1,0 +1,64 @@
+{
+  "fixture": "row_fill_ignores_content",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 40,
+          "width": 100,
+          "x": 0,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 10,
+              "width": 150,
+              "x": 0,
+              "y": 0
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 10,
+              "width": 150
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "height": 40,
+          "layout": "row",
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 40,
+          "width": 100,
+          "x": 100,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 40,
+          "width": "fill"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 40,
+      "layout": "row",
+      "width": 200
+    }
+  },
+  "title": "Row: fill children share space equally whatever they contain"
+}

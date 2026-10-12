@@ -1,0 +1,80 @@
+{
+  "fixture": "grid_items_align_center",
+  "root": {
+    "box": {
+      "height": 100,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 20,
+          "x": 40,
+          "y": 15
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 20
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 40,
+          "x": 130,
+          "y": 20
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 10,
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 100,
+          "x": 0,
+          "y": 70
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 10,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 50,
+          "width": 30,
+          "x": 135,
+          "y": 50
+        },
+        "children": [],
+        "id": "0.3",
+        "props": {
+          "height": "fill",
+          "width": 30
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "center",
+      "columns": 2,
+      "height": 100,
+      "justify": "center",
+      "layout": "grid",
+      "rows": 2,
+      "width": 200
+    }
+  },
+  "title": "Grid: justify and align center place items inside their cells"
+}

@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Hug on a frame without auto-layout uses its fallback</title>
+<div data-layout="row" data-width="hug" data-height="hug">
+  <div data-width="hug" data-width-fallback="70" data-height="hug" data-height-fallback="30">
+    <div data-x="10" data-y="5" data-width="200" data-height="100"></div>
+  </div>
+</div>

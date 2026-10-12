@@ -10,7 +10,8 @@
       "!packages/types-ts/src/generated",
       "!packages/types-ts/src/index.ts",
       "!pnpm-lock.yaml",
-      "!spikes/*/results"
+      "!spikes/*/results",
+      "!fixtures/layout-oracle/expected"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

@@ -1,0 +1,6 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Fill on a top-level frame uses its fallback</title>
+<div data-layout="row" data-width="fill" data-width-fallback="150" data-height="fill" data-height-fallback="50">
+  <div data-width="fill" data-height="20"></div>
+</div>

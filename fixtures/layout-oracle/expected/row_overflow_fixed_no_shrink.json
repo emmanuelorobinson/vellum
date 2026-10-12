@@ -1,0 +1,63 @@
+{
+  "fixture": "row_overflow_fixed_no_shrink",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 100,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 60,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 60
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 60,
+          "x": 70,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": 60
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 0,
+          "x": 140,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 10,
+      "height": 40,
+      "layout": "row",
+      "width": 100
+    }
+  },
+  "title": "Row: fixed children never shrink when they overflow"
+}

@@ -1,0 +1,97 @@
+{
+  "fixture": "column_hug_nested_rows",
+  "root": {
+    "box": {
+      "height": 32,
+      "width": 50,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 15,
+          "width": 43,
+          "x": 0,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 10,
+              "width": 20,
+              "x": 0,
+              "y": 0
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 10,
+              "width": 20
+            }
+          },
+          {
+            "box": {
+              "height": 15,
+              "width": 20,
+              "x": 23,
+              "y": 0
+            },
+            "children": [],
+            "id": "0.0.1",
+            "props": {
+              "height": 15,
+              "width": 20
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "gap": 3,
+          "height": "hug",
+          "layout": "row",
+          "width": "hug"
+        }
+      },
+      {
+        "box": {
+          "height": 12,
+          "width": 50,
+          "x": 0,
+          "y": 20
+        },
+        "children": [
+          {
+            "box": {
+              "height": 12,
+              "width": 50,
+              "x": 0,
+              "y": 0
+            },
+            "children": [],
+            "id": "0.1.0",
+            "props": {
+              "height": 12,
+              "width": 50
+            }
+          }
+        ],
+        "id": "0.1",
+        "props": {
+          "gap": 3,
+          "height": "hug",
+          "layout": "row",
+          "width": "hug"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 5,
+      "height": "hug",
+      "layout": "column",
+      "width": "hug"
+    }
+  },
+  "title": "Column: hugging column of hugging rows"
+}

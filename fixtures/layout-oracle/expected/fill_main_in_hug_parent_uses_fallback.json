@@ -1,0 +1,50 @@
+{
+  "fixture": "fill_main_in_hug_parent_uses_fallback",
+  "root": {
+    "box": {
+      "height": 20,
+      "width": 80,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 45,
+          "x": 35,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": "fill",
+          "widthFallback": 45
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 5,
+      "height": "hug",
+      "layout": "row",
+      "width": "hug"
+    }
+  },
+  "title": "Fill on the main axis of a hugging row uses its fallback"
+}

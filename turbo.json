@@ -21,7 +21,8 @@
       "cache": false
     },
     "//#test:scripts": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["VELLUM_LANES", "VELLUM_CHROME"]
     },
     "build": {
       "dependsOn": ["^build"],

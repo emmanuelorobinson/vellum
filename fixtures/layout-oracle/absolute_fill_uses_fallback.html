@@ -1,0 +1,7 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Absolute child: fill has nothing to fill and uses its fallback</title>
+<div data-layout="row" data-padding="10" data-width="200" data-height="100">
+  <div data-width="fill" data-height="20"></div>
+  <div data-position="absolute" data-x="20" data-y="50" data-width="fill" data-width-fallback="40" data-height="fill" data-height-fallback="30"></div>
+</div>

@@ -1,0 +1,68 @@
+{
+  "fixture": "fill_main_in_hug_parent_hugs",
+  "root": {
+    "box": {
+      "height": 58,
+      "width": 100,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 33,
+          "width": 60,
+          "x": 0,
+          "y": 25
+        },
+        "children": [
+          {
+            "box": {
+              "height": 25,
+              "width": 10,
+              "x": 4,
+              "y": 4
+            },
+            "children": [],
+            "id": "0.1.0",
+            "props": {
+              "height": 25,
+              "width": 10
+            }
+          }
+        ],
+        "id": "0.1",
+        "props": {
+          "height": "fill",
+          "layout": "row",
+          "padding": [
+            4
+          ],
+          "width": 60
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 5,
+      "height": "hug",
+      "layout": "column",
+      "width": 100
+    }
+  },
+  "title": "Fill on the main axis of a hugging column without a fallback hugs"
+}

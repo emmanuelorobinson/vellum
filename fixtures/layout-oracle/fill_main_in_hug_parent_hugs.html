@@ -1,0 +1,9 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Fill on the main axis of a hugging column without a fallback hugs</title>
+<div data-layout="column" data-gap="5" data-width="100" data-height="hug">
+  <div data-width="30" data-height="20"></div>
+  <div data-layout="row" data-padding="4" data-width="60" data-height="fill">
+    <div data-width="10" data-height="25"></div>
+  </div>
+</div>

@@ -8,6 +8,18 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-002** (Prompt 6). It accepts D2 and fixes Vellum's sizing rules where CSS's defaults disagree with
+  hug, fill and fixed (15 rows, each with a fixture). Decisions worth a look: fill shares space equally and ignores its
+  content (`flex-basis: 0`, `min-width: 0`); fixed and hug never shrink; fill on the main axis of a hugging parent uses
+  its fallback, else hugs; hug on a frame without auto-layout, and fill with nothing to fill, need a fallback; two padding
+  values are vertical then horizontal, as in CSS.
+- **Define grid tracks and `layoutIncludesStroke` in ARCHITECTURE §4.1** (Prompt 6). ARCHITECTURE gives a grid no
+  track fields and does not say what `layoutIncludesStroke` includes. The oracle assumes `columns`/`rows` counts with
+  equal tracks and leaves strokes out of layout. Prompts 7 and 18 need the real definitions; only a person edits
+  ARCHITECTURE.md.
+- **Watch the first CI run of the new `layout-oracle` job** (Prompt 6). It has not run on GitHub yet. It installs Chrome
+  for Testing 155.0.8059.39 on Ubuntu and runs `--check` against boxes written by Chrome on macOS. No fixture has text,
+  so the boxes should not depend on the OS, but that is unproven until the job passes.
 - **Review ADR-004 and ADR-001's new "Text" section** (Prompt 5). ADR-004 keeps Loro behind DocStore and sets the S06
   directory-codec suggestion at 10,000 nodes or 4 MB of `.vellum` JSON. ADR-001 now says: Parley lays text out, Skia
   only draws glyphs, no skia-safe `textlayout`, and every renderer uses Skia's FreeType font manager.
@@ -264,3 +276,57 @@ the three measurements; at the root: `biome check .`, `pnpm run copy-lint`, `pnp
 `pnpm run deps:check`, `pnpm run test:scripts` (123), `pnpm run design:check`, `cargo test --workspace`,
 `cargo clippy --workspace --all-targets -D warnings`, `cargo fmt --check`. `pnpm type-check` was not re-run: no
 TypeScript package changed.
+
+## Prompt 6: Spike C, Chrome layout oracle (ADR-002)
+
+Not committed. Prompt 5 was committed before this session (`78175eb`, `37be68d`). Decision: **D2 accepted**; see
+`docs/architecture/decisions/ADR-002-layout-oracle.md` for the CSS mapping, the 15 semantic mismatches and how each is
+resolved.
+
+Built:
+- `vellum-testkit::layout_oracle` (TDD, 6 tests): loads expected-box JSON (strict fields, unique ids, finite
+  non-negative boxes), saves it deterministically, `load_dir` (skips `manifest.json`, file name must match the
+  fixture), and `compare` at `TOLERANCE_PX = 0.5`. Adds `serde` and `serde_json` (workspace versions) to vellum-testkit.
+- `scripts/gen-layout-oracle.sh` (now real) → `scripts/gen-layout-oracle.mjs`: `--check`, `--out`, `--only`, `--help`.
+  `scripts/lib/layout-oracle.mjs` holds the fixture parser, the semantic resolution and the CSS mapping;
+  `scripts/lib/chrome.mjs` drives headless Chrome over `--remote-debugging-pipe` (no TCP port, no npm dependency).
+- `fixtures/layout-oracle/`: 51 fixtures (`TEST DATA`), written in Vellum semantics as `data-*` attributes, and
+  `expected/` with Chrome's boxes and `manifest.json`. A full regeneration takes under 2 s.
+- `spikes/layout/`: a separate Cargo workspace; taffy 0.14.0 lays out every fixture through a mapping that mirrors the
+  CSS one, compared at 0.5 px, with an exact `known-mismatches.txt` (empty).
+- CI: a `layout-oracle` job (chrome lane) that installs Chrome for Testing 155.0.8059.39, runs `--check`, then the Taffy
+  spike test. `docs/runbooks/layout-oracle.md`; version-baseline taffy row and note C17; AGENTS.md command row.
+
+Results: Taffy matches Chrome on all 51 fixtures (186 visible nodes); the largest difference is 0.0104 px (Chrome's
+1/64 px layout units). Breaking the spike mapping on purpose makes 11 nodes in 4 fixtures fail, so the comparison is not
+vacuous.
+
+Things that differ from the guide, surprised me, or could not be verified:
+- **Fixtures are Vellum semantics, not CSS.** The guide says "fixtures written as HTML (our sizing semantics mapped to
+  CSS)". Each fixture is HTML, but its elements carry only Vellum properties; the generator applies the mapping and
+  renders the CSS equivalent. That way the mapping is tested too, and Prompt 18 can feed the same props to Taffy.
+- **No text in any fixture.** Hugging text needs `TextEngine` (Prompt 19) and a shared font. Also not covered:
+  `layoutIncludesStroke` and real grid tracks (undefined in ARCHITECTURE, see "Needs a person"), wrap, min/max,
+  percentages, RTL. The guide wants at least 150 fixtures by Prompt 18.
+- **Turborepo was dropping `VELLUM_LANES`.** In strict env mode, `VELLUM_LANES=chrome pnpm test` reached the script
+  tests without the variable, so lane tests always skipped through Turbo. `turbo.json` now passes `VELLUM_LANES` and
+  `VELLUM_CHROME` through to `//#test:scripts` (`passThroughEnv`; `globalPassThroughEnv` is deprecated in 2.11.7).
+  Prompt 4's and 5's lane tests run outside Turbo, so they were not affected.
+- **taffy 0.14.0's API differs from the `refs/taffy` pin**: alignment constants are `AlignItems::FLEX_START` on
+  crates.io, `AlignItems::FlexStart` at the pin and in its `docs/style-properties.md` (note C17).
+- **Biome ignores `fixtures/layout-oracle/expected`**: the generator writes one value per line, and Biome would collapse
+  short arrays. The files are generated, like `spikes/*/results`.
+- **`cargo fmt` in a spike workspace reformats `crates/vellum-testkit`** (a path dependency) differently from the root,
+  as in Prompt 4. Use `cargo fmt -p spike-layout` there; root `cargo fmt --all` restored the testkit.
+- **Only macOS Chrome has written boxes so far.** The CI job (Linux) is unproven; see "Needs a person".
+- **Test order:** the testkit tests failed to compile before the module existed; the script tests failed (missing
+  module, then missing fixtures and the not-implemented script) before the code; the Taffy test failed to compile before
+  `compute` existed and then exposed the `manifest.json` gap in `load_dir`, which got its own failing test first.
+
+Verified: `cargo test -p vellum-testkit --test layout_oracle` (6), `VELLUM_LANES=chrome node --test
+"scripts/__tests__/*.test.mjs"` (140, chrome lane included), `VELLUM_LANES=chrome pnpm exec turbo run //#test:scripts`
+(140, chrome lane runs), `bash scripts/gen-layout-oracle.sh --check` (51 match), in `spikes/layout`: `cargo test` (2),
+`cargo clippy --all-targets -D warnings`, `cargo fmt --check -p spike-layout`; at the root: `pnpm exec biome check .`,
+`pnpm run copy-lint`, `pnpm run clean-room`, `pnpm run deps:check`, `pnpm run checksum`, `pnpm run design:check`,
+`pnpm run type-check`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -D warnings`,
+`cargo fmt --all --check`, `cargo deny check`.

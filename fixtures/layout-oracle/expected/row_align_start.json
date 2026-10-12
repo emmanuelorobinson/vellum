@@ -1,0 +1,49 @@
+{
+  "fixture": "row_align_start",
+  "root": {
+    "box": {
+      "height": 60,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 40,
+          "width": 30,
+          "x": 30,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 40,
+          "width": 30
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "start",
+      "height": 60,
+      "layout": "row",
+      "width": 200
+    }
+  },
+  "title": "Row: align start does not stretch children"
+}

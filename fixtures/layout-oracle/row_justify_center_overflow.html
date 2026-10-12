@@ -1,0 +1,7 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Row: centred children that overflow spill out on both sides</title>
+<div data-layout="row" data-justify="center" data-width="100" data-height="40">
+  <div data-width="80" data-height="20"></div>
+  <div data-width="80" data-height="20"></div>
+</div>

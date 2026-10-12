@@ -1,0 +1,10 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Grid: three columns with gap and padding</title>
+<div data-layout="grid" data-columns="3" data-gap="10" data-padding="10" data-width="320" data-height="hug">
+  <div data-width="fill" data-height="fill"></div>
+  <div data-width="fill" data-height="50"></div>
+  <div data-width="fill" data-height="fill"></div>
+  <div data-width="40" data-height="20"></div>
+  <div data-width="fill" data-height="fill"></div>
+</div>

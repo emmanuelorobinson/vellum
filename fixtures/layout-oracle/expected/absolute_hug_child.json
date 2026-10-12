@@ -1,0 +1,71 @@
+{
+  "fixture": "absolute_hug_child",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 80,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 14,
+          "width": 68,
+          "x": 60,
+          "y": 10
+        },
+        "children": [
+          {
+            "box": {
+              "height": 10,
+              "width": 30,
+              "x": 2,
+              "y": 2
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 10,
+              "width": 30
+            }
+          },
+          {
+            "box": {
+              "height": 10,
+              "width": 30,
+              "x": 36,
+              "y": 2
+            },
+            "children": [],
+            "id": "0.0.1",
+            "props": {
+              "height": 10,
+              "width": 30
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "gap": 4,
+          "height": "hug",
+          "layout": "row",
+          "padding": [
+            2
+          ],
+          "position": "absolute",
+          "width": "hug",
+          "x": 60,
+          "y": 10
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 40,
+      "layout": "row",
+      "width": 80
+    }
+  },
+  "title": "Absolute child that hugs its own children, past the parent's edge"
+}

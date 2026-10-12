@@ -1,0 +1,70 @@
+{
+  "fixture": "layout_none_children_positioned",
+  "root": {
+    "box": {
+      "height": 150,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 50,
+          "width": 50,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 50,
+          "width": 50,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "box": {
+          "height": 100,
+          "width": 100,
+          "x": 120,
+          "y": 80
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 100,
+          "width": 100,
+          "x": 120,
+          "y": 80
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 30,
+          "x": -10,
+          "y": 20
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 10,
+          "width": 30,
+          "x": -10,
+          "y": 20
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 150,
+      "padding": [
+        10
+      ],
+      "width": 200
+    }
+  },
+  "title": "Frame without auto-layout: children sit at their own x and y"
+}

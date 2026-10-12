@@ -158,7 +158,8 @@ Keep it factual and short. Do not record secrets, and do not paste design conten
 | `pnpm design:open` | copy `docs/design/vellum.pen` to `.design-cache/vellum.readonly.pen` (no write bit) and open that copy in pen.dev; `--no-open` only copies |
 | `pnpm design:snapshot` | regenerate `docs/design/snapshots/` (PNG at 1x and 2x, `inventory.json`) with the pen CLI on the read-only copy. Needs `pen login` or `PEN_CLI_KEY`; run locally, not in CI. Only `inventory.json` is committed; the PNGs are gitignored |
 | `pnpm design:check` | no pen.dev needed: `inventory.json` matches `vellum.pen`'s checksum, every PNG it names exists when any are present locally, every screen, theme and width DESIGN.md asks for exists, names follow the file's convention. Runs in CI |
-| `layout-oracle` `fixtures:record` | later prompts; exit non-zero until then |
+| `pnpm layout-oracle` | lay out `fixtures/layout-oracle/*.html` in headless Chrome and write the expected boxes (ADR-002); `--check` compares with the committed ones (CI's chrome lane). Needs Chrome (`VELLUM_CHROME`); see `docs/runbooks/layout-oracle.md` |
+| `fixtures:record` | later prompts; exits non-zero until then |
 
 ## Layout
 
@@ -168,7 +169,7 @@ packages/      TypeScript packages (@vellum/*); types-ts is generated
 apps/          extension, desktop, account, api, web, docs
 docs/          product/, design/, architecture/, implementation/ (the guide)
 scripts/       repo tooling and its tests (scripts/__tests__)
-fixtures/      golden documents and reference images (later)
+fixtures/      layout-oracle/ (Chrome layout oracle, Prompt 6); golden documents and reference images (later)
 refs/          reference repositories, gitignored, read-only
 ```
 

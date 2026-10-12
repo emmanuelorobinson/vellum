@@ -1,0 +1,82 @@
+{
+  "fixture": "clip_does_not_change_layout",
+  "root": {
+    "box": {
+      "height": 50,
+      "width": 150,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 50,
+          "width": 110,
+          "x": 0,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 10,
+              "width": 200,
+              "x": 0,
+              "y": 0
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 10,
+              "width": 200
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "clip": true,
+          "height": 50,
+          "layout": "row",
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 110,
+          "y": 0
+        },
+        "children": [
+          {
+            "box": {
+              "height": 30,
+              "width": 40,
+              "x": 0,
+              "y": 0
+            },
+            "children": [],
+            "id": "0.1.0",
+            "props": {
+              "height": 30,
+              "width": 40
+            }
+          }
+        ],
+        "id": "0.1",
+        "props": {
+          "clip": true,
+          "height": "hug",
+          "layout": "row",
+          "width": "hug"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 50,
+      "layout": "row",
+      "width": 150
+    }
+  },
+  "title": "Clipping content does not change layout"
+}

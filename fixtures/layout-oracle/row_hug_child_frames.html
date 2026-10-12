@@ -1,0 +1,12 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Row: hugging child frames size to their own children</title>
+<div data-layout="row" data-gap="4" data-width="hug" data-height="hug">
+  <div data-layout="column" data-gap="2" data-padding="3" data-width="hug" data-height="hug">
+    <div data-width="20" data-height="10"></div>
+    <div data-width="30" data-height="10"></div>
+  </div>
+  <div data-layout="row" data-padding="1 2" data-width="hug" data-height="hug">
+    <div data-width="15" data-height="15"></div>
+  </div>
+</div>

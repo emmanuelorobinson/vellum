@@ -1,0 +1,66 @@
+{
+  "fixture": "column_justify_space_between",
+  "root": {
+    "box": {
+      "height": 200,
+      "width": 80,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 10,
+          "y": 10
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 30,
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 10,
+          "y": 85
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 30,
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 10,
+          "y": 160
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 30,
+          "width": 40
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 200,
+      "justify": "space-between",
+      "layout": "column",
+      "padding": [
+        10
+      ],
+      "width": 80
+    }
+  },
+  "title": "Column: space-between"
+}

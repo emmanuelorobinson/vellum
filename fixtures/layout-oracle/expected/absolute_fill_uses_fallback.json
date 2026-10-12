@@ -1,0 +1,56 @@
+{
+  "fixture": "absolute_fill_uses_fallback",
+  "root": {
+    "box": {
+      "height": 100,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 180,
+          "x": 10,
+          "y": 10
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 20,
+          "y": 50
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": "fill",
+          "heightFallback": 30,
+          "position": "absolute",
+          "width": "fill",
+          "widthFallback": 40,
+          "x": 20,
+          "y": 50
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 100,
+      "layout": "row",
+      "padding": [
+        10
+      ],
+      "width": 200
+    }
+  },
+  "title": "Absolute child: fill has nothing to fill and uses its fallback"
+}

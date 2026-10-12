@@ -1,0 +1,62 @@
+{
+  "fixture": "row_fill_thirds",
+  "root": {
+    "box": {
+      "height": 20,
+      "width": 100,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 33.328125,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 33.34375,
+          "x": 33.328125,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 33.328125,
+          "x": 66.671875,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 20,
+      "layout": "row",
+      "width": 100
+    }
+  },
+  "title": "Row: three fill children split a width that does not divide evenly"
+}

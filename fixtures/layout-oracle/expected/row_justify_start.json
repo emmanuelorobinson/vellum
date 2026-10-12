@@ -1,0 +1,50 @@
+{
+  "fixture": "row_justify_start",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 30,
+          "width": 30,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 30,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 40,
+          "x": 35,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 30,
+          "width": 40
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 5,
+      "height": 40,
+      "justify": "start",
+      "layout": "row",
+      "width": 200
+    }
+  },
+  "title": "Row: justify start"
+}

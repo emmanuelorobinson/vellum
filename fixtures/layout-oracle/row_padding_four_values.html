@@ -1,0 +1,7 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Row: four padding values are top, right, bottom, left</title>
+<div data-layout="row" data-padding="2 4 8 16" data-gap="3" data-width="hug" data-height="hug">
+  <div data-width="30" data-height="20"></div>
+  <div data-width="20" data-height="25"></div>
+</div>

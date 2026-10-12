@@ -1,0 +1,7 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Row: fill on the cross axis stretches to the row's height minus padding</title>
+<div data-layout="row" data-align="center" data-padding="6" data-width="200" data-height="80">
+  <div data-width="40" data-height="fill"></div>
+  <div data-width="40" data-height="20"></div>
+</div>

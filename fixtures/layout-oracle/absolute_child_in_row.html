@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Absolute child in a row: out of the flow, placed from the frame's top-left</title>
+<div data-layout="row" data-gap="10" data-padding="10" data-width="200" data-height="60">
+  <div data-width="30" data-height="30"></div>
+  <div data-position="absolute" data-x="150" data-y="5" data-width="20" data-height="20"></div>
+  <div data-width="30" data-height="30"></div>
+</div>

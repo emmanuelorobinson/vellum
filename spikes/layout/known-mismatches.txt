@@ -1,0 +1,5 @@
+# Taffy vs the Chrome layout oracle: mismatches ADR-002 records and accepts for now.
+# One "<fixture> <node id>" per line; text after "#" is the reason. tests/oracle.rs fails when a
+# mismatch appears that is not listed here, and when a listed one stops happening.
+#
+# Empty: Taffy 0.14.0 matches Chrome 155 on every starter fixture within 0.5 px (2026-10-12).

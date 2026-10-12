@@ -53,6 +53,32 @@ jobs:
       - name: Specification unchanged by build and test
         run: node scripts/spec-checksums.mjs check
 
+  layout-oracle:
+    name: Layout oracle (chrome lane)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # The Chrome for Testing build that wrote fixtures/layout-oracle/expected/ (manifest.json).
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          chrome-version: 155.0.8059.39
+          install-dependencies: true
+      - name: Regenerate the oracle in headless Chrome and compare with the committed boxes
+        env:
+          VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: bash scripts/gen-layout-oracle.sh --check
+      - name: Install the toolchain pinned in rust-toolchain.toml
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spikes/layout
+      - name: Taffy computes the same fixtures (spike, ADR-002)
+        run: cargo test --manifest-path spikes/layout/Cargo.toml
+
   repo:
     name: Repo checks (script tests, dependency rules, clean room, copy, specification checksums)
     runs-on: ubuntu-latest

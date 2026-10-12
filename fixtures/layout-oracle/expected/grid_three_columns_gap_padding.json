@@ -1,0 +1,95 @@
+{
+  "fixture": "grid_three_columns_gap_padding",
+  "root": {
+    "box": {
+      "height": 100,
+      "width": 320,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 50,
+          "width": 93.328125,
+          "x": 10,
+          "y": 10
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": "fill",
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 50,
+          "width": 93.328125,
+          "x": 113.328125,
+          "y": 10
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 50,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 50,
+          "width": 93.34375,
+          "x": 216.65625,
+          "y": 10
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": "fill",
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 40,
+          "x": 10,
+          "y": 70
+        },
+        "children": [],
+        "id": "0.3",
+        "props": {
+          "height": 20,
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 93.328125,
+          "x": 113.328125,
+          "y": 70
+        },
+        "children": [],
+        "id": "0.4",
+        "props": {
+          "height": "fill",
+          "width": "fill"
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "columns": 3,
+      "gap": 10,
+      "height": "hug",
+      "layout": "grid",
+      "padding": [
+        10
+      ],
+      "width": 320
+    }
+  },
+  "title": "Grid: three columns with gap and padding"
+}

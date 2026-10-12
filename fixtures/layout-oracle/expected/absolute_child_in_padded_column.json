@@ -1,0 +1,56 @@
+{
+  "fixture": "absolute_child_in_padded_column",
+  "root": {
+    "box": {
+      "height": 120,
+      "width": 120,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 40,
+          "width": 40,
+          "x": 40,
+          "y": 40
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 40,
+          "width": 40
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 10,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 10,
+          "position": "absolute",
+          "width": 10,
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "center",
+      "height": 120,
+      "justify": "center",
+      "layout": "column",
+      "padding": [
+        20
+      ],
+      "width": 120
+    }
+  },
+  "title": "Absolute child in a padded column ignores padding and alignment"
+}

@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Absolute child in a grid takes no cell</title>
+<div data-layout="grid" data-columns="2" data-gap="4" data-width="100" data-height="hug">
+  <div data-position="absolute" data-x="-5" data-y="-5" data-width="10" data-height="10"></div>
+  <div data-width="fill" data-height="20"></div>
+  <div data-width="fill" data-height="20"></div>
+</div>

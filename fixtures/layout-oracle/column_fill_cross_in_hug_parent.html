@@ -1,0 +1,9 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Column: fill width in a hugging column matches the widest sibling</title>
+<div data-layout="column" data-gap="4" data-padding="6" data-width="hug" data-height="hug">
+  <div data-width="fill" data-height="20"></div>
+  <div data-width="90" data-height="20"></div>
+  <div data-width="fill" data-height="10"></div>
+  <div data-width="40" data-height="10"></div>
+</div>

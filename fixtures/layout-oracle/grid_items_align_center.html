@@ -1,0 +1,9 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Grid: justify and align center place items inside their cells</title>
+<div data-layout="grid" data-columns="2" data-rows="2" data-justify="center" data-align="center" data-width="200" data-height="100">
+  <div data-width="20" data-height="20"></div>
+  <div data-width="40" data-height="10"></div>
+  <div data-width="fill" data-height="10"></div>
+  <div data-width="30" data-height="fill"></div>
+</div>

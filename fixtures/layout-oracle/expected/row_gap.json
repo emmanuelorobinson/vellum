@@ -1,0 +1,63 @@
+{
+  "fixture": "row_gap",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 30,
+          "width": 30,
+          "x": 0,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 30,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 30,
+          "x": 42,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 30,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 30,
+          "width": 30,
+          "x": 84,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 30,
+          "width": 30
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 12,
+      "height": 40,
+      "layout": "row",
+      "width": 200
+    }
+  },
+  "title": "Row: gap between fixed children"
+}

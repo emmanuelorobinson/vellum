@@ -1,0 +1,7 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Absolute child in a padded column ignores padding and alignment</title>
+<div data-layout="column" data-align="center" data-justify="center" data-padding="20" data-width="120" data-height="120">
+  <div data-width="40" data-height="40"></div>
+  <div data-position="absolute" data-x="0" data-y="0" data-width="10" data-height="10"></div>
+</div>

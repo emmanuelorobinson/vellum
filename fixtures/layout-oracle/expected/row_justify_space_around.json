@@ -1,0 +1,63 @@
+{
+  "fixture": "row_justify_space_around",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 200,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 18.328125,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 85,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 151.65625,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 40,
+      "justify": "space-around",
+      "layout": "row",
+      "width": 200
+    }
+  },
+  "title": "Row: space-around"
+}

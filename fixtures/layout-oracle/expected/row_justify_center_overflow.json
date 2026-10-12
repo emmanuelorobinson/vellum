@@ -1,0 +1,49 @@
+{
+  "fixture": "row_justify_center_overflow",
+  "root": {
+    "box": {
+      "height": 40,
+      "width": 100,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 80,
+          "x": -30,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 80
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 80,
+          "x": 50,
+          "y": 0
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": 80
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": 40,
+      "justify": "center",
+      "layout": "row",
+      "width": 100
+    }
+  },
+  "title": "Row: centred children that overflow spill out on both sides"
+}

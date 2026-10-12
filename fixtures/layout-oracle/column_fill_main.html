@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Column: fill children split the height</title>
+<div data-layout="column" data-gap="6" data-padding="4" data-width="80" data-height="200">
+  <div data-width="50" data-height="fill"></div>
+  <div data-width="50" data-height="40"></div>
+  <div data-width="50" data-height="fill"></div>
+</div>

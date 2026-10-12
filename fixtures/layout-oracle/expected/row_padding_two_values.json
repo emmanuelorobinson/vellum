@@ -1,0 +1,52 @@
+{
+  "fixture": "row_padding_two_values",
+  "root": {
+    "box": {
+      "height": 32,
+      "width": 78,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 30,
+          "x": 14,
+          "y": 6
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": 30
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 20,
+          "x": 44,
+          "y": 6
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 10,
+          "width": 20
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": "hug",
+      "layout": "row",
+      "padding": [
+        6,
+        14
+      ],
+      "width": "hug"
+    }
+  },
+  "title": "Row: two padding values are vertical then horizontal"
+}

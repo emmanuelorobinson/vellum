@@ -27,7 +27,7 @@
 | axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
 | loro | 1.16.2 | 1.16.x | spike only: `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
-| taffy | 0.14.0 | 0.14.x | not yet used | layout adapter (Prompt 18) |
+| taffy | 0.14.0 | 0.14.x | spike only: `spikes/layout` (Prompt 6, default features) | layout adapter (Prompt 18); ADR-002, C17 |
 | parley | 0.12.0 | 0.12.x | spike only: `spikes/renderer` (Prompt 5; no default features, `std`) | text adapter (Prompt 19); ADR-001's text decision |
 | fontique | 0.12.0 | 0.12.x | not yet used | ships with parley; a direct dependency only if needed |
 | skia-safe | 0.153.3 | 0.153.x | spike only: `spikes/renderer` (features gl; textlayout for a size build and the native SkParagraph comparison) | the renderer everywhere, native and emscripten (ADR-001, C15, C16) |
@@ -174,6 +174,11 @@ No repository has a release at or after its pin, so every pin stays at the guide
   skia_enable_fontmgr_custom_empty=true"`) and patches one bindgen alias for the macOS 27 SDK
   (`spikes/renderer/scripts/build-native.sh`). Fonts for the text fixtures are Noto files pinned by SHA-256 in
   `spikes/renderer/fonts.json`, downloaded and not committed.
+- **C17: Chrome for Testing 155.0.8059.39 writes the layout oracle** (Prompt 6, ADR-002). It is the version recorded in
+  `fixtures/layout-oracle/expected/manifest.json`; CI installs it with `browser-actions/setup-chrome@v2` (v2.2.0 when written; Chrome pinned
+  by version in `.github/workflows/ci.yml`). The committed boxes, not the version, are the contract: `--check` passes
+  under another Chrome as long as no box moves more than 0.5 px. taffy 0.14.0 on crates.io predates the `refs/taffy`
+  pin and spells alignment constants `AlignItems::FLEX_START`, not the pin's `AlignItems::FlexStart`.
 
 ## What the reference clones are for
 

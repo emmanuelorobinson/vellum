@@ -9,6 +9,9 @@ publish.workspace = true
 [dependencies]
 # PNG read/write for golden images and diff artifacts (pixel_diff).
 png = "0.18.1"
+# Expected-box files of the Chrome layout oracle (layout_oracle).
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

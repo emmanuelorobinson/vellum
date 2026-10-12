@@ -1,0 +1,10 @@
+<!doctype html>
+<!-- TEST DATA: layout oracle fixture (guide Prompt 6, ADR-002). Vellum sizing semantics as data-* attributes; scripts/gen-layout-oracle.sh maps them to CSS and records the boxes Chrome computes. -->
+<title>Hidden children take no space, gap included</title>
+<div data-layout="row" data-gap="10" data-width="hug" data-height="hug">
+  <div data-width="30" data-height="20"></div>
+  <div data-width="40" data-height="40" data-visible="false">
+    <div data-width="10" data-height="10"></div>
+  </div>
+  <div data-width="30" data-height="20"></div>
+</div>

@@ -1,0 +1,17 @@
+# Spike C (guide Prompt 6): Taffy computes the Chrome layout oracle's fixtures, for ADR-002.
+# Spike quality; the layout adapter is Prompt 18 (crates/adapters/layout-taffy). A separate Cargo
+# workspace so taffy never enters the product dependency graph before its adapter exists.
+[workspace]
+resolver = "3"
+
+[package]
+name = "spike-layout"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+taffy = "0.14.0"
+serde_json = "1.0.154"
+vellum-testkit = { path = "../../crates/vellum-testkit" }

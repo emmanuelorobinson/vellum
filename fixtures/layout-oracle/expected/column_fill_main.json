@@ -1,0 +1,66 @@
+{
+  "fixture": "column_fill_main",
+  "root": {
+    "box": {
+      "height": 200,
+      "width": 80,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 70,
+          "width": 50,
+          "x": 4,
+          "y": 4
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": "fill",
+          "width": 50
+        }
+      },
+      {
+        "box": {
+          "height": 40,
+          "width": 50,
+          "x": 4,
+          "y": 80
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 40,
+          "width": 50
+        }
+      },
+      {
+        "box": {
+          "height": 70,
+          "width": 50,
+          "x": 4,
+          "y": 126
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": "fill",
+          "width": 50
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 6,
+      "height": 200,
+      "layout": "column",
+      "padding": [
+        4
+      ],
+      "width": 80
+    }
+  },
+  "title": "Column: fill children split the height"
+}

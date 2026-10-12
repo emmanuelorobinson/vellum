@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Placeholder. Real implementation: Prompt 6 (Chrome layout oracle).
+# Chrome layout oracle (guide Prompt 6, ADR-002): lays out fixtures/layout-oracle/*.html in headless
+# Chrome and writes the expected boxes to fixtures/layout-oracle/expected/. --help lists the options.
 set -euo pipefail
-. "$(dirname "$0")/lib/not-implemented.sh"
-not_implemented "scripts/gen-layout-oracle.sh" "6 (Chrome layout oracle)"
+exec node "$(dirname "$0")/gen-layout-oracle.mjs" "$@"

@@ -1,0 +1,80 @@
+{
+  "fixture": "column_fill_cross_in_hug_parent",
+  "root": {
+    "box": {
+      "height": 84,
+      "width": 102,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 20,
+          "width": 90,
+          "x": 6,
+          "y": 6
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 20,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 20,
+          "width": 90,
+          "x": 6,
+          "y": 30
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 20,
+          "width": 90
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 90,
+          "x": 6,
+          "y": 54
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 10,
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 10,
+          "width": 40,
+          "x": 6,
+          "y": 68
+        },
+        "children": [],
+        "id": "0.3",
+        "props": {
+          "height": 10,
+          "width": 40
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 4,
+      "height": "hug",
+      "layout": "column",
+      "padding": [
+        6
+      ],
+      "width": "hug"
+    }
+  },
+  "title": "Column: fill width in a hugging column matches the widest sibling"
+}
