@@ -44,14 +44,15 @@ fn with(kind: &str, extra: Json) -> Json {
 }
 
 #[test]
-fn there_are_eighteen_node_kinds() {
-    assert_eq!(NodeKind::ALL.len(), 18);
+fn there_are_nineteen_node_kinds() {
+    assert_eq!(NodeKind::ALL.len(), 19);
     let names: Vec<&str> = NodeKind::ALL.iter().map(|k| k.as_str()).collect();
     assert_eq!(
         names,
         [
             "frame", "group", "rect", "ellipse", "polygon", "star", "line", "vector", "boolean",
-            "text", "image", "icon", "instance", "script", "note", "context", "prompt", "embed"
+            "text", "image", "icon", "instance", "script", "note", "context", "prompt", "embed",
+            "conflict"
         ]
     );
 }
@@ -316,6 +317,44 @@ fn script_note_context_prompt_and_embed_round_trip() {
         }),
     ));
     canonical(with("embed", json!({"url": "http://localhost:3000"})));
+}
+
+/// A merge leaves a conflict node where both sides changed the same properties of a node (ARCHITECTURE §4.5,
+/// DESIGN C22). It takes the node's place and id, holds each side's version without children (absent when that
+/// side removed the node), names the properties in conflict, and keeps the node's merged children.
+#[test]
+fn a_conflict_node_holds_both_versions_and_the_children() {
+    let ours = with(
+        "rect",
+        json!({"fills": [{"type": "solid", "color": "#FF0000"}]}),
+    );
+    let theirs = with(
+        "rect",
+        json!({"fills": [{"type": "solid", "color": "#0000FF"}]}),
+    );
+    let node = canonical(with(
+        "conflict",
+        json!({
+            "ours": ours,
+            "theirs": theirs,
+            "properties": ["fills"],
+            "children": [with("rect", json!({"id": "node000002"}))]
+        }),
+    ));
+    assert_eq!(node.kind(), NodeKind::Conflict);
+    assert_eq!(node.children().len(), 1);
+    let Node::Conflict(conflict) = &node else {
+        panic!("a conflict node")
+    };
+    assert_eq!(conflict.properties, ["fills"]);
+    assert!(conflict.ours.is_some() && conflict.theirs.is_some());
+
+    // One side removed the node: its version is absent.
+    let removed = canonical(with("conflict", json!({"theirs": with("rect", json!({}))})));
+    let Node::Conflict(removed) = removed else {
+        panic!("a conflict node")
+    };
+    assert!(removed.ours.is_none() && removed.properties.is_empty());
 }
 
 #[test]

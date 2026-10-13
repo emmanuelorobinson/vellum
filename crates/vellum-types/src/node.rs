@@ -100,6 +100,9 @@ pub const NODE_PROPERTIES: &[&str] = &[
     "zoom",
     "scroll",
     "radius",
+    "ours",
+    "theirs",
+    "properties",
 ];
 
 /// Declares a node struct: the fields common to every node, then the ones for this kind.
@@ -211,6 +214,8 @@ pub enum Node {
     Prompt(PromptNode),
     /// A live web view (typed now, gated to v1.1).
     Embed(EmbedNode),
+    /// Where a merge found both sides changing the same node: both versions, until someone picks.
+    Conflict(ConflictNode),
 }
 
 node_struct!(
@@ -484,6 +489,26 @@ node_struct!(
     }
 );
 
+node_struct!(
+    /// Left by a three-way merge (ARCHITECTURE §4.5) where both sides changed the same properties of a node, or one
+    /// side removed a node the other changed. It takes that node's place and id; the common fields copy one
+    /// version so it shows where the node was. Picking a version replaces it with that node.
+    ConflictNode {
+        /// Our version of the node, without children; absent when our side removed it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ours: Option<Box<Node>>,
+        /// Their version of the node, without children; absent when their side removed it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        theirs: Option<Box<Node>>,
+        /// The properties both sides changed, in the file's spelling; empty when one side removed the node.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        properties: Vec<String>,
+        /// The node's children, merged. They stay in the document whichever version is kept.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        children: Vec<Node>,
+    }
+);
+
 /// A frame's slot marker.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(deny_unknown_fields)]
@@ -541,6 +566,7 @@ macro_rules! on_each {
             Node::Context($n) => $body,
             Node::Prompt($n) => $body,
             Node::Embed($n) => $body,
+            Node::Conflict($n) => $body,
         }
     };
 }
@@ -567,6 +593,7 @@ impl Node {
             Self::Context(_) => NodeKind::Context,
             Self::Prompt(_) => NodeKind::Prompt,
             Self::Embed(_) => NodeKind::Embed,
+            Self::Conflict(_) => NodeKind::Conflict,
         }
     }
 
@@ -672,6 +699,7 @@ impl Node {
             Self::Frame(n) => &n.children,
             Self::Group(n) => &n.children,
             Self::Boolean(n) => &n.children,
+            Self::Conflict(n) => &n.children,
             _ => &[],
         }
     }
@@ -682,6 +710,7 @@ impl Node {
             Self::Frame(n) => Some(&mut n.children),
             Self::Group(n) => Some(&mut n.children),
             Self::Boolean(n) => Some(&mut n.children),
+            Self::Conflict(n) => Some(&mut n.children),
             _ => None,
         }
     }

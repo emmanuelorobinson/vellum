@@ -12,6 +12,7 @@ export type { BooleanProp } from "./generated/BooleanProp";
 export type { Color } from "./generated/Color";
 export type { Component } from "./generated/Component";
 export type { ComponentId } from "./generated/ComponentId";
+export type { ConflictNode } from "./generated/ConflictNode";
 export type { ContextNode } from "./generated/ContextNode";
 export type { CornerRadius } from "./generated/CornerRadius";
 export type { DeviceId } from "./generated/DeviceId";

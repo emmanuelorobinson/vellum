@@ -25,7 +25,7 @@ mod tests;
 use std::collections::BTreeSet;
 use std::fmt;
 
-use vellum_types::{Actor, AgentId, ComponentId, Document, Node, NodeId, Origin};
+use vellum_types::{Actor, AgentId, ComponentId, Document, Node, NodeId, Origin, PageId, PageKind};
 
 use crate::lease::{BlockedPairs, Leases};
 use crate::ops::{self, Applied, Edit, Inputs, OpError, Parent, Plan, Transaction};
@@ -273,6 +273,7 @@ fn check_agent(
         .iter()
         .map(|edit| match edit {
             Edit::Insert { node, .. } => count_nodes(node),
+            Edit::InsertPage { page, .. } => page.children.iter().map(count_nodes).sum(),
             _ => 0,
         })
         .sum();
@@ -329,6 +330,8 @@ struct Scope {
     subtree: BTreeSet<NodeId>,
     ancestors: BTreeSet<NodeId>,
     components: BTreeSet<ComponentId>,
+    /// The page the frame is on, and that page's kind.
+    page: Option<(PageId, PageKind)>,
 }
 
 impl Scope {
@@ -343,6 +346,7 @@ impl Scope {
         let mut path = Vec::new();
         for page in &doc.pages {
             if self.walk(&page.children, frame, &mut path) {
+                self.page = Some((page.id.clone(), page.kind));
                 return;
             }
         }
@@ -396,6 +400,13 @@ impl Scope {
             Edit::Set { node } => self.subtree.contains(node.id()),
             Edit::SetComponent { id, .. } => self.components.contains(id),
             Edit::SetVariable { .. } => false,
+            // Removing the page takes the frame with it; changing its kind can refuse what it holds.
+            Edit::RemovePage { id } => self.page.as_ref().is_some_and(|(page, _)| page == id),
+            Edit::SetPage { page } => self
+                .page
+                .as_ref()
+                .is_some_and(|(id, kind)| *id == page.id && *kind != page.kind),
+            Edit::InsertPage { .. } | Edit::MovePage { .. } | Edit::SetShell { .. } => false,
         }
     }
 }

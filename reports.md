@@ -8,12 +8,26 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Schedule a fix for op planning cost** (Prompt 14). `ops::plan` re-checks every reference after each op and
-  lists every id for each insert, so a 200-op transaction on a 10,000-node document takes about 292 ms to plan (M5
-  Pro, release). The Loro store adds about 12 ms; undo of the same batch takes 14.5 ms, inside ADR-004's 16 ms frame
-  but with little room. An id index in `vellum-core`'s edit functions, and checking references once per transaction,
-  would cut both. Numbers and the test that measures them: ADR-004 "Prompt 14",
-  `crates/adapters/doc-loro/tests/undo_cost.rs` (ignored by default; run in release).
+- **Review the conflict node and the new document-level ops** (Prompt 15). ADR-010's "Prompt 15" section. The
+  format gains a 19th node kind, `conflict` (`ours`, `theirs`, `properties`, `children`), which ARCHITECTURE §4.1's
+  table does not list; only a person edits ARCHITECTURE.md. Ops gain `InsertPage`, `DeletePage`, `UpdatePage`,
+  `MovePage`, `SetShell`, `SetComponent`, `UpdateComponent`; `ChangeSet` gains `pages`, `components`, `shell`; `Kept`
+  gains `Page`, `Shell`. Merge rules I chose: a change beats a removal; where no node can hold both versions (both
+  moved one node, both reordered the same children, a variable, style, page or the name changed both ways) ours is
+  kept and the conflict is only in the merge's report, so the editor must show those from the report.
+- **References are now checked once per transaction** (Prompt 15), not after every op. It changes what is accepted:
+  a transaction whose ops pass through a broken state but end valid (an instance inserted before its component is
+  added) is now accepted. A refused one still names the op that first broke a reference. Say if you want the old
+  rule back; the diff would then need another ordering scheme.
+- **Op planning cost** (Prompt 14, mostly fixed in Prompt 15). Checking references once per transaction took planning
+  a 200-op batch at 10,000 nodes from about 292 ms to 13 ms. Undo of that batch is 15.0 ms (budget 16, was 14.5).
+  What is left: an insert still lists every id in the document, and undo copies the document; an id index would cut
+  both. `crates/adapters/doc-loro/tests/undo_cost.rs` (ignored by default; run in release).
+- **Guide Prompt 15's FINAL command does not run as written.** `cargo test diff:: merge::` fails with "unexpected
+  argument 'merge::'" (cargo takes one filter). Use `cargo test -p vellum-core -- diff:: merge::`.
+- **Decide whether the fuzz targets run anywhere but a laptop** (Prompts 9 and 15). `crates/vellum-core/fuzz/`
+  (`merge`) and `crates/adapters/codec-json/fuzz/` (`decode`) need nightly and cargo-fuzz; CI runs neither. The same
+  properties run on a fixed corpus in `cargo test` (`fuzz_smoke`, `robustness.rs`).
 - **Review the `DocStore` additions and the undo rules** (Prompt 14). Only a person edits ARCHITECTURE.md. New on
   the port: `undo_turn(turn, by) -> UndoTurn` (`Nothing`, `Undone(ChangeSet)`, `Revert(Revert)`), `Revert` and
   `Kept`, `SyncError::DifferentDocument`, and `vellum_core::ops::revert` to apply a `Revert` as a new transaction.
@@ -942,4 +956,56 @@ were written before the adapter; once it compiled they passed, so I added the re
 and variable round trips to make sure Loro's own state, not only the store's copy, was being checked. Two
 mutations of the undo rules: keeping a node someone built on is caught; not moving back a node someone moved since
 survived, so the suite now has a test for it, which fails under the mutation and passes on the code.
+
+## Prompt 15: diff to ops, three-way merge, merge-driver core
+
+Built:
+- `vellum_core::diff::diff(old, new)`: the ops that turn one document into another, by node id and property. A node
+  with the same id, kind and tree in both is updated (only the properties that differ), moved or reordered; only
+  nodes that are new, gone or changed kind or tree are inserted and deleted, as whole subtrees without what lives on
+  inside them. Covers pages, the shell, variables and components; ordered so every step is accepted.
+- `vellum_core::merge::merge(base, ours, theirs) -> Result<Merged, MergeError>`: three-way merge by node id and
+  property, with `Conflict` (`Properties`, `Removed`, `Moved`, `Order`, `Entry`). Same-property conflicts and
+  removed-versus-changed nodes leave a conflict node holding both versions.
+- `vellum-types`: the `conflict` node kind (format, JSON Schema, TypeScript regenerated). The op layer: page, shell
+  and component ops and edits (ADR-010 "Prompt 15"); the Loro store and the in-memory fake write them; the Guard
+  knows them; `ChangeSet` and `Kept` report them. References are checked once per transaction.
+- Tests: 18 diff and 15 merge cases by name; 11 for the new ops; the contract check `document_parts` (pages, shell
+  and components applied, synced, undone and redone on both stores, Loro read back after every step); property tests
+  over random branches of every fixture document (`tests/diff_merge.rs`: diff leads to the new document, also between
+  two branches and between every pair of fixtures; merge(b, x, b) == x; merge(b, b, y) == y; every merge valid; a
+  clean merge commutes; at least a fifth of random merges clean; every op kind the generator makes is accepted
+  often); the cargo-fuzz target `merge` and its `fuzz_smoke` corpus in `cargo test`.
+
+Differs from the guide:
+- The guide asks for a conflict marker node; the format had none, so it gained a node kind (ADR-010).
+- Diffing whole documents needed ops the guide does not list (pages, shell, components). They are in ADR-010.
+- Guide FINAL `cargo test diff:: merge::` does not parse; see "Needs a person".
+
+Found and fixed on the way (Prompt 14 code): redo counted the actor's own earlier redos as later work, so redoing two
+changes to one page, component or variable kept the second; making a component or variable counted as changing it;
+changing a component's name counted as replacing its tree. Proptest also found that a clean merge was not symmetric
+when both sides moved the same nodes into one place; runs now line up on the nodes they share.
+
+Not verified or not done:
+- No `vellum merge-driver` CLI, exit codes or `.gitattributes` (Prompt 60), no banner or resolver UI (Prompt 53).
+- Diff and merge were not timed on large documents.
+- Fuzzing ran locally only (nightly, cargo-fuzz 0.13 on this Mac): about 15,000 runs in 2 minutes and 31,118 in 5 minutes at libFuzzer's default input length (it stayed under 17 bytes), then 25,853 in 4 minutes with inputs up to 512 bytes; no failures. CI does not fuzz.
+- The proptest regression file `crates/vellum-core/tests/diff_merge.proptest-regressions` holds two cases (one from a
+  deliberate mutation check, one real); both pass and replay on every run.
+
+Verified (each exited 0 unless said):
+- `cargo test -p vellum-core -- diff:: merge::` (33 unit, 4 integration); `cargo test -p vellum-core --test diff_merge`
+  (also 25 more runs with fresh proptest seeds); `cargo test --workspace`; `cargo clippy --workspace --all-targets
+  -- -D warnings`; `cargo test -p vellum-doc-loro --release --test undo_cost -- --ignored --nocapture`.
+- `pnpm format:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm checksum`, `pnpm copy-lint`,
+  `pnpm clean-room`, `pnpm lint`, `pnpm type-check`, `pnpm deps:check`.
+- Failed: `pnpm test:scripts`: 148 passed, 1 failed, the recorded `missing: R3 taffy: main.rs`.
+- Mutation checks: breaking the id tie-break for inserts at one place fails the commutativity property; skipping the
+  diff's reorder step fails the diff property; placing every new page first in Loro fails the read-back suite.
+
+Test order: the type test for the conflict node, then the op tests, then `document_parts`, failed first (missing
+variants, then the three redo bugs above on the fake). The diff and merge cases ran against stubs and failed (16 of
+17 diff cases; the 18th, an id used twice in the new document, panicked before it returned an error) before the code was written. The generator check failed first too: correlated bytes never chose
+some op kinds, so test inputs now come from SplitMix64.
 

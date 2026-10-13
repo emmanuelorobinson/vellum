@@ -8,11 +8,11 @@
 use std::collections::BTreeSet;
 
 use vellum_types::{
-    Component, ComponentId, Document, Node, NodeId, NodeKind, Origin, PageId, PageKind, Variable,
-    VariableId,
+    Component, ComponentId, Document, Node, NodeId, NodeKind, Origin, Page, PageId, PageKind,
+    Variable, VariableId,
 };
 
-use super::{OpErrorKind, Parent, Place};
+use super::{OpErrorKind, Parent, Place, Shell};
 use crate::ports::ChangeSet;
 
 /// One primitive change.
@@ -56,6 +56,52 @@ pub enum Edit {
         /// Its new definition.
         variable: Option<Box<Variable>>,
     },
+    /// Adds a page with its nodes at `index` among the pages.
+    InsertPage {
+        /// Where among the pages.
+        index: usize,
+        /// The page; no id in it may exist yet.
+        page: Box<Page>,
+    },
+    /// Removes a page and its nodes.
+    RemovePage {
+        /// The page.
+        id: PageId,
+    },
+    /// Sets a page's name and kind. Same id; the page keeps the nodes it has.
+    SetPage {
+        /// The page as it should read; its children are ignored.
+        page: Box<Page>,
+    },
+    /// Moves a page to `index` among the pages, counted after it has left its old place.
+    MovePage {
+        /// The page.
+        id: PageId,
+        /// Where it ends up.
+        index: usize,
+    },
+    /// Sets the meta block, imports, themes, styles and fonts.
+    SetShell {
+        /// The shell as it should read.
+        shell: Box<Shell>,
+    },
+}
+
+/// A page without its nodes.
+pub(crate) fn bare(page: &Page) -> Page {
+    Page {
+        id: page.id.clone(),
+        name: page.name.clone(),
+        kind: page.kind,
+        children: Vec::new(),
+    }
+}
+
+fn page_index(doc: &Document, id: &PageId) -> Result<usize, OpErrorKind> {
+    doc.pages
+        .iter()
+        .position(|p| &p.id == id)
+        .ok_or_else(|| OpErrorKind::UnknownPage(id.clone()))
 }
 
 /// What holds a node: a page of some kind, or a node of some kind.
@@ -68,11 +114,15 @@ pub enum Container {
 }
 
 /// Whether `container` may hold a node of `kind`. Frames, groups and canvas pages hold anything; a boolean
-/// holds what can be turned into a path; a slides page holds slides (frames) and annotations.
+/// holds what can be turned into a path; a slides page holds slides (frames) and annotations. A merge's
+/// conflict node may stand wherever the node it replaces stood, and holds whatever that node held.
 pub fn can_hold(container: Container, kind: NodeKind) -> bool {
     use NodeKind as K;
     match container {
-        Container::Page(PageKind::Canvas) | Container::Node(K::Frame | K::Group) => true,
+        _ if kind == K::Conflict => true,
+        Container::Page(PageKind::Canvas) | Container::Node(K::Frame | K::Group | K::Conflict) => {
+            true
+        }
         Container::Page(PageKind::Slides) => {
             matches!(kind, K::Frame | K::Note | K::Context | K::Prompt)
         }
@@ -297,7 +347,7 @@ fn resolve(doc: &Document, parent: &Parent) -> Result<Target, OpErrorKind> {
             let node = find(doc, id).expect("located");
             if !matches!(
                 node.kind(),
-                NodeKind::Frame | NodeKind::Group | NodeKind::Boolean
+                NodeKind::Frame | NodeKind::Group | NodeKind::Boolean | NodeKind::Conflict
             ) {
                 return Err(OpErrorKind::NotAContainer(id.clone()));
             }
@@ -352,6 +402,9 @@ pub(crate) struct Touched {
     updated: BTreeSet<NodeId>,
     removed: BTreeSet<NodeId>,
     variables: BTreeSet<VariableId>,
+    pages: BTreeSet<PageId>,
+    components: BTreeSet<ComponentId>,
+    shell: bool,
 }
 
 impl Touched {
@@ -383,6 +436,9 @@ impl Touched {
             updated: self.updated.into_iter().collect(),
             removed: self.removed.into_iter().collect(),
             variables: self.variables.into_iter().collect(),
+            pages: self.pages.into_iter().collect(),
+            components: self.components.into_iter().collect(),
+            shell: self.shell,
         }
     }
 }
@@ -537,6 +593,7 @@ pub(crate) fn apply_one(
                     touched.insert(id);
                 }
             }
+            touched.components.insert(id.clone());
             Ok(Edit::SetComponent {
                 id: id.clone(),
                 component: before.map(Box::new),
@@ -555,6 +612,83 @@ pub(crate) fn apply_one(
             Ok(Edit::SetVariable {
                 id: id.clone(),
                 variable: before.map(Box::new),
+            })
+        }
+        Edit::InsertPage { index, page } => {
+            if doc.pages.iter().any(|p| p.id == page.id) {
+                return Err(OpErrorKind::DuplicatePage(page.id.clone()));
+            }
+            if *index > doc.pages.len() {
+                return Err(OpErrorKind::IndexOutOfRange {
+                    index: *index,
+                    len: doc.pages.len(),
+                });
+            }
+            let mut new_ids = Vec::new();
+            page.children
+                .iter()
+                .for_each(|n| subtree_ids(n, &mut new_ids));
+            let mut taken: BTreeSet<NodeId> = all_ids(doc).into_iter().collect();
+            for id in &new_ids {
+                if !taken.insert(id.clone()) {
+                    return Err(OpErrorKind::DuplicateId(id.clone()));
+                }
+            }
+            for node in &page.children {
+                check_kinds(node, Container::Page(page.kind))?;
+            }
+            doc.pages.insert(*index, (**page).clone());
+            new_ids.into_iter().for_each(|id| touched.insert(id));
+            touched.pages.insert(page.id.clone());
+            Ok(Edit::RemovePage {
+                id: page.id.clone(),
+            })
+        }
+        Edit::RemovePage { id } => {
+            let index = page_index(doc, id)?;
+            let page = doc.pages.remove(index);
+            let mut gone = Vec::new();
+            page.children.iter().for_each(|n| subtree_ids(n, &mut gone));
+            gone.into_iter().for_each(|id| touched.remove(id));
+            touched.pages.insert(id.clone());
+            Ok(Edit::InsertPage {
+                index,
+                page: Box::new(page),
+            })
+        }
+        Edit::SetPage { page } => {
+            let index = page_index(doc, &page.id)?;
+            for node in &doc.pages[index].children {
+                check_kinds(node, Container::Page(page.kind))?;
+            }
+            let current = &mut doc.pages[index];
+            let before = bare(current);
+            current.name = page.name.clone();
+            current.kind = page.kind;
+            touched.pages.insert(page.id.clone());
+            Ok(Edit::SetPage {
+                page: Box::new(before),
+            })
+        }
+        Edit::MovePage { id, index } => {
+            let from = page_index(doc, id)?;
+            let len = doc.pages.len() - 1;
+            if *index > len {
+                return Err(OpErrorKind::IndexOutOfRange { index: *index, len });
+            }
+            let page = doc.pages.remove(from);
+            doc.pages.insert(*index, page);
+            touched.pages.insert(id.clone());
+            Ok(Edit::MovePage {
+                id: id.clone(),
+                index: from,
+            })
+        }
+        Edit::SetShell { shell } => {
+            let before = (**shell).clone().swap_into(doc);
+            touched.shell = true;
+            Ok(Edit::SetShell {
+                shell: Box::new(before),
             })
         }
     }

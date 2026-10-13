@@ -78,3 +78,85 @@ renamed, so the same merge stays clean.
 - Users find the id references unreadable enough that the reference page and the tools cannot cover it. Then a
   readable name can be stored beside the id, and the rename rule written down.
 - A typed override per node kind becomes necessary for the resolver or for agents (see the costs above).
+
+## Prompt 15: conflict nodes, ops for every part of a document, diff and merge
+
+- **Date:** 2026-10-12
+- **Written by:** Prompt 15 (diff → ops, three-way merge, merge-driver core).
+- **Evidence:** `crates/vellum-core/src/{diff,merge}/` (with their unit tests), `crates/vellum-core/tests/diff_merge.rs`
+  and `tests/common/mutate.rs` (property tests over random branches of every fixture document),
+  `crates/vellum-core/fuzz/` (cargo-fuzz target `merge`), `crates/vellum-core/src/ops/tests/document.rs`, the
+  contract check `document_parts` in `crates/contracts/src/suites/doc_store.rs`, and the regenerated `docs/format/`.
+
+### Decision
+
+1. **A `conflict` node kind, the 19th** (ARCHITECTURE §4.5 asks for "a conflict marker node"; DESIGN C22 shows one).
+   It takes the conflicted node's place and id and has the common fields (copied from one version, so it shows where
+   the node was), `ours` and `theirs` (that side's version of the node without children; absent when that side
+   removed it), `properties` (what both sides changed; `type` when the kind is one of them; empty for a removal) and
+   `children` (the node's merged children, which stay live in the document). Choosing a version is
+   `Op::Replace { id, node: version }`, which may reuse the id. Versions are not walked for ids, so the id is not a
+   duplicate. A conflict node may stand where its node stood and holds anything, including on a slides page and in a
+   boolean. The format version stays 1: nothing has been released.
+2. **Every part of a document is reachable by ops**, because an external change is applied as ops (Invariant 1, §4.5).
+   New ops: `InsertPage`, `DeletePage`, `UpdatePage` (name, kind), `MovePage`, `SetShell` (meta, imports, themes,
+   styles, fonts as one value, `ops::Shell`), `SetComponent` (add, replace with its tree, remove) and
+   `UpdateComponent` (name, props, variants; the tree stays). New edits: `InsertPage`, `RemovePage`, `SetPage`,
+   `MovePage`, `SetShell`. `ChangeSet` gains `pages`, `components` and `shell`; `Kept` gains `Page` and `Shell`; the
+   Guard treats removing a leased frame's page, or changing its kind, as touching the frame.
+3. **References are checked once per transaction**, against the document it leaves (instances, override paths,
+   slots). A transaction is all or nothing, so only its end has to be valid, and ops can come in any order that
+   gets there; the diff relies on it. When the end is invalid, the transaction is planned again with the same ids,
+   checking after every op, so the error still names the op that first broke a reference. Variable references are
+   still checked as each op is planned. It also makes planning cheaper (below).
+4. **Diff** (`vellum_core::diff::diff`): a node with the same id, kind and tree (the pages, or one component) in both
+   documents is the same node, so it gets an `Update` of the properties that differ (`null` for one back at its
+   default), a `Move` to a new parent, a `Reorder` among siblings. Only nodes that are new, gone, or changed kind or
+   tree are inserted and deleted, as whole subtrees without what lives on inside them. A component whose root
+   changes is set whole. The ops are ordered so every step is accepted (the module comment lists the order).
+5. **Merge** (`vellum_core::merge::merge`), three-way by node id and property: what one side changed is taken; what
+   both changed differently is a conflict. Same property of one node: a conflict node, each version carrying every
+   non-conflicting change from both sides. Removed on one side, changed (or changed inside) on the other: the change
+   wins; the topmost removed node becomes a conflict node with no version for the side that removed it, and the
+   other side's whole version of what was under it lives on. Where no node can hold both (both moved one node to
+   different places, both reordered the same children differently, one entry of the document such as a variable,
+   style, page or the name changed both ways): ours is kept and the conflict is reported. Inserts at the same place
+   are ordered by id, so a merge without conflicts does not depend on which side is ours. Moves that make a cycle
+   put its nodes back where ours has them. After assembly: a variable or component one side removed and the other
+   uses is kept; an instance whose overrides no longer resolve (one side changed the component, the other the
+   instance) becomes a conflict node; a slides page that would hold what it cannot becomes a canvas. The result is
+   checked like any document; when it cannot be made valid, `merge` returns an error and the caller keeps ours.
+6. **History fixes found on the way** (Prompt 14's rules, now covering pages): redo protects only other people's
+   later work (since an undo, the actor's own changes can only be redos, because a new change clears redo); making
+   a variable or component is not "changing it since"; a component's change of name, props or variants does not
+   count as replacing its tree. All three were bugs that `document_parts` found on the in-memory store first.
+
+### Numbers
+
+Apple M5 Pro, release, the Prompt 14 benchmark (`crates/adapters/doc-loro/tests/undo_cost.rs`, 10,000 nodes,
+200-node batch, medians of 7): planning the batch went from about 292 ms to **13.2 ms**; plan and store 24.5 ms;
+undo 15.0 ms and redo 15.3 ms (Prompt 14: 14.5 ms; budget 16). The diff and merge of a 10,000-node document were not
+timed; the diff plans each op as it makes it, and an insert still lists every id, so a diff with many inserts into
+a large document costs inserts × nodes.
+
+### Costs and risks accepted
+
+- Conflicts with no node to hold them (moves, orders, document entries) live only in the merge's report; the file
+  keeps ours, and theirs stays in Git (`MERGE_HEAD`). The editor (Prompt 53, the C22 work) has to show them from
+  the report.
+- A conflict node's children are live, and ops may insert into it, so work can continue around a conflict.
+- An override conflict is coarse: the whole instance becomes a conflict node, not the one override.
+- A kind change on one side against any property change on the other is a conflict of whole versions.
+
+### Not decided
+
+- Who resolves report-only conflicts, and how "Ask agent to merge" frames a conflict for an agent (DESIGN C22).
+- `vellum merge-driver` itself (exit codes, the report's format, `.gitattributes`): Prompt 60.
+
+### Reference reading
+
+Graphite's `editor/src/messages/portfolio/document/document_diff.rs` (MIT OR Apache-2.0, commit
+`7477cd2fab315494e4c2613bc446c707733e6e7b`) diffs two node registries by id as set differences (missing, extra,
+shared with differing payloads), then compares the shared ones field by field; it prints the result for a debug
+check and produces no edits. Vellum keeps the shape (match by stable id, then per field) and changes the output: ops
+in an order the op layer accepts, so an external change goes through the one write path. Nothing was ported.

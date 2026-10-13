@@ -39,6 +39,11 @@ fn node_path(prefix: &str, root: &Node, target: &NodeId) -> String {
     path
 }
 
+/// Whether `id` is `node` or under it.
+fn holds(node: &Node, id: &NodeId) -> bool {
+    node.id() == id || node.children().iter().any(|c| holds(c, id))
+}
+
 /// The path for an error from inserting `node` (written `field`) at `to`.
 fn insert_path(kind: &OpErrorKind, field: &str, node: &Node) -> String {
     match kind {
@@ -79,6 +84,12 @@ pub(super) fn renumbered(node: &Node, ids: &mut dyn IdGen) -> Node {
     let mut copy = node.clone();
     fn walk(node: &mut Node, ids: &mut dyn IdGen) {
         let fresh = ids.node_id();
+        // A conflict's two versions are the same node as the conflict itself.
+        if let Node::Conflict(n) = node {
+            for version in [&mut n.ours, &mut n.theirs].into_iter().flatten() {
+                set_id(version, fresh.clone());
+            }
+        }
         set_id(node, fresh);
         if let Some(children) = node.children_mut() {
             children.iter_mut().for_each(|child| walk(child, ids));
@@ -112,7 +123,7 @@ pub(super) fn set_id(node: &mut Node, id: NodeId) {
     }
     each!(
         Frame, Group, Rect, Ellipse, Polygon, Star, Line, Vector, Boolean, Text, Image, Icon,
-        Instance, Script, Note, Context, Prompt, Embed
+        Instance, Script, Note, Context, Prompt, Embed, Conflict
     );
 }
 
@@ -122,16 +133,33 @@ pub(super) struct Planner {
     inverse: Vec<Edit>,
     touched: Touched,
     pub(super) created: BTreeMap<usize, NodeId>,
+    /// Check component references, override paths and slots after every op that can break them, not once at
+    /// the end. Only used to name the op that broke a refused transaction.
+    strict: bool,
 }
 
 impl Planner {
-    pub(super) fn new(doc: Document) -> Self {
+    pub(super) fn new(doc: Document, strict: bool) -> Self {
         Self {
             doc,
             edits: Vec::new(),
             inverse: Vec::new(),
             touched: Touched::default(),
             created: BTreeMap::new(),
+            strict,
+        }
+    }
+
+    pub(super) fn strict(&self) -> bool {
+        self.strict
+    }
+
+    /// Checks references now when strict; otherwise `plan` checks them once, at the end.
+    pub(super) fn references(&self, path: &str) -> Result<(), Refusal> {
+        if self.strict {
+            super::advanced::validate_references(&self.doc).map_err(at(path))
+        } else {
+            Ok(())
         }
     }
 
@@ -183,7 +211,7 @@ impl Planner {
         })
         .map_err(|kind| (insert_path(&kind, field, node), kind))?;
         self.variables_exist(referenced_variables(node), field)?;
-        super::advanced::validate_references(&self.doc).map_err(at(field))
+        self.references(field)
     }
 
     pub(super) fn lower(
@@ -217,7 +245,7 @@ impl Planner {
                     node: Box::new(next),
                 })
                 .map_err(at("id"))?;
-                super::advanced::validate_references(&self.doc).map_err(at("patch"))
+                self.references("patch")
             }
             Op::Delete { id } => self.edit(Edit::Remove { id: id.clone() }).map_err(at("id")),
             Op::Move { id, to } => self
@@ -267,6 +295,101 @@ impl Planner {
             Op::WrapInFrame { ids, frame } => self.wrap(ids, frame, NodeKind::Frame, "frame"),
             Op::Group { ids, group } => self.wrap(ids, group, NodeKind::Group, "group"),
             Op::Ungroup { id } => self.ungroup(id),
+            Op::InsertPage { index, page } => {
+                self.edit(Edit::InsertPage {
+                    index: *index,
+                    page: page.clone(),
+                })
+                .map_err(|kind| {
+                    let path = match &kind {
+                        OpErrorKind::IndexOutOfRange { .. } => "index".to_owned(),
+                        OpErrorKind::DuplicateId(id) | OpErrorKind::NotAllowedIn { id, .. } => page
+                            .children
+                            .iter()
+                            .enumerate()
+                            .find(|(_, n)| holds(n, id))
+                            .map_or("page".to_owned(), |(i, n)| {
+                                node_path(&format!("page.children[{i}]"), n, id)
+                            }),
+                        _ => "page.id".to_owned(),
+                    };
+                    (path, kind)
+                })?;
+                self.variables_exist(referenced_variables(&page.children), "page")
+            }
+            Op::DeletePage { id } => self
+                .edit(Edit::RemovePage { id: id.clone() })
+                .map_err(at("id")),
+            Op::UpdatePage { id, name, kind } => self
+                .edit(Edit::SetPage {
+                    page: Box::new(vellum_types::Page {
+                        id: id.clone(),
+                        name: name.clone(),
+                        kind: *kind,
+                        children: Vec::new(),
+                    }),
+                })
+                .map_err(|e| match e {
+                    OpErrorKind::NotAllowedIn { .. } => ("kind".to_owned(), e),
+                    e => ("id".to_owned(), e),
+                }),
+            Op::MovePage { id, index } => self
+                .edit(Edit::MovePage {
+                    id: id.clone(),
+                    index: *index,
+                })
+                .map_err(|e| match e {
+                    OpErrorKind::IndexOutOfRange { .. } => ("index".to_owned(), e),
+                    e => ("id".to_owned(), e),
+                }),
+            Op::SetShell { shell } => {
+                self.edit(Edit::SetShell {
+                    shell: shell.clone(),
+                })
+                .map_err(at("shell"))?;
+                self.variables_exist(referenced_variables(&shell.styles), "shell.styles")
+            }
+            Op::SetComponent { id, component } => {
+                self.edit(Edit::SetComponent {
+                    id: id.clone(),
+                    component: component.clone(),
+                })
+                .map_err(|e| match (&e, component) {
+                    (_, None) => ("id".to_owned(), e),
+                    (OpErrorKind::DuplicateId(_) | OpErrorKind::WrongKind { .. }, _) => {
+                        ("component.root".to_owned(), e)
+                    }
+                    _ => ("component".to_owned(), e),
+                })?;
+                if let Some(component) = component {
+                    self.variables_exist(referenced_variables(component), "component")?;
+                }
+                self.references("component")
+            }
+            Op::UpdateComponent {
+                id,
+                name,
+                props,
+                variants,
+            } => {
+                let current =
+                    self.doc.components.get(id).ok_or_else(|| {
+                        ("id".to_owned(), OpErrorKind::UnknownComponent(id.clone()))
+                    })?;
+                let next = vellum_types::Component {
+                    name: name.clone(),
+                    props: props.clone(),
+                    root: current.root.clone(),
+                    variants: variants.clone(),
+                };
+                self.edit(Edit::SetComponent {
+                    id: id.clone(),
+                    component: Some(Box::new(next)),
+                })
+                .map_err(at("id"))?;
+                self.variables_exist(referenced_variables(variants), "variants")?;
+                self.references("variants")
+            }
             _ => self.advanced(op_index, op, ids, inputs),
         }
     }

@@ -3,4 +3,4 @@
 /**
  * Which kind of node. The words are the `type` tag in the file.
  */
-export type NodeKind = "frame" | "group" | "rect" | "ellipse" | "polygon" | "star" | "line" | "vector" | "boolean" | "text" | "image" | "icon" | "instance" | "script" | "note" | "context" | "prompt" | "embed";
+export type NodeKind = "frame" | "group" | "rect" | "ellipse" | "polygon" | "star" | "line" | "vector" | "boolean" | "text" | "image" | "icon" | "instance" | "script" | "note" | "context" | "prompt" | "embed" | "conflict";

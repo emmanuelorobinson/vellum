@@ -3,7 +3,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vellum_types::{ComponentId, Document, Node, NodeId, Origin, PageId, VariableId};
+use vellum_types::{ComponentId, Document, Node, NodeId, Origin, PageId, PageKind, VariableId};
 
 use crate::ops::Edit;
 use crate::ops::edit::subtree_ids;
@@ -23,10 +23,22 @@ pub(crate) struct Footprint {
     pub moved: BTreeSet<NodeId>,
     /// Nodes whose children it added, removed or moved.
     pub parents: BTreeSet<NodeId>,
-    /// Variables it set or removed.
+    /// Variables it changed or removed (that existed before it).
     pub variables: BTreeSet<VariableId>,
-    /// Components it set or removed.
+    /// Variables it made.
+    pub variables_made: BTreeSet<VariableId>,
+    /// Components it changed or removed (that existed before it).
     pub components: BTreeSet<ComponentId>,
+    /// Components it made.
+    pub components_made: BTreeSet<ComponentId>,
+    /// Pages it added, removed, renamed, changed in kind or moved.
+    pub pages: BTreeSet<PageId>,
+    /// Pages it renamed or changed in kind.
+    pub pages_set: BTreeSet<PageId>,
+    /// Pages it moved among the pages.
+    pub pages_moved: BTreeSet<PageId>,
+    /// Whether it set the meta block, imports, themes, styles or fonts.
+    pub shell: bool,
 }
 
 /// The properties that differ between two versions of one node, children aside.
@@ -93,11 +105,15 @@ impl Footprint {
                     }
                 }
                 Edit::SetComponent { id, component } => {
-                    out.components.insert(id.clone());
                     let old = match inv {
                         Some(Edit::SetComponent { component, .. }) => component.as_deref(),
                         _ => None,
                     };
+                    if old.is_some() {
+                        out.components.insert(id.clone());
+                    } else {
+                        out.components_made.insert(id.clone());
+                    }
                     let new = component.as_deref();
                     if old.map(|c| &c.root) != new.map(|c| &c.root) {
                         if let Some(old) = old {
@@ -109,8 +125,35 @@ impl Footprint {
                     }
                 }
                 Edit::SetVariable { id, .. } => {
-                    out.variables.insert(id.clone());
+                    if let Some(Edit::SetVariable { variable: None, .. }) = inv {
+                        out.variables_made.insert(id.clone());
+                    } else {
+                        out.variables.insert(id.clone());
+                    }
                 }
+                Edit::InsertPage { page, .. } => {
+                    out.pages.insert(page.id.clone());
+                    page.children
+                        .iter()
+                        .for_each(|n| out.inserted.extend(ids(n)));
+                }
+                Edit::RemovePage { id } => {
+                    out.pages.insert(id.clone());
+                    if let Some(Edit::InsertPage { page, .. }) = inv {
+                        page.children
+                            .iter()
+                            .for_each(|n| out.removed.extend(ids(n)));
+                    }
+                }
+                Edit::SetPage { page } => {
+                    out.pages.insert(page.id.clone());
+                    out.pages_set.insert(page.id.clone());
+                }
+                Edit::MovePage { id, .. } => {
+                    out.pages.insert(id.clone());
+                    out.pages_moved.insert(id.clone());
+                }
+                Edit::SetShell { .. } => out.shell = true,
             }
         }
         out
@@ -135,7 +178,15 @@ impl Footprint {
         self.moved.extend(other.moved.iter().cloned());
         self.parents.extend(other.parents.iter().cloned());
         self.variables.extend(other.variables.iter().cloned());
+        self.variables_made
+            .extend(other.variables_made.iter().cloned());
         self.components.extend(other.components.iter().cloned());
+        self.components_made
+            .extend(other.components_made.iter().cloned());
+        self.pages.extend(other.pages.iter().cloned());
+        self.pages_set.extend(other.pages_set.iter().cloned());
+        self.pages_moved.extend(other.pages_moved.iter().cloned());
+        self.shell |= other.shell;
     }
 
     /// Whether the change did anything to the node: set a property, made, removed or moved it, or changed its
@@ -197,21 +248,27 @@ impl Footprint {
             .keys()
             .chain(after.variables.keys())
             .collect();
-        out.variables = keys
-            .into_iter()
-            .filter(|id| before.variables.get(*id) != after.variables.get(*id))
-            .cloned()
-            .collect();
+        for id in keys {
+            match (before.variables.get(id), after.variables.get(id)) {
+                (None, Some(_)) => out.variables_made.insert(id.clone()),
+                (was, now) if was != now => out.variables.insert(id.clone()),
+                _ => false,
+            };
+        }
         let keys: BTreeSet<_> = before
             .components
             .keys()
             .chain(after.components.keys())
             .collect();
-        out.components = keys
-            .into_iter()
-            .filter(|id| before.components.get(*id) != after.components.get(*id))
-            .cloned()
-            .collect();
+        for id in keys {
+            match (before.components.get(id), after.components.get(id)) {
+                (None, Some(_)) => out.components_made.insert(id.clone()),
+                (was, now) if was != now => out.components.insert(id.clone()),
+                _ => false,
+            };
+        }
+        (out.pages, out.pages_set, out.pages_moved) = changed_pages(before, after);
+        out.shell = crate::ops::Shell::of(before) != crate::ops::Shell::of(after);
         let inserted: Vec<_> = out
             .inserted
             .iter()
@@ -229,7 +286,14 @@ impl Footprint {
             inserted,
             updated: updated.into_iter().collect(),
             removed,
-            variables: out.variables.iter().cloned().collect(),
+            variables: out.variables.union(&out.variables_made).cloned().collect(),
+            pages: out.pages.iter().cloned().collect(),
+            components: out
+                .components
+                .union(&out.components_made)
+                .cloned()
+                .collect(),
+            shell: out.shell,
         };
         (out, changes)
     }
@@ -239,6 +303,44 @@ impl Footprint {
             self.parents.insert(id.clone());
         }
     }
+}
+
+/// Pages that changed: any change, then those renamed or changed in kind, then those moved among the pages both
+/// documents have.
+fn changed_pages(
+    before: &Document,
+    after: &Document,
+) -> (BTreeSet<PageId>, BTreeSet<PageId>, BTreeSet<PageId>) {
+    let rank = |doc: &Document, other: &Document| -> BTreeMap<PageId, (usize, String, PageKind)> {
+        doc.pages
+            .iter()
+            .filter(|p| other.pages.iter().any(|o| o.id == p.id))
+            .enumerate()
+            .map(|(rank, p)| (p.id.clone(), (rank, p.name.clone(), p.kind)))
+            .collect()
+    };
+    let (was, now) = (rank(before, after), rank(after, before));
+    let mut set = BTreeSet::new();
+    let mut moved = BTreeSet::new();
+    for (id, (rank, name, kind)) in &was {
+        let (to, new_name, new_kind) = &now[id];
+        if (name, kind) != (new_name, new_kind) {
+            set.insert(id.clone());
+        }
+        if rank != to {
+            moved.insert(id.clone());
+        }
+    }
+    let mut any: BTreeSet<PageId> = before
+        .pages
+        .iter()
+        .chain(&after.pages)
+        .map(|p| p.id.clone())
+        .filter(|id| !was.contains_key(id))
+        .collect();
+    any.extend(set.iter().cloned());
+    any.extend(moved.iter().cloned());
+    (any, set, moved)
 }
 
 /// What holds a node.

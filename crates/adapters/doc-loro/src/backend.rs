@@ -84,6 +84,14 @@ fn properties(node: &Node) -> BTreeMap<String, String> {
         .collect()
 }
 
+/// A page without its nodes, as a page root's meta holds it.
+fn bare(page: &Page) -> Page {
+    Page {
+        children: Vec::new(),
+        ..page.clone()
+    }
+}
+
 fn string(value: &LoroValue) -> Option<&str> {
     match value {
         LoroValue::String(s) => Some(s.as_str()),
@@ -140,11 +148,9 @@ impl Backend {
                 .tree
                 .create(TreeParentId::Root)
                 .expect("a page root");
-            let mut bare = page.clone();
-            bare.children.clear();
             backend
                 .meta(root)
-                .insert("page", json_string(&bare))
+                .insert("page", json_string(&bare(page)))
                 .expect("write a page");
             backend.roots.insert(Root::Page(page.id.clone()), root);
             for (index, node) in page.children.iter().enumerate() {
@@ -227,6 +233,30 @@ impl Backend {
         self.create(root, 0, &component.root);
     }
 
+    /// Where among the tree's roots (pages and components together) a page goes to be page `index`, leaving
+    /// `moving` out of the count.
+    fn page_slot(&self, moving: Option<TreeID>, index: usize) -> usize {
+        let pages: BTreeMap<TreeID, ()> = self
+            .roots
+            .iter()
+            .filter(|(root, _)| matches!(root, Root::Page(_)))
+            .map(|(_, id)| (*id, ()))
+            .collect();
+        let roots: Vec<TreeID> = self
+            .tree
+            .children(TreeParentId::Root)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|id| Some(*id) != moving)
+            .collect();
+        roots
+            .iter()
+            .enumerate()
+            .filter(|(_, id)| pages.contains_key(id))
+            .nth(index)
+            .map_or(roots.len(), |(at, _)| at)
+    }
+
     fn set_properties(&mut self, node: &Node) {
         let meta = self.meta(self.nodes[node.id()]);
         let now = read_map(&meta);
@@ -304,6 +334,53 @@ impl Backend {
                         None => map.delete(id.as_str()),
                     }
                     .expect("write a variable");
+                }
+                Edit::InsertPage { index, page } => {
+                    let at = self.page_slot(None, *index);
+                    let root = self
+                        .tree
+                        .create_at(TreeParentId::Root, at)
+                        .expect("a page root");
+                    self.meta(root)
+                        .insert("page", json_string(&bare(page)))
+                        .expect("write a page");
+                    self.roots.insert(Root::Page(page.id.clone()), root);
+                    for (index, node) in page.children.iter().enumerate() {
+                        self.create(root, index, node);
+                    }
+                }
+                Edit::RemovePage { id } => {
+                    let root = self
+                        .roots
+                        .remove(&Root::Page(id.clone()))
+                        .expect("the page was checked by the op layer");
+                    self.delete(root);
+                }
+                Edit::SetPage { page } => {
+                    let root = self.roots[&Root::Page(page.id.clone())];
+                    self.meta(root)
+                        .insert("page", json_string(&bare(page)))
+                        .expect("write a page");
+                }
+                Edit::MovePage { id, index } => {
+                    let root = self.roots[&Root::Page(id.clone())];
+                    let at = self.page_slot(Some(root), *index);
+                    self.tree
+                        .mov_to(root, TreeParentId::Root, at)
+                        .expect("the move was checked by the op layer");
+                }
+                Edit::SetShell { shell } => {
+                    let mut written = Document::new("");
+                    (written.meta, written.imports, written.themes) = (
+                        shell.meta.clone(),
+                        shell.imports.clone(),
+                        shell.themes.clone(),
+                    );
+                    (written.styles, written.fonts) = (shell.styles.clone(), shell.fonts.clone());
+                    self.doc
+                        .get_map(SHELL)
+                        .insert("shell", json_string(&written))
+                        .expect("write the shell");
                 }
             }
         }

@@ -57,6 +57,153 @@ pub fn run<S: DocStore>(make: impl Fn(&Document, u64) -> S) {
     undo_turn(&make);
     undo_turn_with_later_work(&make);
     sync(&make);
+    document_parts(&make);
+}
+
+/// Pages, the shell (meta, imports, themes, styles, fonts) and component definitions go through a store as
+/// nodes do: applied as planned, reported, synced and undone. An external change reaches them as ops
+/// (ARCHITECTURE §4.5), so a store must hold all of them.
+fn document_parts<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
+    use std::collections::BTreeMap;
+    use vellum_core::ops::Shell;
+    use vellum_types::{ComponentId, PageKind};
+
+    let comp = ComponentId::new("comp000001").expect("an id");
+    let component = |name: &str| -> Box<vellum_types::Component> {
+        Box::new(
+            serde_json::from_value(json!({"name": name, "root": {
+                "type": "frame", "id": "croot00001", "name": "Root", "width": 10, "height": 10,
+                "children": [{"type": "rect", "id": "crect00001", "name": "R", "width": 4, "height": 4}]
+            }}))
+            .expect("a component"),
+        )
+    };
+    let mut shell = Shell::of(&document());
+    shell.meta.name = "TEST DATA renamed".into();
+    shell.themes = BTreeMap::from([("mode".into(), vec!["light".into(), "dark".into()])]);
+    let instance = node_with(
+        "instance",
+        "inst000001",
+        &[],
+        json!({"componentId": "comp000001"}),
+    );
+    let steps: Vec<(&str, Vec<Op>)> = vec![
+        (
+            "insert a page",
+            vec![Op::InsertPage {
+                index: 1,
+                page: Box::new(crate::samples::page(
+                    "page00003",
+                    vec![node("rect", "pgrect0001")],
+                )),
+            }],
+        ),
+        (
+            "move a page",
+            vec![Op::MovePage {
+                id: page_id("page00003"),
+                index: 0,
+            }],
+        ),
+        (
+            "rename a page",
+            vec![Op::UpdatePage {
+                id: page_id("page00001"),
+                name: "TEST DATA renamed".into(),
+                kind: PageKind::Canvas,
+            }],
+        ),
+        (
+            "set the shell",
+            vec![Op::SetShell {
+                shell: Box::new(shell),
+            }],
+        ),
+        (
+            "add a component",
+            vec![Op::SetComponent {
+                id: comp.clone(),
+                component: Some(component("TEST DATA Chip")),
+            }],
+        ),
+        (
+            "change a component",
+            vec![Op::UpdateComponent {
+                id: comp.clone(),
+                name: "TEST DATA Tag".into(),
+                props: BTreeMap::new(),
+                variants: Vec::new(),
+            }],
+        ),
+        ("use it", vec![insert_at("page00002", None, 0, instance)]),
+        (
+            "remove a page",
+            vec![Op::DeletePage {
+                id: page_id("page00002"),
+            }],
+        ),
+        (
+            "remove the component",
+            vec![Op::SetComponent {
+                id: comp.clone(),
+                component: None,
+            }],
+        ),
+    ];
+
+    let a = alice();
+    let mut left = make(&document(), 1);
+    let mut states = vec![left.snapshot()];
+    for (name, ops) in &steps {
+        let before = left.snapshot();
+        let expected = ops::plan(&before, &tx(&a, ops.clone()), &mut SequentialIds::new())
+            .unwrap_or_else(|e| panic!("{name}: {e}"))
+            .document;
+        let changes =
+            write(&mut left, tx(&a, ops.clone())).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_eq!(
+            left.snapshot(),
+            expected,
+            "DocStore: {name} did not apply as planned"
+        );
+        assert!(!changes.is_empty(), "DocStore: {name} reported no change");
+        states.push(left.snapshot());
+    }
+    assert_eq!(states[1].pages[1].id.as_str(), "page00003");
+    assert!(states[4].themes.contains_key("mode"));
+
+    let mut right = make(&document(), 2);
+    right
+        .import_updates(&left.export_updates(&right.cursor()))
+        .expect("import");
+    assert_eq!(
+        right.snapshot(),
+        left.snapshot(),
+        "DocStore: pages, shell and components did not sync"
+    );
+
+    for (step, (name, _)) in steps.iter().enumerate().rev() {
+        left.undo(&a)
+            .unwrap_or_else(|| panic!("DocStore: nothing to undo for {name}"));
+        assert_eq!(
+            left.snapshot(),
+            states[step],
+            "DocStore: undoing {name} did not restore"
+        );
+    }
+    for (step, (name, _)) in steps.iter().enumerate() {
+        left.redo(&a)
+            .unwrap_or_else(|| panic!("DocStore: nothing to redo for {name}"));
+        assert_eq!(
+            left.snapshot(),
+            states[step + 1],
+            "DocStore: redoing {name} did not restore"
+        );
+    }
+    right
+        .import_updates(&left.export_updates(&right.cursor()))
+        .expect("import undo and redo");
+    assert_eq!(right.snapshot(), left.snapshot());
 }
 
 fn teal() -> Actor {

@@ -5,9 +5,9 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value as Json;
 use vellum_types::{
-    BooleanNode, ContextNode, Document, EllipseNode, EmbedNode, FrameNode, GroupNode, IconNode,
-    ImageNode, InstanceNode, LineNode, NoteNode, PolygonNode, PromptNode, RectNode, ScriptNode,
-    StarNode, TextNode, VectorNode,
+    BooleanNode, ConflictNode, ContextNode, Document, EllipseNode, EmbedNode, FrameNode, GroupNode,
+    IconNode, ImageNode, InstanceNode, LineNode, NoteNode, PolygonNode, PromptNode, RectNode,
+    ScriptNode, StarNode, TextNode, VectorNode,
 };
 
 use crate::locate::{Index, offset_of, position};
@@ -198,6 +198,7 @@ fn refine_node(mut node: Json) -> Option<(Vec<Step>, String)> {
         "context" => check::<ContextNode>(value),
         "prompt" => check::<PromptNode>(value),
         "embed" => check::<EmbedNode>(value),
+        "conflict" => check::<ConflictNode>(value),
         _ => None,
     }
 }

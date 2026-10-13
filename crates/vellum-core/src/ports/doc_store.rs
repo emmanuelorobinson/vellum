@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use vellum_types::{Actor, ComponentId, Document, NodeId, Origin, TurnId, VariableId};
+use vellum_types::{Actor, ComponentId, Document, NodeId, Origin, PageId, TurnId, VariableId};
 
 use crate::ops::Edit;
 
@@ -75,6 +75,12 @@ pub struct ChangeSet {
     pub removed: Vec<NodeId>,
     /// Variables added, changed or removed.
     pub variables: Vec<VariableId>,
+    /// Pages added, renamed, changed in kind, moved or removed. Nodes on them are listed above.
+    pub pages: Vec<PageId>,
+    /// Component definitions added, changed or removed. Nodes in them are listed above.
+    pub components: Vec<ComponentId>,
+    /// Whether the meta block, imports, themes, styles or fonts changed.
+    pub shell: bool,
 }
 
 impl ChangeSet {
@@ -84,6 +90,9 @@ impl ChangeSet {
             && self.updated.is_empty()
             && self.removed.is_empty()
             && self.variables.is_empty()
+            && self.pages.is_empty()
+            && self.components.is_empty()
+            && !self.shell
     }
 }
 
@@ -96,6 +105,10 @@ pub enum Kept {
     Variable(VariableId),
     /// A component someone changed since.
     Component(ComponentId),
+    /// A page someone changed, moved or built on since.
+    Page(PageId),
+    /// The meta block, imports, themes, styles and fonts, which someone changed since.
+    Shell,
 }
 
 /// A transaction that reverts earlier changes as a new change, attributed to whoever asked for it, and keeps

@@ -105,6 +105,7 @@ string_enum!(
         Context = "context",
         Prompt = "prompt",
         Embed = "embed",
+        Conflict = "conflict",
     }
 );
 

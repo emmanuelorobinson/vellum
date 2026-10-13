@@ -789,6 +789,35 @@ A live web view (typed now, gated to v1.1).
 | `width` | [Size](#size) | yes | Width: fixed, hug or fill. |
 | `zoom` | number | no | 1 is actual size. |
 
+#### `conflict`
+
+Where a merge found both sides changing the same node: both versions, until someone picks.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `agentNotes` | string | no | Instructions for agents, read with the node. |
+| `blendMode` | [BlendMode](#blendmode) | no | How the layer combines with what is beneath it. |
+| `children` | array of [Node](#node) | no | The node's children, merged. They stay in the document whichever version is kept. |
+| `effects` | array of [Effect](#effect) | no | Applied in order. |
+| `fills` | array of [Paint](#paint) | no | Painted in order, first at the bottom. |
+| `flipX` | boolean | no | Mirrored left to right. |
+| `flipY` | boolean | no | Mirrored top to bottom. |
+| `height` | [Size](#size) | yes | Height: fixed, hug or fill. |
+| `id` | [NodeId](#nodeid) | yes | Unique within the document, never reused. |
+| `locked` | boolean | no | Locked layers cannot be selected or moved on the canvas. |
+| `metadata` | object | no | Free-form JSON for tooling and agents; the editor ignores it. |
+| `name` | string | yes | The name shown in the layers panel. |
+| `opacity` | [Value](#value) | no | 0 to 1. |
+| `ours` | [Node](#node) | no | Our version of the node, without children; absent when our side removed it. |
+| `position` | [Position](#position) | no | Placed by the parent's layout, or at fixed coordinates. |
+| `properties` | array of string | no | The properties both sides changed, in the file's spelling; empty when one side removed the node. |
+| `prototype` | [Prototype](#prototype) | no | A link to another frame when the prototype runs. |
+| `rotation` | [Value](#value) | no | Degrees, clockwise. |
+| `stroke` | [Stroke](#stroke) | no | The outline. |
+| `theirs` | [Node](#node) | no | Their version of the node, without children; absent when their side removed it. |
+| `visible` | [Value4](#value4) | no | Shown or hidden; a boolean variable can decide. |
+| `width` | [Size](#size) | yes | Width: fixed, hug or fill. |
+
 ### NodeId
 
 A node's id, unique within its document and never reused.

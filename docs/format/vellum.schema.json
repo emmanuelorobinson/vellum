@@ -3062,6 +3062,156 @@
             "height",
             "url"
           ]
+        },
+        {
+          "description": "Where a merge found both sides changing the same node: both versions, until someone picks.",
+          "type": "object",
+          "properties": {
+            "agentNotes": {
+              "description": "Instructions for agents, read with the node.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "blendMode": {
+              "description": "How the layer combines with what is beneath it.",
+              "$ref": "#/$defs/BlendMode"
+            },
+            "children": {
+              "description": "The node's children, merged. They stay in the document whichever version is kept.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Node"
+              }
+            },
+            "effects": {
+              "description": "Applied in order.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Effect"
+              }
+            },
+            "fills": {
+              "description": "Painted in order, first at the bottom.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Paint"
+              }
+            },
+            "flipX": {
+              "description": "Mirrored left to right.",
+              "type": "boolean"
+            },
+            "flipY": {
+              "description": "Mirrored top to bottom.",
+              "type": "boolean"
+            },
+            "height": {
+              "description": "Height: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            },
+            "id": {
+              "description": "Unique within the document, never reused.",
+              "$ref": "#/$defs/NodeId"
+            },
+            "locked": {
+              "description": "Locked layers cannot be selected or moved on the canvas.",
+              "type": "boolean"
+            },
+            "metadata": {
+              "description": "Free-form JSON for tooling and agents; the editor ignores it.",
+              "type": "object",
+              "additionalProperties": true
+            },
+            "name": {
+              "description": "The name shown in the layers panel.",
+              "type": "string"
+            },
+            "opacity": {
+              "description": "0 to 1.",
+              "$ref": "#/$defs/Value"
+            },
+            "ours": {
+              "description": "Our version of the node, without children; absent when our side removed it.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Node"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "position": {
+              "description": "Placed by the parent's layout, or at fixed coordinates.",
+              "$ref": "#/$defs/Position"
+            },
+            "properties": {
+              "description": "The properties both sides changed, in the file's spelling; empty when one side removed the node.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "prototype": {
+              "description": "A link to another frame when the prototype runs.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Prototype"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rotation": {
+              "description": "Degrees, clockwise.",
+              "$ref": "#/$defs/Value"
+            },
+            "stroke": {
+              "description": "The outline.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Stroke"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "theirs": {
+              "description": "Their version of the node, without children; absent when their side removed it.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Node"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "conflict"
+            },
+            "visible": {
+              "description": "Shown or hidden; a boolean variable can decide.",
+              "$ref": "#/$defs/Value4"
+            },
+            "width": {
+              "description": "Width: fixed, hug or fill.",
+              "$ref": "#/$defs/Size"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name",
+            "width",
+            "height"
+          ]
         }
       ]
     },

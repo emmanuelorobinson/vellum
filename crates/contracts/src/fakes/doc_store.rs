@@ -2,13 +2,13 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use vellum_core::history::{self, History, TurnUndo};
-use vellum_core::ops::{Edit, Parent, Place, apply_edits};
+use vellum_core::ops::{Edit, Parent, Place, Shell, apply_edits};
 use vellum_core::ports::{
     ChangeSet, Commit, DocStore, SyncCursor, SyncError, SyncPayload, UndoTurn,
 };
 use vellum_types::{
-    Actor, Component, ComponentId, Document, Node, NodeId, Origin, PageId, Subsystem, TurnId,
-    Variable, VariableId,
+    Actor, AssetId, Component, ComponentId, Document, DocumentMeta, FontFace, Node, NodeId, Origin,
+    Page, PageId, Style, StyleId, Subsystem, TurnId, Variable, VariableId,
 };
 
 /// An edit as the fake writes it into sync payloads. `vellum-core` has no serde, so the fake keeps its own
@@ -40,6 +40,27 @@ enum Step {
     SetVariable {
         id: VariableId,
         variable: Option<Box<Variable>>,
+    },
+    InsertPage {
+        index: usize,
+        page: Box<Page>,
+    },
+    RemovePage {
+        id: PageId,
+    },
+    SetPage {
+        page: Box<Page>,
+    },
+    MovePage {
+        id: PageId,
+        index: usize,
+    },
+    SetShell {
+        meta: DocumentMeta,
+        imports: BTreeMap<String, String>,
+        themes: BTreeMap<String, Vec<String>>,
+        styles: BTreeMap<StyleId, Style>,
+        fonts: BTreeMap<AssetId, FontFace>,
     },
 }
 
@@ -84,6 +105,26 @@ impl From<&Edit> for Step {
             Edit::Set { node } => Self::Set { node },
             Edit::SetComponent { id, component } => Self::SetComponent { id, component },
             Edit::SetVariable { id, variable } => Self::SetVariable { id, variable },
+            Edit::InsertPage { index, page } => Self::InsertPage { index, page },
+            Edit::RemovePage { id } => Self::RemovePage { id },
+            Edit::SetPage { page } => Self::SetPage { page },
+            Edit::MovePage { id, index } => Self::MovePage { id, index },
+            Edit::SetShell { shell } => {
+                let Shell {
+                    meta,
+                    imports,
+                    themes,
+                    styles,
+                    fonts,
+                } = *shell;
+                Self::SetShell {
+                    meta,
+                    imports,
+                    themes,
+                    styles,
+                    fonts,
+                }
+            }
         }
     }
 }
@@ -113,6 +154,25 @@ impl Step {
             Self::Set { node } => Edit::Set { node },
             Self::SetComponent { id, component } => Edit::SetComponent { id, component },
             Self::SetVariable { id, variable } => Edit::SetVariable { id, variable },
+            Self::InsertPage { index, page } => Edit::InsertPage { index, page },
+            Self::RemovePage { id } => Edit::RemovePage { id },
+            Self::SetPage { page } => Edit::SetPage { page },
+            Self::MovePage { id, index } => Edit::MovePage { id, index },
+            Self::SetShell {
+                meta,
+                imports,
+                themes,
+                styles,
+                fonts,
+            } => Edit::SetShell {
+                shell: Box::new(Shell {
+                    meta,
+                    imports,
+                    themes,
+                    styles,
+                    fonts,
+                }),
+            },
         })
     }
 }

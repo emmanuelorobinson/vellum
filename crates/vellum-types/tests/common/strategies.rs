@@ -676,6 +676,24 @@ pub fn arb_node() -> impl Strategy<Value = Node> {
                 ),
             (arb_common(), children.clone())
                 .prop_map(|(c, children)| Node::Group(build!(GroupNode { children: children }, c))),
+            (
+                arb_common(),
+                prop::option::of(inner.clone()),
+                prop::option::of(inner.clone()),
+                vec("[a-z]{1,8}", 0..3),
+                children.clone(),
+            )
+                .prop_map(|(c, ours, theirs, properties, children)| {
+                    Node::Conflict(build!(
+                        ConflictNode {
+                            ours: ours.map(Box::new),
+                            theirs: theirs.map(Box::new),
+                            properties: properties,
+                            children: children
+                        },
+                        c
+                    ))
+                }),
             (arb_common(), arb_enum(BoolOp::ALL), children).prop_map(|(c, op, children)| {
                 Node::Boolean(build!(
                     BooleanNode {

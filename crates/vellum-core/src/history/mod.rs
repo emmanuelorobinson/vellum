@@ -172,7 +172,16 @@ impl History {
     /// to redo.
     pub fn redo(&mut self, doc: &mut Document, actor: &Actor) -> Option<Step> {
         let undone = self.redo.get_mut(actor)?.pop()?;
-        let later = self.later(undone.seq, &BTreeSet::new());
+        // Since the undo, the actor's own changes can only be redos of older changes (a new change clears what
+        // they could redo): those are theirs to build on, not later work to keep.
+        let own: BTreeSet<usize> = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.seq > undone.seq && &e.origin.actor == actor)
+            .map(|(i, _)| i)
+            .collect();
+        let later = self.later(undone.seq, &own);
         let targets = [(undone.inverse.as_slice(), &undone.footprint, &later)];
         let Some(done) = Reverting::run(doc, &targets) else {
             self.redo.entry(actor.clone()).or_default().push(undone);
@@ -431,11 +440,20 @@ impl Reverting {
                     },
                 })
             }
-            Edit::SetComponent { id, .. } => {
+            Edit::SetComponent { id, component } => {
+                // Putting back another tree removes the one there now: not when someone built on it since
+                // (changed, moved or drew into a node of it). Making it is not building on it.
                 let built_on = self.work.components.get(id).is_some_and(|c| {
+                    if component.as_ref().is_some_and(|next| next.root == c.root) {
+                        return false;
+                    }
                     let mut ids: Vec<NodeId> = Vec::new();
                     subtree_ids(&c.root, &mut ids);
-                    ids.iter().any(|i| later.touches_node(i))
+                    ids.iter().any(|i| {
+                        later.props.contains_key(i)
+                            || later.moved.contains(i)
+                            || later.parents.contains(i)
+                    })
                 });
                 if later.components.contains(id) || built_on {
                     self.keep(Kept::Component(id.clone()));
@@ -446,6 +464,53 @@ impl Reverting {
             Edit::SetVariable { id, .. } => {
                 if later.variables.contains(id) {
                     self.keep(Kept::Variable(id.clone()));
+                    return None;
+                }
+                Some(edit.clone())
+            }
+            Edit::InsertPage { index, page } => {
+                if self.work.pages.iter().any(|p| p.id == page.id) {
+                    self.keep(Kept::Page(page.id.clone()));
+                    return None;
+                }
+                Some(Edit::InsertPage {
+                    index: (*index).min(self.work.pages.len()),
+                    page: page.clone(),
+                })
+            }
+            Edit::RemovePage { id } => {
+                let page = self.work.pages.iter().find(|p| &p.id == id)?;
+                let mut ids = Vec::new();
+                page.children.iter().for_each(|n| subtree_ids(n, &mut ids));
+                let changed = later.pages_set.contains(id) || later.pages_moved.contains(id);
+                if changed || ids.iter().any(|i| later.touches_node(i)) {
+                    self.keep(Kept::Page(id.clone()));
+                    return None;
+                }
+                Some(edit.clone())
+            }
+            Edit::SetPage { page } => {
+                self.work.pages.iter().find(|p| p.id == page.id)?;
+                if later.pages_set.contains(&page.id) {
+                    self.keep(Kept::Page(page.id.clone()));
+                    return None;
+                }
+                Some(edit.clone())
+            }
+            Edit::MovePage { id, index } => {
+                self.work.pages.iter().find(|p| &p.id == id)?;
+                if later.pages_moved.contains(id) {
+                    self.keep(Kept::Page(id.clone()));
+                    return None;
+                }
+                Some(Edit::MovePage {
+                    id: id.clone(),
+                    index: (*index).min(self.work.pages.len() - 1),
+                })
+            }
+            Edit::SetShell { .. } => {
+                if later.shell {
+                    self.keep(Kept::Shell);
                     return None;
                 }
                 Some(edit.clone())
@@ -462,5 +527,8 @@ fn kept(edit: &Edit) -> Kept {
         Edit::Remove { id } | Edit::Move { id, .. } => Kept::Node(id.clone()),
         Edit::SetComponent { id, .. } => Kept::Component(id.clone()),
         Edit::SetVariable { id, .. } => Kept::Variable(id.clone()),
+        Edit::InsertPage { page, .. } | Edit::SetPage { page } => Kept::Page(page.id.clone()),
+        Edit::RemovePage { id } | Edit::MovePage { id, .. } => Kept::Page(id.clone()),
+        Edit::SetShell { .. } => Kept::Shell,
     }
 }

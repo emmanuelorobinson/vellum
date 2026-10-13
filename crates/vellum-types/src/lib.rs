@@ -48,9 +48,9 @@ pub use ids::{
     AssetId, ComponentId, IdError, MAX_ID_LEN, NodeId, NodeIdPath, PageId, StyleId, VariableId,
 };
 pub use node::{
-    BooleanNode, ContextNode, EllipseNode, EmbedNode, FrameNode, GroupNode, IconNode, ImageNode,
-    InstanceNode, LineNode, NODE_PROPERTIES, Node, NoteNode, PolygonNode, PromptNode, Prototype,
-    RectNode, ScriptNode, Slot, StarNode, TextNode, Transition, VectorNode,
+    BooleanNode, ConflictNode, ContextNode, EllipseNode, EmbedNode, FrameNode, GroupNode, IconNode,
+    ImageNode, InstanceNode, LineNode, NODE_PROPERTIES, Node, NoteNode, PolygonNode, PromptNode,
+    Prototype, RectNode, ScriptNode, Slot, StarNode, TextNode, Transition, VectorNode,
 };
 pub use origin::{Actor, AgentId, DeviceId, Origin, SessionId, TurnId};
 pub use paint::{

@@ -186,6 +186,13 @@ fn apply_override(root: &mut Node, path: &NodeIdPath, value: &Override) -> Resul
     }
     Ok(())
 }
+/// Whether an instance's component, variant, overrides and slot content resolve in `doc`.
+pub(crate) fn resolves(doc: &Document, instance: &vellum_types::InstanceNode) -> bool {
+    effective(doc, instance).is_ok_and(|root| {
+        super::edit::check_kinds(&root, super::Container::Node(NodeKind::Frame)).is_ok()
+    })
+}
+
 fn effective(doc: &Document, instance: &vellum_types::InstanceNode) -> Result<Node, OpErrorKind> {
     let c = doc
         .components
@@ -476,7 +483,7 @@ impl Planner {
                 .map_err(|e| ("id".into(), patch_error(e)))?;
         }
         self.replace(id, instance)?;
-        validate_references(&self.doc).map_err(at("component_id"))
+        self.references("component_id")
     }
     fn detach(&mut self, id: &NodeId, ids: &mut dyn IdGen) -> Result<ComponentId, Refusal> {
         let Node::Instance(instance) = self.node(id)? else {
@@ -601,7 +608,7 @@ impl Planner {
                     node: Box::new(Node::Instance(n)),
                 })
                 .map_err(at("id"))?;
-                validate_references(&self.doc).map_err(at("node"))
+                self.references("node")
             }
             Op::MakeSlot { id, suggested } => {
                 let loc = locate(&self.doc, id)

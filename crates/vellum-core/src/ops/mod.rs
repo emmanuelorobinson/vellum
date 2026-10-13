@@ -19,14 +19,55 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use vellum_types::{
-    BoolOp, ComponentId, Document, Node, NodeId, NodeIdPath, NodeKind, NodePatch, Origin, PageId,
-    Point, Variable, VariableId, VariableType,
+    AssetId, BoolOp, Component, ComponentId, Document, DocumentMeta, FontFace, Node, NodeId,
+    NodeIdPath, NodeKind, NodePatch, Origin, Page, PageId, PageKind, Point, PropDef, Style,
+    StyleId, Variable, VariableId, VariableType, Variant,
 };
 
 pub use check::check_document;
 pub use edit::{Container, Edit, Location, Tree, apply_edits, can_hold, find, locate};
 
 use crate::ports::{ChangeSet, Commit, DocStore, IdGen, Revert};
+
+/// What a document holds besides its pages, variables and components: the meta block, imports, themes, styles
+/// and fonts. One op sets it whole; the merge works on its entries one by one.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Shell {
+    /// The meta block.
+    pub meta: DocumentMeta,
+    /// Library imports by alias.
+    pub imports: BTreeMap<String, String>,
+    /// Theme axes and their values.
+    pub themes: BTreeMap<String, Vec<String>>,
+    /// Text and effect styles.
+    pub styles: BTreeMap<StyleId, Style>,
+    /// Custom fonts.
+    pub fonts: BTreeMap<AssetId, FontFace>,
+}
+
+impl Shell {
+    /// The shell of `doc`.
+    pub fn of(doc: &Document) -> Self {
+        Self {
+            meta: doc.meta.clone(),
+            imports: doc.imports.clone(),
+            themes: doc.themes.clone(),
+            styles: doc.styles.clone(),
+            fonts: doc.fonts.clone(),
+        }
+    }
+
+    /// Puts this shell into `doc` and returns the one it had.
+    pub(crate) fn swap_into(self, doc: &mut Document) -> Self {
+        Self {
+            meta: std::mem::replace(&mut doc.meta, self.meta),
+            imports: std::mem::replace(&mut doc.imports, self.imports),
+            themes: std::mem::replace(&mut doc.themes, self.themes),
+            styles: std::mem::replace(&mut doc.styles, self.styles),
+            fonts: std::mem::replace(&mut doc.fonts, self.fonts),
+        }
+    }
+}
 
 /// What holds a placed node: the top level of a page, or a container node.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -246,6 +287,57 @@ pub enum Op {
         /// Script node.
         id: NodeId,
     },
+    /// Adds a page, with its nodes, at `index` among the pages. No id in it may exist yet.
+    InsertPage {
+        /// Where among the pages; equal to their number appends.
+        index: usize,
+        /// The page.
+        page: Box<Page>,
+    },
+    /// Removes a page and every node on it.
+    DeletePage {
+        /// The page.
+        id: PageId,
+    },
+    /// Renames a page or changes its kind. Its nodes stay, and must be allowed on a page of that kind.
+    UpdatePage {
+        /// The page.
+        id: PageId,
+        /// Its name.
+        name: String,
+        /// Its kind.
+        kind: PageKind,
+    },
+    /// Moves a page among the pages.
+    MovePage {
+        /// The page.
+        id: PageId,
+        /// Where it ends up, counted after it has left its old place.
+        index: usize,
+    },
+    /// Sets the document's meta block, imports, themes, styles and fonts.
+    SetShell {
+        /// All of them, as they should read.
+        shell: Box<Shell>,
+    },
+    /// Adds a component definition, replaces one with its whole node tree, or removes one no instance uses.
+    SetComponent {
+        /// The component.
+        id: ComponentId,
+        /// The definition, or `None` to remove it.
+        component: Option<Box<Component>>,
+    },
+    /// Changes a component's name, props and variants; its node tree stays as it is.
+    UpdateComponent {
+        /// The component.
+        id: ComponentId,
+        /// Its name.
+        name: String,
+        /// Its props.
+        props: BTreeMap<String, PropDef>,
+        /// Its variants.
+        variants: Vec<Variant>,
+    },
 }
 
 /// Changes applied together, all or nothing, as one undo step. It cannot exist without an origin
@@ -295,6 +387,8 @@ pub enum OpErrorKind {
     Empty,
     /// No such page.
     UnknownPage(PageId),
+    /// The page id is taken.
+    DuplicatePage(PageId),
     /// No such node.
     UnknownNode(NodeId),
     /// No such variable.
@@ -394,6 +488,7 @@ impl fmt::Display for OpErrorKind {
             Self::NotImplemented(op) => write!(f, "{op}: not implemented yet"),
             Self::Empty => f.write_str("the change has nothing in it."),
             Self::UnknownPage(id) => write!(f, "there is no page {id}."),
+            Self::DuplicatePage(id) => write!(f, "the page id {id} is already used."),
             Self::UnknownNode(id) => write!(f, "there is no layer {id}."),
             Self::UnknownVariable(id) => write!(f, "there is no variable {id}."),
             Self::DuplicateId(id) => write!(f, "the id {id} is already used."),
@@ -493,7 +588,37 @@ pub fn plan_with_inputs(
             kind: OpErrorKind::Empty,
         });
     }
-    let mut planner = lower::Planner::new(doc.clone());
+    // References (component instances, override paths, slots) are checked once, against the document the
+    // whole transaction leaves: a transaction is all or nothing, so only where it ends has to be valid, and ops
+    // may come in any order that gets there (the diff relies on it).
+    let mut recorded = Recording {
+        ids,
+        made: Vec::new(),
+    };
+    let mut planner = lower::Planner::new(doc.clone(), false);
+    run(&mut planner, tx, &mut recorded, inputs)?;
+    if let Err(kind) = advanced::validate_references(&planner.doc) {
+        // Name the op after which the references were first broken: plan again, checking after every op,
+        // with the same ids.
+        let mut replay = Replay(recorded.made.into_iter());
+        let mut strict = lower::Planner::new(doc.clone(), true);
+        return Err(run(&mut strict, tx, &mut replay, inputs)
+            .err()
+            .unwrap_or(OpError {
+                op_index: tx.ops.len() - 1,
+                path: "id".into(),
+                kind,
+            }));
+    }
+    Ok(planner.finish(tx.origin.clone()))
+}
+
+fn run(
+    planner: &mut lower::Planner,
+    tx: &Transaction,
+    ids: &mut dyn IdGen,
+    inputs: &Inputs<'_>,
+) -> Result<(), OpError> {
     for (op_index, op) in tx.ops.iter().enumerate() {
         planner
             .lower(op_index, op, ids, inputs)
@@ -502,13 +627,89 @@ pub fn plan_with_inputs(
                 path,
                 kind,
             })?;
-        advanced::validate_references(&planner.doc).map_err(|kind| OpError {
-            op_index,
-            path: "id".into(),
-            kind,
-        })?;
+        if planner.strict() {
+            advanced::validate_references(&planner.doc).map_err(|kind| OpError {
+                op_index,
+                path: "id".into(),
+                kind,
+            })?;
+        }
     }
-    Ok(planner.finish(tx.origin.clone()))
+    Ok(())
+}
+
+/// A transaction built one op at a time against a document, each op checked as it is added (as [`plan`]
+/// checks it, references aside: [`plan`] checks those over the whole transaction). For code in this crate that
+/// works out ops from the state they leave, such as the diff.
+pub(crate) struct Draft {
+    planner: lower::Planner,
+    ops: Vec<Op>,
+}
+
+impl Draft {
+    pub(crate) fn new(doc: &Document) -> Self {
+        Self {
+            planner: lower::Planner::new(doc.clone(), false),
+            ops: Vec::new(),
+        }
+    }
+
+    /// The document as the ops so far leave it.
+    pub(crate) fn doc(&self) -> &Document {
+        &self.planner.doc
+    }
+
+    /// Adds `op`, or refuses it and leaves the draft as it was.
+    pub(crate) fn push(&mut self, op: Op) -> Result<(), OpError> {
+        let op_index = self.ops.len();
+        self.planner
+            .lower(op_index, &op, &mut NoIds, &Inputs::default())
+            .map_err(|(path, kind)| OpError {
+                op_index,
+                path,
+                kind,
+            })?;
+        self.ops.push(op);
+        Ok(())
+    }
+
+    pub(crate) fn into_ops(self) -> Vec<Op> {
+        self.ops
+    }
+}
+
+/// For drafts, whose ops never make ids.
+struct NoIds;
+
+impl IdGen for NoIds {
+    fn node_id(&mut self) -> NodeId {
+        unreachable!("a draft's ops carry their own ids")
+    }
+}
+
+/// Hands out ids from another generator and remembers them.
+struct Recording<'a> {
+    ids: &'a mut dyn IdGen,
+    made: Vec<NodeId>,
+}
+
+impl IdGen for Recording<'_> {
+    fn node_id(&mut self) -> NodeId {
+        let id = self.ids.node_id();
+        self.made.push(id.clone());
+        id
+    }
+}
+
+/// Hands out the ids a [`Recording`] remembered, in the same order.
+struct Replay(std::vec::IntoIter<NodeId>);
+
+impl IdGen for Replay {
+    fn node_id(&mut self) -> NodeId {
+        self.0
+            .next()
+            .expect("planning the same transaction again asks for the same ids")
+    }
 }
 
 /// What an applied transaction did.
