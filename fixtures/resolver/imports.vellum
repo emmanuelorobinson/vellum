@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA library imports",
+    "createdWith": "tests"
+  },
+  "imports": {
+    "ui": "library.lib.vellum"
+  },
+  "pages": [
+    {
+      "id": "page",
+      "name": "TEST DATA Canvas",
+      "children": [
+        {
+          "type": "instance",
+          "id": "linked",
+          "name": "TEST DATA linked Card",
+          "width": "hug",
+          "height": "hug",
+          "componentId": "card",
+          "library": "ui",
+          "props": {
+            "title": "TEST DATA linked title"
+          },
+          "overrides": {
+            "root/title": {
+              "props": {
+                "opacity": 0.6
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

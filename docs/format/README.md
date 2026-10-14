@@ -634,6 +634,7 @@ An instance of a component.
 | `flipY` | boolean | no | Mirrored top to bottom. |
 | `height` | [Size](#size) | yes | Height: fixed, hug or fill. |
 | `id` | [NodeId](#nodeid) | yes | Unique within the document, never reused. |
+| `library` | string | no | Import alias when the component belongs to a library; absent for a local component. |
 | `locked` | boolean | no | Locked layers cannot be selected or moved on the canvas. |
 | `metadata` | object | no | Free-form JSON for tooling and agents; the editor ignores it. |
 | `name` | string | yes | The name shown in the layers panel. |
@@ -824,6 +825,13 @@ A node's id, unique within its document and never reused.
 
 Type: string
 
+### NodeIdPath
+
+The address of a node inside an instance: node ids joined by `/` (`card/actions/button`). It always
+has at least one segment.
+
+Type: string
+
 ### NodePatch
 
 Property values to set on one node: a JSON object whose keys are node properties (`fills`, `visible`,
@@ -959,10 +967,19 @@ At these coordinates in the parent, outside any auto-layout flow.
 | `x` | number | yes | Horizontal. |
 | `y` | number | yes | Vertical, growing downward. |
 
+### PropBinding
+
+A component prop's target, addressed from the definition root.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `node` | [NodeIdPath](#nodeidpath) | yes | The node within the definition. |
+| `property` | string | yes | A property in the file's spelling. Identity and children cannot be bound. |
+
 ### PropDef
 
 A prop a component declares. The `type` tag says what kind of value it takes, and the default has that
-type too. Which node a prop drives is not in the format yet (Prompt 17).
+type too. Its bindings name the node paths and properties it drives.
 
 #### `boolean`
 
@@ -970,6 +987,7 @@ A switch, on or off.
 
 | Property | Type | Required | Description |
 |---|---|---|---|
+| `bindings` | array of [PropBinding](#propbinding) | no | Node properties driven by this prop. |
 | `default` | boolean | yes | The value when an instance sets none. |
 
 #### `text`
@@ -978,6 +996,7 @@ A line of text.
 
 | Property | Type | Required | Description |
 |---|---|---|---|
+| `bindings` | array of [PropBinding](#propbinding) | no | Node properties driven by this prop. `content` replaces a text node's characters, keeping its first run's style. |
 | `default` | string | yes | The value when an instance sets none. |
 
 #### `number`
@@ -986,6 +1005,7 @@ A number.
 
 | Property | Type | Required | Description |
 |---|---|---|---|
+| `bindings` | array of [PropBinding](#propbinding) | no | Node properties driven by this prop. |
 | `default` | number | yes | The value when an instance sets none. |
 
 ### Prototype

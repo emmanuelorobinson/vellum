@@ -73,6 +73,9 @@ pub fn check_document(doc: &Document) -> Vec<String> {
     if let Err(error) = super::advanced::validate_references(doc) {
         problems.push(error.to_string());
     }
+    if let Err(error) = super::advanced::validate_instance_bindings(doc) {
+        problems.push(error.to_string());
+    }
     problems
 }
 

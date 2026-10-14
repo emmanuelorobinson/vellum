@@ -712,6 +712,8 @@ pub fn apply_edits(
     }
     super::advanced::validate_references(&work)
         .map_err(|kind| (edits.len().saturating_sub(1), kind))?;
+    super::advanced::validate_instance_bindings(&work)
+        .map_err(|kind| (edits.len().saturating_sub(1), kind))?;
     inverse.reverse();
     *doc = work;
     Ok((inverse, touched.into_change_set(origin)))

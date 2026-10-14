@@ -33,7 +33,7 @@ pub struct Component {
 }
 
 /// A prop a component declares. The `type` tag says what kind of value it takes, and the default has that
-/// type too. Which node a prop drives is not in the format yet (Prompt 17).
+/// type too. Its bindings name the node paths and properties it drives.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(tag = "type", rename_all = "lowercase")]
 #[ts(export)]
@@ -53,6 +53,9 @@ pub enum PropDef {
 pub struct BooleanProp {
     /// The value when an instance sets none.
     pub default: bool,
+    /// Node properties driven by this prop.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bindings: Vec<PropBinding>,
 }
 
 /// A text prop and its default.
@@ -62,6 +65,9 @@ pub struct BooleanProp {
 pub struct TextProp {
     /// The value when an instance sets none.
     pub default: String,
+    /// Node properties driven by this prop. `content` replaces a text node's characters, keeping its first run's style.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bindings: Vec<PropBinding>,
 }
 
 /// A number prop and its default.
@@ -71,6 +77,20 @@ pub struct TextProp {
 pub struct NumberProp {
     /// The value when an instance sets none.
     pub default: f64,
+    /// Node properties driven by this prop.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bindings: Vec<PropBinding>,
+}
+
+/// A component prop's target, addressed from the definition root.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export)]
+pub struct PropBinding {
+    /// The node within the definition.
+    pub node: NodeIdPath,
+    /// A property in the file's spelling. Identity and children cannot be bound.
+    pub property: String,
 }
 
 /// One combination of variant axis values, and the overrides it applies to the component's tree.

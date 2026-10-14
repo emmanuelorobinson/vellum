@@ -8,6 +8,10 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 17 in progress:** the person selected node-path/property bindings on each component prop.
+  New integration tests exposed four gaps: detach ignored prop bindings, props overrides bypassed variable-type
+  checks, linked instances required a local definition, and finite nested slot instances were mistaken for cycles.
+
 - **Review the Prompt 16 choices that the guide or ARCHITECTURE leave open** (ADR-010 "Prompt 16"). Only a person edits
   ARCHITECTURE.md. (1) The last entry that applies wins by position, not specificity. (2) A script input
   (`inputs {name → value | $var}`) takes a variable of any type; a colour arrives as the text `#RRGGBB`. I chose it

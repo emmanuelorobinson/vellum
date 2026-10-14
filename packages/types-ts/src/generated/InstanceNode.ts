@@ -96,6 +96,10 @@ metadata?: { [key in string]: JsonValue },
  */
 componentId: ComponentId, 
 /**
+ * Import alias when the component belongs to a library; absent for a local component.
+ */
+library?: string | null, 
+/**
  * The axis values chosen, by axis (`{"State": "hover"}`). The variant whose values equal these applies.
  */
 variant?: { [key in string]: string }, 

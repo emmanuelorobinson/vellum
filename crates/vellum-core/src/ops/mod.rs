@@ -623,7 +623,8 @@ pub fn plan_with_inputs(
     let broken = advanced::validate_references(&planner.doc).err();
     let plan = planner.finish(tx.origin.clone());
     let binding = match broken {
-        None => check::new_binding_problem(doc, &plan.document, &plan.changes),
+        None => check::new_binding_problem(doc, &plan.document, &plan.changes)
+            .or_else(|| advanced::validate_instance_bindings(&plan.document).err()),
         Some(_) => None,
     };
     if let Some(kind) = broken.or_else(|| binding.clone()) {
@@ -659,6 +660,11 @@ fn run(
                 path,
                 kind,
             })?;
+        planner.expanded_binding_error().map_err(|kind| OpError {
+            op_index,
+            path: "id".into(),
+            kind,
+        })?;
         if planner.strict() {
             advanced::validate_references(&planner.doc).map_err(|kind| OpError {
                 op_index,

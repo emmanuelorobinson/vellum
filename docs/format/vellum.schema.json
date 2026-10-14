@@ -2300,6 +2300,13 @@
               "description": "Unique within the document, never reused.",
               "$ref": "#/$defs/NodeId"
             },
+            "library": {
+              "description": "Import alias when the component belongs to a library; absent for a local component.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "locked": {
               "description": "Locked layers cannot be selected or moved on the canvas.",
               "type": "boolean"
@@ -3219,6 +3226,10 @@
       "description": "A node's id, unique within its document and never reused.",
       "type": "string"
     },
+    "NodeIdPath": {
+      "description": "The address of a node inside an instance: node ids joined by `/` (`card/actions/button`). It always\nhas at least one segment.",
+      "type": "string"
+    },
     "NodePatch": {
       "description": "Property values to set on one node: a JSON object whose keys are node properties (`fills`, `visible`,\n`content` and so on). Every key must be a property some node has, and a patch cannot set the node's id\nor its children (a children override does that). The values are checked when the patch is applied to a\nnode, because only then is its kind known: the result must read back as that node.",
       "type": "object",
@@ -3580,13 +3591,39 @@
         }
       ]
     },
+    "PropBinding": {
+      "description": "A component prop's target, addressed from the definition root.",
+      "type": "object",
+      "properties": {
+        "node": {
+          "description": "The node within the definition.",
+          "$ref": "#/$defs/NodeIdPath"
+        },
+        "property": {
+          "description": "A property in the file's spelling. Identity and children cannot be bound.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "node",
+        "property"
+      ]
+    },
     "PropDef": {
-      "description": "A prop a component declares. The `type` tag says what kind of value it takes, and the default has that\ntype too. Which node a prop drives is not in the format yet (Prompt 17).",
+      "description": "A prop a component declares. The `type` tag says what kind of value it takes, and the default has that\ntype too. Its bindings name the node paths and properties it drives.",
       "oneOf": [
         {
           "description": "A switch, on or off.",
           "type": "object",
           "properties": {
+            "bindings": {
+              "description": "Node properties driven by this prop.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PropBinding"
+              }
+            },
             "default": {
               "description": "The value when an instance sets none.",
               "type": "boolean"
@@ -3606,6 +3643,13 @@
           "description": "A line of text.",
           "type": "object",
           "properties": {
+            "bindings": {
+              "description": "Node properties driven by this prop. `content` replaces a text node's characters, keeping its first run's style.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PropBinding"
+              }
+            },
             "default": {
               "description": "The value when an instance sets none.",
               "type": "string"
@@ -3625,6 +3669,13 @@
           "description": "A number.",
           "type": "object",
           "properties": {
+            "bindings": {
+              "description": "Node properties driven by this prop.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PropBinding"
+              }
+            },
             "default": {
               "description": "The value when an instance sets none.",
               "type": "number",

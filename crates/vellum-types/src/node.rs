@@ -443,6 +443,9 @@ node_struct!(
     InstanceNode {
         /// The component this is an instance of.
         component_id: ComponentId,
+        /// Import alias when the component belongs to a library; absent for a local component.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        library: Option<String>,
         /// The axis values chosen, by axis (`{"State": "hover"}`). The variant whose values equal these applies.
         #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
         variant: BTreeMap<String, String>,

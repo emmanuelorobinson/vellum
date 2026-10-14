@@ -47,7 +47,9 @@ fn nodes_owned(node: &Node, visit: &mut impl FnMut(&Node)) {
 }
 fn instances_in(node: &Node, out: &mut BTreeSet<ComponentId>) {
     nodes_owned(node, &mut |node| {
-        if let Node::Instance(n) = node {
+        if let Node::Instance(n) = node
+            && n.library.is_none()
+        {
             out.insert(n.component_id.clone());
         }
     });
@@ -81,6 +83,19 @@ pub(crate) fn validate_references(doc: &Document) -> Result<(), OpErrorKind> {
                 }
             }
             if let Node::Instance(n) = node {
+                if let Some(alias) = &n.library {
+                    match doc.imports.get(alias) {
+                        Some(path)
+                            if crate::resolver::libraries::import_path("document.vellum", path)
+                                .is_ok() => {}
+                        _ => {
+                            error = Some(invalid(format!(
+                                "unknown or invalid library import {alias}"
+                            )))
+                        }
+                    }
+                    return;
+                }
                 match effective(doc, n) {
                     Ok(root) => {
                         if let Err(e) =
@@ -135,6 +150,82 @@ pub(crate) fn validate_references(doc: &Document) -> Result<(), OpErrorKind> {
             }
         }
     }
+    // Check every prop/default and variant, including definitions with no placed instances.
+    for (id, component) in &doc.components {
+        let Node::Instance(mut instance) = component.root.as_instance(id.clone()) else {
+            unreachable!()
+        };
+        let root = effective(doc, &instance)?;
+        validate_expanded(doc, &root, 0, false)?;
+        for variant in &component.variants {
+            instance.variant = variant.properties.clone();
+            let root = effective(doc, &instance)?;
+            validate_expanded(doc, &root, 0, false)?;
+        }
+    }
+    for page in &doc.pages {
+        for node in &page.children {
+            validate_expanded(doc, node, 0, false)?;
+        }
+    }
+    Ok(())
+}
+/// Bindings introduced by applying props overrides, including unselected variants. Called separately
+/// from reference validation so the existing bind-time checker can retain its precise property paths.
+pub(crate) fn validate_instance_bindings(doc: &Document) -> Result<(), OpErrorKind> {
+    for (id, component) in &doc.components {
+        let Node::Instance(mut instance) = component.root.as_instance(id.clone()) else {
+            unreachable!()
+        };
+        let root = effective(doc, &instance)?;
+        validate_expanded(doc, &root, 0, true)?;
+        for variant in &component.variants {
+            instance.variant = variant.properties.clone();
+            validate_expanded(doc, &effective(doc, &instance)?, 0, true)?;
+        }
+    }
+    for page in &doc.pages {
+        for node in &page.children {
+            validate_expanded(doc, node, 0, true)?;
+        }
+    }
+    Ok(())
+}
+fn validate_expanded(
+    doc: &Document,
+    node: &Node,
+    depth: usize,
+    bindings: bool,
+) -> Result<(), OpErrorKind> {
+    if depth > 128 {
+        return Err(invalid("instance depth exceeds 128"));
+    }
+    if let Node::Instance(instance) = node {
+        if instance.library.is_some() {
+            return Ok(());
+        }
+        let root = effective(doc, instance)?;
+        return validate_expanded(doc, &root, depth + 1, bindings);
+    }
+    if bindings
+        && let Some(problem) = crate::resolver::variables::check_node_bindings(doc, node).first()
+    {
+        return Err(match &problem.kind {
+            crate::resolver::variables::BindingProblemKind::Unknown => {
+                OpErrorKind::UnknownVariable(problem.variable.clone())
+            }
+            crate::resolver::variables::BindingProblemKind::Type { expected, found } => {
+                OpErrorKind::BindingType {
+                    variable: problem.variable.clone(),
+                    expected,
+                    found: *found,
+                }
+            }
+        });
+    }
+    for child in node.children() {
+        validate_expanded(doc, child, depth + 1, bindings)?;
+    }
     Ok(())
 }
 fn definition_path<'a>(root: &'a Node, path: &NodeIdPath) -> Result<&'a Node, OpErrorKind> {
@@ -152,88 +243,31 @@ fn definition_path<'a>(root: &'a Node, path: &NodeIdPath) -> Result<&'a Node, Op
     }
     Ok(node)
 }
-fn path_mut<'a>(root: &'a mut Node, path: &NodeIdPath) -> Result<&'a mut Node, OpErrorKind> {
-    let mut parts = path.segments();
-    if parts.next() != Some(root.id()) {
-        return Err(invalid("override path must start at the component root"));
-    }
-    let mut node = root;
-    for id in parts {
-        node = node
-            .children_mut()
-            .and_then(|nodes| nodes.iter_mut().find(|n| n.id() == id))
-            .ok_or_else(|| OpErrorKind::UnknownNode(id.clone()))?;
-    }
-    Ok(node)
-}
-fn apply_override(root: &mut Node, path: &NodeIdPath, value: &Override) -> Result<(), OpErrorKind> {
-    let target = path_mut(root, path)?;
-    match value {
-        Override::Props(patch) => *target = target.patched(patch).map_err(patch_error)?,
-        Override::Replace(node) => {
-            // Keep the inherited address stable in this temporary view, so a later instance override
-            // can still address a variant's replacement. Stored replacement ids are never changed.
-            let logical_id = target.id().clone();
-            *target = (**node).clone();
-            set_id(target, logical_id);
-        }
-        Override::Children(children) => {
-            let id = target.id().clone();
-            *target
-                .children_mut()
-                .ok_or(OpErrorKind::NotAContainer(id))? = children.clone();
-        }
-    }
-    Ok(())
-}
 /// Whether an instance's component, variant, overrides and slot content resolve in `doc`.
 pub(crate) fn resolves(doc: &Document, instance: &vellum_types::InstanceNode) -> bool {
+    if let Some(alias) = &instance.library {
+        return doc.imports.get(alias).is_some_and(|path| {
+            crate::resolver::libraries::import_path("document.vellum", path).is_ok()
+        });
+    }
     effective(doc, instance).is_ok_and(|root| {
         super::edit::check_kinds(&root, super::Container::Node(NodeKind::Frame)).is_ok()
     })
 }
 
 fn effective(doc: &Document, instance: &vellum_types::InstanceNode) -> Result<Node, OpErrorKind> {
+    if instance.library.is_some() {
+        return Err(missing(
+            "resolved library definition for component operation",
+        ));
+    }
     let c = doc
         .components
         .get(&instance.component_id)
         .ok_or_else(|| OpErrorKind::UnknownComponent(instance.component_id.clone()))?;
-    let mut root = c.root.clone();
-    if let Some(variant) = c.variants.iter().find(|v| v.properties == instance.variant) {
-        for (path, value) in &variant.overrides {
-            apply_override(&mut root, path, value)?;
-        }
-    } else if !instance.variant.is_empty() {
-        return Err(invalid("no component variant matches the instance"));
-    }
-    for (path, value) in &instance.overrides {
-        apply_override(&mut root, path, value)?;
-    }
-    for (slot, children) in &instance.slot_content {
-        fn populate(node: &mut Node, id: &NodeId, children: &[Node]) -> bool {
-            if node.id() == id {
-                if let Node::Frame(n) = node
-                    && n.slot.is_some()
-                {
-                    n.children = children.to_vec();
-                    return true;
-                }
-                return false;
-            }
-            node.children_mut()
-                .is_some_and(|nodes| nodes.iter_mut().any(|n| populate(n, id, children)))
-        }
-        if !populate(&mut root, slot, children) {
-            return Err(invalid(format!("{slot} is not a slot in this instance")));
-        }
-    }
-    // Sparse instance fields inherit the main component's defaults; fixed dimensions and placement win.
-    let node = Node::Instance(instance.clone());
-    root = root
-        .patched(&node.common_sparse_patch())
-        .map_err(patch_error)?;
-    Ok(root)
+    crate::resolver::components::instantiate(c, instance).map_err(|e| invalid(e.to_string()))
 }
+
 fn clear_slots(node: &mut Node) {
     if let Node::Frame(n) = node {
         n.slot = None;

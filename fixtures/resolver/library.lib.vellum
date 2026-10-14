@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA resolver library",
+    "createdWith": "tests",
+    "kind": "library"
+  },
+  "themes": {
+    "Mode": [
+      "Light",
+      "Dark"
+    ]
+  },
+  "variables": {
+    "space": {
+      "type": "number",
+      "name": "TEST DATA Space/base",
+      "values": [
+        {
+          "value": 8
+        },
+        {
+          "value": 16,
+          "when": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    }
+  },
+  "components": {
+    "badge": {
+      "name": "TEST DATA Badge",
+      "root": {
+        "type": "frame",
+        "id": "badgeRoot",
+        "name": "TEST DATA Badge root",
+        "width": "hug",
+        "height": "hug",
+        "children": [
+          {
+            "type": "rect",
+            "id": "dot",
+            "name": "TEST DATA Dot",
+            "width": {
+              "$var": "space"
+            },
+            "height": 8
+          }
+        ]
+      }
+    },
+    "card": {
+      "name": "TEST DATA Card",
+      "props": {
+        "title": {
+          "type": "text",
+          "default": "TEST DATA default",
+          "bindings": [
+            {
+              "node": "root/title",
+              "property": "content"
+            }
+          ]
+        }
+      },
+      "root": {
+        "type": "frame",
+        "id": "root",
+        "name": "TEST DATA Card root",
+        "width": 100,
+        "height": "hug",
+        "children": [
+          {
+            "type": "text",
+            "id": "title",
+            "name": "TEST DATA Title",
+            "width": "hug",
+            "height": "hug",
+            "content": [
+              {
+                "text": "TEST DATA title",
+                "font": "Inter",
+                "size": 14
+              }
+            ]
+          },
+          {
+            "type": "frame",
+            "id": "slot",
+            "name": "TEST DATA Slot",
+            "width": "fill",
+            "height": "hug",
+            "slot": {
+              "suggested": [
+                "badge"
+              ]
+            }
+          }
+        ]
+      },
+      "variants": [
+        {
+          "properties": {
+            "State": "active"
+          },
+          "overrides": {
+            "root/title": {
+              "props": {
+                "opacity": 0.5
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "id": "page",
+      "name": "TEST DATA Canvas"
+    }
+  ]
+}

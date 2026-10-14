@@ -723,6 +723,7 @@ pub fn arb_node() -> impl Strategy<Value = Node> {
                     Node::Instance(build!(
                         InstanceNode {
                             component_id: ComponentId::new(component).expect("valid"),
+                            library: None,
                             variant: variant,
                             props: props,
                             overrides: overrides,

@@ -5,6 +5,6 @@ import type { TextProp } from "./TextProp";
 
 /**
  * A prop a component declares. The `type` tag says what kind of value it takes, and the default has that
- * type too. Which node a prop drives is not in the format yet (Prompt 17).
+ * type too. Its bindings name the node paths and properties it drives.
  */
 export type PropDef = { "type": "boolean" } & BooleanProp | { "type": "text" } & TextProp | { "type": "number" } & NumberProp;

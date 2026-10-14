@@ -32,8 +32,8 @@ mod variable;
 pub use bindings::{BindingPath, Bindings, BindingsMut};
 pub use color::{Color, ColorError};
 pub use component::{
-    BooleanProp, Component, NodePatch, NumberProp, Override, PatchApplyError, PatchError, PropDef,
-    TextProp, Variant,
+    BooleanProp, Component, NodePatch, NumberProp, Override, PatchApplyError, PatchError,
+    PropBinding, PropDef, TextProp, Variant,
 };
 pub use document::{Document, DocumentMeta, Page};
 pub use effect::{Blur, Effect, ShaderEffect, Shadow};

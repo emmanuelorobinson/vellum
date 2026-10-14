@@ -62,9 +62,18 @@ fn arb_node_id_path() -> impl Strategy<Value = NodeIdPath> {
 
 fn arb_prop_def() -> impl Strategy<Value = PropDef> {
     prop_oneof![
-        any::<bool>().prop_map(|default| PropDef::Boolean(BooleanProp { default })),
-        arb_text().prop_map(|default| PropDef::Text(TextProp { default })),
-        arb_f64().prop_map(|default| PropDef::Number(NumberProp { default })),
+        any::<bool>().prop_map(|default| PropDef::Boolean(BooleanProp {
+            default,
+            bindings: vec![]
+        })),
+        arb_text().prop_map(|default| PropDef::Text(TextProp {
+            default,
+            bindings: vec![]
+        })),
+        arb_f64().prop_map(|default| PropDef::Number(NumberProp {
+            default,
+            bindings: vec![]
+        })),
     ]
 }
 

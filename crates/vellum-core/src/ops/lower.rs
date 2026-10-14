@@ -188,6 +188,16 @@ impl Planner {
         }
     }
 
+    pub(super) fn expanded_binding_error(&self) -> Result<(), OpErrorKind> {
+        if let Some(blame) = &self.blame
+            && let Err(error) = super::advanced::validate_instance_bindings(&self.doc)
+            && *blame == error
+        {
+            return Err(error);
+        }
+        Ok(())
+    }
+
     pub(super) fn strict(&self) -> bool {
         self.strict
     }

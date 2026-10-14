@@ -62,6 +62,7 @@ export type { Point } from "./generated/Point";
 export type { PolygonNode } from "./generated/PolygonNode";
 export type { Position } from "./generated/Position";
 export type { PromptNode } from "./generated/PromptNode";
+export type { PropBinding } from "./generated/PropBinding";
 export type { PropDef } from "./generated/PropDef";
 export type { Prototype } from "./generated/Prototype";
 export type { RectNode } from "./generated/RectNode";
