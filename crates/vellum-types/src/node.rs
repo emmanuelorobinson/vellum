@@ -105,6 +105,16 @@ pub const NODE_PROPERTIES: &[&str] = &[
     "properties",
 ];
 
+/// A field of a node as `without_children` copies it: `children` starts empty, every other field is cloned.
+macro_rules! shallow_field {
+    (children, $value:expr) => {
+        Vec::new()
+    };
+    ($field:ident, $value:expr) => {
+        $value.clone()
+    };
+}
+
 /// Declares a node struct: the fields common to every node, then the ones for this kind.
 macro_rules! node_struct {
     (
@@ -169,6 +179,36 @@ macro_rules! node_struct {
             #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
             pub metadata: BTreeMap<String, Json>,
             $( $(#[$fmeta])* pub $field: $ty, )*
+        }
+
+        impl $name {
+            /// A copy of this node without its children (`children`, where the kind has them, is empty). The
+            /// resolver keeps a resolved node's own properties apart from its resolved children, and
+            /// cloning the whole subtree to throw it away would cost the size of the subtree at every level.
+            #[allow(clippy::clone_on_copy)]
+            pub fn without_children(&self) -> Self {
+                Self {
+                    id: self.id.clone(),
+                    name: self.name.clone(),
+                    visible: self.visible.clone(),
+                    locked: self.locked.clone(),
+                    opacity: self.opacity.clone(),
+                    rotation: self.rotation.clone(),
+                    flip_x: self.flip_x.clone(),
+                    flip_y: self.flip_y.clone(),
+                    position: self.position.clone(),
+                    width: self.width.clone(),
+                    height: self.height.clone(),
+                    fills: self.fills.clone(),
+                    stroke: self.stroke.clone(),
+                    effects: self.effects.clone(),
+                    blend_mode: self.blend_mode.clone(),
+                    agent_notes: self.agent_notes.clone(),
+                    prototype: self.prototype.clone(),
+                    metadata: self.metadata.clone(),
+                    $( $field: shallow_field!($field, self.$field), )*
+                }
+            }
         }
     };
 }
@@ -571,6 +611,8 @@ macro_rules! on_each {
     };
 }
 
+pub(crate) use on_each;
+
 impl Node {
     /// Which kind of node this is.
     pub fn kind(&self) -> NodeKind {
@@ -701,6 +743,39 @@ impl Node {
             Self::Boolean(n) => &n.children,
             Self::Conflict(n) => &n.children,
             _ => &[],
+        }
+    }
+
+    /// The theme values a frame sets for its subtree, by axis; `None` for kinds that cannot set one.
+    pub fn theme(&self) -> Option<&BTreeMap<String, String>> {
+        match self {
+            Self::Frame(n) => Some(&n.theme),
+            _ => None,
+        }
+    }
+
+    /// This node without its children: the same kind, id and properties, `children` empty.
+    pub fn without_children(&self) -> Node {
+        match self {
+            Self::Frame(n) => Self::Frame(n.without_children()),
+            Self::Group(n) => Self::Group(n.without_children()),
+            Self::Rect(n) => Self::Rect(n.without_children()),
+            Self::Ellipse(n) => Self::Ellipse(n.without_children()),
+            Self::Polygon(n) => Self::Polygon(n.without_children()),
+            Self::Star(n) => Self::Star(n.without_children()),
+            Self::Line(n) => Self::Line(n.without_children()),
+            Self::Vector(n) => Self::Vector(n.without_children()),
+            Self::Boolean(n) => Self::Boolean(n.without_children()),
+            Self::Text(n) => Self::Text(n.without_children()),
+            Self::Image(n) => Self::Image(n.without_children()),
+            Self::Icon(n) => Self::Icon(n.without_children()),
+            Self::Instance(n) => Self::Instance(n.without_children()),
+            Self::Script(n) => Self::Script(n.without_children()),
+            Self::Note(n) => Self::Note(n.without_children()),
+            Self::Context(n) => Self::Context(n.without_children()),
+            Self::Prompt(n) => Self::Prompt(n.without_children()),
+            Self::Embed(n) => Self::Embed(n.without_children()),
+            Self::Conflict(n) => Self::Conflict(n.without_children()),
         }
     }
 

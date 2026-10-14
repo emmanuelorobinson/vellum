@@ -598,6 +598,7 @@ impl Planner {
                 }
                 definition_path(&root, path).map_err(at("path"))?;
                 self.variables_exist(vellum_types::referenced_variables(node), "node")?;
+                self.bindings_fit(node, "node")?;
                 n.overrides
                     .insert(path.clone(), Override::Replace(node.clone()));
                 // The replacement is validated in context (parent kind, ids and references).

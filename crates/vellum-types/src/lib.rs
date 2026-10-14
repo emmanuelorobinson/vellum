@@ -10,6 +10,7 @@
 //! that describe the file. Prompt 11 adds who made a change (`Actor`, `Origin`, the ULID ids) and the patch
 //! application the op layer needs.
 
+mod bindings;
 pub mod brand;
 mod color;
 mod component;
@@ -28,6 +29,7 @@ mod text;
 mod value;
 mod variable;
 
+pub use bindings::{BindingPath, Bindings, BindingsMut};
 pub use color::{Color, ColorError};
 pub use component::{
     BooleanProp, Component, NodePatch, NumberProp, Override, PatchApplyError, PatchError, PropDef,

@@ -151,7 +151,7 @@ fn small() -> Document {
 }
 
 /// Every node in the pages and components, with what kind it is.
-fn nodes(doc: &Document) -> Vec<(NodeId, NodeKind)> {
+pub fn nodes(doc: &Document) -> Vec<(NodeId, NodeKind)> {
     fn walk(nodes: &[Node], out: &mut Vec<(NodeId, NodeKind)>) {
         for n in nodes {
             out.push((n.id().clone(), n.kind()));
@@ -217,7 +217,7 @@ fn children_len(doc: &Document, parent: &Parent) -> usize {
 }
 
 /// One random op for `doc`, or None when the bytes pick something with nothing to act on.
-fn one_op(doc: &Document, bytes: &mut Bytes<'_>, ids: &mut TagIds) -> Option<Op> {
+pub fn one_op(doc: &Document, bytes: &mut Bytes<'_>, ids: &mut TagIds) -> Option<Op> {
     let all = nodes(doc);
     let target = bytes.pick(&all).map(|(id, _)| id.clone());
     let n = bytes.below(1000);
@@ -483,6 +483,41 @@ pub fn mutate_counting(
         }
     }
     doc
+}
+
+/// As [`mutate`], but each accepted transaction on its own: the document it leaves and what it changed. `extra`
+/// may offer an op of its own before the shared generator is asked (it gets the document as it stands).
+pub fn mutate_steps(
+    doc: &Document,
+    bytes: &mut Bytes<'_>,
+    tag: &str,
+    steps: usize,
+    extra: &mut dyn FnMut(&Document, &mut Bytes<'_>, &mut TagIds) -> Option<Op>,
+) -> Vec<(Document, vellum_core::ports::ChangeSet)> {
+    let mut doc = doc.clone();
+    let mut ids = TagIds::new(tag);
+    let mut out = Vec::new();
+    for _ in 0..steps {
+        let count = 1 + bytes.below(3);
+        let ops: Vec<Op> = (0..count)
+            .filter_map(|_| {
+                if bytes.below(3) == 0 {
+                    extra(&doc, bytes, &mut ids).or_else(|| one_op(&doc, bytes, &mut ids))
+                } else {
+                    one_op(&doc, bytes, &mut ids)
+                }
+            })
+            .collect();
+        if ops.is_empty() {
+            continue;
+        }
+        let tx = ops::Transaction::new(origin(), ops);
+        if let Ok(plan) = ops::plan(&doc, &tx, &mut ids) {
+            doc = plan.document.clone();
+            out.push((plan.document, plan.changes));
+        }
+    }
+    out
 }
 
 /// The op's variant name, as `Insert`.

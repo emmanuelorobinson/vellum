@@ -8,6 +8,18 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the Prompt 16 choices that the guide or ARCHITECTURE leave open** (ADR-010 "Prompt 16"). Only a person edits
+  ARCHITECTURE.md. (1) The last entry that applies wins by position, not specificity. (2) A script input
+  (`inputs {name → value | $var}`) takes a variable of any type; a colour arrives as the text `#RRGGBB`. I chose it
+  because `fixtures/documents/content.vellum` already binds a colour variable to a script input, and ARCHITECTURE puts no
+  limit on it; the alternative is to refuse colour there and change that fixture. (3) Variable types are checked when a
+  binding is made, once per transaction, as `OpErrorKind::BindingType`; a variable that changes type while something
+  uses it is refused. (4) A bad theme choice on a frame is ignored and reported, not fatal. (5) The resolver visits every
+  node on every resolve (cheap, no allocation) and recomputes only the dirty ones; skipping whole subtrees needs
+  `ChangeSet` to name the parents of inserted, removed and moved nodes, which I did not change.
+- **A `$var` inside a props override is not type-checked yet** (Prompt 16). Props overrides are plain JSON, so the
+  binding walk cannot see them; Prompt 17 has to check them when it applies them (and decide the prop-to-node question
+  below). Overrides that replace a node, children overrides and slot content are checked.
 - **Review the conflict node and the new document-level ops** (Prompt 15). ADR-010's "Prompt 15" section. The
   format gains a 19th node kind, `conflict` (`ours`, `theirs`, `properties`, `children`), which ARCHITECTURE §4.1's
   table does not list; only a person edits ARCHITECTURE.md. Ops gain `InsertPage`, `DeletePage`, `UpdatePage`,
@@ -1009,3 +1021,46 @@ variants, then the three redo bugs above on the fake). The diff and merge cases 
 17 diff cases; the 18th, an id used twice in the new document, panicked before it returned an error) before the code was written. The generator check failed first too: correlated bytes never chose
 some op kinds, so test inputs now come from SplitMix64.
 
+## Prompt 16: resolver I, variables, theme axes, aliases
+
+Built:
+- `vellum_core::resolver::variables`: `Theme` (the first value of each axis, a frame's `theme` replacing the axes it names),
+  `resolve_variable` (last matching `when` wins; aliases followed under the same theme; typed `VariableError`: `Unknown`,
+  `NoValue`, `AliasType`, `Cycle`, `TypeMismatch`), `resolve_value` / `resolve_visible` (a boolean variable drives
+  visibility), and `Resolver` with `ResolvedNode`: a tree of nodes with every reference replaced by its value, cached
+  per node with a dirty set (`invalidate(doc, &ChangeSet)`), a variable-to-readers index and the inherited theme.
+- Bind-time type checks: `vellum_types::{Bindings, BindingsMut, BindingPath}` walk every place a node, style or effect can
+  hold a variable with its type (one macro writes the reading and the writing walk). The op layer refuses a wrong type
+  with `OpErrorKind::BindingType` at a path such as `patch.fills[0].color`, and a variable that changes type while
+  something uses it; `check_document` reports the same. `Node::without_children` and `Node::theme` were added.
+- Tests: 51 unit tests (`resolver::variables::tests::{theme,values,bind,cache}`); `tests/resolver_cache.rs` (300 random
+  cases and a fixed corpus of 400 seeds: cached resolution equals fresh after random accepted edits, including
+  variable values, axes, frame themes and bindings; several change sets can pile up before a resolve).
+
+Differs from the guide:
+- None in what it asks. The guide's FINAL command `cargo test resolver::variables` runs as written (53 tests).
+- Types are checked once per transaction (like references in Prompt 15), not after each op, because the diff changes a
+  variable's type before it rebinds what used it. Found because the Prompt 15 property tests failed on it.
+
+Found and changed on the way:
+- `content.vellum` binds a colour variable to a script input, which a stricter first rule refused. The rule changed
+  (see "Needs a person"); the fixture did not.
+- A replay that names the op at fault refused the first passing mismatch, not the one the final check found. It now
+  refuses only the error the final check found.
+
+Not verified or not done:
+- Nothing was timed on a large document. Resolution of instances, overrides, slots and libraries is Prompt 17.
+- Props overrides are not type-checked (see "Needs a person").
+
+Verified (each exited 0 unless said):
+- `cargo test resolver::variables`; `cargo test --workspace`; `cargo clippy --workspace --all-targets -- -D warnings`;
+  `pnpm format:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm checksum`, `pnpm copy-lint`, `pnpm clean-room`,
+  `pnpm lint`, `pnpm type-check`, `pnpm deps:check`.
+- Failed: `pnpm test:scripts`: only the recorded `missing: R3 taffy: main.rs`.
+- The corpus test with 30,000 seeds in release (3.4 s), once.
+- Mutation checks: not evicting a variable's readers, not comparing the inherited theme, not evicting updated nodes, and
+  reusing a parent after its children changed each fail the property test; picking the first matching entry fails several
+  unit tests; removing cycle detection makes the cycle tests loop until killed.
+
+Test order: the test files were written first and failed to compile (no `Theme`, `Resolver`, `ResolvedValue`,
+`OpErrorKind::BindingType`); all 51 passed on the first run of the finished code, which is why the mutation checks above were run.

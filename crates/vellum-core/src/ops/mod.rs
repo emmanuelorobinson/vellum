@@ -456,6 +456,15 @@ pub enum OpErrorKind {
     },
     /// Aliases lead back to this variable.
     AliasCycle(VariableId),
+    /// A property is bound to a variable of a type it does not take.
+    BindingType {
+        /// The variable.
+        variable: VariableId,
+        /// The types the property takes.
+        expected: &'static [VariableType],
+        /// The variable's type.
+        found: VariableType,
+    },
     /// No local component with this id.
     UnknownComponent(ComponentId),
     /// Component id is taken.
@@ -539,6 +548,19 @@ impl fmt::Display for OpErrorKind {
                 expected.as_str()
             ),
             Self::AliasCycle(id) => write!(f, "variable {id} ends up referring to itself."),
+            Self::BindingType {
+                variable,
+                expected,
+                found,
+            } => write!(
+                f,
+                "{}",
+                crate::resolver::variables::VariableError::TypeMismatch {
+                    variable: variable.clone(),
+                    expected,
+                    found: *found,
+                }
+            ),
         }
     }
 }
@@ -597,11 +619,21 @@ pub fn plan_with_inputs(
     };
     let mut planner = lower::Planner::new(doc.clone(), false);
     run(&mut planner, tx, &mut recorded, inputs)?;
-    if let Err(kind) = advanced::validate_references(&planner.doc) {
-        // Name the op after which the references were first broken: plan again, checking after every op,
-        // with the same ids.
+    // Variable types are checked at the same place, for the same reason (see `check::new_binding_problem`).
+    let broken = advanced::validate_references(&planner.doc).err();
+    let plan = planner.finish(tx.origin.clone());
+    let binding = match broken {
+        None => check::new_binding_problem(doc, &plan.document, &plan.changes),
+        Some(_) => None,
+    };
+    if let Some(kind) = broken.or_else(|| binding.clone()) {
+        // Name the op after which things were first broken: plan again, checking after every op, with the same
+        // ids.
         let mut replay = Replay(recorded.made.into_iter());
         let mut strict = lower::Planner::new(doc.clone(), true);
+        if let Some(binding) = binding {
+            strict = strict.blaming(binding);
+        }
         return Err(run(&mut strict, tx, &mut replay, inputs)
             .err()
             .unwrap_or(OpError {
@@ -610,7 +642,7 @@ pub fn plan_with_inputs(
                 kind,
             }));
     }
-    Ok(planner.finish(tx.origin.clone()))
+    Ok(plan)
 }
 
 fn run(

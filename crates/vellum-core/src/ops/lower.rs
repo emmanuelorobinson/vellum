@@ -10,12 +10,29 @@ use vellum_types::{
 use super::edit::{Location, Touched, apply_one, find, locate};
 use super::{Edit, Op, OpErrorKind, Parent, Place, Plan};
 use crate::ports::IdGen;
+use crate::resolver::variables::{
+    BindingProblem, BindingProblemKind, check_component_bindings, check_own_bindings,
+    check_style_bindings, check_subtree_bindings, check_variants_bindings, first_misuse_of,
+};
 
 pub(super) type Refusal = (String, OpErrorKind);
 
 pub(super) fn at(path: impl Into<String>) -> impl FnOnce(OpErrorKind) -> Refusal {
     let path = path.into();
     move |kind| (path, kind)
+}
+
+/// A binding the op layer refuses, at `path`.
+fn binding_refusal(path: String, problem: &BindingProblem) -> Refusal {
+    let kind = match &problem.kind {
+        BindingProblemKind::Unknown => OpErrorKind::UnknownVariable(problem.variable.clone()),
+        BindingProblemKind::Type { expected, found } => OpErrorKind::BindingType {
+            variable: problem.variable.clone(),
+            expected,
+            found: *found,
+        },
+    };
+    (path, kind)
 }
 
 /// The path inside `root` (written `prefix`) to the node `target`: `node`, `node.children[1].children[0]`.
@@ -136,6 +153,11 @@ pub(super) struct Planner {
     /// Check component references, override paths and slots after every op that can break them, not once at
     /// the end. Only used to name the op that broke a refused transaction.
     strict: bool,
+    /// The binding error a replay is looking for. Variable types are checked once, at the end; a replay that
+    /// refused the first transient mismatch would name an op that has nothing to do with the one the final
+    /// check found, so it refuses this error and no other. `None` checks no bindings (the first pass, and a
+    /// replay for a broken reference).
+    blame: Option<OpErrorKind>,
 }
 
 impl Planner {
@@ -147,6 +169,22 @@ impl Planner {
             touched: Touched::default(),
             created: BTreeMap::new(),
             strict,
+            blame: None,
+        }
+    }
+
+    /// Makes this planner refuse `error`, a binding the transaction leaves wrong, at the op that causes it.
+    pub(super) fn blaming(mut self, error: OpErrorKind) -> Self {
+        self.blame = Some(error);
+        self
+    }
+
+    /// Refuses `problem` at `path` if this planner is looking for exactly that binding error.
+    fn binding_error(&self, path: String, problem: &BindingProblem) -> Result<(), Refusal> {
+        let refusal = binding_refusal(path, problem);
+        match &self.blame {
+            Some(blamed) if *blamed == refusal.1 => Err(refusal),
+            _ => Ok(()),
         }
     }
 
@@ -204,6 +242,22 @@ impl Planner {
         }
     }
 
+    /// Every variable bound anywhere in the subtree `root` (written `field`) has a type its property takes.
+    /// Run after `variables_exist`, so a missing variable has already been refused. Like references, types are
+    /// checked once against where the transaction ends (`check::new_binding_problem`), because ops may come in
+    /// any order that gets there (the diff changes a variable's type before it rebinds what used it); this
+    /// runs only when the planner is strict, to say which op is at fault.
+    pub(super) fn bindings_fit(&self, root: &Node, field: &str) -> Result<(), Refusal> {
+        if self.blame.is_none() {
+            return Ok(());
+        }
+        for (id, problem) in check_subtree_bindings(&self.doc, root) {
+            let path = format!("{}.{}", node_path(field, root, &id), problem.at);
+            self.binding_error(path, &problem)?;
+        }
+        Ok(())
+    }
+
     pub(super) fn insert(&mut self, to: Place, node: &Node, field: &str) -> Result<(), Refusal> {
         self.edit(Edit::Insert {
             to,
@@ -211,6 +265,7 @@ impl Planner {
         })
         .map_err(|kind| (insert_path(&kind, field, node), kind))?;
         self.variables_exist(referenced_variables(node), field)?;
+        self.bindings_fit(node, field)?;
         self.references(field)
     }
 
@@ -241,6 +296,17 @@ impl Planner {
                     )
                 })?;
                 self.variables_exist(referenced_variables(patch), "patch")?;
+                // Only what the patch made wrong: a file can hold a binding this layer would not have accepted,
+                // and changing the layer's name is not the moment to refuse it.
+                if self.blame.is_some() {
+                    let before = check_own_bindings(&self.doc, current);
+                    for (_, problem) in check_own_bindings(&self.doc, &next)
+                        .iter()
+                        .filter(|found| !before.contains(found))
+                    {
+                        self.binding_error(format!("patch.{}", problem.at), problem)?;
+                    }
+                }
                 self.edit(Edit::Set {
                     node: Box::new(next),
                 })
@@ -315,7 +381,11 @@ impl Planner {
                     };
                     (path, kind)
                 })?;
-                self.variables_exist(referenced_variables(&page.children), "page")
+                self.variables_exist(referenced_variables(&page.children), "page")?;
+                for (i, child) in page.children.iter().enumerate() {
+                    self.bindings_fit(child, &format!("page.children[{i}]"))?;
+                }
+                Ok(())
             }
             Op::DeletePage { id } => self
                 .edit(Edit::RemovePage { id: id.clone() })
@@ -343,11 +413,29 @@ impl Planner {
                     e => ("id".to_owned(), e),
                 }),
             Op::SetShell { shell } => {
+                let before = if self.blame.is_some() {
+                    self.doc.styles.clone()
+                } else {
+                    BTreeMap::new()
+                };
                 self.edit(Edit::SetShell {
                     shell: shell.clone(),
                 })
                 .map_err(at("shell"))?;
-                self.variables_exist(referenced_variables(&shell.styles), "shell.styles")
+                self.variables_exist(referenced_variables(&shell.styles), "shell.styles")?;
+                for (style_id, style) in shell
+                    .styles
+                    .iter()
+                    .filter(|(id, s)| self.blame.is_some() && before.get(*id) != Some(*s))
+                {
+                    for problem in check_style_bindings(&self.doc, style) {
+                        self.binding_error(
+                            format!("shell.styles.{style_id}.{}", problem.at),
+                            &problem,
+                        )?;
+                    }
+                }
+                Ok(())
             }
             Op::SetComponent { id, component } => {
                 self.edit(Edit::SetComponent {
@@ -363,6 +451,16 @@ impl Planner {
                 })?;
                 if let Some(component) = component {
                     self.variables_exist(referenced_variables(component), "component")?;
+                    if self.blame.is_some() {
+                        for (id, problem) in check_component_bindings(&self.doc, component) {
+                            let path = format!(
+                                "{}.{}",
+                                node_path("component.root", &component.root, &id),
+                                problem.at
+                            );
+                            self.binding_error(path, &problem)?;
+                        }
+                    }
                 }
                 self.references("component")
             }
@@ -388,6 +486,11 @@ impl Planner {
                 })
                 .map_err(at("id"))?;
                 self.variables_exist(referenced_variables(variants), "variants")?;
+                if self.blame.is_some() {
+                    for (_, problem) in check_variants_bindings(&self.doc, variants) {
+                        self.binding_error(format!("variants.{}", problem.at), &problem)?;
+                    }
+                }
                 self.references("variants")
             }
             _ => self.advanced(op_index, op, ids, inputs),
@@ -399,6 +502,16 @@ impl Planner {
         set: &BTreeMap<VariableId, Variable>,
         remove: &BTreeSet<VariableId>,
     ) -> Result<(), Refusal> {
+        let retyped: BTreeSet<VariableId> = set
+            .iter()
+            .filter(|(id, new)| {
+                self.doc
+                    .variables
+                    .get(*id)
+                    .is_some_and(|old| old.variable_type() != new.variable_type())
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
         for (id, variable) in set {
             self.edit(Edit::SetVariable {
                 id: id.clone(),
@@ -459,6 +572,13 @@ impl Planner {
                     ));
                 }
             }
+        }
+        // A variable that changed type must still be one every place bound to it takes.
+        if self.blame.is_some()
+            && !retyped.is_empty()
+            && let Some(problem) = first_misuse_of(&self.doc, &retyped)
+        {
+            self.binding_error(format!("set.{}", problem.variable), &problem)?;
         }
         Ok(())
     }

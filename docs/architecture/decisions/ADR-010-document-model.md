@@ -160,3 +160,71 @@ Graphite's `editor/src/messages/portfolio/document/document_diff.rs` (MIT OR Apa
 shared with differing payloads), then compares the shared ones field by field; it prints the result for a debug
 check and produces no edits. Vellum keeps the shape (match by stable id, then per field) and changes the output: ops
 in an order the op layer accepts, so an external change goes through the one write path. Nothing was ported.
+
+## Prompt 16: resolving variables, theme axes and aliases
+
+- **Date:** 2026-10-14
+- **Written by:** Prompt 16 (Resolver I).
+- **Evidence:** `crates/vellum-core/src/resolver/variables/` (with its unit tests in `tests/`),
+  `crates/vellum-core/tests/resolver_cache.rs` (cached equals fresh over random edits), `crates/vellum-types/src/bindings.rs`,
+  and the binding cases in `crates/vellum-core/src/resolver/variables/tests/bind.rs`.
+
+### Decision
+
+1. **A theme is one value on every axis.** `Theme::defaults` takes the first value of each axis (an axis with no values
+   has none). A frame's `theme` replaces the axes it names, for itself and everything below, and only those. A choice
+   naming an axis or value the document lacks is a typed `ThemeError`; a tree resolution ignores that one choice,
+   applies the rest, and reports it as a `Problem` on the node (`theme.Mode`).
+2. **The last entry that applies wins.** An entry applies when every axis in its `when` has that value in the theme;
+   no `when` always applies; an axis the document lacks never matches. Position decides, not specificity: a later,
+   broader entry beats an earlier, narrower one. No entry applying is `VariableError::NoValue`.
+3. **An alias is followed under the same theme**, so the target picks its own entry. A cycle is an error only along the
+   entries the theme selects (`Cycle` names the loop, first and last the same variable); the op layer still refuses
+   any alias loop on any entry when it is set, so a cycle here means a file, merge or older version the ops never
+   saw. A missing target, or one of another type, is `Unknown` / `AliasType`.
+4. **Types are checked where a binding is made.** Every property that takes a variable has a type: opacity a number,
+   `visible` a boolean, a fill's colour a colour, an icon's name a string, a script input any variable (a colour
+   arrives as the text `#RRGGBB`, because a script input is a boolean, number or text), a shader uniform a boolean,
+   number or colour. `vellum_types::Bindings` walks a node's places with that type (one walk for reading, one for
+   writing, from one macro), so the op layer and the resolver share the list. Insert, replace, update, wrap, page,
+   component and shell ops, and a variable changing type while something uses it, are refused with
+   `OpErrorKind::BindingType`, at a path such as `patch.fills[0].color`. `check_document` reports the same.
+5. **Like references, types are checked once per transaction**, against where it ends, because the diff changes a
+   variable's type before it rebinds what used it. When the end is wrong the transaction is planned again, and the
+   replay refuses only that binding error, so the error names the op that caused it and not a passing state. A
+   problem the document already had, in the same place, is not the transaction's: renaming a layer is not the
+   moment to refuse a binding a file arrived with.
+6. **A resolved tree** is `ResolvedNode`: the node's own properties without children, every reference that resolved
+   replaced by its value, the theme in force, whether it is shown (`visible`, a boolean variable can decide), and its
+   resolved children shared by `Arc`. A reference that cannot be resolved stays a reference and is listed in
+   `problems`, so nothing is drawn from a guess; an unresolved visibility flag counts as shown.
+7. **The cache is per node, kept good by a dirty set.** An entry is good while the node's content did not change (the
+   `ChangeSet` names the nodes that did), the theme it inherited is the same (compared on the way down), and none of
+   the variables it read changed (an index from variable to readers; a node's reads include every variable on the
+   alias chains it followed, and a variable it asked for that did not exist). A change to the theme axes drops
+   everything. A `ChangeSet` does not name the parent of an inserted, removed or moved node, so a parent is rebuilt
+   whenever a child's resolved node is not the one it held. That makes the walk visit every node, but only dirty
+   ones are recomputed, and a rebuilt parent reuses its own resolved properties.
+
+### Numbers
+
+`cargo test resolver::variables` runs 51 unit tests and the property test (300 random cases and a fixed corpus of 400
+seeds; 30,000 seeds were run once, in release, 3.4 s). The property test was checked by breaking the cache four ways
+(variable readers not evicted, inherited theme not compared, updated nodes not evicted, a parent reused after its
+children changed); each made it fail. Nothing was timed against a large document.
+
+### Costs and risks accepted
+
+- The walk visits every node on every resolve. It is a hash lookup and a pointer comparison per node, with no
+  allocation, but it is O(nodes) where a skip of untouched subtrees would be O(changes). Skipping needs the
+  ChangeSet to name parents or the cache to hold parent links for the new structure; neither is done.
+- Props overrides are plain JSON, so a `$var` inside one is not type-checked until Prompt 17 applies it. A variable
+  inside a props override of the wrong type is therefore not refused today.
+- A script input bound to a colour variable receives text. A script that wants the channels has to parse it.
+- `ResolvedNode::visible` is the node's own flag. Applying a hidden ancestor is left to the reader of the tree.
+
+### Not decided
+
+- Resolution of instances, overrides, slots and libraries (Prompt 17). The cache is keyed by node id, and a component
+  change will have to reach its instances there.
+- Whether the resolved value of a style (`textStyle`) belongs on the resolved text node or beside it (Prompts 19, 21).
