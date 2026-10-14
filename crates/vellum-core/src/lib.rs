@@ -2,7 +2,7 @@
 //!
 //! So far: the ports (Prompt 10), the ops that are the one write path (Prompts 11-12), the Guard with its
 //! leases (Prompt 13), the history that per-actor undo and "Undo this turn" run on (Prompt 14), diff and
-//! three-way merge (Prompt 15), and the first half of the resolver: variables, theme axes and aliases (Prompt 16).
+//! three-way merge (Prompt 15), the resolver (variables, themes, components and libraries, Prompts 16–17), and shared layout preparation (Prompt 18).
 //! Real code for the rest lands in the prompt that owns it.
 //!
 //! This crate is pure (ARCHITECTURE §2.1): no file system, network, clock or randomness, and no dependency but
@@ -11,6 +11,7 @@
 pub mod diff;
 pub mod guard;
 pub mod history;
+pub mod layout;
 pub mod lease;
 pub mod merge;
 pub mod ops;

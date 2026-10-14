@@ -4,7 +4,7 @@ use vellum_core::ports::{
     Dimension, DirtySet, Extent, LayoutContent, LayoutEngine, LayoutNode, LayoutResult, Rect,
     TextEngine,
 };
-use vellum_types::{Align, Justify, Layout, NodeId};
+use vellum_types::{Align, Justify, Layout, NodeIdPath};
 
 /// Lays out rows and columns with fixed, hug and fill sizes, gap, padding, justify and align, by the rules of
 /// ADR-002 that the contract suite checks. Always lays out everything and ignores the dirty set. A grid is laid
@@ -19,7 +19,7 @@ impl StackLayout {
     }
 }
 
-type Boxes = BTreeMap<NodeId, Rect>;
+type Boxes = BTreeMap<NodeIdPath, Rect>;
 
 impl LayoutEngine for StackLayout {
     fn layout(
@@ -32,7 +32,10 @@ impl LayoutEngine for StackLayout {
         let root = &tree.root;
         let (w, h) = place(root, None, None, text, &mut boxes);
         boxes.insert(root.id.clone(), Rect::new(root.style.x, root.style.y, w, h));
-        LayoutResult { boxes }
+        LayoutResult {
+            boxes,
+            ..Default::default()
+        }
     }
 }
 

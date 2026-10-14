@@ -1,0 +1,71 @@
+{
+  "fixture": "matrix_row_end_end_fixed",
+  "root": {
+    "box": {
+      "height": 111.25,
+      "width": 321.5,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 21.25,
+          "width": 31.5,
+          "x": 166.25,
+          "y": 80.25
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 21.25,
+          "width": 31.5
+        }
+      },
+      {
+        "box": {
+          "height": 32.5,
+          "width": 62.25,
+          "x": 205,
+          "y": 69
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 32.5,
+          "width": 62.25
+        }
+      },
+      {
+        "box": {
+          "height": 14.75,
+          "width": 41.75,
+          "x": 274.5,
+          "y": 86.75
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 14.75,
+          "width": 41.75
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "end",
+      "gap": 7.25,
+      "height": 111.25,
+      "justify": "end",
+      "layout": "row",
+      "padding": [
+        3.5,
+        5.25,
+        9.75,
+        11.5
+      ],
+      "width": 321.5
+    }
+  },
+  "title": "row end end, fractional padding and fixed children"
+}

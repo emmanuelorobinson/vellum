@@ -264,8 +264,7 @@ node_struct!(
         /// `none`, `row`, `column` or `grid`.
         #[serde(default, skip_serializing_if = "is_default")]
         layout: Layout,
-        /// Grid only: the number of equal columns. ARCHITECTURE gives a grid no track fields; this is
-        /// the shape the layout oracle uses, to be settled in Prompt 18.
+        /// Grid only: the number of equal columns, with auto-placed children (ADR-012).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         columns: Option<u32>,
         /// Grid only: the number of equal rows; as many as the children need when absent.
@@ -283,8 +282,8 @@ node_struct!(
         /// Alignment across the main axis.
         #[serde(default, skip_serializing_if = "is_default")]
         align: Align,
-        /// Whether the stroke takes part in layout. ARCHITECTURE does not define it; undefined until
-        /// Prompt 18.
+        /// Reserves this frame's inward stroke alongside padding: inside full, center half, outside
+        /// zero. Fixed sizes include that space; children’s strokes do not change layout (ADR-012).
         #[serde(default, skip_serializing_if = "is_false")]
         layout_includes_stroke: bool,
         /// Clips children to the frame.

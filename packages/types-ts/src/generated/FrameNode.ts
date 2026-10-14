@@ -98,8 +98,7 @@ metadata?: { [key in string]: JsonValue },
  */
 layout?: Layout, 
 /**
- * Grid only: the number of equal columns. ARCHITECTURE gives a grid no track fields; this is
- * the shape the layout oracle uses, to be settled in Prompt 18.
+ * Grid only: the number of equal columns, with auto-placed children (ADR-012).
  */
 columns?: number | null, 
 /**
@@ -123,8 +122,8 @@ justify?: Justify,
  */
 align?: Align, 
 /**
- * Whether the stroke takes part in layout. ARCHITECTURE does not define it; undefined until
- * Prompt 18.
+ * Reserves this frame's inward stroke alongside padding: inside full, center half, outside
+ * zero. Fixed sizes include that space; children’s strokes do not change layout (ADR-012).
  */
 layoutIncludesStroke?: boolean, 
 /**

@@ -690,7 +690,7 @@
               "type": "boolean"
             },
             "columns": {
-              "description": "Grid only: the number of equal columns. ARCHITECTURE gives a grid no track fields; this is\nthe shape the layout oracle uses, to be settled in Prompt 18.",
+              "description": "Grid only: the number of equal columns, with auto-placed children (ADR-012).",
               "type": [
                 "integer",
                 "null"
@@ -745,7 +745,7 @@
               "$ref": "#/$defs/Layout"
             },
             "layoutIncludesStroke": {
-              "description": "Whether the stroke takes part in layout. ARCHITECTURE does not define it; undefined until\nPrompt 18.",
+              "description": "Reserves this frame's inward stroke alongside padding: inside full, center half, outside\nzero. Fixed sizes include that space; children’s strokes do not change layout (ADR-012).",
               "type": "boolean"
             },
             "locked": {

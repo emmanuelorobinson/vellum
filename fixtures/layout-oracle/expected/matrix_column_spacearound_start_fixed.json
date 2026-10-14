@@ -1,0 +1,71 @@
+{
+  "fixture": "matrix_column_spacearound_start_fixed",
+  "root": {
+    "box": {
+      "height": 321.5,
+      "width": 111.25,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 31.5,
+          "width": 21.25,
+          "x": 11.5,
+          "y": 29.875
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 31.5,
+          "width": 21.25
+        }
+      },
+      {
+        "box": {
+          "height": 62.25,
+          "width": 32.5,
+          "x": 11.5,
+          "y": 121.375
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 62.25,
+          "width": 32.5
+        }
+      },
+      {
+        "box": {
+          "height": 41.75,
+          "width": 14.75,
+          "x": 11.5,
+          "y": 243.625
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 41.75,
+          "width": 14.75
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "align": "start",
+      "gap": 7.25,
+      "height": 321.5,
+      "justify": "space-around",
+      "layout": "column",
+      "padding": [
+        3.5,
+        5.25,
+        9.75,
+        11.5
+      ],
+      "width": 111.25
+    }
+  },
+  "title": "column space-around start, fractional padding and fixed children"
+}

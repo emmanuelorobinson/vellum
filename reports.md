@@ -8,9 +8,15 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Prompt 17 in progress:** the person selected node-path/property bindings on each component prop.
-  New integration tests exposed four gaps: detach ignored prop bindings, props overrides bypassed variable-type
-  checks, linked instances required a local definition, and finite nested slot instances were mistaken for cycles.
+- **Review the existing Loro dependency advisories** (Prompt 17). `pnpm cargo:deny` now fails on
+  `bitmaps` ([RUSTSEC-2026-0247](https://rustsec.org/advisories/RUSTSEC-2026-0247)),
+  `im` ([RUSTSEC-2026-0248](https://rustsec.org/advisories/RUSTSEC-2026-0248)) and
+  `sized-chunks` ([RUSTSEC-2026-0251](https://rustsec.org/advisories/RUSTSEC-2026-0251)), all unmaintained
+  through the existing Loro dependency chain. Its report says no safe upgrade is available. Prompt 17 changes
+  neither dependencies nor advisory policy; decide the upstream/pin response separately.
+- **Review ADR-011 and synchronize ARCHITECTURE** (Prompt 17). The person selected explicit prop bindings;
+  the ADR also records the new optional instance `library` alias, precedence, text-content binding rule,
+  library scope, cache and paste behavior. Only a person edits ARCHITECTURE.md.
 
 - **Review the Prompt 16 choices that the guide or ARCHITECTURE leave open** (ADR-010 "Prompt 16"). Only a person edits
   ARCHITECTURE.md. (1) The last entry that applies wins by position, not specificity. (2) A script input
@@ -21,9 +27,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   uses it is refused. (4) A bad theme choice on a frame is ignored and reported, not fatal. (5) The resolver visits every
   node on every resolve (cheap, no allocation) and recomputes only the dirty ones; skipping whole subtrees needs
   `ChangeSet` to name the parents of inserted, removed and moved nodes, which I did not change.
-- **A `$var` inside a props override is not type-checked yet** (Prompt 16). Props overrides are plain JSON, so the
-  binding walk cannot see them; Prompt 17 has to check them when it applies them (and decide the prop-to-node question
-  below). Overrides that replace a node, children overrides and slot content are checked.
 - **Review the conflict node and the new document-level ops** (Prompt 15). ADR-010's "Prompt 15" section. The
   format gains a 19th node kind, `conflict` (`ours`, `theirs`, `properties`, `children`), which ARCHITECTURE §4.1's
   table does not list; only a person edits ARCHITECTURE.md. Ops gain `InsertPage`, `DeletePage`, `UpdatePage`,
@@ -117,11 +120,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   inside `scripts/gentest/`, and the real file is `scripts/gentest/src/main.rs`. Reproduced on `HEAD` in a separate
   worktree with this machine's `refs/`. The fix is in the guide row or in `scripts/reference-index.mjs`; I did not touch
   either.
-- **Decide how a component prop reaches a node** (Prompt 8, ADR-010). A prop is declared (`boolean`, `text` or `number`,
-  with a default) and set on an instance, but nothing in the format says which node it changes. ARCHITECTURE is silent.
-  The two options ADR-010 lists are a `{"$prop": "<name>"}` reference beside `$var` (it widens `Value<T>`, and a text
-  run's characters are not a `Value` yet) or a binding on each prop that names a node path and a property. Prompt 17
-  needs it, and the format changes if it adds one, so it is worth deciding before v1.
 - **Review ADR-010 and update ARCHITECTURE §4.1 and §4.4** (Prompt 8). The ADR makes three decisions that differ from
   ARCHITECTURE: a `$var` (and an alias) names a variable by its id, not its name path, so the example
   `{"$var": "color/primary"}` now describes a name, not the file; variants are override sets on the component's one tree,
@@ -149,10 +147,11 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   content (`flex-basis: 0`, `min-width: 0`); fixed and hug never shrink; fill on the main axis of a hugging parent uses
   its fallback, else hugs; hug on a frame without auto-layout, and fill with nothing to fill, need a fallback; two padding
   values are vertical then horizontal, as in CSS.
-- **Define grid tracks and `layoutIncludesStroke` in ARCHITECTURE §4.1** (Prompt 6). ARCHITECTURE gives a grid no
-  track fields and does not say what `layoutIncludesStroke` includes. The oracle assumes `columns`/`rows` counts with
-  equal tracks and leaves strokes out of layout. Prompts 7 and 18 need the real definitions; only a person edits
-  ARCHITECTURE.md.
+- **Review ADR-012 and synchronize ARCHITECTURE** (Prompt 18). Grid keeps equal column/optional row counts;
+  `layoutIncludesStroke` reserves the frame's own inward stroke beside padding (inside full, center half,
+  outside zero), preserving absolute outer-edge coordinates. Layout ids/results/dirty entries use occurrence
+  paths, and results expose typed problems. Preparation scans all inputs; Taffy reuses clean computations.
+  Only a person edits ARCHITECTURE.md.
 - **Watch the first CI run of the new `layout-oracle` job** (Prompt 6). It has not run on GitHub yet. It installs Chrome
   for Testing 155.0.8059.39 on Ubuntu and runs `--check` against boxes written by Chrome on macOS. No fixture has text,
   so the boxes should not depend on the OS, but that is unproven until the job passes.
@@ -1068,3 +1067,102 @@ Verified (each exited 0 unless said):
 
 Test order: the test files were written first and failed to compile (no `Theme`, `Resolver`, `ResolvedValue`,
 `OpErrorKind::BindingType`); all 51 passed on the first run of the finished code, which is why the mutation checks above were run.
+
+
+## Prompt 17: resolver II, components, instances, overrides, slots and libraries
+
+Built:
+- `resolver::components` and the complete `resolver::Resolver`: addressed resolved occurrences, typed prop
+  bindings/defaults, variants, props/replacement/children overrides, nested instance paths, per-instance slots,
+  suggestions, problems and missing-library flags. Own values and unchanged subtrees reuse Arcs; cached/fresh
+  equality is checked over 128 generated mixed-edit sequences.
+- `resolver::libraries`: an injected `LibrarySource`, relative/transitive imports, per-pass refresh, seeded
+  last-known copies with explicit missing/unreadable flags, and Locate through an updated import.
+- Paste planning as ordinary ops: Link/Copies, copied component dependencies (including slot suggestions), fresh
+  ids and path remapping, variable/alias/theme transfer, per-variable Use existing/Add renamed, style/font definitions,
+  rebased imports and explicit dependency-byte handoff. No direct store mutation or fabricated Origin.
+- Types: optional prop `bindings` and instance `library` alias. JSON Schema, format reference and 111 TypeScript
+  exports regenerated. Canonical TEST DATA parity documents in `fixtures/resolver/`, with a test-to-parity map.
+- 27 new tests. Local ops share the instance recipe, apply props on detach, check unselected variants and expanded
+  override bindings, and preserve the existing precise binding-error paths. Imported ops without a definition input
+  explicitly refuse instead of using a same-id local component.
+
+Decisions and differences:
+- The person selected explicit node-path/property prop bindings; the Prompt 8 open decision is removed above.
+  Local props-override variable types are now checked; the Prompt 16 open item is removed. Imported overrides are
+  typed and resolved with source/owner scope by the resolver. ADR-011 records the representation and behavior.
+- Guide FINAL has two cargo filters before `--`; the working form used is
+  `cargo test -p vellum-core --lib -- resolver::components resolver::libraries`.
+- No reference row is assigned to Prompt 17 in guide §3.2. Sibling projects were searched for reusable Rust patterns;
+  none was found. No reference code was ported; the existing typed patch/component machinery is shared.
+
+Found and fixed:
+- Tests first exposed missing APIs, then ignored props on detach, override type-check bypass, a local-definition
+  requirement for imported links, finite nested slot content mistaken for recursion, missing suggestion dependencies,
+  and owner-scope loss in deep library overrides. The full suite exposed broad validation hiding Prompt 16's error
+  paths; reference and expanded-binding checks were separated without weakening the assertions.
+- Restricted pnpm could not verify its pinned release against the registry. Registry access with the required
+  tool permission resolved it; regeneration and repository commands then ran with verified pnpm.
+
+Not verified or not done:
+- No large-document timings, GPU or UI screenshot checks. This is an engine prompt, with no user-facing UI.
+- Library cache persistence and copying asset/font/script bytes are Prompt 24; live watching is Prompt 28; dialogs
+  and starter-system distribution are later prompts. Existing imported detach/scale/replace ops need library-derived
+  input and currently return MissingInput. Nested links to other libraries remain linked when copying definitions.
+
+Verified (each exited 0 unless stated):
+- `cargo test -p vellum-core --lib -- resolver::components resolver::libraries` (27 tests), `cargo test --workspace`.
+- `pnpm types:gen`, `pnpm format-spec:gen`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm format:check`,
+  `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm clean-room`, `pnpm checksum`.
+- `cargo run -p vellum-codec-json --example canonicalize -- fixtures/resolver/components.vellum
+  fixtures/resolver/imports.vellum fixtures/resolver/library.lib.vellum`; also the same command with `--check`.
+- Failed: `pnpm test:scripts` (148 pass, one skip, the recorded `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (three existing Loro-chain unmaintained advisories listed above; bans, licenses and sources pass).
+
+
+## Prompt 18: production layout on Taffy and browser oracle
+
+Built:
+- Core layout-tree conversion from addressed resolver occurrences, typed ADR-002 sizing preparation, fallback
+  validation and safe hug-cycle diagnostics. Grid, absolute placement, hidden subtrees, stroke space and text
+  inputs are included. Layout result keys are `NodeIdPath`, so component occurrences cannot collide.
+- Persistent Taffy 0.14 adapter, injected TextEngine measurement/wrapping, style/content/topology reconciliation,
+  dirty measurement invalidation and cached clean subtrees. A topology pre-pass prevents transient ancestry cycles.
+- 186 Chrome-generated fixtures (51 existing, 135 new), a reproducible input matrix, shared oracle-to-port test
+  helper, production CI lane and spike compatibility wrapper. All boxes match within 0.5 px, without exemptions.
+- Tests: LayoutEngine contract; measurement counter; dependent text rewrap; hide/move/remove and reverse ancestry;
+  128 generated mixed-edit sequences compared to fresh layout; resolved component addresses, numeric failures,
+  empty hug fallbacks and ignored theme warnings. ADR-012 and the oracle runbook record choices and reference study.
+
+Differences and findings:
+- Stroke semantics were undefined; ADR-012 records the frame-own inward-space choice and the existing grid model.
+  No format representation change; type descriptions and generated format documentation were refreshed.
+  `LayoutStyle` gains the missing inputs and `LayoutResult` gains typed problems.
+- Chrome snaps border widths to whole pixels; the oracle expresses each fractional remainder as padding, keeping
+  exact inward stroke space and absolute coordinates. This fixed a real >0.5 px mismatch; tolerance stayed 0.5.
+- Tests failed first on missing APIs, the 51-fixture floor and missing stroke attributes; later on empty hug
+  fallbacks and an ignored theme warning incorrectly blocking geometry. Test setup corrections were also needed
+  for the existing library fake signature, document envelope and oracle index ids; product assertions were retained.
+- Chrome exited in the sandbox; the same generator passed with tool permission. The pnpm shim could not verify
+  registry signatures while restricted; permitted registry verification resolved it. The spike's new dependency
+  graph could not update the index while restricted; `--offline` resolved cached dependencies and passed.
+- Final `pnpm types:check` caught old FrameNode descriptions after concurrent Rust tests and regeneration;
+  regeneration after the Rust run finished restored current output. The final bindings check passes.
+
+Limits:
+- Preparation/reconciliation still scan the tree; counter tests prove clean text subtrees reuse measurements,
+  and dependent nodes remeasure. No large-document timing claim. TextEngine/font changes require dirty text or all.
+- No browser font/text parity fixtures (Prompt 19), GPU or UI checks. Geometry fixtures require Chrome only when
+  regenerating; ordinary Rust tests use committed expectations. CI configuration was checked locally, not on GitHub.
+
+Verified (each exited 0 unless stated):
+- `cargo test -p vellum-layout-taffy` (contract, 186 oracle fixtures, 128 generated edit sequences and regressions),
+  `cargo test -p vellum-core --test layout` (6 tests), `cargo test --workspace`.
+- `cargo test --offline --manifest-path spikes/layout/Cargo.toml`.
+- `node scripts/fixtures-layout.mjs`; `node scripts/gen-layout-oracle.mjs`; `pnpm layout-oracle --check`
+  (186 fixtures, Chrome 155.0.8059.41); `pnpm types:gen`, `pnpm format-spec:gen`.
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm clean-room`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm checksum`.
+- `VELLUM_LANES=chrome pnpm test:scripts`: Chrome lane passes; 151 passed, one failed on the existing
+  `missing: R3 taffy: main.rs` reference-index issue.
+- `pnpm cargo:deny`: existing three Loro-chain unmaintained advisories fail; bans, licenses and sources pass.

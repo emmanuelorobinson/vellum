@@ -1,0 +1,30 @@
+{
+  "fixture": "matrix_hug_fallback_column_empty",
+  "root": {
+    "box": {
+      "height": 27.25,
+      "width": 73.5,
+      "x": 0,
+      "y": 0
+    },
+    "children": [],
+    "id": "0",
+    "props": {
+      "height": "hug",
+      "heightFallback": 27.25,
+      "layout": "column",
+      "layoutIncludesStroke": true,
+      "padding": [
+        2.75,
+        4.5
+      ],
+      "stroke": [
+        2.5
+      ],
+      "strokeAlign": "center",
+      "width": "hug",
+      "widthFallback": 73.5
+    }
+  },
+  "title": "column hug fallback with empty content and inward stroke"
+}

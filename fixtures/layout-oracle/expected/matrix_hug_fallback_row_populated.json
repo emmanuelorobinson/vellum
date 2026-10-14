@@ -1,0 +1,45 @@
+{
+  "fixture": "matrix_hug_fallback_row_populated",
+  "root": {
+    "box": {
+      "height": 29.5,
+      "width": 42.75,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 21.5,
+          "width": 31.25,
+          "x": 5.75,
+          "y": 4
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 21.5,
+          "width": 31.25
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "height": "hug",
+      "heightFallback": 27.25,
+      "layout": "row",
+      "layoutIncludesStroke": true,
+      "padding": [
+        2.75,
+        4.5
+      ],
+      "stroke": [
+        2.5
+      ],
+      "strokeAlign": "center",
+      "width": "hug",
+      "widthFallback": 73.5
+    }
+  },
+  "title": "row hug fallback with populated content and inward stroke"
+}

@@ -291,7 +291,7 @@ A container with optional auto-layout.
 | `blendMode` | [BlendMode](#blendmode) | no | How the layer combines with what is beneath it. |
 | `children` | array of [Node](#node) | no | Back to front. |
 | `clip` | boolean | no | Clips children to the frame. |
-| `columns` | integer | no | Grid only: the number of equal columns. ARCHITECTURE gives a grid no track fields; this is the shape the layout oracle uses, to be settled in Prompt 18. |
+| `columns` | integer | no | Grid only: the number of equal columns, with auto-placed children (ADR-012). |
 | `cornerRadius` | [CornerRadius](#cornerradius) | no | Rounds the frame's corners (and its clip). |
 | `effects` | array of [Effect](#effect) | no | Applied in order. |
 | `fills` | array of [Paint](#paint) | no | Painted in order, first at the bottom. |
@@ -302,7 +302,7 @@ A container with optional auto-layout.
 | `id` | [NodeId](#nodeid) | yes | Unique within the document, never reused. |
 | `justify` | [Justify](#justify) | no | Distribution along the main axis. |
 | `layout` | [Layout](#layout) | no | `none`, `row`, `column` or `grid`. |
-| `layoutIncludesStroke` | boolean | no | Whether the stroke takes part in layout. ARCHITECTURE does not define it; undefined until Prompt 18. |
+| `layoutIncludesStroke` | boolean | no | Reserves this frame's inward stroke alongside padding: inside full, center half, outside zero. Fixed sizes include that space; children’s strokes do not change layout (ADR-012). |
 | `locked` | boolean | no | Locked layers cannot be selected or moved on the canvas. |
 | `metadata` | object | no | Free-form JSON for tooling and agents; the editor ignores it. |
 | `name` | string | yes | The name shown in the layers panel. |

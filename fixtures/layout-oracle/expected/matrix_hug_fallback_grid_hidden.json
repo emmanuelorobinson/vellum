@@ -1,0 +1,42 @@
+{
+  "fixture": "matrix_hug_fallback_grid_hidden",
+  "root": {
+    "box": {
+      "height": 27.25,
+      "width": 73.5,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": null,
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": 21.5,
+          "visible": false,
+          "width": 31.25
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "columns": 2,
+      "height": "hug",
+      "heightFallback": 27.25,
+      "layout": "grid",
+      "layoutIncludesStroke": true,
+      "padding": [
+        2.75,
+        4.5
+      ],
+      "stroke": [
+        2.5
+      ],
+      "strokeAlign": "center",
+      "width": "hug",
+      "widthFallback": 73.5
+    }
+  },
+  "title": "grid hug fallback with hidden content and inward stroke"
+}

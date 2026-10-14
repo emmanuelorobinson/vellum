@@ -74,10 +74,8 @@ jobs:
       - name: Install the toolchain pinned in rust-toolchain.toml
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: spikes/layout
-      - name: Taffy computes the same fixtures (spike, ADR-002)
-        run: cargo test --manifest-path spikes/layout/Cargo.toml
+      - name: Production LayoutEngine contract and 150+ oracle fixtures (ADR-002)
+        run: cargo test -p vellum-layout-taffy
 
   repo:
     name: Repo checks (script tests, dependency rules, clean room, copy, specification checksums)

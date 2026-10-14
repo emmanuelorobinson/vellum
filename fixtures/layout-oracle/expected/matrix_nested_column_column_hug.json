@@ -1,0 +1,88 @@
+{
+  "fixture": "matrix_nested_column_column_hug",
+  "root": {
+    "box": {
+      "height": 75,
+      "width": 97.75,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 43.5,
+          "width": 90.25,
+          "x": 3.75,
+          "y": 1.5
+        },
+        "children": [
+          {
+            "box": {
+              "height": 12.5,
+              "width": 81.25,
+              "x": 4.5,
+              "y": 2.75
+            },
+            "children": [],
+            "id": "0.0.0",
+            "props": {
+              "height": 12.5,
+              "width": 81.25
+            }
+          },
+          {
+            "box": {
+              "height": 21.25,
+              "width": 44.75,
+              "x": 4.5,
+              "y": 19.5
+            },
+            "children": [],
+            "id": "0.0.1",
+            "props": {
+              "height": 21.25,
+              "width": 44.75
+            }
+          }
+        ],
+        "id": "0.0",
+        "props": {
+          "gap": 4.25,
+          "height": "hug",
+          "layout": "column",
+          "padding": [
+            2.75,
+            4.5
+          ],
+          "width": "hug"
+        }
+      },
+      {
+        "box": {
+          "height": 19.25,
+          "width": 17.5,
+          "x": 3.75,
+          "y": 54.25
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 19.25,
+          "width": 17.5
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 9.25,
+      "height": "hug",
+      "layout": "column",
+      "padding": [
+        1.5,
+        3.75
+      ],
+      "width": "hug"
+    }
+  },
+  "title": "column with column, hug and fallback, nested padding and hidden child"
+}

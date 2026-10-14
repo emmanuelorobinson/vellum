@@ -1,0 +1,99 @@
+{
+  "fixture": "matrix_stroke_column_outside_included",
+  "root": {
+    "box": {
+      "height": 121.25,
+      "width": 213.5,
+      "x": 0,
+      "y": 0
+    },
+    "children": [
+      {
+        "box": {
+          "height": 89.25,
+          "width": 205,
+          "x": 4.25,
+          "y": 2.5
+        },
+        "children": [],
+        "id": "0.0",
+        "props": {
+          "height": "fill",
+          "width": "fill"
+        }
+      },
+      {
+        "box": {
+          "height": 19.5,
+          "width": 27.25,
+          "x": 4.25,
+          "y": 99.25
+        },
+        "children": [],
+        "id": "0.1",
+        "props": {
+          "height": 19.5,
+          "width": 27.25
+        }
+      },
+      {
+        "box": {
+          "height": 9.25,
+          "width": 14.75,
+          "x": -7.25,
+          "y": 3.5
+        },
+        "children": [],
+        "id": "0.2",
+        "props": {
+          "height": 9.25,
+          "position": "absolute",
+          "width": 14.75,
+          "x": -7.25,
+          "y": 3.5
+        }
+      },
+      {
+        "box": null,
+        "children": [
+          {
+            "box": null,
+            "children": [],
+            "id": "0.3.0",
+            "props": {
+              "height": 30,
+              "width": 30
+            }
+          }
+        ],
+        "id": "0.3",
+        "props": {
+          "height": 99,
+          "layout": "row",
+          "visible": false,
+          "width": 999
+        }
+      }
+    ],
+    "id": "0",
+    "props": {
+      "gap": 7.5,
+      "height": 121.25,
+      "layout": "column",
+      "layoutIncludesStroke": true,
+      "padding": [
+        2.5,
+        4.25
+      ],
+      "stroke": [
+        2.5,
+        4.75,
+        6.25,
+        8.5
+      ],
+      "strokeAlign": "outside",
+      "width": 213.5
+    }
+  },
+  "title": "column own outside stroke included, absolute origin and hidden subtree"
+}

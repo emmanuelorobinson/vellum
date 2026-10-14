@@ -28,12 +28,13 @@ fn style(mode: Layout, width: Dimension, height: Dimension) -> LayoutStyle {
         padding: Insets::default(),
         justify: Justify::Start,
         align: Align::Start,
+        ..Default::default()
     }
 }
 
 fn frame(id: &str, style: LayoutStyle, children: Vec<LayoutNode>) -> LayoutNode {
     LayoutNode {
-        id: node_id(id),
+        id: node_id(id).into(),
         style,
         content: LayoutContent::Frame,
         children,
@@ -57,7 +58,7 @@ fn tree(root: LayoutNode) -> LayoutTree {
 fn expect(result: &LayoutResult, id: &str, x: f64, y: f64, w: f64, h: f64, what: &str) {
     let got = result
         .boxes
-        .get(&node_id(id))
+        .get(&node_id(id).into())
         .unwrap_or_else(|| panic!("LayoutEngine ({what}): {id} has no box"));
     let want = Rect::new(x, y, w, h);
     assert!(
@@ -264,7 +265,7 @@ pub fn run<E: LayoutEngine>(make: impl Fn() -> E, text: &dyn TextEngine) {
     let rich = RichText::plain("hello brave new world", "TEST DATA Sans", 10.0);
     let unbounded = text.measure(&rich, vellum_core::ports::Extent::UNBOUNDED);
     let hugging_text = LayoutNode {
-        id: node_id("t"),
+        id: node_id("t").into(),
         style: style(Layout::None, HUG, HUG),
         content: LayoutContent::Text(rich.clone()),
         children: vec![],
@@ -296,7 +297,7 @@ pub fn run<E: LayoutEngine>(make: impl Fn() -> E, text: &dyn TextEngine) {
 
     let wrapped = text.measure(&rich, vellum_core::ports::Extent::with_width(40.0));
     let narrow = LayoutNode {
-        id: node_id("t"),
+        id: node_id("t").into(),
         style: style(Layout::None, FIXED(40.0), HUG),
         content: LayoutContent::Text(rich),
         children: vec![],

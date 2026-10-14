@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vellum_types::{Align, Justify, Layout, NodeId};
+use vellum_types::{Align, Justify, Layout, NodeIdPath};
 
 use crate::ports::{Rect, RichText, TextEngine};
 
@@ -57,6 +57,42 @@ pub struct LayoutStyle {
     pub justify: Justify,
     /// Where children sit across it.
     pub align: Align,
+    /// Equal grid column count, required for a grid.
+    pub columns: Option<u32>,
+    /// Equal grid row count, or auto rows when absent.
+    pub rows: Option<u32>,
+    /// Outside auto-layout flow, anchored at x/y from the parent's outer edge.
+    pub absolute: bool,
+    /// Hidden nodes and descendants have no boxes and take no space.
+    pub visible: bool,
+    /// Drawing clip; does not affect sizing.
+    pub clip: bool,
+    /// Include this frame's inward stroke alongside padding (ADR-012).
+    pub layout_includes_stroke: bool,
+    /// Inward part of the resolved stroke: full inside, half center, zero outside.
+    pub stroke: Insets,
+}
+impl Default for LayoutStyle {
+    fn default() -> Self {
+        Self {
+            mode: Layout::None,
+            width: Dimension::Fixed(0.0),
+            height: Dimension::Fixed(0.0),
+            x: 0.0,
+            y: 0.0,
+            gap: 0.0,
+            padding: Insets::default(),
+            justify: Justify::Start,
+            align: Align::Start,
+            columns: None,
+            rows: None,
+            absolute: false,
+            visible: true,
+            clip: false,
+            layout_includes_stroke: false,
+            stroke: Insets::default(),
+        }
+    }
 }
 
 /// What a node holds.
@@ -71,8 +107,8 @@ pub enum LayoutContent {
 /// One node of the tree to lay out.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LayoutNode {
-    /// The node it stands for.
-    pub id: NodeId,
+    /// The resolved occurrence it stands for; component instances cannot collide.
+    pub id: NodeIdPath,
     /// Sizing and arrangement.
     pub style: LayoutStyle,
     /// What it holds.
@@ -94,7 +130,7 @@ pub struct DirtySet {
     /// Everything: the first layout, or a change the caller cannot narrow.
     pub all: bool,
     /// The nodes that changed. The engine works out which ancestors and siblings that moves.
-    pub nodes: BTreeSet<NodeId>,
+    pub nodes: BTreeSet<NodeIdPath>,
 }
 
 impl DirtySet {
@@ -107,10 +143,10 @@ impl DirtySet {
     }
 
     /// Only these nodes changed.
-    pub fn of(nodes: impl IntoIterator<Item = NodeId>) -> Self {
+    pub fn of<I: Into<NodeIdPath>>(nodes: impl IntoIterator<Item = I>) -> Self {
         Self {
             all: false,
-            nodes: nodes.into_iter().collect(),
+            nodes: nodes.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -118,14 +154,16 @@ impl DirtySet {
 /// Where every node ended up.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct LayoutResult {
-    /// One box per node in the tree. `x` and `y` are from the parent's top-left corner (the root's from its
-    /// own `x` and `y`), which is how a node's `position` reads in the file.
-    pub boxes: BTreeMap<NodeId, Rect>,
+    /// One box per visible occurrence. `x` and `y` are from the parent's top-left corner
+    /// (the root's from its own `x` and `y`), as a node's `position` reads in the file.
+    pub boxes: BTreeMap<NodeIdPath, Rect>,
+    /// Invalid inputs or a dependency cycle broken using ADR-002’s fallback rule.
+    pub problems: Vec<crate::layout::LayoutProblem>,
 }
 
 /// Lays a tree out.
 pub trait LayoutEngine {
-    /// Boxes for every node of `tree`. `dirty` says what changed since the previous call on this engine, so an
+    /// Boxes for every visible occurrence. `dirty` says what changed since the previous call, so an
     /// incremental engine may reuse the rest; the result must equal a full layout of `tree`.
     fn layout(
         &mut self,

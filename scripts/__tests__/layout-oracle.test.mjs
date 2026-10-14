@@ -357,9 +357,9 @@ const fixtureNames = () =>
         .sort()
     : [];
 
-test("at least 40 fixtures, all valid, each with expected boxes that match its props", () => {
+test("at least 150 fixtures, all valid, each with expected boxes that match its props", () => {
   const names = fixtureNames();
-  assert.ok(names.length >= 40, `only ${names.length} fixtures`);
+  assert.ok(names.length >= 150, `only ${names.length} fixtures`);
   const expectedDir = join(fixturesDir, "expected");
   const expectedFiles = readdirSync(expectedDir).filter(
     (f) => f.endsWith(".json") && f !== "manifest.json",
@@ -478,4 +478,35 @@ test("chrome lane: regenerating in headless Chrome reproduces the committed boxe
   } finally {
     discard(out);
   }
+});
+
+test("stroke-in-layout reserves the inward stroke and keeps absolute x/y at the outer edge", () => {
+  const plan = cssPlan(
+    resolveTree(
+      parseFixtureHtml(
+        page(
+          `<div data-layout="row" data-layout-includes-stroke="true" data-stroke="2 4 6 8" data-stroke-align="center" data-width="120" data-height="80"><div data-position="absolute" data-x="3" data-y="-5" data-width="10" data-height="10"></div></div>`,
+        ),
+      ),
+    ),
+  );
+  assert.match(plan.get("0"), /border-width: 1px 2px 3px 4px/);
+  assert.match(plan.get("0.0"), /left: -1px/);
+  assert.match(plan.get("0.0"), /top: -6px/);
+});
+
+test("fractional inward stroke keeps Chrome border snapping out of the layout oracle", () => {
+  const plan = cssPlan(
+    resolveTree(
+      parseFixtureHtml(
+        page(
+          `<div data-layout="row" data-layout-includes-stroke="true" data-stroke="2.5 4.75 6.25 8.5" data-stroke-align="center" data-padding="2.5 4.25" data-width="120" data-height="80"><div data-position="absolute" data-x="3" data-y="-5" data-width="10" data-height="10"></div></div>`,
+        ),
+      ),
+    ),
+  );
+  assert.match(plan.get("0"), /border-width: 1px 2px 3px 4px/);
+  assert.match(plan.get("0"), /padding: 2.75px 4.625px 2.625px 4.5px/);
+  assert.match(plan.get("0.0"), /left: -1px/);
+  assert.match(plan.get("0.0"), /top: -6px/);
 });

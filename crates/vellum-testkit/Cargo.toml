@@ -7,6 +7,8 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+vellum-core = { path = "../vellum-core" }
+vellum-types = { path = "../vellum-types" }
 # PNG read/write for golden images and diff artifacts (pixel_diff).
 png = "0.18.1"
 # Expected-box files of the Chrome layout oracle (layout_oracle).

@@ -12,6 +12,7 @@ rust-version = "1.99"
 publish = false
 
 [dependencies]
-taffy = "0.14.0"
-serde_json = "1.0.154"
+vellum-core = { path = "../../crates/vellum-core" }
+vellum-contracts = { path = "../../crates/contracts" }
+vellum-layout-taffy = { path = "../../crates/adapters/layout-taffy" }
 vellum-testkit = { path = "../../crates/vellum-testkit" }

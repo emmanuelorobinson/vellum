@@ -29,6 +29,9 @@ const ATTRIBUTES = {
   "data-y": ["y", number({})],
   "data-visible": ["visible", boolean],
   "data-clip": ["clip", boolean],
+  "data-layout-includes-stroke": ["layoutIncludesStroke", boolean],
+  "data-stroke": ["stroke", padding],
+  "data-stroke-align": ["strokeAlign", oneOf(["inside", "center", "outside"])],
 };
 
 function oneOf(values) {
@@ -209,7 +212,15 @@ export function resolveTree(tree) {
     }
 
     const hug = (axis) => {
-      if (layout !== "none") return { kind: "hug" };
+      if (layout !== "none") {
+        const hasContent = node.children.some(
+          (c) => c.props.visible !== false && c.props.position !== "absolute",
+        );
+        const fallback = p[`${axis}Fallback`];
+        return !hasContent && fallback !== undefined
+          ? { kind: "fixed", value: fallback }
+          : { kind: "hug" };
+      }
       const fallback = p[`${axis}Fallback`];
       if (fallback === undefined) {
         throw new Error(`${where}: ${axis} hug on a frame with no auto-layout needs a fallback`);
@@ -254,13 +265,27 @@ const FLEX_JUSTIFY = {
 const FLEX_ALIGN = { start: "flex-start", center: "center", end: "flex-end" };
 const px = (n) => `${n}px`;
 
+function inwardStroke(props) {
+  if (!props.layoutIncludesStroke) return [0, 0, 0, 0];
+  const v = props.stroke ?? [0];
+  const sides =
+    v.length === 1 ? [v[0], v[0], v[0], v[0]] : v.length === 2 ? [v[0], v[1], v[0], v[1]] : v;
+  const factor = { inside: 1, center: 0.5, outside: 0 }[props.strokeAlign ?? "center"];
+  return sides.map((n) => n * factor);
+}
+
 function cssFor(node, parent) {
   const p = node.props;
   const d = [];
   if (node.isRoot) d.push(["position", "absolute"], ["left", "0px"], ["top", "0px"]);
-  else if (node.positioned)
-    d.push(["position", "absolute"], ["left", px(p.x ?? 0)], ["top", px(p.y ?? 0)]);
-  else d.push(["position", "relative"]);
+  else if (node.positioned) {
+    const border = inwardStroke(parent.props).map(Math.floor);
+    d.push(
+      ["position", "absolute"],
+      ["left", px((p.x ?? 0) - border[3])],
+      ["top", px((p.y ?? 0) - border[0])],
+    );
+  } else d.push(["position", "relative"]);
   d.push(["box-sizing", "border-box"], ["margin", "0px"]);
 
   const layout = layoutOf(p);
@@ -281,6 +306,24 @@ function cssFor(node, parent) {
   }
   if (p.gap !== undefined && layout !== "none") d.push(["gap", px(p.gap)]);
   if (p.padding) d.push(["padding", p.padding.map(px).join(" ")]);
+  if (p.layoutIncludesStroke) {
+    const inward = inwardStroke(p);
+    const border = inward.map(Math.floor);
+    const pad = p.padding ?? [0];
+    const sides =
+      pad.length === 1
+        ? [pad[0], pad[0], pad[0], pad[0]]
+        : pad.length === 2
+          ? [pad[0], pad[1], pad[0], pad[1]]
+          : pad;
+    // Chrome snaps border widths to whole CSS pixels. Keep the fractional remainder in padding
+    // so the oracle checks Vellum's exact inward stroke, including half-width centered strokes.
+    d.push(
+      ["border-style", "solid"],
+      ["border-width", border.map(px).join(" ")],
+      ["padding", sides.map((n, i) => px(n + inward[i] - border[i])).join(" ")],
+    );
+  }
   if (p.clip) d.push(["overflow", "hidden"]);
 
   const inFlex = parent && !node.positioned && isFlex(parent.props);

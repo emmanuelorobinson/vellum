@@ -11,6 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
+use vellum_core::ports::{Dimension, Insets, LayoutContent, LayoutNode, LayoutStyle};
 
 use serde::{Deserialize, Serialize};
 
@@ -244,4 +245,130 @@ pub fn compare(
             }
         })
         .collect()
+}
+
+/// The production port input for a valid oracle fixture. Oracle index paths become occurrence paths;
+/// no expected boxes are used to build the input. Panics on malformed fixture properties.
+pub fn layout_tree(fixture: &OracleFixture) -> vellum_core::ports::LayoutTree {
+    vellum_core::ports::LayoutTree {
+        root: oracle_node(&fixture.root),
+    }
+}
+fn layout_node(
+    id: &str,
+    mode: vellum_types::Layout,
+    width: Dimension,
+    height: Dimension,
+    children: Vec<LayoutNode>,
+) -> LayoutNode {
+    LayoutNode {
+        id: id.parse().expect("valid oracle index path"),
+        style: LayoutStyle {
+            mode,
+            width,
+            height,
+            ..Default::default()
+        },
+        content: LayoutContent::Frame,
+        children,
+    }
+}
+fn oracle_node(n: &OracleNode) -> LayoutNode {
+    let p = &n.props;
+    let number = |k: &str| p.get(k).and_then(serde_json::Value::as_f64).unwrap_or(0.0);
+    let dim = |k: &str| match p[k].as_str() {
+        Some("hug") => Dimension::Hug {
+            fallback: p
+                .get(&format!("{k}Fallback"))
+                .and_then(serde_json::Value::as_f64),
+        },
+        Some("fill") => Dimension::Fill {
+            fallback: p
+                .get(&format!("{k}Fallback"))
+                .and_then(serde_json::Value::as_f64),
+        },
+        _ => Dimension::Fixed(number(k)),
+    };
+    let insets = |k: &str| {
+        let v: Vec<f64> = p
+            .get(k)
+            .and_then(serde_json::Value::as_array)
+            .map(|a| a.iter().map(|v| v.as_f64().unwrap()).collect())
+            .unwrap_or(vec![0.0]);
+        match v[..] {
+            [a] => Insets {
+                top: a,
+                right: a,
+                bottom: a,
+                left: a,
+            },
+            [y, x] => Insets {
+                top: y,
+                right: x,
+                bottom: y,
+                left: x,
+            },
+            [top, right, bottom, left] => Insets {
+                top,
+                right,
+                bottom,
+                left,
+            },
+            _ => panic!("invalid insets"),
+        }
+    };
+    let mut node = layout_node(
+        &n.id.replace('.', "/"),
+        serde_json::from_value(p.get("layout").cloned().unwrap_or("none".into())).unwrap(),
+        dim("width"),
+        dim("height"),
+        n.children.iter().map(oracle_node).collect(),
+    );
+    node.style.x = number("x");
+    node.style.y = number("y");
+    node.style.gap = number("gap");
+    node.style.padding = insets("padding");
+    node.style.justify =
+        serde_json::from_value(p.get("justify").cloned().unwrap_or("start".into())).unwrap();
+    node.style.align =
+        serde_json::from_value(p.get("align").cloned().unwrap_or("start".into())).unwrap();
+    node.style.columns = p
+        .get("columns")
+        .and_then(serde_json::Value::as_u64)
+        .map(|n| n as u32);
+    node.style.rows = p
+        .get("rows")
+        .and_then(serde_json::Value::as_u64)
+        .map(|n| n as u32);
+    node.style.absolute = p.get("position").and_then(serde_json::Value::as_str) == Some("absolute");
+    node.style.visible = p
+        .get("visible")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true);
+    node.style.clip = p
+        .get("clip")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    node.style.layout_includes_stroke = p
+        .get("layoutIncludesStroke")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    let factor = match p
+        .get("strokeAlign")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("center")
+    {
+        "inside" => 1.0,
+        "center" => 0.5,
+        "outside" => 0.0,
+        _ => panic!(),
+    };
+    let s = insets("stroke");
+    node.style.stroke = Insets {
+        top: s.top * factor,
+        right: s.right * factor,
+        bottom: s.bottom * factor,
+        left: s.left * factor,
+    };
+    node
 }
