@@ -86,6 +86,13 @@ function main() {
     Object.assign(env, JSON.parse(emsdkEnv.stdout));
     env.EMCC_CFLAGS = config.emscriptenCflags;
     env.AR_wasm32_unknown_emscripten = "emar";
+    // rquickjs has no bundled emscripten bindings. Bindgen needs the target headers and
+    // visible declarations (emscripten otherwise hides JS_ToCStringLen2 from bindgen).
+    env.BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten = [
+      env.BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten || "",
+      `--sysroot=${join(emsdk, "upstream/emscripten/cache/sysroot")}`,
+      "-fvisibility=default",
+    ].join(" ");
   }
   const start = performance.now();
   const result = spawnSync("cargo", args, { cwd: root, env, stdio: "inherit" });

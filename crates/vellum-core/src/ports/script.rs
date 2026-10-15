@@ -6,6 +6,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::rc::Rc;
 
 /// A value that crosses between a script and the host: JSON's shapes.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -27,7 +28,19 @@ pub enum ScriptValue {
 
 /// What a script may call. Prompt 26 defines the functions; the port only carries them.
 pub trait ScriptApi {
+    /// The only functions exposed as `doc.<name>`. Names are unique identifiers.
+    fn functions(&self) -> &[&str] {
+        &[]
+    }
+
+    /// Exact number of newly created nodes, including descendants, before admitting a call.
+    /// Read-only APIs use zero. Mutating APIs must count against their staged document, without
+    /// changing it. The runtime reserves this cost before calling `call`.
+    fn node_cost(&self, function: &str, args: &[ScriptValue]) -> Result<u32, ScriptError>;
+
     /// Calls the host function `function`.
+    /// Implementations stage changes; only the caller commits after a successful run (Prompt 26).
+    /// Calls must be synchronous and bounded: the JS interrupt cannot preempt Rust host code.
     fn call(&self, function: &str, args: &[ScriptValue]) -> Result<ScriptValue, ScriptError>;
 }
 
@@ -47,7 +60,7 @@ pub struct ScriptLimits {
 /// What a finished script leaves behind.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ScriptOutput {
-    /// The value of the last expression, or `Null`.
+    /// The explicit return value of the script body, or `Null`.
     pub value: ScriptValue,
     /// What the script logged, in order.
     pub logs: Vec<String>,
@@ -109,7 +122,7 @@ pub trait ScriptRuntime {
     fn run(
         &self,
         src: &str,
-        api: &dyn ScriptApi,
+        api: Rc<dyn ScriptApi>,
         limits: ScriptLimits,
     ) -> Result<ScriptOutput, ScriptError>;
 }

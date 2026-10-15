@@ -35,7 +35,8 @@
 | kurbo | 0.13.1 | 0.13.x | not yet used | path geometry adapter |
 | i_overlay | 9.0.1 | 9.0.x | not yet used | boolean operations (Prompt 12) |
 | rstar | 0.13.0 | 0.13.x | =0.13.0 | spatial index (Prompt 20) |
-| rquickjs | 0.14.0 | 0.14.x | spike only: `spikes/engine`, and a size-only feature of `spikes/renderer` (Prompt 5) | ScriptRuntime (Prompt 25) |
+| libm | 0.2.16 | portable math (not in §5) | `crates/adapters/script-quickjs`; no defaults, `force-soft-floats` | identical Math in native/WASM (Prompt 25, ADR-005) |
+| rquickjs | 0.14.0 | 0.14.x | `crates/adapters/script-quickjs` only; `std`, emscripten-only `bindgen`; also the Prompt 5 spikes | ScriptRuntime (Prompt 25, ADR-005); explicit bounded allocator, no loader/futures |
 | rmcp | 3.5.1 | 3.5.x | not yet used | MCP adapter (Prompt 29) |
 | schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |
 | ts-rs | 12.0.1 | 12.x | `Cargo.toml` workspace.dependencies | TypeScript bindings from vellum-types |

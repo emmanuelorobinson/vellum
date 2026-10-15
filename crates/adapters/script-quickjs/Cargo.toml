@@ -6,5 +6,23 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+rquickjs = { version = "=0.14.0", default-features = false, features = ["std"] }
+serde_json.workspace = true
+# force-soft-floats overrides feature unification with other adapters.
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
+
+[target.'cfg(target_os = "emscripten")'.dependencies]
+rquickjs = { version = "=0.14.0", default-features = false, features = ["std", "bindgen"] }
+
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+vellum-testkit = { path = "../../vellum-testkit" }
+
+[[example]]
+name = "script-corpus"
+crate-type = ["cdylib"]
+
 [lints]
 workspace = true

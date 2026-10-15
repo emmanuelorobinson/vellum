@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-005 and synchronize ARCHITECTURE** (Prompt 25). `ScriptRuntime` now owns an `Rc<dyn ScriptApi>`;
+  the API has an allowlist and mandatory node-cost planning. Scripts use explicit returns, bounded JSON copies
+  and portable Math; `**`/`**=` refuse in favor of `Math.pow`. Review these restrictions and boundary caps.
+  The new sandbox CI workflow is configured but has not run remotely; only macOS arm64 and WASM ran here.
+  Only a person edits ARCHITECTURE.md.
+
 - **Review ADR-018 and synchronize ARCHITECTURE** (Prompt 24). Only a person edits ARCHITECTURE.md. It differs in
   five places: (1) §3.1 gains three ports, `FileSystem`, `AssetCollect` and `DocumentFiles`; (2) §4.3 calls the directory
   format "a second `Codec`", but bytes in and out cannot say which page a byte is, so it is `DocumentFiles` (`SingleFile`
@@ -1572,3 +1578,61 @@ Verified (exited 0 unless listed as failed):
 - Failed: `pnpm test:scripts` (163 pass, 3 skipped, the recorded `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories; `sha2` and `wuff` add none, and bans,
   licences and sources pass).
+
+
+## Prompt 25: QuickJS sandbox, limits and escape corpus
+
+Built (ADR-005, `docs/runbooks/scripts.md`):
+- `vellum-script-quickjs`: fresh runtime/realm per run, injected monotonic clock and seed, frozen allowlisted
+  `doc`, copied JSON arguments/results, no I/O/timers/clock globals or job execution. Literal async/import
+  activity refuses through a promise hook; dynamic evaluation and function constructors refuse.
+- Sticky typed time, memory, API-call, node and API errors, including caught OOM; bounded allocator with unsafe
+  delegation confined to one module. Deadlines include preflight/setup and bracket host calls/cost planning.
+  Node costs are reserved before host calls; zero limits never mean unlimited.
+- 21 behavior tests, 47 shared escape cases and eight deterministic fixtures. Native/WASM returned values and
+  recorded API calls compare byte for byte. A tagged Node harness checks WASM imports and writes transcripts.
+  New Linux CI workflow runs the corpus and checks the emscripten adapter; it has not run remotely.
+- rquickjs 0.14.0 promoted from the spike; portable libm 0.2.16 added to the adapter and version baseline.
+  Emscripten build tooling configures bindgen's sysroot and visibility without modifying vendor sources.
+
+Decisions and scope:
+- Owned `Rc<dyn ScriptApi>` avoids unsafe borrowed callback lifetimes. The API now declares exposed functions
+  and must implement exact node-cost planning. It stages changes; Prompt 26 owns actual Ops/transactions,
+  script nodes, source excerpts and the generated/versioned `vellum-doc.d.ts` registry. No DocStore access here.
+- Scripts are strict function bodies with explicit returns; logs stay empty. No RegExp/Proxy/typed-array/Date
+  intrinsics. JSON traffic caps, finite/plain-data rules and source/depth limits are explicit in ADR-005.
+- `Math.tan(1e20)` differed by one bit between native/WASM. Portable software Math fixes the mismatch;
+  `**`/`**=` refuse because QuickJS's operator bypasses Math. The lexical guard covers templates, comments,
+  Unicode whitespace/line terminators and bounded source nesting. This restriction needs human review above.
+- Read R9/R10's rquickjs runtime/context/WASM and Codex/OpenCode code-mode sources, plus the Prompt 5 spike.
+  Sibling searches found no reusable sandbox. No reference code was ported.
+
+Failures found and fixed:
+- Initial tests failed on absent APIs. Omitting internal Promise initialization caused a QuickJS teardown
+  assertion when hardening async prototypes; initialize it internally, hide its global and reject activity.
+- The engine's secondary memory limit could fire before the allocator's sticky failure flag; use one bounded
+  allocator. Regressions also caught error getters running during diagnostics, sparse/nonenumerable array
+  corruption, host calls continuing past a deadline and setup excluded from the deadline.
+- Including setup exposed a 10 ms wall-clock test assumption; an injected clock now advances inside the
+  host call, preserving the assertion that exactly one call is admitted. The separate real-clock loop test stays.
+- Emscripten first lacked stdio headers, then generated hidden/incomplete bindings. Target sysroot plus default
+  visibility fixes both. Cargo retained old bindings until its target-specific rquickjs-sys output was cleaned.
+- Restricted pnpm stalled; permitted pinned-pnpm cache access completed verification.
+
+Verified (exited 0 unless listed as failed; pnpm used both dev-telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace` (854 pass, five tagged ignores on the final run); `cargo test --offline -p vellum-script-quickjs` (21 behavior tests + smoke).
+- `node scripts/script-sandbox.mjs --offline`;
+  `CARGO_NET_OFFLINE=true VELLUM_LANES=wasm node --test scripts/__tests__/script-sandbox.test.mjs`.
+- `cargo clippy --offline -p vellum-script-quickjs -p vellum-core -p vellum-contracts -p vellum-testkit --all-targets -- -D warnings`;
+  `node scripts/skia-build.mjs check --offline -p vellum-script-quickjs --target wasm32-unknown-emscripten`;
+  `node scripts/skia-build.mjs clippy --offline -p vellum-script-quickjs --target wasm32-unknown-emscripten -- -D warnings`.
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`; `cargo fmt --all --check`; `git diff --check`.
+- `node --test scripts/__tests__/skia-build.test.mjs scripts/__tests__/version-baseline.test.mjs scripts/__tests__/script-sandbox.test.mjs`
+  (nine pass, one explicit lane skip; the opted-in lane passed separately).
+- Failed: `pnpm test:scripts` (163 pass, four tagged skips, existing `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories; bans, licenses and sources pass).
+
+Not verified: remote CI, native Windows/Linux, production editor host wiring (Prompt 26), or a real document
+API's node-cost plans and transaction rollback (also Prompt 26). The emscripten target compiled/type-checked;
+execution/parity used wasm32-unknown-unknown in Node. No new format/schema or source-specification edits.

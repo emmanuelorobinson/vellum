@@ -427,7 +427,7 @@ impl ScriptRuntime for Flaky {
     fn run(
         &self,
         _src: &str,
-        _api: &dyn ScriptApi,
+        _api: std::rc::Rc<dyn ScriptApi>,
         _limits: ScriptLimits,
     ) -> Result<ScriptOutput, ScriptError> {
         self.0.set(self.0.get() + 1);

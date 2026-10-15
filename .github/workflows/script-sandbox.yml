@@ -1,0 +1,42 @@
+name: ScriptRuntime sandbox
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: script-sandbox-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+jobs:
+  sandbox:
+    name: Native and WASM sandbox corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.6
+          actions-cache-folder: emsdk-cache
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: script-sandbox
+          cache-all-crates: true
+      - run: cargo test --locked -p vellum-script-quickjs
+      - run: node scripts/script-sandbox.mjs
+      - run: node scripts/skia-build.mjs check --locked -p vellum-script-quickjs --target wasm32-unknown-emscripten
+      - run: node scripts/spec-checksums.mjs check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: script-sandbox-transcripts
+          path: target/script-sandbox
