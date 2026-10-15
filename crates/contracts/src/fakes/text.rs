@@ -103,6 +103,7 @@ impl TextEngine for FixedMetricText {
                 width: 0.0,
                 height: 0.0,
                 lines: vec![],
+                problems: vec![],
             };
         };
         let chars = chars(text);
@@ -148,6 +149,8 @@ impl TextEngine for FixedMetricText {
                         font: self.font,
                         size: c.size,
                         glyphs: vec![],
+                        source_run: 0, normalized_coords: vec![], embolden: false, skew: None,
+                        underline: None, strikethrough: None, link: None,
                     });
                 }
                 if let Some(run) = runs.last_mut() {
@@ -155,6 +158,7 @@ impl TextEngine for FixedMetricText {
                         id: c.ch as u32,
                         cluster: c.byte,
                         x: pen,
+                        y: 0.0,
                         advance: c.advance,
                     });
                 }
@@ -177,6 +181,7 @@ impl TextEngine for FixedMetricText {
             width: widest,
             height: top,
             lines,
+            problems: vec![],
         }
     }
 }

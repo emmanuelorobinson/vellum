@@ -1,6 +1,6 @@
 use super::LayoutError;
 use crate::{ports::*, resolver::ResolvedNode};
-use vellum_types::{Node, Padding, Position, Size, StrokeAlign, StrokeWidth, Value};
+use vellum_types::{Node, Padding, Position, Size, StrokeAlign, StrokeWidth, TextResize, Value};
 /// Build one top-level layout tree, retaining every resolved occurrence address. Never changes a document.
 pub fn from_resolved(root: &ResolvedNode) -> Result<LayoutTree, LayoutError> {
     Ok(LayoutTree { root: node(root)? })
@@ -86,8 +86,15 @@ fn node(r: &ResolvedNode) -> Result<LayoutNode, LayoutError> {
         };
     }
     let content = if let Node::Text(t) = own {
+        match t.resize {
+            TextResize::AutoWidth => { style.width = Dimension::Hug { fallback: None }; style.height = Dimension::Hug { fallback: None }; }
+            TextResize::AutoHeight => { style.height = Dimension::Hug { fallback: None }; }
+            TextResize::Fixed => {}
+        }
         LayoutContent::Text(RichText {
             align: t.align,
+            vertical_align: t.vertical_align,
+            resize: t.resize,
             runs: t
                 .content
                 .iter()
@@ -100,6 +107,9 @@ fn node(r: &ResolvedNode) -> Result<LayoutNode, LayoutError> {
                         size: number(&run.size)?,
                         line_height: run.line_height.as_ref().map(number).transpose()?,
                         letter_spacing: number(&run.letter_spacing)?,
+                        underline: run.underline,
+                        strikethrough: run.strikethrough,
+                        link: run.link.clone(),
                     })
                 })
                 .collect::<Result<_, LayoutError>>()?,

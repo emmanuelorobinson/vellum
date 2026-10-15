@@ -44,3 +44,6 @@ loro = "1.16.2"
 
 # Layout stays behind its adapter. Pinned to the version verified by ADR-002.
 taffy = "=0.14.0"
+
+# Text stays in its adapter; system/font downloads are supplied by the host as bytes.
+parley = { version = "=0.12.0", default-features = false, features = ["std"] }

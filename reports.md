@@ -1166,3 +1166,13 @@ Verified (each exited 0 unless stated):
 - `VELLUM_LANES=chrome pnpm test:scripts`: Chrome lane passes; 151 passed, one failed on the existing
   `missing: R3 taffy: main.rs` reference-index issue.
 - `pnpm cargo:deny`: existing three Loro-chain unmaintained advisories fail; bans, licenses and sources pass.
+
+
+## Prompt 19: text on Parley and explicit font sources (in progress)
+
+- Tests first: production text tests failed on absent adapter APIs/dependencies; the core conversion test
+  failed on dropped resizing, alignment, decoration and link fields.
+- The existing ports cannot carry vertical glyph offsets, variable font coordinates, synthetic styles,
+  decorations, links or missing-font diagnostics; expanding the pure data ports for those inputs.
+- The pinned Inter 4.1 font and OFL license were downloaded from rsms/inter for the offline fallback.
+  Restricted DNS blocked the first download; the same request succeeded with tool permission.

@@ -26,7 +26,7 @@ pub use codec::{Codec, CodecError, Position};
 pub use doc_store::{
     ChangeSet, Commit, DocStore, Kept, Revert, SyncCursor, SyncError, SyncPayload, UndoTurn,
 };
-pub use fonts::{FontHandle, FontSource};
+pub use fonts::{FontData, FontHandle, FontSource};
 pub use geometry::{Extent, Rect};
 pub use layout::{
     Dimension, DirtySet, Insets, LayoutContent, LayoutEngine, LayoutNode, LayoutResult,
@@ -37,5 +37,5 @@ pub use script::{ScriptApi, ScriptError, ScriptLimits, ScriptOutput, ScriptRunti
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;
 pub use text::{
-    Glyph, GlyphRun, RichText, StyledRun, TextEngine, TextLayout, TextLine, TextMetrics,
+    Glyph, GlyphRun, RichText, StyledRun, TextEngine, TextLayout, TextLine, TextMetrics, TextDecoration, TextProblem, TextBoxLayout,
 };

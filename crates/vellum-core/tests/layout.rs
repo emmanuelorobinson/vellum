@@ -177,3 +177,20 @@ fn ignored_theme_choice_does_not_block_resolved_geometry() {
     assert!(!resolved.problems.is_empty());
     assert!(layout::from_resolved(&resolved).is_ok());
 }
+
+#[test]
+fn text_conversion_keeps_resize_vertical_alignment_links_and_decorations() {
+    use vellum_types::{TextResize,VerticalAlign};
+    for (resize,w,h) in [("auto-width",Dimension::Hug {fallback:None},Dimension::Hug {fallback:None}),("auto-height",Dimension::Fixed(100.0),Dimension::Hug {fallback:None}),("fixed",Dimension::Fixed(100.0),Dimension::Fixed(50.0))] {
+        let doc=Document::new("TEST DATA");
+        let n:Node=serde_json::from_value(serde_json::json!({"type":"text","id":"t","name":"TEST DATA","width":100,"height":50,"resize":resize,"verticalAlign":"bottom","content":[{"text":"TEST DATA","font":"Inter","size":12,"underline":true,"strikethrough":true,"link":"https://example.test"}]})).unwrap();
+        let r=Resolver::new().resolve_node(&doc,"/TEST DATA/doc.vellum",&n,&mut Libraries::new(&NoLibraries));
+        let t=layout::from_resolved(&r).unwrap();
+        assert_eq!(t.root.style.width,w); assert_eq!(t.root.style.height,h);
+        let LayoutContent::Text(rich)=t.root.content else {panic!()};
+        assert_eq!(rich.vertical_align,VerticalAlign::Bottom);
+        assert_eq!(rich.resize, match resize {"auto-width"=>TextResize::AutoWidth,"auto-height"=>TextResize::AutoHeight,_=>TextResize::Fixed});
+        assert!(rich.runs[0].underline && rich.runs[0].strikethrough);
+        assert_eq!(rich.runs[0].link.as_deref(),Some("https://example.test"));
+    }
+}
