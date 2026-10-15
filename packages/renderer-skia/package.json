@@ -1,0 +1,26 @@
+{
+  "name": "@vellum/renderer-skia",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Editor Renderer port over the shared Rust/Skia emscripten module.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./module": {
+      "types": "./src/module.d.ts",
+      "default": "./dist/vellum-editor.js"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vellum/renderer-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@vellum/contracts": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

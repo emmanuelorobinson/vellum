@@ -200,3 +200,12 @@ No repository has a release at or after its pin, so every pin stays at the guide
 `pnpm refs` clones the 15 repositories (about 2 GB on disk: goose 655 MB, penpot 509 MB, opencode 240 MB, the rest
 under 170 MB each) and checks that every path named in guide §3.2 and §3.3 exists. It needs the network, so it runs on a developer machine and not in CI. Nothing in `refs/` is committed or
 edited.
+
+## Prompt 22 renderer production pin
+
+- `skia-safe = 0.153.3`, matching ADR-001's measured spike, now source-only with gl/pdf/jpeg/embed-freetype.
+  Default features, binary-cache and textlayout are disabled. GN selects data-backed FreeType, disables
+  platform font managers and the low-precision CPU raster path. emsdk remains 4.0.6; Rust remains 1.99.0.
+- Noto Color Emoji is bundled at the spike's pinned revision/hash, with its original OFL alongside Inter.
+- ADR-016 records the source-build choice, retired macOS 27 patch and local native/WASM pixel evidence.
+  The six-target native CI matrix and opt-in hardware matrix are configured, not yet verified remotely.

@@ -4,3 +4,6 @@
 TS_RS_EXPORT_DIR = { value = "packages/types-ts/src/generated", relative = true }
 # i64/u64 are never serialised past 2^53 in the file format (ids are strings), so plain numbers.
 TS_RS_LARGE_INT = "number"
+
+# Data-backed font manager on every target (ADR-016). No platform font enumeration.
+SKIA_GN_ARGS = "skia_use_freetype=true skia_use_system_freetype2=false skia_enable_fontmgr_custom_empty=true skia_use_fontconfig=false skia_use_fonthost_mac=false skia_enable_fontmgr_win=false extra_cflags_cc=[\"-DSK_DISABLE_LOWP_RASTER_PIPELINE\"]"

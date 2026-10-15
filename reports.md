@@ -8,6 +8,15 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Finish Prompt 22 remote acceptance**. ADR-016 selects source-built Skia with caching. Native behavior
+  jobs cover six targets; hardware GPU jobs need six self-hosted `vellum-gpu` runners. Only macOS arm64
+  and WASM were executed here. Run the workflows and collect other-target cold/cached timings,
+  fresh-clone download times and billed CI minutes. No binary archive publishing is configured.
+- **Review ADR-016 and synchronize ARCHITECTURE** (Prompt 22). Shared Rust renderer, source-only build,
+  data-backed fonts, retired SDK workaround and explicit unsupported cases are recorded. ADR-010 was
+  already occupied by the document model, so the renderer decision uses ADR-016. Only a person edits
+  ARCHITECTURE.md.
+
 - **Review ADR-015 and synchronize ARCHITECTURE** (Prompt 21). Display commands now have a versioned
   binary ABI and typed shape/appearance resources. Transform sets an absolute device matrix after f64
   viewport rebasing. The ADR records layout diagnostic semantics, conservative culling and deferred
@@ -173,10 +182,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
 - **Review ADR-004 and ADR-001's new "Text" section** (Prompt 5). ADR-004 keeps Loro behind DocStore and sets the S06
   directory-codec suggestion at 10,000 nodes or 4 MB of `.vellum` JSON. ADR-001 now says: Parley lays text out, Skia
   only draws glyphs, no skia-safe `textlayout`, and every renderer uses Skia's FreeType font manager.
-- **Decide how the native FreeType Skia gets built** (Prompt 5). Matching text natively needs Skia built from source with
-  FreeType on macOS (rust-skia's prebuilt binaries have only CoreText), plus a one-line patch to bindgen output for the
-  macOS 27 SDK (`spikes/renderer/scripts/build-native.sh`). Prompt 22 should either publish Vellum's own binaries or
-  build them in CI. Windows was not tried.
 - **Undo cost grows with the document** (Prompt 5, ADR-004). Undoing a 200-node batch took 13 ms at 10k nodes and 109 ms
   at 50k, while applying it took under 2 ms. Prompt 14 has to measure per-actor undo and get it under 16 ms at 10k, or
   ADR-004 is revisited. Nothing for you to do now; it is here so it is not lost.
@@ -1338,3 +1343,62 @@ Verified (each exited 0 unless stated; pnpm commands used TURBO_TELEMETRY_DISABL
 - Failed: `pnpm test:scripts` (150 pass, one skip, the existing `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories above;
   bans, licenses and sources pass).
+
+
+## Prompt 22: shared native/editor Skia renderer
+
+Built:
+- Production display-buffer consumer and prepared scenes shared by CPU PNG, multi-page PDF and WebGL2.
+  Shapes, SVG paths/booleans, solid/image paints, aligned/per-side rectangular strokes, caps/joins/dashes,
+  glyph runs with variable coordinates/synthesis/decorations, image fit/fill/stretch/crop, clips, transforms
+  and group opacity. SVG serialization is a pure core writer over lowered paths and embedded images.
+- Checked emscripten buffer ownership/ABI, editor Renderer port and adapter, resize/DPR, context loss/restore,
+  disposal and TypeScript behavior contract. Combined text/render fixtures live in the native composition
+  root; adapters have no dependency on each other. No host UI/chrome or document mutations.
+- Source-only FreeType Skia, no platform font managers, pinned bundled Noto Color Emoji and original licenses.
+  Build/cache identity and measurement script, notice assembly, six-target native CI, software WebGL2 CI and
+  opt-in six-target self-hosted hardware lanes. ADR-016 and renderer runbook document use and reference study.
+
+Decisions/findings:
+- Chose option A, source builds with caching; removed the Prompt 5 native-build decision above. No Vellum
+  archives exist to verify. With the data-only font configuration, unpatched bindings compile on SDK 27.0;
+  the spike patch is retired and guarded rather than shipped. No upstream issue for a nonreproducible break.
+- Native low-precision CPU rendering differed from WASM by 3 on one emoji-edge pixel. Defining
+  SK_DISABLE_LOWP_RASTER_PIPELINE fixes this without changing test limits: CPU max delta 1; hardware GPU
+  p95 0 and 1.4664% over channel 2 (limit 2%); SwiftShader 1.6235%. Real recovery and Renderer contract pass.
+- Source/cache measurement on M5 Pro: isolated native renderer+text test build 47.76 s, cached repeat 0.24 s;
+  sources/dependencies were already downloaded. Other-target timings and fresh-clone/network costs unmeasured.
+- Tests first failed on absent APIs, then an unnamed Skia dummy family mistaken for a system font, missing
+  emoji fallback, full-circle arc lowering and aligned text strokes. All corrected. A crop test's cover-mode
+  setup was corrected while retaining its assertions. No reference code was ported; sibling patterns and
+  the guide's Penpot/Graphite/rust-skia paths were read. No .pen screen is named by this renderer prompt.
+- Restricted registry metadata, pnpm verification, emscripten cache and Chrome loopback access needed either
+  offline cached sources or tool permission. No source specification was edited.
+
+Limits:
+- Remote CI/hardware runs have not been executed. Windows, Linux and macOS x64 remain unverified; no
+  cross-platform performance claim. CI configuration is reviewable, not claimed green.
+- Per-side widths require rectangular geometry; nonuniform text strokes and bitmap-glyph strokes refuse
+  explicitly. Unknown avar versions refuse explicitly. SVG outlines ordinary glyphs and embeds bitmap/colour
+  glyph runs. Gradients, effects, non-normal blends and caches are Prompt 23 and currently return errors.
+- No binary publication/checksum manifest (option A). No upstream issue or active SDK patch because the
+  production configuration no longer reproduces the spike's SDK failure. These guide differences are in ADR-016.
+
+Verified (all exited 0 unless listed as failed; pnpm uses both telemetry opt-out variables):
+- `node scripts/skia-build.mjs test --offline --workspace`;
+  `node scripts/skia-build.mjs test --offline -p vellum -p vellum-render-skia` (9 adapter + 2 text integration tests);
+  `node scripts/skia-build.mjs test --offline -p vellum-text-parley --test fonts_lane -- --ignored` (2 tests).
+- `pnpm wasm:build`; `node scripts/renderer-gpu.mjs`; `node scripts/renderer-gpu.mjs --software`;
+  `node --test scripts/__tests__/skia-build.test.mjs`; `node --test scripts/__tests__/wasm-build.test.mjs`.
+- `packages/renderer-api/node_modules/.bin/vitest run --root packages/renderer-api`, also `--root
+  packages/renderer-skia` and `--root packages/contracts` (8 total tests, including ABI mock/lifetime checks).
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`; `git diff --check`.
+- `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `node scripts/skia-build.mjs clippy --offline --release -p vellum-wasm --bin vellum-editor
+  --target wasm32-unknown-emscripten -- -D warnings`;
+  `node scripts/skia-notices.mjs
+  /Users/emmanuelejakpomewhe/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/skia-bindings-0.153.3/skia
+  target/skia-notices`.
+- Failed: `pnpm test:scripts` (153 pass, 2 tagged skips, existing `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (the existing three Loro-chain unmaintained advisories; bans/licenses/sources pass).

@@ -15,3 +15,11 @@ exact bytes, face index, normalized axes and synthesis instructions returned wit
 The family named Inter in a document may override it; missing-family substitution always starts
 with this bundled face. Other Unicode coverage comes from explicitly supplied fonts and is reported
 when missing. No font is downloaded or installed by the adapter.
+
+Noto Color Emoji is bundled for deterministic offline colour emoji fallback (Prompt 22).
+Unmodified `fonts/NotoColorEmoji.ttf` from googlefonts/noto-emoji,
+commit `e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D`.
+SHA-256: `15671215ab769fdc7162a045d56fd7d7e477c51b04e6b3c761d914d8fdd6cc44`.
+Source: https://raw.githubusercontent.com/googlefonts/noto-emoji/e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/fonts/NotoColorEmoji.ttf
+License: SIL OFL 1.1, reproduced in `NotoColorEmoji.OFL.txt`.
+The renderer only receives these bytes through FontSource; it never substitutes a platform font.

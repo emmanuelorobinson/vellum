@@ -84,6 +84,11 @@ impl TextEngine for ParleyText {
             if !stack.contains(&bundled) {
                 stack.push(bundled.clone());
             }
+            if let Some(emoji) = ParleyFonts::alias(&state, "Noto Color Emoji")
+                && !stack.contains(&emoji)
+            {
+                stack.push(emoji);
+            }
             stacks.push(stack);
             at += run.text.len();
         }

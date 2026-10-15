@@ -14,5 +14,8 @@
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@vellum/renderer-api": "workspace:*"
   }
 }

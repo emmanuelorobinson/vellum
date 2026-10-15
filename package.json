@@ -35,12 +35,12 @@
     "checksum": "node scripts/spec-checksums.mjs check",
     "checksum:update": "node scripts/spec-checksums.mjs update",
     "clean": "node scripts/clean.mjs",
-    "cargo:build": "cargo build --workspace",
-    "cargo:check": "cargo check --workspace --all-targets",
-    "cargo:test": "cargo test --workspace",
-    "wasm:build": "cargo build -p vellum-wasm --target wasm32-unknown-unknown",
+    "cargo:build": "node scripts/skia-build.mjs build --workspace",
+    "cargo:check": "node scripts/skia-build.mjs check --workspace --all-targets",
+    "cargo:test": "node scripts/skia-build.mjs test --workspace",
+    "wasm:build": "node scripts/skia-build.mjs build --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten",
     "lint:ts": "biome check . && node scripts/copy-lint.mjs",
-    "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
+    "lint:rust": "node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings",
     "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\""
   },
   "devDependencies": {

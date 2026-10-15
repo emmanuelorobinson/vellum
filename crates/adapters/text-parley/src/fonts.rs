@@ -91,6 +91,12 @@ impl ParleyFonts {
             )
             .expect("bundled Inter is valid");
         fonts
+            .register(
+                FontTier::Bundled,
+                include_bytes!("../fonts/NotoColorEmoji.ttf").to_vec(),
+            )
+            .expect("bundled emoji is valid");
+        fonts
     }
     /// Register a single-family SFNT (all weights in a collection are allowed). Metadata comes from
     /// the font. Browser WOFF/WOFF2 decoding and reading document/cache/system files belong to hosts.

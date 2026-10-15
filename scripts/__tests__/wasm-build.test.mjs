@@ -8,10 +8,19 @@ import { fileURLToPath } from "node:url";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-test("vellum-wasm builds for the browser target with a placeholder export", () => {
+test("vellum-wasm keeps version smoke exports import-free on the unknown-unknown target", () => {
   const build = spawnSync(
     "cargo",
-    ["build", "-p", "vellum-wasm", "--target", "wasm32-unknown-unknown"],
+    [
+      "rustc",
+      "-p",
+      "vellum-wasm",
+      "--lib",
+      "--crate-type",
+      "cdylib",
+      "--target",
+      "wasm32-unknown-unknown",
+    ],
     { cwd: repo, encoding: "utf8" },
   );
   assert.equal(build.status, 0, build.stderr);
@@ -24,7 +33,11 @@ test("vellum-wasm builds for the browser target with a placeholder export", () =
     WebAssembly.Module.exports(module).some((e) => e.name === "vellum_format_version"),
     "wasm module must export vellum_format_version",
   );
-  assert.deepEqual(WebAssembly.Module.imports(module), [], "the placeholder needs no host imports");
+  assert.deepEqual(
+    WebAssembly.Module.imports(module),
+    [],
+    "version smoke exports need no host imports",
+  );
 
   const instance = new WebAssembly.Instance(module, {});
   assert.equal(instance.exports.vellum_format_version(), 1);

@@ -1,0 +1,139 @@
+name: Renderer I
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      hardware_gpu:
+        type: boolean
+        default: false
+        description: Run all six configured self-hosted hardware GPU lanes
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+  VELLUM_SKIA_FROM_SOURCE: "1"
+jobs:
+  native:
+    name: Native ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            target: aarch64-apple-darwin
+          - os: macos-26-intel
+            target: x86_64-apple-darwin
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install
+      - name: Linux source-build prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - name: Windows source-build prerequisites
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install ninja llvm -y --no-progress
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" >> $env:GITHUB_ENV
+      - name: Key source build by version, target, features, GN flags and patch contents
+        id: skia
+        shell: bash
+        run: echo "key=$(node scripts/skia-build.mjs --key --target ${{ matrix.target }})" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: renderer-${{ steps.skia.outputs.key }}
+          cache-all-crates: true
+      - name: Source build and renderer behavior tests
+        run: node scripts/skia-build.mjs test --locked -p vellum -p vellum-render-skia -p vellum-text-parley --target ${{ matrix.target }}
+      - name: Cached repeat for the same target
+        run: node scripts/skia-build.mjs test --locked -p vellum -p vellum-render-skia -p vellum-text-parley --target ${{ matrix.target }}
+      - name: Native parity artifacts and timing
+        run: node scripts/skia-build.mjs run --locked --release -p vellum --example renderer-fixtures --target ${{ matrix.target }} -- target/renderer-fixtures
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renderer-${{ matrix.target }}
+          path: |
+            target/skia-measurements/
+            target/renderer-fixtures/
+  webgl:
+    name: Browser WASM and WebGL2 integration
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.6
+          actions-cache-folder: emsdk-cache
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: renderer-emscripten-${{ hashFiles('scripts/skia-config.json', 'patches/skia-bindings/**') }}
+          cache-all-crates: true
+      - name: Build shared editor module
+        run: pnpm wasm:build
+      - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-fixtures -- target/renderer-fixtures
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          chrome-version: 155.0.8059.39
+          install-dependencies: true
+      - name: Software WebGL2, CPU parity, context recovery and actual Renderer contract
+        env:
+          VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: node scripts/renderer-gpu.mjs --software
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renderer-browser
+          path: |
+            target/renderer-fixtures/
+            target/skia-measurements/
+            packages/renderer-skia/dist/
+  hardware:
+    if: github.event_name == 'workflow_dispatch' && inputs.hardware_gpu
+    name: Hardware GPU ${{ matrix.platform }} ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macOS, Windows, Linux]
+        arch: [X64, ARM64]
+    runs-on: [self-hosted, vellum-gpu, '${{ matrix.platform }}', '${{ matrix.arch }}']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: rustup toolchain install
+      - run: pnpm wasm:build
+      - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-fixtures -- target/renderer-fixtures
+      - name: Hardware GPU lane (requires preinstalled Chrome, emsdk 4.0.6 and native build tools)
+        run: node scripts/renderer-gpu.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renderer-gpu-${{ matrix.platform }}-${{ matrix.arch }}
+          path: target/renderer-fixtures/

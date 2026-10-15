@@ -261,3 +261,22 @@ fn uncovered_characters_are_reported_with_logical_usage() {
             .any(|g| g.id == 0 && g.cluster == 1)
     );
 }
+
+#[test]
+fn bundled_emoji_fallback_needs_no_host_fonts() {
+    use vellum_core::ports::{FontSource, RichText, TextEngine};
+    let fonts = vellum_text_parley::ParleyFonts::new();
+    let text = vellum_text_parley::ParleyText::new(fonts.clone());
+    let layout = text.layout(&RichText::plain("A 😀 👩🏽‍💻", "Inter", 32.), 300.);
+    assert!(layout.problems.is_empty(), "{:?}", layout.problems);
+    let emoji = fonts
+        .resolve("Noto Color Emoji", 400, vellum_types::FontStyle::Normal)
+        .expect("bundled emoji");
+    assert!(
+        layout
+            .lines
+            .iter()
+            .flat_map(|l| &l.glyph_runs)
+            .any(|r| r.font == emoji)
+    );
+}

@@ -38,5 +38,15 @@
     "test": {
       "dependsOn": ["^test"]
     }
-  }
+  },
+  "globalPassThroughEnv": [
+    "CARGO_HOME",
+    "CARGO_TARGET_DIR",
+    "SKIA_SOURCE_DIR",
+    "VELLUM_SKIA_FROM_SOURCE",
+    "EMSDK",
+    "LIBCLANG_PATH",
+    "VELLUM_CHROME",
+    "VELLUM_LANES"
+  ]
 }

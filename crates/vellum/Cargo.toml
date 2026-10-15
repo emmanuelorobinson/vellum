@@ -16,3 +16,8 @@ vellum-types = { path = "../vellum-types" }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+vellum-core = { path = "../vellum-core" }
+vellum-render-skia = { path = "../adapters/render-skia" }
+vellum-text-parley = { path = "../adapters/text-parley" }

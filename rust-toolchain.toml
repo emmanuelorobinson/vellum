@@ -2,6 +2,6 @@
 channel = "1.99.0"
 profile = "minimal"
 components = ["rustfmt", "clippy"]
-# wasm32-unknown-unknown: the browser target vellum-wasm builds for today.
-# wasm32-unknown-emscripten: the editor's renderer (skia-safe in WASM, ADR-001); the spike in spikes/renderer uses it now.
+# wasm32-unknown-unknown: import-free version exports, tested with cargo rustc --crate-type cdylib.
+# wasm32-unknown-emscripten: production editor engine/renderer (ADR-001, ADR-016).
 targets = ["wasm32-unknown-unknown", "wasm32-unknown-emscripten"]

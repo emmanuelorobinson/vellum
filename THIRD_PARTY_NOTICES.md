@@ -16,3 +16,15 @@ table is for copied or adapted source only.
 commit `0b58fb370093f9a9f4ff785d94405710b79de67c`, `ofl/inter/Inter[opsz,wght].ttf`, renamed only.
 SIL Open Font License 1.1; copyright and license are reproduced in the adjacent `OFL.txt`.
 The adjacent README records the source URL and SHA-256. This is a licensed font asset, not ported code.
+
+`crates/adapters/text-parley/fonts/NotoColorEmoji.ttf` is unmodified Noto Color Emoji from
+googlefonts/noto-emoji commit `e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D`, `fonts/NotoColorEmoji.ttf`.
+SIL Open Font License 1.1; copyright/license in the adjacent `NotoColorEmoji.OFL.txt`.
+This is a licensed font asset, not ported code.
+
+## Native graphics libraries (Prompt 22)
+
+Skia (BSD-3-Clause) and its embedded FreeType (FTL or GPL-2.0; distributed under FTL) are built from
+the source revisions pinned by skia-bindings 0.153.3. Their original notices ship with release
+artifacts; `scripts/skia-notices.mjs` assembles them from the synchronized source tree.
+HarfBuzz/ICU are disabled: Parley supplies positioned glyphs and Skia does no text layout.
