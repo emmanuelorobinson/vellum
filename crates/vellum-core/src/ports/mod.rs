@@ -11,6 +11,8 @@ mod assets;
 mod clock;
 mod codec;
 mod doc_store;
+mod document_files;
+mod files;
 mod fonts;
 mod geometry;
 mod layout;
@@ -20,12 +22,14 @@ mod shader;
 mod spatial;
 mod text;
 
-pub use assets::{AssetError, AssetHash, AssetHashError, AssetStore};
+pub use assets::{AssetCollect, AssetError, AssetHash, AssetHashError, AssetStore, check_mime};
 pub use clock::{Clock, IdGen, Timestamp};
 pub use codec::{Codec, CodecError, Position};
 pub use doc_store::{
     ChangeSet, Commit, DocStore, Kept, Revert, SyncCursor, SyncError, SyncPayload, UndoTurn,
 };
+pub use document_files::{DocumentFiles, FileError, Loaded, Saved};
+pub use files::{FileSystem, FsError, check_path};
 pub use fonts::{FontData, FontHandle, FontSource};
 pub use geometry::{Extent, Rect};
 pub use layout::{

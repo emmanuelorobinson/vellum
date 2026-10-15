@@ -53,6 +53,8 @@
 | serde_json | 1.0.154 | workspace dependency (not in §5) | `Cargo.toml` workspace.dependencies | Prompt 1 pin, still latest; `float_roundtrip` on since Prompt 7 (C18) |
 | proptest | 1.12.0 | dev dependency (not in §5) | `Cargo.toml` workspace.dependencies; `vellum-types` and `vellum-core` dev-dependencies | property tests (guide §11 and Prompts 7, 9, 10, 14); `scripts/rust-deps-allowlist.txt` (C18, C19) |
 | trybuild | 1.0.122 | dev dependency (not in §5) | `Cargo.toml` workspace.dependencies; `vellum-core` dev-dependencies | compile-fail test for Invariant 1 (Prompt 11); C19 |
+| sha2 | 0.11.1 | 0.11.x | `crates/adapters/assets-fs` | SHA-256 content hash of an asset, its file name in `<name>.assets/` (Prompt 24, ADR-018, C20) |
+| wuff | 0.2.9 | 0.2.x | `crates/adapters/text-parley` | WOFF and WOFF2 to sfnt, pure Rust, MIT; byte-identical to Google's woff2 on google/fonts per its README (Prompt 24, ADR-018, C20) |
 
 ## Node and JavaScript tooling
 
@@ -209,3 +211,10 @@ edited.
 - Noto Color Emoji is bundled at the spike's pinned revision/hash, with its original OFL alongside Inter.
 - ADR-016 records the source-build choice, retired macOS 27 patch and local native/WASM pixel evidence.
   The six-target native CI matrix and opt-in hardware matrix are configured, not yet verified remotely.
+
+- **C20: `sha2` and `wuff` join the adapters; both are banned everywhere else** (Prompt 24). `sha2` 0.11.1 hashes assets
+  in `vellum-assets-fs` (SHA-256 is the file name and the `AssetId`). `wuff` 0.2.9 unpacks WOFF/WOFF2 in
+  `vellum-text-parley`; no other pure-Rust decoder was checked, and the encoders (`woofwoof`, `ttf2woff2`) are not needed
+  because Vellum stores the imported file as it came. `deny.toml` bans both with a wrapper, and
+  `scripts/rust-deps-allowlist.txt` keeps them out of `vellum-core` and `vellum-types`. WOFF fixtures in
+  `crates/adapters/text-parley/tests/fonts/` come from `@fontsource/inter` 5.3.0 (OFL 1.1).

@@ -77,3 +77,30 @@ pub trait AssetStore {
     /// Stores `bytes` and returns their hash. `mime` is `type/subtype`.
     fn put(&self, bytes: &[u8], mime: &str) -> Result<AssetHash, AssetError>;
 }
+
+/// Checks that `mime` is `type/subtype`: two non-empty parts, no whitespace. Every store applies the same rule.
+pub fn check_mime(mime: &str) -> Result<(), AssetError> {
+    let mut parts = mime.split('/');
+    let valid = match (parts.next(), parts.next(), parts.next()) {
+        (Some(kind), Some(subtype), None) => [kind, subtype]
+            .iter()
+            .all(|p| !p.is_empty() && !p.chars().any(char::is_whitespace)),
+        _ => false,
+    };
+    if valid {
+        Ok(())
+    } else {
+        Err(AssetError::InvalidMime(mime.to_owned()))
+    }
+}
+
+/// A store that can say what it holds and drop what a document no longer uses (guide Prompt 24).
+///
+/// Separate from [`AssetStore`] because a store behind a network (S3) may offer neither. Nothing calls `remove`
+/// but [`crate::files::collect_on_save`], and that only on an explicit save.
+pub trait AssetCollect: AssetStore {
+    /// Every hash in the store, sorted.
+    fn list(&self) -> Result<Vec<AssetHash>, AssetError>;
+    /// Removes one asset. A hash that is not there is `NotFound`.
+    fn remove(&self, hash: &AssetHash) -> Result<(), AssetError>;
+}

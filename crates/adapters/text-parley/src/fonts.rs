@@ -5,7 +5,7 @@ use parley::{
 };
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 use vellum_core::ports::{FontData, FontHandle, FontSource};
-use vellum_types::FontStyle;
+use vellum_types::{FontFace, FontStyle};
 
 /// Family lookup priority. A higher-priority family owns style/weight matching, even if a lower
 /// tier has an exact weight. GoogleCache and System describe bytes supplied by the composition root.
@@ -22,6 +22,10 @@ pub enum FontTier {
 pub enum FontError {
     InvalidFont,
     MultipleFamilies,
+    /// The file, or the size it says it unpacks to, is past [`crate::MAX_FONT_BYTES`].
+    TooLarge,
+    /// A WOFF or WOFF2 file that does not unpack, with the decoder's reason.
+    Unpack(String),
 }
 impl std::fmt::Display for FontError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -32,6 +36,9 @@ impl std::fmt::Display for FontError {
                 Self::InvalidFont => "invalid font; supply decoded TTF or OTF bytes",
                 Self::MultipleFamilies =>
                     "split multi-family font collections into individual fonts before registration",
+                Self::TooLarge => "the font file is too large",
+                Self::Unpack(reason) =>
+                    return write!(f, "the web font could not be unpacked: {reason}"),
             }
         )
     }
@@ -52,11 +59,40 @@ pub(crate) struct State {
     pub cx: FontContext,
     pub families: Vec<Family>,
     pub faces: Vec<Face>,
+    /// Document fonts already registered, by asset id, so loading a document twice adds nothing.
+    pub loaded: std::collections::BTreeMap<String, (FontFace, Vec<FontHandle>)>,
 }
 fn collection() -> Collection {
     Collection::new(CollectionOptions {
         shared: false,
         system_fonts: false,
+    })
+}
+
+/// What a font file says about itself.
+pub(crate) fn inspect(sfnt: &[u8]) -> Result<FontFace, FontError> {
+    let mut probe = collection();
+    let found = probe.register_fonts(Blob::new(Arc::new(sfnt.to_vec())), None);
+    if found.len() != 1 {
+        return Err(if found.is_empty() {
+            FontError::InvalidFont
+        } else {
+            FontError::MultipleFamilies
+        });
+    }
+    let family = probe
+        .family_name(found[0].0)
+        .ok_or(FontError::InvalidFont)?
+        .to_owned();
+    let info = found[0].1.first().ok_or(FontError::InvalidFont)?;
+    let style = match info.style() {
+        parley::FontStyle::Normal => FontStyle::Normal,
+        _ => FontStyle::Italic,
+    };
+    Ok(FontFace {
+        family,
+        weight: info.weight().value().round().clamp(100.0, 900.0) as u16,
+        style,
     })
 }
 
@@ -82,6 +118,7 @@ impl ParleyFonts {
                 },
                 families: vec![],
                 faces: vec![],
+                loaded: Default::default(),
             })),
         };
         fonts
@@ -102,6 +139,16 @@ impl ParleyFonts {
     /// the font. Browser WOFF/WOFF2 decoding and reading document/cache/system files belong to hosts.
     /// Same-tier later faces replace matching attributes for new layouts; issued handles stay valid.
     pub fn register(&self, tier: FontTier, bytes: Vec<u8>) -> Result<Vec<FontHandle>, FontError> {
+        self.register_with(tier, bytes, None)
+    }
+    /// Like [`Self::register`], but `face` (a document's `FontFace`) says what family, weight and style the
+    /// file answers to, whatever it calls itself. The document is the authority on what its text runs ask for.
+    pub(crate) fn register_with(
+        &self,
+        tier: FontTier,
+        bytes: Vec<u8>,
+        face: Option<&FontFace>,
+    ) -> Result<Vec<FontHandle>, FontError> {
         let bytes: Arc<[u8]> = bytes.into();
         let blob = Blob::new(Arc::new(bytes.clone()));
         let mut probe = collection();
@@ -112,10 +159,13 @@ impl ParleyFonts {
         if found.len() != 1 {
             return Err(FontError::MultipleFamilies);
         }
-        let name = probe
-            .family_name(found[0].0)
-            .ok_or(FontError::InvalidFont)?
-            .to_owned();
+        let name = match face {
+            Some(face) => face.family.clone(),
+            None => probe
+                .family_name(found[0].0)
+                .ok_or(FontError::InvalidFont)?
+                .to_owned(),
+        };
         let mut state = self.state.borrow_mut();
         let alias = state
             .families
@@ -127,6 +177,8 @@ impl ParleyFonts {
             blob.clone(),
             Some(FontInfoOverride {
                 family_name: Some(&alias),
+                weight: face.map(|f| FontWeight::new(f.weight as f32)),
+                style: face.map(|f| to_style(f.style)),
                 ..Default::default()
             }),
         );

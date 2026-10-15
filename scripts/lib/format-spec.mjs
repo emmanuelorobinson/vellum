@@ -124,12 +124,131 @@ export function renderFormatSpec(schema) {
   const defs = schema.$defs ?? {};
   const root = { ...schema };
   delete root.$defs;
-  const lines = ["# The .vellum format", "", BANNER, "", "## Document", ""];
+  const lines = [
+    "# The .vellum format",
+    "",
+    BANNER,
+    "",
+    "Where a document keeps its assets, fonts, libraries and pages on disk, with real examples and the migration notes: [files.md](files.md).",
+    "",
+    "## Document",
+    "",
+  ];
   lines.push(...bodyLines(root, defs));
   lines.push("## Definitions", "");
   for (const name of Object.keys(defs).sort()) {
     lines.push(`### ${name}`, "", ...bodyLines(defs[name], defs));
   }
+  return `${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd()}\n`;
+}
+
+const fence = (text) => ["```json", text.trimEnd(), "```", ""];
+
+/**
+ * Renders docs/format/files.md from what the real codecs wrote (crates/vellum/examples/format-files.rs): the
+ * files on disk, assets, custom fonts, libraries, the directory format, the large-file rule, examples and the
+ * migration notes. Pure, like renderFormatSpec: the same input always gives the same Markdown.
+ */
+export function renderFilesSpec(info) {
+  const { formatVersion, migrations, thresholds, single, directory, assets } = info;
+  const lines = [
+    "# The .vellum files on disk",
+    "",
+    BANNER,
+    "",
+    "Where a document keeps its pages, assets, fonts and libraries. The field-by-field reference is [README.md](README.md), and `vellum.schema.json` is the JSON Schema.",
+    "",
+    "## Files on disk",
+    "",
+    "| Path | What it is |",
+    "|---|---|",
+    "| `app.vellum` | A document in one file (the single-file format). |",
+    "| `app.vellum/` | The same document as a folder: an index and one file per page (the directory format). |",
+    "| `app.assets/` | Images, custom fonts and shader files by content hash, beside the document. |",
+    "| `brand.lib.vellum` | A library: a document other documents import. |",
+    "| `~/.vellum/cache/` | Last-known copies of libraries, shared by every project on the machine. |",
+    "",
+    "Every file is deterministic: keys in a fixed order, 2-space indent, LF line ends, a trailing newline and numbers rounded to a fixed step. Loading a file and saving it gives the same bytes. Paths inside a document use `/` and are relative, so a design folder can be moved or zipped as a unit. Script `.js` files and library files are referenced by relative path.",
+    "",
+    "Every file is written whole or not at all: the new bytes go to a temporary file beside the target, are synced, and are renamed over it. A crash leaves the old file or the new one, never half of either. Temporary files start with `.` and end with `.vellum-tmp`.",
+    "",
+    "## Assets",
+    "",
+    `Assets live in \`<name>.assets/\` beside the document, one file per asset, named by the SHA-256 of its bytes in lower-case hexadecimal, with no extension: \`${assets.folder}/${assets.file}\`. The media type is not part of an asset's identity, so it is not stored. The \`asset\` field of an image, and the keys of \`fonts\`, hold that hash.`,
+    "",
+    "Putting the same bytes twice stores one file. A file whose bytes no longer match its name is damaged: it is reported and never used. Assets nothing uses are removed only when the person saves explicitly, never by an automatic save, and an asset the editor's undo history still uses is kept.",
+    "",
+    "A shader effect's `src` is a relative path. A `src` of the form `<name>.assets/<hash>` names an asset; any other path is a plain file the document's folder holds, like a script.",
+    "",
+    "## Custom fonts",
+    "",
+    "TTF, OTF, WOFF and WOFF2 files can be imported into a document. The file is stored as an asset exactly as it came, so a WOFF2 stays a WOFF2, and `fonts` maps its asset to the family, weight and style that text refers to. WOFF and WOFF2 are unpacked when the font is loaded. A font collection is accepted when it holds one family. A font file, or the size it says it unpacks to, may be at most 128 MiB.",
+    "",
+    "Fonts in the document are served ahead of every other font source, so a family the document carries wins over a bundled or system one of the same name. A document may carry one file for each family, weight and style.",
+    "",
+    "## Libraries",
+    "",
+    'A library is a document with `meta.kind` set to `"library"`, saved as `*.lib.vellum`. A document lists the libraries it uses in `imports`, as an alias and a relative path. Turning a document into a library is one-way: the editor asks first, and nothing turns it back.',
+    "",
+    "Each time a library is read, a last-known copy goes to `~/.vellum/cache/`, keyed by the library's path. If the file is later missing, the editor says so and instances keep rendering from that copy. Pasting library content as copies carries the asset and font bytes it uses into the target document's assets.",
+    "",
+    "## Directory format",
+    "",
+    "A large document can be a folder instead of a file:",
+    "",
+    "```text",
+    "app.vellum/",
+    "  index.json              the document with every page empty: meta, imports, themes, variables,",
+    "                          styles, fonts, components, and each page's id, name and kind, in order",
+    "  pages/<page-id>.json    one page, as a document with just that page",
+    "  .saving                 present only while a save runs, or after one was interrupted",
+    "```",
+    "",
+    "Every file is an ordinary single-file `.vellum` document, so a tool that reads `.vellum` reads one page, and switching between the two formats loses nothing: a document written to a folder and read back is the document, byte for byte when saved as one file again. A page file's `meta` is fixed (the page's name and the current format version), so renaming the document rewrites the index only, and editing a page rewrites that page's file only.",
+    "",
+    "A save that changes one file is one atomic write. A save that changes several writes `.saving` first, then the pages, then the index, then removes page files the index no longer names, then `.saving`. If it is interrupted every file is still whole, but pages can come from different moments, and the leftover `.saving` is how a reader knows. The next save finishes the job. Files in `pages/` that the index does not name are reported when reading and never read.",
+    "",
+    "Page ids become file names, so two ids that differ only in case are refused (macOS and Windows keep one file for both), and so are the names Windows reserves for devices (`con`, `prn`, `aux`, `nul`, `com1` to `com9`, `lpt1` to `lpt9`).",
+    "",
+    "## Large files",
+    "",
+    `The editor quietly suggests the directory format when a document reaches ${thresholds.nodes} nodes or ${thresholds.bytes} bytes of single-file JSON, whichever comes first. It never blocks anything. The reason is Git: a folder diffs and merges one page at a time.`,
+    "",
+    "## Examples",
+    "",
+    "One small document, written by each format. All of it is TEST DATA.",
+    "",
+    "### `app.vellum`",
+    "",
+    ...fence(single),
+    `### \`${assets.folder}/${assets.file}\``,
+    "",
+    "The image the first page's rectangle uses: the file's bytes, named by their SHA-256.",
+    "",
+  ];
+  for (const [name, text] of Object.entries(directory)) {
+    lines.push(`### \`app.vellum/${name}\``, "", ...fence(text));
+  }
+  lines.push("## Migrations", "", `The current format version is ${formatVersion}.`, "");
+  if (migrations.length === 0) {
+    lines.push(
+      `There are no migrations yet: format ${formatVersion} is the first, so every file is already current.`,
+      "",
+    );
+  } else {
+    lines.push("| From | To |", "|---|---|");
+    for (const step of migrations) lines.push(`| ${step.from} | ${step.to} |`);
+    lines.push("");
+  }
+  lines.push(
+    "A file in an older format is migrated step by step, in memory, when it is opened; saving writes the current format. A step reads the JSON of one version and writes the JSON of the next, and the version in `meta.formatVersion` is set by the registry, not by the step.",
+    "",
+    'A file made by a newer version of Vellum is not read by this one. The editor says "Made with a newer version of Vellum (format N) · Update to edit" and opens nothing in its place (DESIGN S04). A file that is not a valid document is not shown partly: the error names the field, the line and the column (DESIGN S05), and a page file in the directory format says which file.',
+    "",
+  );
   return `${lines
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")

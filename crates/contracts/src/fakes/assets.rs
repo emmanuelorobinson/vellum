@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
-use vellum_core::ports::{AssetError, AssetHash, AssetStore};
+use vellum_core::ports::{AssetCollect, AssetError, AssetHash, AssetStore, check_mime};
 
 /// Assets in a map. The hash is two FNV-1a passes over the bytes: the same bytes always give the same hash and
 /// different test bytes give different ones, but it is not collision resistant like a real content hash.
@@ -29,16 +29,6 @@ fn hash_of(bytes: &[u8]) -> AssetHash {
     AssetHash::new(format!("{a:016x}{b:016x}")).expect("hex is a valid hash")
 }
 
-fn valid_mime(mime: &str) -> bool {
-    let mut parts = mime.split('/');
-    let (Some(kind), Some(subtype), None) = (parts.next(), parts.next(), parts.next()) else {
-        return false;
-    };
-    [kind, subtype]
-        .iter()
-        .all(|p| !p.is_empty() && !p.chars().any(char::is_whitespace))
-}
-
 impl AssetStore for InMemoryAssets {
     fn get(&self, hash: &AssetHash) -> Result<Vec<u8>, AssetError> {
         let stored = self
@@ -52,9 +42,7 @@ impl AssetStore for InMemoryAssets {
     }
 
     fn put(&self, bytes: &[u8], mime: &str) -> Result<AssetHash, AssetError> {
-        if !valid_mime(mime) {
-            return Err(AssetError::InvalidMime(mime.to_owned()));
-        }
+        check_mime(mime)?;
         let hash = hash_of(bytes);
         let mut stored = self
             .stored
@@ -62,5 +50,26 @@ impl AssetStore for InMemoryAssets {
             .map_err(|_| AssetError::Unavailable("poisoned".into()))?;
         stored.entry(hash.clone()).or_insert_with(|| bytes.to_vec());
         Ok(hash)
+    }
+}
+
+impl AssetCollect for InMemoryAssets {
+    fn list(&self) -> Result<Vec<AssetHash>, AssetError> {
+        let stored = self
+            .stored
+            .lock()
+            .map_err(|_| AssetError::Unavailable("poisoned".into()))?;
+        Ok(stored.keys().cloned().collect())
+    }
+
+    fn remove(&self, hash: &AssetHash) -> Result<(), AssetError> {
+        let mut stored = self
+            .stored
+            .lock()
+            .map_err(|_| AssetError::Unavailable("poisoned".into()))?;
+        stored
+            .remove(hash)
+            .map(|_| ())
+            .ok_or_else(|| AssetError::NotFound(hash.clone()))
     }
 }

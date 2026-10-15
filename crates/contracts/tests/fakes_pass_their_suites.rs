@@ -71,6 +71,7 @@ fn path_ops() {
 #[test]
 fn assets() {
     suites::assets::run(&InMemoryAssets::new());
+    suites::assets::collect(&InMemoryAssets::new());
 }
 
 #[test]

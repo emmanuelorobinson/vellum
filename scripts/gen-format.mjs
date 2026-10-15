@@ -2,16 +2,18 @@
 // Generates docs/format from crates/vellum-types (guide Prompt 8):
 //   vellum.schema.json  the JSON Schema of the .vellum document (schemars, via the format-schema example)
 //   README.md           the reference page, rendered from that schema (scripts/lib/format-spec.mjs)
+//   files.md            the on-disk page: assets, fonts, libraries, the directory format, examples written by
+//                       the real codecs (crates/vellum/examples/format-files.rs) and the migration notes
 //
 //   node scripts/gen-format.mjs                       regenerate docs/format
 //   node scripts/gen-format.mjs --check [--target d]  fail if <d> (default: docs/format) differs
 //
-// Both files are GENERATED: never hand-edit them. AGENTS.md lists docs/format as read-only except by this script.
+// All three files are GENERATED: never hand-edit them. AGENTS.md lists docs/format as read-only except by this script.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderFormatSpec } from "./lib/format-spec.mjs";
+import { renderFilesSpec, renderFormatSpec } from "./lib/format-spec.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -31,10 +33,25 @@ if (run.status !== 0) {
   process.exit(1);
 }
 
+const filesRun = spawnSync(
+  "cargo",
+  ["run", "--quiet", "-p", "vellum", "--example", "format-files"],
+  {
+    cwd: repo,
+    encoding: "utf8",
+  },
+);
+if (filesRun.status !== 0) {
+  console.error(filesRun.stdout, filesRun.stderr);
+  console.error("format-spec failed: cargo run --example format-files did not pass");
+  process.exit(1);
+}
+
 const schemaText = run.stdout;
 const expected = new Map([
   ["vellum.schema.json", schemaText],
   ["README.md", renderFormatSpec(JSON.parse(schemaText))],
+  ["files.md", renderFilesSpec(JSON.parse(filesRun.stdout))],
 ]);
 
 if (check) {

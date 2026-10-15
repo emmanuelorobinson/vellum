@@ -1,6 +1,6 @@
 //! `AssetStore`.
 
-use vellum_core::ports::{AssetError, AssetHash, AssetStore};
+use vellum_core::ports::{AssetCollect, AssetError, AssetHash, AssetStore};
 
 /// Assets come back as stored, by content: the same bytes give the same hash and different bytes do not.
 pub fn run(store: &dyn AssetStore) {
@@ -60,4 +60,52 @@ pub fn run(store: &dyn AssetStore) {
         matches!(store.get(&missing), Err(AssetError::NotFound(h)) if h == missing),
         "AssetStore: an unknown hash must be NotFound"
     );
+}
+
+/// `AssetCollect`: a store lists what it holds, sorted, and removes one asset at a time.
+pub fn collect(store: &dyn AssetCollect) {
+    let one = store
+        .put(b"TEST DATA collect one", "image/png")
+        .expect("put");
+    let two = store
+        .put(b"TEST DATA collect two", "image/png")
+        .expect("put");
+    let listed = store.list().expect("list");
+    assert!(
+        listed.windows(2).all(|w| w[0] < w[1]),
+        "AssetCollect: list must be sorted and have no repeats"
+    );
+    for hash in [&one, &two] {
+        assert!(
+            listed.contains(hash),
+            "AssetCollect: list is missing {hash}"
+        );
+    }
+    store.remove(&one).expect("remove");
+    assert!(
+        matches!(store.get(&one), Err(AssetError::NotFound(_))),
+        "AssetCollect: a removed asset can still be read"
+    );
+    assert!(
+        matches!(store.remove(&one), Err(AssetError::NotFound(h)) if h == one),
+        "AssetCollect: removing twice must be NotFound"
+    );
+    assert!(
+        !store.list().expect("list").contains(&one),
+        "AssetCollect: a removed asset is still listed"
+    );
+    assert_eq!(
+        store.get(&two).expect("get"),
+        b"TEST DATA collect two",
+        "AssetCollect: removing one asset touched another"
+    );
+    let again = store
+        .put(b"TEST DATA collect one", "image/png")
+        .expect("put");
+    assert_eq!(
+        again, one,
+        "AssetCollect: a removed asset can be stored again"
+    );
+    store.remove(&one).expect("clean up");
+    store.remove(&two).expect("clean up");
 }

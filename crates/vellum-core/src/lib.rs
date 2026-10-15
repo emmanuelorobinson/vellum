@@ -11,6 +11,7 @@
 pub mod diff;
 pub mod display_list;
 pub mod export;
+pub mod files;
 pub mod guard;
 pub mod history;
 pub mod layout;

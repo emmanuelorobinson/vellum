@@ -4,8 +4,8 @@
 use std::cell::Cell;
 
 use vellum_contracts::fakes::{
-    FakeJsonCodec, FixedMetricText, IdentityPathOps, InMemoryDocStore, NaiveSpatialIndex,
-    SequentialIds, StackLayout,
+    FakeJsonCodec, FixedMetricText, IdentityPathOps, InMemoryAssets, InMemoryDocStore, MemFs,
+    NaiveSpatialIndex, SequentialIds, StackLayout,
 };
 use vellum_contracts::{samples, suites};
 use vellum_core::ops::apply_edits;
@@ -481,4 +481,139 @@ impl TextEngine for DropsRichStyle {
 #[should_panic(expected = "TextEngine: rich style was dropped")]
 fn text_that_drops_links_and_decorations() {
     suites::text::rich(&DropsRichStyle(FixedMetricText::new()));
+}
+
+// --- Files (Prompt 24) ---
+
+/// A rename that copies and forgets to remove the old name.
+struct KeepsTheOldName(MemFs);
+impl FileSystem for KeepsTheOldName {
+    fn read(&self, path: &str) -> Result<Vec<u8>, FsError> {
+        self.0.read(path)
+    }
+    fn write(&self, path: &str, bytes: &[u8]) -> Result<(), FsError> {
+        self.0.write(path, bytes)
+    }
+    fn sync_file(&self, path: &str) -> Result<(), FsError> {
+        self.0.sync_file(path)
+    }
+    fn rename(&self, from: &str, to: &str) -> Result<(), FsError> {
+        let bytes = self.0.read(from)?;
+        self.0.write(to, &bytes)
+    }
+    fn remove_file(&self, path: &str) -> Result<(), FsError> {
+        self.0.remove_file(path)
+    }
+    fn list(&self, dir: &str) -> Result<Vec<String>, FsError> {
+        self.0.list(dir)
+    }
+    fn create_dir_all(&self, dir: &str) -> Result<(), FsError> {
+        self.0.create_dir_all(dir)
+    }
+    fn sync_dir(&self, dir: &str) -> Result<(), FsError> {
+        self.0.sync_dir(dir)
+    }
+    fn exists(&self, path: &str) -> Result<bool, FsError> {
+        self.0.exists(path)
+    }
+}
+
+#[test]
+#[should_panic(expected = "the old name survived a rename")]
+fn file_system_whose_rename_copies() {
+    suites::files::run(&KeepsTheOldName(MemFs::new()));
+}
+
+/// A file system that treats `..` as an ordinary name.
+struct NoPathChecks(MemFs);
+impl FileSystem for NoPathChecks {
+    fn read(&self, path: &str) -> Result<Vec<u8>, FsError> {
+        if path.contains("..") {
+            return Err(FsError::NotFound(path.to_owned()));
+        }
+        self.0.read(path)
+    }
+    fn write(&self, path: &str, bytes: &[u8]) -> Result<(), FsError> {
+        self.0.write(path, bytes)
+    }
+    fn sync_file(&self, path: &str) -> Result<(), FsError> {
+        self.0.sync_file(path)
+    }
+    fn rename(&self, from: &str, to: &str) -> Result<(), FsError> {
+        self.0.rename(from, to)
+    }
+    fn remove_file(&self, path: &str) -> Result<(), FsError> {
+        self.0.remove_file(path)
+    }
+    fn list(&self, dir: &str) -> Result<Vec<String>, FsError> {
+        self.0.list(dir)
+    }
+    fn create_dir_all(&self, dir: &str) -> Result<(), FsError> {
+        self.0.create_dir_all(dir)
+    }
+    fn sync_dir(&self, dir: &str) -> Result<(), FsError> {
+        self.0.sync_dir(dir)
+    }
+    fn exists(&self, path: &str) -> Result<bool, FsError> {
+        self.0.exists(path)
+    }
+}
+
+#[test]
+#[should_panic(expected = "read accepted")]
+fn file_system_that_lets_paths_climb_out() {
+    suites::files::run(&NoPathChecks(MemFs::new()));
+}
+
+/// `remove` that says yes and keeps the asset.
+struct RemovesNothing(InMemoryAssets);
+impl AssetStore for RemovesNothing {
+    fn get(&self, hash: &AssetHash) -> Result<Vec<u8>, AssetError> {
+        self.0.get(hash)
+    }
+    fn put(&self, bytes: &[u8], mime: &str) -> Result<AssetHash, AssetError> {
+        self.0.put(bytes, mime)
+    }
+}
+impl AssetCollect for RemovesNothing {
+    fn list(&self) -> Result<Vec<AssetHash>, AssetError> {
+        self.0.list()
+    }
+    fn remove(&self, _hash: &AssetHash) -> Result<(), AssetError> {
+        Ok(())
+    }
+}
+
+#[test]
+#[should_panic(expected = "a removed asset can still be read")]
+fn asset_collect_whose_remove_does_nothing() {
+    suites::assets::collect(&RemovesNothing(InMemoryAssets::new()));
+}
+
+/// A format that writes once and never again.
+struct WritesOnce<'a>(vellum_core::files::SingleFile<'a>);
+impl DocumentFiles for WritesOnce<'_> {
+    fn id(&self) -> &'static str {
+        "writes-once"
+    }
+    fn read(&self, fs: &dyn FileSystem, path: &str) -> Result<Loaded, FileError> {
+        self.0.read(fs, path)
+    }
+    fn write(&self, fs: &dyn FileSystem, path: &str, doc: &Document) -> Result<Saved, FileError> {
+        if fs.exists(path)? {
+            return Ok(Saved::default());
+        }
+        self.0.write(fs, path, doc)
+    }
+}
+
+#[test]
+#[should_panic(expected = "a changed document wrote nothing")]
+fn document_files_that_ignore_a_change() {
+    let codec = FakeJsonCodec;
+    suites::document_files::run(
+        &WritesOnce(vellum_core::files::SingleFile::new(&codec)),
+        &MemFs::new(),
+        &[samples::document()],
+    );
 }

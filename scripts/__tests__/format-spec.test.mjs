@@ -3,9 +3,9 @@
 // they must never drift from the Rust types.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, rmSync } from "node:fs";
 import { test } from "node:test";
-import { renderFormatSpec } from "../lib/format-spec.mjs";
+import { renderFilesSpec, renderFormatSpec } from "../lib/format-spec.mjs";
 import { at, discard, read, repo, scratch } from "./helpers.mjs";
 
 const script = at("scripts", "gen-format.mjs");
@@ -117,4 +117,95 @@ test("a union describes each of its variants", () => {
   assert.match(page, /^### Override$/m);
   assert.match(page, /- `props`: object/);
   assert.match(page, /- `children`: array of \[Page\]\(#page\)/);
+});
+
+// --- On disk (guide Prompt 24): files.md is written from what the real codecs produce ---
+
+const files = {
+  formatVersion: 3,
+  migrations: [
+    { from: 1, to: 2 },
+    { from: 2, to: 3 },
+  ],
+  thresholds: { nodes: 10000, bytes: 4000000 },
+  single: '{\n  "meta": {}\n}\n',
+  directory: {
+    "index.json": '{\n  "index": true\n}\n',
+    "pages/page00001.json": '{\n  "page": 1\n}\n',
+  },
+  assets: {
+    folder: "app.assets",
+    file: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  },
+};
+
+test("the committed docs/format has the on-disk page and the reference links to it", () => {
+  assert.ok(existsSync(at("docs", "format", "files.md")), "docs/format/files.md is missing");
+  assert.match(read("docs", "format", "files.md"), /Generated from `crates\/vellum-types`/);
+  assert.match(read("docs", "format", "README.md"), /\[files\.md\]\(files\.md\)/);
+});
+
+test("a missing on-disk page is detected", () => {
+  const tmp = scratch("format-spec-files");
+  try {
+    cpSync(committed, tmp, { recursive: true });
+    rmSync(`${tmp}/files.md`);
+    const out = check(tmp);
+    assert.equal(out.status, 1, out.stdout + out.stderr);
+    assert.match(out.stderr, /files\.md/);
+  } finally {
+    discard(tmp);
+  }
+});
+
+test("the on-disk page describes every place a document keeps something", () => {
+  const page = renderFilesSpec(files);
+  for (const heading of [
+    "Files on disk",
+    "Assets",
+    "Custom fonts",
+    "Libraries",
+    "Directory format",
+    "Large files",
+    "Examples",
+    "Migrations",
+  ]) {
+    assert.match(page, new RegExp(`^#{2,3} ${heading}$`, "m"), `no section: ${heading}`);
+  }
+  assert.match(page, /app\.assets\/ba7816bf/);
+  assert.match(page, /\.lib\.vellum/);
+  assert.match(page, /~\/\.vellum\/cache/);
+});
+
+test("the examples are the files the codecs wrote, verbatim", () => {
+  const page = renderFilesSpec(files);
+  assert.ok(page.includes(files.single.trimEnd()), "the single file");
+  for (const [name, text] of Object.entries(files.directory)) {
+    assert.ok(page.includes(`### \`app.vellum/${name}\``), `no heading for ${name}`);
+    assert.ok(page.includes(text.trimEnd()), name);
+  }
+});
+
+test("the migration notes list each step and say what a newer file does", () => {
+  const page = renderFilesSpec(files);
+  assert.match(page, /format version is 3/i);
+  assert.match(page, /\| 1 \| 2 \|/);
+  assert.match(page, /\| 2 \| 3 \|/);
+  assert.match(page, /newer version/i);
+  assert.match(page, /read-only|not read/i);
+
+  const none = renderFilesSpec({ ...files, formatVersion: 1, migrations: [] });
+  assert.match(none, /no migrations yet/i);
+});
+
+test("the thresholds come from the numbers the engine uses", () => {
+  const page = renderFilesSpec({ ...files, thresholds: { nodes: 123, bytes: 456 } });
+  assert.match(page, /123 nodes/);
+  assert.match(page, /456 bytes/);
+});
+
+test("the on-disk page is deterministic and ends with one newline", () => {
+  const once = renderFilesSpec(files);
+  assert.equal(renderFilesSpec(files), once);
+  assert.ok(once.endsWith("\n") && !once.endsWith("\n\n"));
 });

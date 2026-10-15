@@ -13,6 +13,8 @@ workspace = true
 vellum-core = { path = "../../vellum-core" }
 vellum-types = { path = "../../vellum-types" }
 parley.workspace = true
+# WOFF and WOFF2 unpack to plain sfnt. Pure Rust, MIT. Only this adapter may use it (deny.toml).
+wuff = "0.2.9"
 
 [dev-dependencies]
 vellum-contracts = { path = "../../contracts" }

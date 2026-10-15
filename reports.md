@@ -8,6 +8,24 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-018 and synchronize ARCHITECTURE** (Prompt 24). Only a person edits ARCHITECTURE.md. It differs in
+  five places: (1) §3.1 gains three ports, `FileSystem`, `AssetCollect` and `DocumentFiles`; (2) §4.3 calls the directory
+  format "a second `Codec`", but bytes in and out cannot say which page a byte is, so it is `DocumentFiles` (`SingleFile`
+  is the same port over a `Codec`); (3) §4.3 says shader files are assets by hash, but fixtures and `ShaderEffect.src`
+  use plain relative paths, so only a `src` into `<name>.assets/` is an asset; (4) an asset is a file named by its
+  SHA-256 with no extension; (5) `sha2` and `wuff` are new adapter-only dependencies (version-baseline C20).
+- **Decide how far a torn directory save must be prevented** (Prompt 24). A save that changes several files can be cut
+  short; every file stays whole, but pages may come from different moments. It is detected (a `.saving` marker, read as
+  `Loaded::interrupted`), not prevented or repaired. Options: rely on the daemon's recovery copy (Prompt 28), add
+  per-page checksums (needs an index that is not a `.vellum` document), or make page files content-addressed (worse
+  Git diffs).
+- **Decide whether library to document must be refused** (Prompt 24). "Turn into library" is one-way only in the
+  helper and the editor: `Op::SetShell` can set `meta.kind` back, because `git checkout` of an older file is a diff
+  applied as ops. The Guard (Prompt 13) does not stop an agent doing it.
+- **Run Prompt 24 on Linux and Windows, and with an OTF** (Prompt 24). Only macOS arm64 (APFS) ran. `sync_dir` is a
+  no-op on Windows, and a real power cut was never tested; the crash tests are a model. No OTF with CFF outlines or
+  multi-family collection was available, so those are covered by container sniffing only.
+
 - **Finish Prompt 23 remote acceptance and review ADR-017**. Native and browser hardware/software
   goldens pass locally on macOS arm64/M5 Pro. Run the extended six-target renderer workflow and
   measure on M1/mid-range Windows. Full input/startup and op-to-frame budgets need the later hosts.
@@ -1481,3 +1499,76 @@ Verified (exited 0 unless listed as failed; pnpm used both telemetry opt-outs):
   `node scripts/skia-build.mjs clippy --offline --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten -- -D warnings`.
 - Failed: `pnpm test:scripts` (156 pass, three tagged skips, existing `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (existing three Loro-chain unmaintained advisories; bans/licenses/sources pass).
+
+## Prompt 24: files, assets, custom fonts, libraries on disk, directory format, spec
+
+Built (ADR-018, `docs/runbooks/files.md`):
+- `vellum-core`: `FileSystem` port, `atomic_write` (temp, fsync, rename, fsync the folder) and `recover_temps`;
+  `AssetCollect` and `collect_on_save` (unused assets go only on `SaveKind::Explicit`; reports used-but-missing ids);
+  `referenced_assets` (reads the document as JSON, so new places that hold an image are covered); `turn_into_library`,
+  `library_path_for`, `FileLibrarySource`, `LibraryCache` (last-known copies, keyed by path, with a sidecar so a
+  collision is skipped, never shown as another library), `copy_dependencies` (asset and font bytes on paste);
+  `DocumentFiles` port with `SingleFile`; `suggest_multi_file` and `count_nodes` (S06, ADR-004).
+- `vellum-assets-fs`: `StdFs` (the real disk), `FsAssets` (one file per SHA-256, no extension, damage detected on read,
+  a wrong file rewritten on put), `assets_dir_for`.
+- `vellum-codec-json-dir`: `DirCodec`: `index.json` (pages as stubs) and `pages/<page-id>.json`, each an ordinary
+  `.vellum` document written by the injected single-file codec. Only changed files are rewritten, a `.saving` marker
+  covers multi-file saves, orphans and interrupted saves are reported on read.
+- `vellum-text-parley`: TTF/OTF/WOFF/WOFF2 import (`import_into_document` returns the `Shell` for `Op::SetShell`),
+  `load_document_fonts` serves them at the Document tier under the document's own family/weight/style, `wuff` unpacks web
+  fonts, 128 MiB cap, a header claiming more is refused before unpacking, one bad font never blocks the rest.
+- `vellum-contracts`: `MemFs` (crash simulation: unsynced bytes come back half), suites `files`, `document_files` and
+  `assets::collect`, each with a "broken implementation fails it" test.
+- `docs/format/files.md` (new, generated): files on disk, assets, fonts, libraries, directory format, the large-file rule,
+  examples written by the real codecs (`crates/vellum/examples/format-files.rs`) and migration notes. The README links to it.
+  No format version change.
+- About 78 new Rust tests and 7 script tests.
+
+Decisions and differences from the guide or ARCHITECTURE: see "Needs a person" and ADR-018. In short: `DocumentFiles` not a
+second `Codec`; shaders are plain paths unless they point into `.assets/`; assets have no extension; the one-way library
+rule lives in the helper, not `SetShell`; the directory format's save order is pages, index, removals, with a marker only
+for multi-file saves.
+
+Measured, and it changes ADR-004's reason (Apple M5 Pro, release, APFS, ADR-004's scene): 10,000 nodes is 4.71 MB of JSON
+(ADR-004 guessed about 4 MB, so the 10,000 nodes / 4 MB rule stands; the byte limit trips first, at about 8,500 nodes).
+Encoding it takes 11 ms. A directory save is **not** faster than a single-file save: one edited page costs 21 ms against
+18 ms for the whole file, and the first directory save about 115 ms, because every page is still encoded and every file is
+an fsync. The reason to use a folder is Git (a diff or merge touches one page's file), not save time. ADR-018 has the table.
+
+Found and fixed:
+- Tests first failed on absent APIs. Two of my own test expectations were wrong and were corrected, not the code: the
+  `content.vellum` fixture also carries a font, and `a0000001` is valid hex, so it can be a hash.
+- A save with nothing to change still issued a `remove_file` for the missing marker. Caught by the "touches nothing" test.
+- Dropping a redundant `create_dir_all` for the one-file fast path stopped zero-page documents getting a `pages/` folder.
+  The focused tests did not catch it; the workspace run did (`crates/vellum/tests/files.rs`). Fixed with its own test.
+- `import_into_document` first did not record its registration, so a later `load_document_fonts` would have registered
+  the font twice. That fix and its test were written in the same edit, so there was no red run for it.
+- The first two attempts at the measurement run produced nothing: macOS has no `timeout`. Run without it.
+- Deleting the fsync from `atomic_write` makes the crash tests fail (checked once by hand), so the simulation is not
+  vacuous.
+
+Not verified or not done:
+- Only macOS arm64 ran: no Linux or Windows disk, no real power cut, no M1 or Windows timings.
+- Nothing calls any of this yet: the daemon, CLI and editor arrive later, so no host wiring is tested. The S06 suggestion
+  is a function and two constants; its UI is a later prompt.
+- A library's cached copy keeps the document only, not its images and fonts. `collect_on_save`'s `also_keep` is not fed from
+  an undo history yet (there is no editor to do it).
+- Saving a directory encodes every page to find what changed; skipping unchanged pages needs a dirty set.
+- No OTF (CFF) font, font collection or 100 MB font was tested; the WOFF and WOFF2 fixtures are Inter Latin subsets.
+- `scripts/skia-build.mjs` and the emscripten link of `vellum-wasm` were not run. `vellum-wasm` does not depend on `sha2`
+  or `wuff`, and the new core modules check for both wasm targets. Plain `cargo` worked for everything else here.
+- No reference row in guide §3.2 belongs to Prompt 24, so no reference code was read or ported.
+
+Verified (exited 0 unless listed as failed):
+- `cargo test --workspace` (833 passed, 0 failed, 5 ignored). Focused: `cargo test -p vellum-contracts --test files --test document_files`,
+  `cargo test -p vellum-assets-fs -p vellum-codec-json-dir -p vellum-text-parley`, `cargo test -p vellum-codec-json --test library_files`,
+  `cargo test -p vellum-core --test files_assets`, `cargo test -p vellum --test files`.
+- `cargo test -p vellum --release --test files -- --ignored --nocapture measure` (the table in ADR-018).
+- `cargo clippy --workspace --all-targets -- -D warnings`; `cargo check -p vellum-core -p vellum-types --target wasm32-unknown-unknown`
+  and `--target wasm32-unknown-emscripten`; `cargo check -p vellum-text-parley -p vellum-assets-fs -p vellum-codec-json-dir --target wasm32-unknown-unknown`.
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`, `pnpm format-spec:check`,
+  `pnpm format-spec:gen` (wrote `docs/format/files.md`), `pnpm clean-room`, `pnpm checksum`, `pnpm copy-lint`;
+  `node --test scripts/__tests__/format-spec.test.mjs` (14 pass); `git diff --check`.
+- Failed: `pnpm test:scripts` (163 pass, 3 skipped, the recorded `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories; `sha2` and `wuff` add none, and bans,
+  licences and sources pass).

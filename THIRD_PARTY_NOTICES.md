@@ -28,3 +28,10 @@ Skia (BSD-3-Clause) and its embedded FreeType (FTL or GPL-2.0; distributed under
 the source revisions pinned by skia-bindings 0.153.3. Their original notices ship with release
 artifacts; `scripts/skia-notices.mjs` assembles them from the synchronized source tree.
 HarfBuzz/ICU are disabled: Parley supplies positioned glyphs and Skia does no text layout.
+
+## Web font test fixtures
+
+`crates/adapters/text-parley/tests/fonts/inter-latin-400-normal.woff` and `.woff2` are unmodified Inter Latin 400
+files from the npm package `@fontsource/inter` 5.3.0, fetched from jsDelivr at that version. SIL Open Font License
+1.1; copyright and license are in the adjacent `OFL.txt`, and the adjacent README records the URLs and SHA-256.
+They are test inputs only and are not shipped. These are licensed font files, not ported code.
