@@ -143,3 +143,100 @@ fn aligned_text_stroke_is_geometry_on_all_backends() {
         .contains("<path")
     );
 }
+#[test]
+fn gradient_does_not_restart_at_a_glyph_run_boundary() {
+    use vellum_core::ports::{FontSource, RichText, TextEngine};
+    let fonts = vellum_text_parley::ParleyFonts::new();
+    let text = vellum_text_parley::ParleyText::new(fonts.clone());
+    let layout = text.layout(&RichText::plain("MMMM", "Inter", 24.), 200.);
+    let run = &layout.lines[0].glyph_runs[0];
+    let mut resources = Resources::default();
+    resources
+        .fonts
+        .insert(run.font, fonts.data(run.font).unwrap());
+    let glyphs: Vec<_> = run
+        .glyphs
+        .iter()
+        .map(|g| RenderGlyph {
+            id: g.id,
+            cluster: g.cluster as u32,
+            position: [g.x as f32, 30.],
+            advance: g.advance as f32,
+        })
+        .collect();
+    let run = RenderGlyphRun {
+        font: run.font.0,
+        size: 24.,
+        glyphs,
+        normalized_coords: run.normalized_coords.clone(),
+        embolden: false,
+        skew: None,
+        underline: None,
+        strikethrough: None,
+        link: None,
+    };
+    let mut list = DisplayList {
+        resources: vec![
+            Resource::Glyphs(run.clone()),
+            Resource::Paint(RenderPaint::Gradient {
+                kind: GradientKind::Linear,
+                transform: [1., 0., 0., 1., 0., 0.],
+                stops: vec![
+                    RenderStop {
+                        position: 0.,
+                        color: [255, 0, 0, 255],
+                    },
+                    RenderStop {
+                        position: 1.,
+                        color: [0, 0, 255, 255],
+                    },
+                ],
+            }),
+        ],
+        commands: vec![DrawCmd::GlyphRun {
+            glyphs: 0,
+            paint: 1,
+            stroke: None,
+        }],
+    };
+    let r = Renderer::new().unwrap();
+    let scene = r.prepare(&list, &resources).unwrap();
+    let before = r
+        .rgba(&Page {
+            width: 200,
+            height: 50,
+            scene: &scene,
+        })
+        .unwrap();
+    let mut left = run.clone();
+    left.glyphs.truncate(2);
+    let mut right = run;
+    right.glyphs.drain(..2);
+    list.resources[0] = Resource::Glyphs(left);
+    list.resources.push(Resource::Glyphs(right));
+    list.commands.push(DrawCmd::GlyphRun {
+        glyphs: 2,
+        paint: 1,
+        stroke: None,
+    });
+    let scene = r.prepare(&list, &resources).unwrap();
+    assert!(
+        before
+            == r.rgba(&Page {
+                width: 200,
+                height: 50,
+                scene: &scene
+            })
+            .unwrap(),
+        "gradient changed at run boundary"
+    );
+    let Resource::Glyphs(run) = &mut list.resources[0] else {
+        unreachable!()
+    };
+    run.glyphs.clear();
+    list.commands.truncate(1);
+    assert!(
+        r.prepare(&list, &resources).is_ok(),
+        "empty glyph run must be drawable with a gradient"
+    );
+}

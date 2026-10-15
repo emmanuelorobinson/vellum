@@ -2326,7 +2326,10 @@ name = "vellum"
 version = "0.0.0"
 dependencies = [
  "clap",
+ "vellum-codec-json",
  "vellum-core",
+ "vellum-index-rstar",
+ "vellum-layout-taffy",
  "vellum-render-skia",
  "vellum-text-parley",
  "vellum-types",
@@ -2499,6 +2502,8 @@ version = "0.0.0"
 name = "vellum-render-skia"
 version = "0.0.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "skia-safe",
  "vellum-core",
  "vellum-types",

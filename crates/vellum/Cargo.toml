@@ -21,3 +21,6 @@ workspace = true
 vellum-core = { path = "../vellum-core" }
 vellum-render-skia = { path = "../adapters/render-skia" }
 vellum-text-parley = { path = "../adapters/text-parley" }
+vellum-codec-json = { path = "../adapters/codec-json" }
+vellum-layout-taffy = { path = "../adapters/layout-taffy" }
+vellum-index-rstar = { path = "../adapters/index-rstar" }

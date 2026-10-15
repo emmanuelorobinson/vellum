@@ -1,4 +1,4 @@
-name: Renderer I
+name: Renderer I and II
 on:
   pull_request:
   push:
@@ -64,6 +64,10 @@ jobs:
         run: node scripts/skia-build.mjs test --locked -p vellum -p vellum-render-skia -p vellum-text-parley --target ${{ matrix.target }}
       - name: Native parity artifacts and timing
         run: node scripts/skia-build.mjs run --locked --release -p vellum --example renderer-fixtures --target ${{ matrix.target }} -- target/renderer-fixtures
+      - name: Native appearance goldens and 2 MB engine budget
+        run: |
+          node scripts/skia-build.mjs run --locked --release -p vellum --example renderer-goldens --target ${{ matrix.target }}
+          node scripts/skia-build.mjs run --locked --release -p vellum --example renderer-budget --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -71,6 +75,7 @@ jobs:
           path: |
             target/skia-measurements/
             target/renderer-fixtures/
+            target/renderer-goldens/
   webgl:
     name: Browser WASM and WebGL2 integration
     runs-on: ubuntu-24.04
@@ -94,6 +99,7 @@ jobs:
       - name: Build shared editor module
         run: pnpm wasm:build
       - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-fixtures -- target/renderer-fixtures
+      - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-goldens
       - uses: browser-actions/setup-chrome@v2
         id: chrome
         with:
@@ -102,13 +108,16 @@ jobs:
       - name: Software WebGL2, CPU parity, context recovery and actual Renderer contract
         env:
           VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
-        run: node scripts/renderer-gpu.mjs --software
+        run: |
+          node scripts/renderer-gpu.mjs --software
+          node scripts/renderer-goldens.mjs --software
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: renderer-browser
           path: |
             target/renderer-fixtures/
+            target/renderer-goldens/
             target/skia-measurements/
             packages/renderer-skia/dist/
   hardware:
@@ -130,10 +139,15 @@ jobs:
       - run: rustup toolchain install
       - run: pnpm wasm:build
       - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-fixtures -- target/renderer-fixtures
+      - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-goldens
       - name: Hardware GPU lane (requires preinstalled Chrome, emsdk 4.0.6 and native build tools)
-        run: node scripts/renderer-gpu.mjs
+        run: |
+          node scripts/renderer-gpu.mjs
+          node scripts/renderer-goldens.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: renderer-gpu-${{ matrix.platform }}-${{ matrix.arch }}
-          path: target/renderer-fixtures/
+          path: |
+            target/renderer-fixtures/
+            target/renderer-goldens/

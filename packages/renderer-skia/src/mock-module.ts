@@ -64,6 +64,7 @@ export function mockModule() {
       }
       return 1;
     },
+    _vellum_zoom: () => 1,
     _vellum_render: () => {
       pixels = new Uint8Array(width * height * 4);
       pixels[3] = 255;

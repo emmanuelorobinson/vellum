@@ -1,0 +1,529 @@
+{
+  "solid": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "gradient-linear": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "gradient-radial": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "gradient-angular": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "mesh": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 4,
+      "fraction": 0.02,
+      "p95": 3
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "mesh-handles": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 4,
+      "fraction": 0.02,
+      "p95": 3
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-normal": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-darken": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-multiply": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-color-burn": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-linear-burn": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-lighten": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-screen": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-color-dodge": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-linear-dodge": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-overlay": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-soft-light": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-hard-light": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-difference": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-exclusion": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-hue": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-saturation": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-color": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "blend-luminosity": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "drop-shadow": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "negative-spread": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "inner-shadow": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "layer-blur": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "background-blur": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "clip-opacity-transform": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  },
+  "text-images-strokes": {
+    "cpu": {
+      "channel": 2,
+      "fraction": 0,
+      "p95": 1
+    },
+    "gpu": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    },
+    "basic": {
+      "channel": 3,
+      "fraction": 0.02,
+      "p95": 1
+    }
+  }
+}

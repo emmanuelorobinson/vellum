@@ -28,10 +28,10 @@ impl WebGl {
         self.surface = next;
         Ok(())
     }
-    pub fn draw(&mut self, scene: Option<&Scene>) {
+    pub fn draw(&mut self, scene: Option<&Scene>, zoom: f32) {
         self.surface.canvas().clear(Color::TRANSPARENT);
         if let Some(scene) = scene {
-            scene.draw(self.surface.canvas());
+            scene.draw_cached(self.surface.canvas(), zoom);
         }
         self.context.flush_and_submit();
     }

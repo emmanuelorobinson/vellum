@@ -10,6 +10,8 @@ publish.workspace = true
 vellum-types = { path = "../../vellum-types" }
 vellum-core = { path = "../../vellum-core" }
 skia-safe.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

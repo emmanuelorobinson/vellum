@@ -474,6 +474,13 @@ importers:
         version: 5.0.3(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2))
 
   packages/renderer-canvas2d:
+    dependencies:
+      '@vellum/renderer-api':
+        specifier: workspace:*
+        version: link:../renderer-api
+      '@vellum/types-ts':
+        specifier: workspace:*
+        version: link:../types-ts
     devDependencies:
       typescript:
         specifier: 'catalog:'

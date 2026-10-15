@@ -2,13 +2,36 @@ use crate::{Error, Op, Page, encode_image, matrix, raster};
 use skia_safe::{Paint, Path, PathFillType, Rect};
 use vellum_core::export::svg::{self, Command};
 pub(crate) fn write(page: &Page<'_>) -> Result<String, Error> {
+    if page.scene.ops.iter().any(|op| match op {
+        Op::Layer { paint, backdrop } => {
+            backdrop.is_some()
+                || paint.image_filter().is_some()
+                || paint.as_blend_mode() != Some(skia_safe::BlendMode::SrcOver)
+        }
+        Op::Path(_, p) | Op::Glyphs(_, p) => p.shader().is_some(),
+        _ => false,
+    }) {
+        let mut surface = raster(page.width, page.height)?;
+        page.scene.draw(surface.canvas());
+        return svg::write(
+            page.width,
+            page.height,
+            &[Command::Image {
+                png: encode_image(&surface.image_snapshot())?,
+                size: [page.width, page.height],
+                transform: [1., 0., 0., 1., 0., 0.],
+                opacity: 1.,
+            }],
+        )
+        .map_err(|_| Error::Geometry);
+    }
     let mut commands = vec![];
-    for op in &page.scene.ops {
+    for op in page.scene.ops.iter() {
         match op {
             Op::Save => commands.push(Command::Save),
             Op::Restore => commands.push(Command::Restore),
             Op::Transform(m) => commands.push(Command::Transform(*m)),
-            Op::Layer(a) => commands.push(Command::Layer(*a)),
+            Op::Layer { paint, .. } => commands.push(Command::Layer(paint.alpha_f())),
             Op::Clip(p) => commands.push(Command::Clip {
                 path: p.to_svg(),
                 even_odd: p.fill_type() == PathFillType::EvenOdd,

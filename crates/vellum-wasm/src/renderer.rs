@@ -13,6 +13,7 @@ struct State {
     scene: Option<Scene>,
     size: (u32, u32),
     error: String,
+    zoom: f32,
 }
 thread_local! {static STATE:RefCell<State>=RefCell::new(State::default());}
 fn status(f: impl FnOnce(&mut State) -> Result<(), String>) -> u32 {
@@ -143,7 +144,7 @@ pub extern "C" fn vellum_render() -> u32 {
         s.gpu
             .as_mut()
             .ok_or("Renderer context lost")?
-            .draw(s.scene.as_ref());
+            .draw(s.scene.as_ref(), s.zoom);
         Ok(())
     })
 }
@@ -193,4 +194,34 @@ pub extern "C" fn vellum_raster_pixels() -> usize {
 #[unsafe(no_mangle)]
 pub extern "C" fn vellum_renderer_dispose() {
     STATE.with_borrow_mut(|s| *s = State::default());
+}
+/// Independent Canvas2D command plan. No WebGL context is needed to compile geometry/fonts.
+#[unsafe(no_mangle)]
+pub extern "C" fn vellum_basic_plan(p: usize) -> usize {
+    STATE.with_borrow_mut(|s| {
+        let result = take(s, p).and_then(|bytes| {
+            Renderer::new()
+                .map_err(|e| e.to_string())?
+                .basic_plan(&bytes, &s.resources)
+                .map_err(|e| e.to_string())
+        });
+        match result {
+            Ok(bytes) => buffer(s, bytes),
+            Err(e) => {
+                s.error = e;
+                0
+            }
+        }
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn vellum_zoom(zoom: f32) -> u32 {
+    status(|s| {
+        if !zoom.is_finite() || zoom <= 0. {
+            return Err("Invalid zoom".into());
+        }
+        s.zoom = zoom;
+        Ok(())
+    })
 }

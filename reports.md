@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Finish Prompt 23 remote acceptance and review ADR-017**. Native and browser hardware/software
+  goldens pass locally on macOS arm64/M5 Pro. Run the extended six-target renderer workflow and
+  measure on M1/mid-range Windows. Full input/startup and op-to-frame budgets need the later hosts.
+  ADR-017 records CPU-composited filters, raster SVG for advanced appearance, conservative cache
+  invalidation and Basic simplifications. Only a person synchronizes ARCHITECTURE.md.
+
 - **Finish Prompt 22 remote acceptance**. ADR-016 selects source-built Skia with caching. Native behavior
   jobs cover six targets; hardware GPU jobs need six self-hosted `vellum-gpu` runners. Only macOS arm64
   and WASM were executed here. Run the workflows and collect other-target cold/cached timings,
@@ -1402,3 +1408,76 @@ Verified (all exited 0 unless listed as failed; pnpm uses both telemetry opt-out
   target/skia-notices`.
 - Failed: `pnpm test:scripts` (153 pass, 2 tagged skips, existing `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (the existing three Loro-chain unmaintained advisories; bans/licenses/sources pass).
+
+## Prompt 23: renderer appearance, caches and Basic fallback
+
+Built:
+- Normalized linear/radial/angular gradients, Coons meshes with shared handles, all 18 blends,
+  ordered drop/inner shadows with signed spread, layer blur and geometry-masked background blur.
+  Runtime shader paints/effects explicitly refuse until v1.1. Text runs share gradient bounds;
+  stroked lines and empty glyph runs retain valid gradient behavior.
+- Exact-content/resource frame cache (eight entries/32 MiB input), per-scene pictures and 512-pixel
+  viewport tiles, with explicit zoom hints, invalidation, eviction and pixel-equivalence tests.
+  CPU composition of filtered scenes followed by shared tiles keeps native/editor pixels aligned.
+- Canvas2D fallback and injectable compiler/reference seam: independent path, gradient, clipping,
+  image, blend and group-opacity drawing; supplied-font glyph rasterization preserves hinting/emoji.
+  Explicit simplification metadata, staged frame replacement and no GL initialization requirement.
+- 31 original committed golden fixtures, per-fixture tolerances, direct native/editor CPU/WebGL
+  comparisons and Canvas2D versus its documented native Basic projection. Corruption/alpha gate
+  tests, diff artifacts, real browser Renderer contracts and the unchanged P22 recovery gate.
+  Six-target CI extended with native goldens, browser cross-products and timing artifacts.
+- ADR-017 and renderer runbook record semantics, reference study, cache/fallback limits and §12
+  measurement scope. No document schema, display-list version or source specification changed.
+
+Findings and decisions:
+- Read the named Penpot fills/shadows/filters and visual-regression guide, Vello architecture and
+  sibling sprite renderer. No code ported. ADR-001's Vello revisit conditions are not all established.
+- First tests failed on absent APIs; regressions caught background blur escaping its layer,
+  line/text-run/empty-text gradient handling and linear burn omitted from SVG raster fallback.
+- Canvas gradients originally used the wrong affine space; the independent sampled implementation
+  fixes it. Font outlines lost native hinting; supplied glyph rasters fix that. GPU filter kernels
+  exceeded the thresholds; filtered scenes now use the shared CPU compositor and cached tiles.
+- Golden comparison now explicitly measures premultiplied RGB plus alpha. A failing invisible-RGB
+  regression established the metric; corruption and alpha-change regressions keep it strict. The
+  initial numeric thresholds stayed unchanged; the older P22 raw-RGBA gate also passes unchanged.
+- Restricted pnpm verification stalled and the WASM linker could not write the emscripten cache;
+  permitted offline linking/builds passed. Clippy's chunk-iterator and nested-if findings were fixed.
+
+Local measurements (M5 Pro/macOS arm64/Chrome 155/ANGLE Metal, release):
+- Hardware completed-GPU renderer p95: 5,000-node changing pan/zoom 7.1 ms; cached tiles 0.2 ms;
+  one-node move 5.2 ms; distinct 200-node frame 0.4 ms. These exclude core ops/layout and host latency.
+- Exactly 2 MiB/5,000-node warm native open → decode → resolve → Taffy → scene/culling → VDL →
+  raster pixels: p50 64.86 ms, p95 86.50 ms (20 runs). Not cold startup or end-to-end host first paint.
+- Shared WASM roughly 1.88 MB gzip, below the 2 MB budget; the JS loader is about 15 KB gzip.
+  Raw results are in target/renderer-goldens/{browser-results,browser-software-results,native-budget}.json.
+
+Limits:
+- Only macOS arm64 and WASM executed here. Remote six-target jobs, M1/Windows measurements and
+  future host input/startup/op-application budgets remain unverified; no full product budget claim.
+- Frame ids partition exact-stream caching; changed full-page streams invalidate conservatively.
+  No automatic unchanged document-subtree or world-tile reuse across changed viewport buffers.
+- Basic omits effects, averages meshes, makes shader paints transparent and uses normal for linear
+  burn. It still needs the geometry/font WASM module. Sampling caps and memory limits are in ADR-017.
+- Advanced SVG embeds a complete viewport PNG; filtered PDF scenes use raster tiles. GPU-native
+  filters remain deferred until they match the goldens. No UI chrome or named design frame in this prompt.
+
+Verified (exited 0 unless listed as failed; pnpm used both telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace`;
+  `node scripts/skia-build.mjs test --offline -p vellum-render-skia -p vellum`;
+  final focused `node scripts/skia-build.mjs test --offline -p vellum --test renderer_text -p vellum-render-skia`
+  and `node scripts/skia-build.mjs test --offline -p vellum-render-skia`.
+- `node scripts/skia-build.mjs run --offline --release -p vellum --example renderer-fixtures -- target/renderer-fixtures`;
+  `node scripts/skia-build.mjs run --offline --release -p vellum --example renderer-goldens`;
+  `node scripts/skia-build.mjs run --offline --release -p vellum --example renderer-budget`.
+- `node scripts/skia-build.mjs build --offline --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten`;
+  `node scripts/renderer-gpu.mjs`; `node scripts/renderer-goldens.mjs`, also `--software` (31 fixtures each).
+- `node --test scripts/__tests__/renderer-golden-compare.test.mjs scripts/__tests__/renderer-goldens.test.mjs`
+  (three pass, hardware test tagged/skip in this ordinary run; executed via the harness above).
+- `packages/renderer-api/node_modules/.bin/vitest run --root packages/renderer-api`, also roots
+  `packages/renderer-skia`, `packages/renderer-canvas2d`, `packages/contracts` (11 tests).
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`; `git diff --check`.
+- `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `node scripts/skia-build.mjs clippy --offline --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten -- -D warnings`.
+- Failed: `pnpm test:scripts` (156 pass, three tagged skips, existing `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (existing three Loro-chain unmaintained advisories; bans/licenses/sources pass).

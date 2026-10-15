@@ -1,5 +1,9 @@
 //! One prepared command stream for native raster/PDF and the editor's WebGL2 canvas.
 //! Preparation validates all input before a canvas is touched. No platform font lookup or I/O.
+mod appearance;
+mod basic;
+mod cache;
+pub use cache::CacheStats;
 mod fonts;
 mod geometry;
 mod svg;
@@ -8,9 +12,9 @@ pub mod webgl;
 use skia_safe::{
     self as sk, Canvas, Color, Data, FontMgr, Image, ImageInfo, Paint, Path, Point, Rect,
 };
-use std::{collections::BTreeMap, sync::Arc};
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc, sync::Arc};
 use vellum_core::ports::{FontData, FontHandle};
-use vellum_types::{AssetId, BlendMode, ImageFit, StrokeAlign, StrokeCap, StrokeJoin, display::*};
+use vellum_types::{AssetId, ImageFit, StrokeAlign, StrokeCap, StrokeJoin, display::*};
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,7 +36,7 @@ impl std::fmt::Display for Error {
     }
 }
 impl std::error::Error for Error {}
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Resources {
     pub fonts: BTreeMap<FontHandle, FontData>,
     /// Host-supplied encoded PNG/JPEG bytes, keyed by document asset id. Never a file path or URL.
@@ -40,19 +44,25 @@ pub struct Resources {
 }
 pub struct Renderer {
     fonts: FontMgr,
+    frames: RefCell<Vec<cache::FrameEntry>>,
 }
 /// Fully prepared, immutable scene. All backends execute the same commands.
+#[derive(Clone)]
 pub struct Scene {
-    ops: Vec<Op>,
+    ops: Rc<Vec<Op>>,
+    cache: Rc<RefCell<cache::DrawCache>>,
 }
 pub(crate) enum Op {
     Save,
     Restore,
     Transform([f32; 6]),
     Clip(Path),
-    Layer(f32),
-    Path(Path, Paint),
-    Glyphs(fonts::Glyphs, Paint),
+    Layer {
+        paint: Paint,
+        backdrop: Option<sk::ImageFilter>,
+    },
+    Path(Path, Brush),
+    Glyphs(fonts::Glyphs, Brush),
     Image {
         image: Image,
         clip: Rect,
@@ -66,38 +76,177 @@ pub struct Page<'a> {
     pub height: u32,
     pub scene: &'a Scene,
 }
+#[derive(Clone)]
+pub(crate) struct Brush {
+    paint: Paint,
+    source: RenderPaint,
+    bounds: Rect,
+}
+impl std::ops::Deref for Brush {
+    type Target = Paint;
+    fn deref(&self) -> &Paint {
+        &self.paint
+    }
+}
+impl Brush {
+    fn new(source: &RenderPaint, bounds: Rect) -> Result<Self, Error> {
+        // Empty/whitespace glyph runs and degenerate geometry still have valid appearance.
+        let bounds = Rect::from_xywh(
+            bounds.left,
+            bounds.top,
+            bounds.width().max(1.),
+            bounds.height().max(1.),
+        );
+        Ok(Self {
+            paint: appearance::paint(source, bounds)?,
+            source: source.clone(),
+            bounds,
+        })
+    }
+}
 impl Renderer {
+    /// Portable geometry and paint plan for the Canvas2D fallback, without GPU initialization.
+    pub fn prepare_basic(&self, buffer: &[u8], resources: &Resources) -> Result<Scene, Error> {
+        self.prepare(&basic::simplify(buffer)?.0, resources)
+    }
+    pub fn basic_plan(&self, buffer: &[u8], resources: &Resources) -> Result<Vec<u8>, Error> {
+        basic::plan(self, buffer, resources)
+    }
+
     pub fn new() -> Result<Self, Error> {
         let fonts = FontMgr::custom_empty().ok_or(Error::FontBackend)?;
         // custom_empty has no system families; a platform manager is never an alternative.
         if fonts.family_names().any(|name| !name.is_empty()) {
             return Err(Error::FontBackend);
         }
-        Ok(Self { fonts })
+        Ok(Self {
+            fonts,
+            frames: RefCell::default(),
+        })
     }
     pub fn prepare_buffer(&self, buffer: &[u8], resources: &Resources) -> Result<Scene, Error> {
-        self.prepare(
+        self.prepare_frame("viewport", buffer, resources)
+    }
+    /// Host frame ids partition picture reuse. Exact content and font/image bytes invalidate atomically.
+    pub fn prepare_frame(
+        &self,
+        id: &str,
+        buffer: &[u8],
+        resources: &Resources,
+    ) -> Result<Scene, Error> {
+        cache::validate_buffer(buffer)?;
+        if let Some(e) = self
+            .frames
+            .borrow()
+            .iter()
+            .find(|e| e.id == id && e.bytes == buffer && cache::equal(&e.resources, resources))
+        {
+            return Ok(e.scene.clone());
+        }
+        let scene = self.prepare(
             &DisplayList::from_bytes(buffer).map_err(Error::Buffer)?,
             resources,
-        )
+        )?;
+        let size = buffer.len() + cache::resource_bytes(resources);
+        let mut frames = self.frames.borrow_mut();
+        frames.retain(|e| e.id != id);
+        if size <= 32 * 1024 * 1024 {
+            while frames.len() >= 8
+                || frames
+                    .iter()
+                    .map(|e| e.bytes.len() + cache::resource_bytes(&e.resources))
+                    .sum::<usize>()
+                    + size
+                    > 32 * 1024 * 1024
+            {
+                frames.remove(0);
+            }
+            frames.push(cache::FrameEntry {
+                id: id.into(),
+                bytes: buffer.to_vec(),
+                resources: resources.clone(),
+                scene: scene.clone(),
+            });
+        }
+        Ok(scene)
     }
     pub fn prepare(&self, list: &DisplayList, resources: &Resources) -> Result<Scene, Error> {
         // The ABI validator also covers typed callers (indices, stack, finite values, resource kinds).
         list.to_bytes().map_err(Error::Buffer)?;
-        let mut ops = vec![];
+        let mut prepared_glyphs = BTreeMap::new();
         for cmd in &list.commands {
+            if let DrawCmd::GlyphRun { glyphs, .. } = cmd
+                && !prepared_glyphs.contains_key(glyphs)
+            {
+                let Resource::Glyphs(run) = &list.resources[*glyphs as usize] else {
+                    unreachable!()
+                };
+                prepared_glyphs.insert(*glyphs, fonts::prepare(&self.fonts, run, resources)?);
+            }
+        }
+        // A node's consecutive text runs share one normalized paint, including rich/bidi/font runs.
+        let mut glyph_bounds = vec![Rect::default(); list.commands.len()];
+        let mut i = 0;
+        while i < list.commands.len() {
+            if let DrawCmd::GlyphRun { paint, stroke, .. } = &list.commands[i] {
+                let start = i;
+                let mut bounds = Rect::default();
+                while let Some(DrawCmd::GlyphRun {
+                    glyphs,
+                    paint: p,
+                    stroke: s,
+                }) = list.commands.get(i)
+                {
+                    if p != paint || s != stroke {
+                        break;
+                    }
+                    bounds.join(prepared_glyphs[glyphs].bounds());
+                    i += 1;
+                }
+                glyph_bounds[start..i].fill(bounds);
+            } else {
+                i += 1;
+            }
+        }
+        let mut ops = vec![];
+        for (at, cmd) in list.commands.iter().enumerate() {
             match cmd {
                 DrawCmd::Save => ops.push(Op::Save),
                 DrawCmd::Restore => ops.push(Op::Restore),
                 DrawCmd::Transform(m) => ops.push(Op::Transform(*m)),
                 DrawCmd::Layer { opacity, blend } => {
                     unit(*opacity)?;
-                    if *blend != BlendMode::Normal {
-                        return Err(Error::Unsupported("blend modes (Prompt 23)"));
-                    }
-                    ops.push(Op::Layer(*opacity));
+                    let mut paint = Paint::default();
+                    paint
+                        .set_alpha_f(*opacity)
+                        .set_blender(appearance::blender(*blend)?);
+                    let effects = list.commands[at + 1..]
+                        .iter()
+                        .take_while(|cmd| matches!(cmd, DrawCmd::Effect { .. }))
+                        .map(|cmd| {
+                            let DrawCmd::Effect { effect } = cmd else {
+                                unreachable!()
+                            };
+                            let Resource::Effect(effect) = &list.resources[*effect as usize] else {
+                                unreachable!()
+                            };
+                            effect.clone()
+                        })
+                        .collect::<Vec<_>>();
+                    let (filter, backdrop) = appearance::effects(&effects)?;
+                    paint.set_image_filter(filter);
+                    ops.push(Op::Layer { paint, backdrop });
                 }
-                DrawCmd::Effect { .. } => return Err(Error::Unsupported("effects (Prompt 23)")),
+                DrawCmd::Effect { .. } => {
+                    if at == 0
+                        || !matches!(
+                            list.commands[at - 1],
+                            DrawCmd::Layer { .. } | DrawCmd::Effect { .. }
+                        )
+                    {
+                        return Err(Error::Unsupported("effects must precede layer content"));
+                    }
+                }
                 DrawCmd::Clip { shape } => {
                     ops.push(Op::Clip(geometry::shape(get_shape(list, *shape))?))
                 }
@@ -121,7 +270,19 @@ impl Renderer {
                             ops.push(image_op(image, path.compute_tight_bounds(), resources)?);
                             ops.push(Op::Restore);
                         }
-                        _ => ops.push(Op::Path(path, solid(paint)?)),
+                        _ => {
+                            let mut bounds = geometry::shape(descriptor)?.compute_tight_bounds();
+                            if bounds.width() == 0. || bounds.height() == 0. {
+                                bounds = path.compute_tight_bounds();
+                            }
+                            bounds = Rect::from_xywh(
+                                bounds.left,
+                                bounds.top,
+                                bounds.width().max(1.),
+                                bounds.height().max(1.),
+                            );
+                            ops.push(Op::Path(path, Brush::new(paint, bounds)?));
+                        }
                     }
                 }
                 DrawCmd::Image { image, dst } => {
@@ -139,11 +300,9 @@ impl Renderer {
                     paint,
                     stroke,
                 } => {
-                    let Resource::Glyphs(run) = &list.resources[*glyphs as usize] else {
-                        unreachable!()
-                    };
-                    let paint = solid(get_paint(list, *paint))?;
-                    let glyphs = fonts::prepare(&self.fonts, run, resources)?;
+                    let glyphs = prepared_glyphs[glyphs].clone();
+                    let bounds = glyph_bounds[at];
+                    let paint = Brush::new(get_paint(list, *paint), bounds)?;
                     if let Some(i) = stroke {
                         let s = get_stroke(list, *i);
                         validate_stroke(s)?;
@@ -178,7 +337,11 @@ impl Renderer {
                 }
             }
         }
-        Ok(Scene { ops })
+        appearance::mask_backdrops(&mut ops)?;
+        Ok(Scene {
+            ops: Rc::new(ops),
+            cache: Rc::default(),
+        })
     }
     pub fn rgba(&self, page: &Page<'_>) -> Result<Vec<u8>, Error> {
         let mut surface = raster(page.width, page.height)?;
@@ -225,8 +388,18 @@ impl Renderer {
 impl Scene {
     /// Draw into a clean device-space viewport. The caller owns clear/presentation/context lifetime.
     pub fn draw(&self, canvas: &Canvas) {
+        self.draw_cached(canvas, 1.);
+    }
+    /// Zoom metadata selects viewport tiles below 50%; coordinates already include zoom and DPR.
+    pub fn draw_cached(&self, canvas: &Canvas, zoom: f32) {
+        cache::draw(self, canvas, zoom, &self.cache);
+    }
+    pub fn cache_stats(&self) -> CacheStats {
+        self.cache.borrow().stats
+    }
+    pub(crate) fn draw_ops(&self, canvas: &Canvas) {
         let count = canvas.save();
-        for op in &self.ops {
+        for op in self.ops.iter() {
             match op {
                 Op::Save => {
                     canvas.save();
@@ -240,8 +413,13 @@ impl Scene {
                 Op::Clip(p) => {
                     canvas.clip_path(p, None, true);
                 }
-                Op::Layer(a) => {
-                    canvas.save_layer_alpha_f(None, *a);
+                Op::Layer { paint, backdrop } => {
+                    let rec = sk::canvas::SaveLayerRec::default().paint(paint);
+                    canvas.save_layer(&if let Some(filter) = backdrop {
+                        rec.backdrop(filter)
+                    } else {
+                        rec
+                    });
                 }
                 Op::Path(p, paint) => {
                     canvas.draw_path(p, paint);
@@ -311,15 +489,6 @@ fn get_stroke(list: &DisplayList, i: u32) -> &RenderStroke {
         unreachable!()
     };
     s
-}
-fn solid(p: &RenderPaint) -> Result<Paint, Error> {
-    let RenderPaint::Solid([r, g, b, a]) = p else {
-        return Err(Error::Unsupported("paint (Prompt 23)"));
-    };
-    let mut p = Paint::default();
-    p.set_anti_alias(true);
-    p.set_color(Color::from_argb(*a, *r, *g, *b));
-    Ok(p)
 }
 fn unit(n: f32) -> Result<(), Error> {
     if (0. ..=1.).contains(&n) {

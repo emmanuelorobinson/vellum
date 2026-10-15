@@ -173,6 +173,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(out.join("native.png"), renderer.png(&page)?)?;
     fs::write(out.join("native.svg"), renderer.svg(&page)?)?;
     fs::write(out.join("native.pdf"), renderer.pdf(&[page, page])?)?;
+    let basic = renderer.prepare_basic(&list.to_bytes()?, &resources)?;
+    fs::write(
+        out.join("basic-native.rgba"),
+        renderer.rgba(&Page {
+            width: 256,
+            height: 256,
+            scene: &basic,
+        })?,
+    )?;
+    fs::write(
+        out.join("basic.json"),
+        renderer.basic_plan(&list.to_bytes()?, &resources)?,
+    )?;
     for (handle, data) in resources.fonts {
         fs::write(out.join(format!("font-{}.ttf", handle.0)), data.bytes)?;
     }

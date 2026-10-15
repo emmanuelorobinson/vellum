@@ -39,6 +39,7 @@ export interface SkiaModule {
   _vellum_image(id: number, buffer: number): number;
   _vellum_scene(buffer: number): number;
   _vellum_render(): number;
+  _vellum_zoom(zoom: number): number;
   _vellum_pixels(): number;
 }
 export type ModuleFactory = (options: {
@@ -127,6 +128,7 @@ class SkiaRenderer implements Renderer {
   }
   draw(frame: Frame) {
     this.active();
+    this.check(this.module._vellum_zoom(frame.zoom ?? 1));
     this.module._vellum_resources_clear();
     for (const f of frame.fonts) {
       if (

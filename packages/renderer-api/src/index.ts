@@ -16,6 +16,8 @@ export interface ImageResource {
   bytes: Uint8Array;
 }
 export interface Frame {
+  /** Cache hint only. Display coordinates already include zoom and DPR. */
+  zoom?: number;
   /** Buffer from vellum-core, already transformed into device coordinates at viewport DPR. */
   displayList: Uint8Array;
   fonts: readonly FontResource[];

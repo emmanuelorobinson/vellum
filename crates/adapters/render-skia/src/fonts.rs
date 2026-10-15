@@ -3,6 +3,7 @@ use skia_safe::{self as sk, Canvas, Data, Font, FontMgr, Paint, Point, Rect};
 use vellum_core::ports::FontHandle;
 use vellum_types::display::RenderGlyphRun;
 
+#[derive(Clone)]
 pub(crate) struct Glyphs {
     pub font: Font,
     pub ids: Vec<u16>,
@@ -10,6 +11,19 @@ pub(crate) struct Glyphs {
     pub decorations: Vec<Rect>,
 }
 impl Glyphs {
+    pub fn bounds(&self) -> Rect {
+        let mut out = Rect::default();
+        let mut boxes = vec![Rect::default(); self.ids.len()];
+        self.font.get_bounds(&self.ids, &mut boxes, None);
+        for (b, pos) in boxes.iter().zip(&self.positions) {
+            out.join(b.with_offset(*pos));
+        }
+        for r in &self.decorations {
+            out.join(*r);
+        }
+        out
+    }
+
     pub fn draw(&self, c: &Canvas, p: &Paint) {
         c.draw_glyphs_at(
             &self.ids,
