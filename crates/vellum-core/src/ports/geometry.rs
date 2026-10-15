@@ -27,6 +27,22 @@ impl Rect {
         }
     }
 
+    /// Finite coordinates, nonnegative sizes and finite far edges.
+    pub fn is_valid(&self) -> bool {
+        [
+            self.x,
+            self.y,
+            self.width,
+            self.height,
+            self.right(),
+            self.bottom(),
+        ]
+        .iter()
+        .all(|v| v.is_finite())
+            && self.width >= 0.0
+            && self.height >= 0.0
+    }
+
     /// The right edge.
     pub fn right(&self) -> f64 {
         self.x + self.width

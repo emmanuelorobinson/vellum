@@ -8,6 +8,10 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-014 and synchronize ARCHITECTURE** (Prompt 20). `SpatialIndex` now takes occurrence
+  paths, matching layout and resolved components. The ADR records bounds-based selection, rounded clipping,
+  snapping ties and the bounded free-space search. Only a person edits ARCHITECTURE.md.
+
 - **Review ADR-013 and synchronize ARCHITECTURE** (Prompt 19). Text ports now carry renderer-ready glyph
   offsets, variation/synthesis, decorations/links, shared font bytes and explicit missing-font/glyph ranges.
   Auto-width hugs both dimensions; auto-height hugs height; fixed text keeps its sizes and reports overflow.
@@ -1226,3 +1230,55 @@ Verified (each exited 0 unless stated):
   `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`; `git diff HEAD --check`.
 - Failed: `pnpm test:scripts`: 150 pass, one skip, one existing `missing: R3 taffy: main.rs` failure.
 - Failed: `pnpm cargo:deny`: the three existing Loro-chain unmaintained advisories above; bans, licenses and sources pass.
+
+
+## Prompt 20: scene, spatial index, hit-testing and snapping
+
+Built:
+- rstar 0.13.0 adapter: bulk rebuild, incremental envelope replacement/removal and occurrence-addressed
+  queries. Extended SpatialIndex contract (production and fake) covers repeated descendants, duplicate writes,
+  malformed bounds and removal precedence. No vendor dependency entered core.
+- Pure page scene from resolved occurrences and parent-relative layout: accumulated rotation/reflection,
+  inherited visibility/locks, nested rectangular/rounded clips, point and marquee selection with drawing order,
+  deepest/top-level results, intersection/containment modes and viewport culling. Invalid syncs are atomic.
+- Index-only snapping candidates, screen/zoom tolerance, edges/centres, equal gaps between and beyond neighbors,
+  optional pixel grid, subtree exclusions and typed guide data. Deterministic `find_space(width,height,near?)`
+  includes locked layers and nonselectable session reservations, uses 16 px clearance, and explicitly fails
+  after 10,000 probes. No document/store mutations or host UI.
+- 15 scene/contract tests plus an opt-in release benchmark; generated tests compare 128 random index edit
+  sequences with the naive fake and 64 scene edit sequences with fresh scenes. Component occurrences share
+  definition ids without aliasing. ADR-014 and the dependency version baseline record decisions/reference study.
+
+Decisions and limits:
+- SpatialIndex keys changed from NodeId to NodeIdPath to match Prompt 18's layout addresses. Selection is
+  based on transformed layout boxes, including visible clipped portions; it does not test vector fill/stroke
+  or glyph coverage. Rounded clip arcs target 0.01 px sagitta, capped at 128 segments per corner.
+- Reconciliation still scans the page; only changed envelopes reach the index. Free-space search is bounded,
+  deterministic and conservative about world AABBs; it does not promise the globally nearest placement.
+- No reference code was ported. Sibling-project searches found no reusable Rust scene/index implementation.
+  The guide's Excalidraw Renderer path moved under `packages/excalidraw/scene/`; that file was read.
+- No GPU, UI or browser screenshot checks: this prompt builds engine queries. WASM compilation was verified,
+  not WASM runtime execution. The benchmark is local timing evidence, not a cross-machine performance gate.
+
+Test order and findings:
+- Tests first failed on missing scene/adapter APIs and NodeId-only index signatures; rounded clipping then
+  failed on its absent input field. A test document lacked required `createdWith`; the setup was corrected.
+- Final review regressions failed on tiny nonzero clips treated as empty and finite radii overflowing when
+  summed. Zero-area detection and normalized radius sums fix both. Clippy's two style findings were fixed.
+- Restricted Cargo/pnpm registry verification failed or stalled; permitted registry access resolved the
+  pinned dependencies/checks. Context7 had no matching rstar library; official docs.rs and the installed
+  crate verified its API (0.13 envelope arguments are by value).
+
+Verified (each exited 0 unless stated):
+- `cargo test --offline -p vellum-index-rstar --test scene` (15 pass; benchmark ignored),
+  `cargo test --offline scene::`, `cargo test --offline --workspace`.
+- `cargo test --offline -p vellum-index-rstar --release --test scene scene::baseline_5000 -- --ignored --nocapture`.
+  5,000-node release baseline: initial sync 7.29 ms; p95 point 0.71 µs, marquee 24.88 µs, culling 14.63 µs,
+  snapping 72.67 µs, free-space search 42.46 µs, one-move reconciliation 2.80 ms. Other checks ran concurrently.
+- `cargo check --offline -p vellum-index-rstar --target wasm32-unknown-unknown`,
+  `cargo clippy --offline --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`.
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`, `git diff --check`.
+- Failed: `pnpm test:scripts` (150 pass, one skip, the existing `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories above;
+  bans, licenses and sources pass).

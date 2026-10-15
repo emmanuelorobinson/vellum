@@ -354,13 +354,17 @@ fn fonts_that_find_everything() {
 
 struct StrictEdges(NaiveSpatialIndex);
 impl SpatialIndex for StrictEdges {
-    fn rebuild(&mut self, items: &[(NodeId, Rect)]) {
+    fn rebuild(&mut self, items: &[(vellum_types::NodeIdPath, Rect)]) {
         self.0.rebuild(items);
     }
-    fn update(&mut self, changed: &[(NodeId, Rect)], removed: &[NodeId]) {
+    fn update(
+        &mut self,
+        changed: &[(vellum_types::NodeIdPath, Rect)],
+        removed: &[vellum_types::NodeIdPath],
+    ) {
         self.0.update(changed, removed);
     }
-    fn query_rect(&self, r: Rect) -> Vec<NodeId> {
+    fn query_rect(&self, r: Rect) -> Vec<vellum_types::NodeIdPath> {
         self.0.query_rect(Rect::new(
             r.x + 1e-3,
             r.y + 1e-3,
@@ -368,7 +372,7 @@ impl SpatialIndex for StrictEdges {
             r.height - 2e-3,
         ))
     }
-    fn query_point(&self, x: f64, y: f64) -> Vec<NodeId> {
+    fn query_point(&self, x: f64, y: f64) -> Vec<vellum_types::NodeIdPath> {
         self.0.query_point(x, y)
     }
 }

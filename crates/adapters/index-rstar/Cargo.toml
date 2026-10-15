@@ -8,3 +8,13 @@ publish.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+rstar.workspace = true
+vellum-core = { path = "../../vellum-core" }
+vellum-types = { path = "../../vellum-types" }
+
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+proptest.workspace = true
+serde_json.workspace = true

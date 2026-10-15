@@ -34,7 +34,7 @@
 | vello | 0.11.0 | 0.11.x | not yet used | later, behind a flag |
 | kurbo | 0.13.1 | 0.13.x | not yet used | path geometry adapter |
 | i_overlay | 9.0.1 | 9.0.x | not yet used | boolean operations (Prompt 12) |
-| rstar | 0.13.0 | 0.13.x | not yet used | spatial index (Prompt 20) |
+| rstar | 0.13.0 | 0.13.x | =0.13.0 | spatial index (Prompt 20) |
 | rquickjs | 0.14.0 | 0.14.x | spike only: `spikes/engine`, and a size-only feature of `spikes/renderer` (Prompt 5) | ScriptRuntime (Prompt 25) |
 | rmcp | 3.5.1 | 3.5.x | not yet used | MCP adapter (Prompt 29) |
 | schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |

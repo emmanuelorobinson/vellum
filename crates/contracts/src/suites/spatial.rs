@@ -1,11 +1,13 @@
 //! `SpatialIndex`.
 
 use vellum_core::ports::{Rect, SpatialIndex};
-use vellum_types::NodeId;
+use vellum_types::NodeIdPath;
 
-use crate::samples::node_id;
+fn node_id(s: &str) -> NodeIdPath {
+    s.parse().expect("TEST DATA address")
+}
 
-fn sorted(mut ids: Vec<NodeId>) -> Vec<String> {
+fn sorted(mut ids: Vec<NodeIdPath>) -> Vec<String> {
     ids.sort();
     ids.into_iter().map(|id| id.to_string()).collect()
 }
@@ -20,6 +22,7 @@ fn point(index: &dyn SpatialIndex, x: f64, y: f64) -> Vec<String> {
 
 /// Queries find what they should, edges count, updates move and remove, and rebuilding starts over.
 pub fn run<S: SpatialIndex>(make: impl Fn() -> S) {
+    run_occurrences(&make);
     let a = (node_id("a"), Rect::new(0.0, 0.0, 10.0, 10.0));
     let b = (node_id("b"), Rect::new(5.0, 5.0, 10.0, 10.0));
     let c = (node_id("c"), Rect::new(20.0, 20.0, 5.0, 5.0));
@@ -97,4 +100,29 @@ pub fn run<S: SpatialIndex>(make: impl Fn() -> S) {
         ["c"],
         "SpatialIndex: rebuild must forget everything before it"
     );
+}
+
+/// Occurrences cannot alias; repeated writes replace, removal wins, malformed geometry stays out.
+pub fn run_occurrences<S: SpatialIndex>(make: impl Fn() -> S) {
+    let mut index = make();
+    let a = node_id("one/shared");
+    let b = node_id("two/shared");
+    let r = Rect::new(-10., -10., 5., 5.);
+    index.rebuild(&[(a.clone(), Rect::default()), (a.clone(), r), (b.clone(), r)]);
+    assert_eq!(point(&index, -8., -8.), ["one/shared", "two/shared"]);
+    assert!(point(&index, 0., 0.).is_empty());
+    index.update(&[(a.clone(), r)], std::slice::from_ref(&a));
+    assert_eq!(point(&index, -8., -8.), ["two/shared"]);
+    for bad in [
+        Rect::new(f64::NAN, 0., 1., 1.),
+        Rect::new(0., 0., -1., 2.),
+        Rect::new(f64::MAX, 0., f64::MAX, 1.),
+    ] {
+        index.update(&[(b.clone(), bad)], &[]);
+        assert!(rect(&index, r).is_empty());
+        assert!(rect(&index, bad).is_empty());
+        index.update(&[(b.clone(), r)], &[]);
+    }
+    index.rebuild(&[(b, Rect::new(f64::INFINITY, 0., 1., 1.))]);
+    assert!(rect(&index, r).is_empty());
 }
