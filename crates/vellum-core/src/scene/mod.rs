@@ -1,6 +1,6 @@
 //! Read-only world-space scene queries over resolved occurrence bounds. Document edits remain Ops.
 //! Selection uses transformed layout boxes; path/fill coverage belongs to the geometry/rendering layer.
-mod geometry;
+pub(crate) mod geometry;
 mod resolved;
 mod snapping;
 mod space;

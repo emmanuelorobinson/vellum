@@ -1,9 +1,9 @@
 //! Convex box geometry, kept in f64 model coordinates. No renderer or vendor dependency.
 use crate::ports::Rect;
 use vellum_types::Point;
-pub(super) type Polygon = Vec<Point>;
+pub(crate) type Polygon = Vec<Point>;
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(super) struct Affine(pub [f64; 6]);
+pub(crate) struct Affine(pub [f64; 6]);
 impl Affine {
     pub const IDENTITY: Self = Self([1., 0., 0., 1., 0., 0.]);
     pub fn point(self, p: Point) -> Point {
@@ -41,7 +41,7 @@ impl Affine {
         ])
     }
 }
-pub(super) fn corners(r: Rect) -> Polygon {
+pub(crate) fn corners(r: Rect) -> Polygon {
     vec![
         Point { x: r.x, y: r.y },
         Point {
@@ -58,7 +58,7 @@ pub(super) fn corners(r: Rect) -> Polygon {
         },
     ]
 }
-pub(super) fn bounds(p: &[Point]) -> Option<Rect> {
+pub(crate) fn bounds(p: &[Point]) -> Option<Rect> {
     let first = p.first()?;
     let (mut x, mut y, mut right, mut bottom) = (first.x, first.y, first.x, first.y);
     for p in p {
@@ -80,7 +80,7 @@ fn area(p: &[Point]) -> f64 {
 }
 /// Rounded clipping polygon. Each circular arc uses segments with at most 0.01 px sagitta
 /// (capped at 128 segments per corner for pathological radii). CSS's shared radius reduction applies.
-pub(super) fn rounded(w: f64, h: f64, mut radii: [f64; 4]) -> Polygon {
+pub(crate) fn rounded(w: f64, h: f64, mut radii: [f64; 4]) -> Polygon {
     let largest = radii.iter().copied().fold(0.0_f64, f64::max);
     if largest == 0. {
         return corners(Rect::new(0., 0., w, h));
@@ -127,7 +127,7 @@ pub(super) fn rounded(w: f64, h: f64, mut radii: [f64; 4]) -> Polygon {
     }
     out
 }
-pub(super) fn contains(poly: &[Point], p: Point) -> bool {
+pub(crate) fn contains(poly: &[Point], p: Point) -> bool {
     if poly.is_empty() {
         return false;
     }
@@ -151,7 +151,7 @@ pub(super) fn contains(poly: &[Point], p: Point) -> bool {
         .all(|(a, b)| cross(*a, *b, p) * sign >= -1e-9)
 }
 /// Intersection against a nondegenerate convex clipping box. Degenerate clips display no descendant content.
-pub(super) fn clip(poly: &[Point], clip: &[Point]) -> Polygon {
+pub(crate) fn clip(poly: &[Point], clip: &[Point]) -> Polygon {
     if clip.is_empty() {
         return vec![];
     }
@@ -189,7 +189,7 @@ pub(super) fn clip(poly: &[Point], clip: &[Point]) -> Polygon {
     }
     out
 }
-pub(super) fn intersects_rect(poly: &[Point], r: Rect) -> bool {
+pub(crate) fn intersects_rect(poly: &[Point], r: Rect) -> bool {
     // Separating axes of both the selection rectangle and each edge of the clipped box.
     if poly.is_empty() {
         return false;

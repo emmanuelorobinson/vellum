@@ -15,6 +15,7 @@ pub mod brand;
 mod color;
 mod component;
 mod defaults;
+pub mod display;
 mod document;
 mod effect;
 mod enums;
@@ -35,6 +36,7 @@ pub use component::{
     BooleanProp, Component, NodePatch, NumberProp, Override, PatchApplyError, PatchError,
     PropBinding, PropDef, TextProp, Variant,
 };
+pub use display::{DISPLAY_LIST_VERSION, DisplayList, DrawCmd};
 pub use document::{Document, DocumentMeta, Page};
 pub use effect::{Blur, Effect, ShaderEffect, Shadow};
 pub use enums::{

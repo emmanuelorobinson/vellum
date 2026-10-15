@@ -8,6 +8,11 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-015 and synchronize ARCHITECTURE** (Prompt 21). Display commands now have a versioned
+  binary ABI and typed shape/appearance resources. Transform sets an absolute device matrix after f64
+  viewport rebasing. The ADR records layout diagnostic semantics, conservative culling and deferred
+  renderer lowering. Only a person edits ARCHITECTURE.md.
+
 - **Review ADR-014 and synchronize ARCHITECTURE** (Prompt 20). `SpatialIndex` now takes occurrence
   paths, matching layout and resolved components. The ADR records bounds-based selection, rounded clipping,
   snapping ties and the bounded free-space search. Only a person edits ARCHITECTURE.md.
@@ -1279,6 +1284,57 @@ Verified (each exited 0 unless stated):
   `cargo clippy --offline --workspace --all-targets -- -D warnings`, `cargo fmt --all --check`.
 - `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
   `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`, `git diff --check`.
+- Failed: `pnpm test:scripts` (150 pass, one skip, the existing `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories above;
+  bans, licenses and sources pass).
+
+
+## Prompt 21: layout check and display list
+
+Built:
+- Structured occurrence-addressed text overflow, ancestor clipping, auto-layout sibling overlap,
+  outside-frame and hug-cycle diagnostics. World-space node snapshots and a problems-only projection
+  retain every problem participant. Hidden subtrees are omitted; missing geometry fails explicitly.
+- Renderer-neutral DrawCmd and typed shape/paint/stroke/image/effect/glyph resources in vellum-types,
+  generated TypeScript bindings, DISPLAY_LIST_VERSION 1 and a deterministic little-endian buffer codec.
+  The decoder validates versions, lengths, resource kinds, state balance and nonfinite wire scalars.
+- Resolved/layout-to-display-list producer: R-tree viewport queries, ancestor state, clips, subtree
+  opacity/blending, ordered appearance, boolean operands, text metadata and shared font bytes. Missing
+  font data and unsupported node rendering are explicit problems. No document or store mutations.
+- 16 integration tests on the production R-tree and six wire tests, including generated/mutated inputs.
+  ADR-015 and the display-list runbook document decisions, wire layout and reference study.
+
+Decisions and limits:
+- Transform sets an absolute device matrix; world accumulation and viewport subtraction happen in f64
+  before f32 conversion. Shape references carry backend-neutral descriptors; SVG parsing, boolean path
+  lowering and actual drawing remain renderer work in Prompts 22–23. No PathOps adapter was introduced.
+- Off-frame means no visible frame contains the complete transformed box. Overlap checks flow siblings
+  in row/column/grid, with a 1e-9 square-pixel noise tolerance. Clipping uses Prompt 20's rounded polygons.
+- Strokes/effects/text overflow conservatively expand spatial queries. Outset queries temporarily disable
+  scene clipping and restore it afterward, preserving shadows cast back inside a clip. SVG/shaders disable
+  culling when bounds are unknown. Text bounds use line/advance extents, not glyph outlines; stroke/blur
+  assumptions and overdraw limits are in ADR-015. No GPU/pixel parity, WASM runtime or performance gate.
+- The binary resource codec uses an internal serde_json::Value bridge, never JSON text on the boundary.
+  Font bytes remain shared side resources. WASM allocation/host transport and consumers are later prompts.
+- Read Excalidraw/Vello references and the existing renderer spike; sibling searches found no reusable
+  implementation. No reference code was ported. Context7 verified serde_json's nonfinite-value behavior.
+
+Test order and findings:
+- Initial tests failed on missing APIs. Invalid test Document metadata, image-fit spelling and occurrence
+  addresses were corrected. Regression tests then failed on f32 pan cancellation and a clipped-away box
+  whose shadow re-entered the clip; f64 rebasing and conservative spatial queries fixed them.
+- Clippy's default-field-reassignment test finding was fixed. Restricted pnpm verification stalled;
+  permitted package-manager verification completed the checks. No dependencies or advisory policy changed.
+- Guide FINAL needs `--` before its two test filters; the written command is rejected by Cargo.
+
+Verified (each exited 0 unless stated; pnpm commands used TURBO_TELEMETRY_DISABLED=1 and NEXT_TELEMETRY_DISABLED=1):
+- `cargo test --offline -p vellum-index-rstar --test engine_output` (16 pass);
+  `cargo test --offline -p vellum-types --test display_list` (six pass);
+  `cargo test --offline -- layout_check:: display_list::`; `cargo test --offline --workspace`.
+- `cargo check --offline -p vellum-core --target wasm32-unknown-unknown`;
+  `cargo clippy --offline --workspace --all-targets -- -D warnings`; `cargo fmt --all`.
+- `pnpm types:gen`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm lint`, `pnpm type-check`,
+  `pnpm deps:check`, `pnpm format:check`, `pnpm clean-room`, `pnpm checksum`; `git diff --check`.
 - Failed: `pnpm test:scripts` (150 pass, one skip, the existing `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories above;
   bans, licenses and sources pass).
