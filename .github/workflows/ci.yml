@@ -77,6 +77,24 @@ jobs:
       - name: Production LayoutEngine contract and 150+ oracle fixtures (ADR-002)
         run: cargo test -p vellum-layout-taffy
 
+  text-fixtures:
+    name: Text fixtures (fonts lane)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install the toolchain pinned in rust-toolchain.toml
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Fetch pinned text fixture fonts (checksum verified)
+        run: node spikes/renderer/scripts/fetch-fonts.mjs
+      - name: Verify the Prompt 5 glyph oracle
+        run: node scripts/gen-text-fixtures.mjs --check
+      - name: Production text fixtures and FontSource contract
+        run: cargo test -p vellum-text-parley --test fonts_lane -- --ignored
+
   repo:
     name: Repo checks (script tests, dependency rules, clean room, copy, specification checksums)
     runs-on: ubuntu-latest

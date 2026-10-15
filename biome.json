@@ -11,7 +11,8 @@
       "!packages/types-ts/src/index.ts",
       "!pnpm-lock.yaml",
       "!spikes/*/results",
-      "!fixtures/layout-oracle/expected"
+      "!fixtures/layout-oracle/expected",
+      "!fixtures/text/prompt5.json"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

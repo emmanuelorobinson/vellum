@@ -32,12 +32,13 @@ struct Ch {
     advance: f64,
     size: f64,
     line_height: f64,
+    source_run: usize,
 }
 
 fn chars(text: &RichText) -> Vec<Ch> {
     let mut out = Vec::new();
     let mut byte = 0;
-    for run in &text.runs {
+    for (source_run, run) in text.runs.iter().enumerate() {
         for ch in run.text.chars() {
             out.push(Ch {
                 ch,
@@ -45,6 +46,7 @@ fn chars(text: &RichText) -> Vec<Ch> {
                 advance: 0.6 * run.size + run.letter_spacing,
                 size: run.size,
                 line_height: run.line_height.unwrap_or(1.2 * run.size),
+                source_run,
             });
             byte += ch.len_utf8();
         }
@@ -144,13 +146,29 @@ impl TextEngine for FixedMetricText {
                 if matches!(c.ch, '\n') {
                     continue;
                 }
-                if runs.last().is_none_or(|r| r.size != c.size) {
+                if runs.last().is_none_or(|r| r.source_run != c.source_run) {
+                    let source = &text.runs[c.source_run];
                     runs.push(GlyphRun {
                         font: self.font,
                         size: c.size,
                         glyphs: vec![],
-                        source_run: 0, normalized_coords: vec![], embolden: false, skew: None,
-                        underline: None, strikethrough: None, link: None,
+                        source_run: c.source_run,
+                        normalized_coords: vec![],
+                        embolden: false,
+                        skew: None,
+                        underline: source
+                            .underline
+                            .then_some(vellum_core::ports::TextDecoration {
+                                offset: 0.1 * c.size,
+                                thickness: 0.05 * c.size,
+                            }),
+                        strikethrough: source.strikethrough.then_some(
+                            vellum_core::ports::TextDecoration {
+                                offset: -0.3 * c.size,
+                                thickness: 0.05 * c.size,
+                            },
+                        ),
+                        link: source.link.clone(),
                     });
                 }
                 if let Some(run) = runs.last_mut() {

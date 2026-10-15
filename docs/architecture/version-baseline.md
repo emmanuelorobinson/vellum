@@ -28,8 +28,8 @@
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
 | loro | 1.16.2 | 1.16.x | workspace `Cargo.toml`, used by `crates/adapters/doc-loro` only (Prompt 14); also `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
 | taffy | 0.14.0 | 0.14.x | spike only: `spikes/layout` (Prompt 6, default features) | layout adapter (Prompt 18); ADR-002, C17 |
-| parley | 0.12.0 | 0.12.x | spike only: `spikes/renderer` (Prompt 5; no default features, `std`) | text adapter (Prompt 19); ADR-001's text decision |
-| fontique | 0.12.0 | 0.12.x | not yet used | ships with parley; a direct dependency only if needed |
+| parley | 0.12.0 | 0.12.x | workspace `vellum-text-parley` (Prompt 19; no default features, `std`, `complex-scripts`); renderer spike (`std`) | ADR-001 and ADR-013 |
+| fontique | 0.12.0 | 0.12.x | text adapter through Parley's re-export (Prompt 19), no system feature | explicit font bytes/tier matching; ADR-013 |
 | skia-safe | 0.153.3 | 0.153.x | spike only: `spikes/renderer` (features gl; textlayout for a size build and the native SkParagraph comparison) | the renderer everywhere, native and emscripten (ADR-001, C15, C16) |
 | vello | 0.11.0 | 0.11.x | not yet used | later, behind a flag |
 | kurbo | 0.13.1 | 0.13.x | not yet used | path geometry adapter |

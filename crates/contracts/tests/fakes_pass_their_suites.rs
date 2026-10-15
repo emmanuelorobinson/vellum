@@ -45,6 +45,7 @@ fn layout() {
 #[test]
 fn text() {
     suites::text::run(&FixedMetricText::new());
+    suites::text::rich(&FixedMetricText::new());
 }
 
 #[test]

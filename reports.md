@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-013 and synchronize ARCHITECTURE** (Prompt 19). Text ports now carry renderer-ready glyph
+  offsets, variation/synthesis, decorations/links, shared font bytes and explicit missing-font/glyph ranges.
+  Auto-width hugs both dimensions; auto-height hugs height; fixed text keeps its sizes and reports overflow.
+  Font sources are explicit host-supplied bytes, prioritized by tier. Only a person edits ARCHITECTURE.md.
+  The new `text-fixtures` fonts CI job was verified locally, not on GitHub.
+
 - **Review the existing Loro dependency advisories** (Prompt 17). `pnpm cargo:deny` now fails on
   `bitmaps` ([RUSTSEC-2026-0247](https://rustsec.org/advisories/RUSTSEC-2026-0247)),
   `im` ([RUSTSEC-2026-0248](https://rustsec.org/advisories/RUSTSEC-2026-0248)) and
@@ -1168,11 +1174,55 @@ Verified (each exited 0 unless stated):
 - `pnpm cargo:deny`: existing three Loro-chain unmaintained advisories fail; bans, licenses and sources pass.
 
 
-## Prompt 19: text on Parley and explicit font sources (in progress)
+## Prompt 19: text on Parley and explicit font sources
 
-- Tests first: production text tests failed on absent adapter APIs/dependencies; the core conversion test
-  failed on dropped resizing, alignment, decoration and link fields.
-- The existing ports cannot carry vertical glyph offsets, variable font coordinates, synthetic styles,
-  decorations, links or missing-font diagnostics; expanding the pure data ports for those inputs.
-- The pinned Inter 4.1 font and OFL license were downloaded from rsms/inter for the offline fallback.
-  Restricted DNS blocked the first download; the same request succeeded with tool permission.
+Built:
+- Parley 0.12 TextEngine: rich runs, bidi, CJK breaks, emoji, spacing, font/default and explicit line heights,
+  physical horizontal alignment, justify, font-metric underline/strike, links as data, vertical alignment,
+  auto-width/auto-height/fixed boxes and explicit overflow without dropping content.
+- FontSource with document → cached Google → system → bundled Inter priority; CSS weight/style matching
+  within the first tier containing the family. Tier-private aliases prevent same-family mixing. Byte inputs
+  and stable handles are shared with renderers; missing-family substitutions and uncovered clusters report ranges.
+  Bundled Inter is a pinned, unmodified Google Fonts variable font, with OFL license and hashes beside it.
+- Pure text ports retain logical UTF-8 clusters, vertical glyph offsets, variable axes, synthesis, decoration
+  metrics, source-run ownership and font bytes. Resolver-to-layout conversion keeps the new text inputs and sizing.
+- Extended shared TextEngine contract on production and fake, plus a broken-implementation check that proves
+  dropping links/decorations fails it. Eight ordinary production behavior tests plus the existing smoke test.
+- Reproducible TEST DATA oracle from Prompt 5's unchanged spike layout: all 30 fixtures match fonts, glyph ids,
+  sizes, line counts and positions within 0.001 px. Separate font-contract, RTL-offset, CJK and emoji-cluster checks.
+  Tagged fonts CI lane; ADR-013, font asset notice/provenance and text runbook.
+
+Differences and findings:
+- Guide FINAL names `text-parley`; the workspace package is `vellum-text-parley`, as with the other adapters.
+- The previous text ports could not represent the required rich styles or complete rendering inputs. They were
+  extended without changing document types or the file format; `layout_box` applies box policy while existing
+  `layout`/`measure` retain their explicitly constrained content contract.
+- Tests failed first on absent APIs and dropped core conversion fields; then on line-box width mistaken for content
+  width, overflow hidden by that mistake and Parley's synthetic empty-text placeholder. Those were corrected.
+  The first fixture exporter used Rust debug strings with non-JSON Unicode escapes; it now emits valid JSON.
+- Production enables `complex-scripts` to include ICU segmentation data; the original spike still emits missing-model
+  notices when generating CJK fixtures. Its results match. Spikes/renderer's stale lockfile also gained Prompt 18's
+  existing testkit dependencies when the new oracle example was built.
+- Sibling projects and the guide's Parley/Fontique and Penpot text paths were read; ADR-013 records the reference
+  study. No reference code was ported. The first Inter download's family name was Inter Variable, so it was replaced
+  by pinned Google Fonts Inter before tests passed. Restricted DNS/pnpm verification needed tool permission.
+
+Limits:
+- Hosts must inject decoded SFNT bytes for document/cache/system fonts; disk persistence and WOFF/WOFF2 decoding
+  remain Prompt 24, platform enumeration belongs to hosts. Multi-family collections return a typed error;
+  single-family collections retain face indices. Missing Unicode coverage is explicit, not bundled in Inter.
+- No GPU, renderer pixel comparison, large-document performance or WASM runtime execution in this prompt.
+  WASM compilation passes. Renderers and hosts are later prompts; the new CI job has not run on GitHub.
+
+Verified (each exited 0 unless stated):
+- `cargo test --offline -p vellum-text-parley`; `cargo test --offline -p vellum-text-parley --test fonts_lane -- --ignored`;
+  `cargo test --offline -p vellum-contracts`; `cargo test --offline -p vellum-contracts --test suites_catch_broken_implementations text_that_drops`;
+  `cargo test --offline -p vellum-core --test layout`; `cargo test --offline --workspace`.
+- `cargo check --offline -p vellum-text-parley --target wasm32-unknown-unknown`;
+  `cargo clippy --offline --workspace --all-targets -- -D warnings`; `cargo fmt --all --check`;
+  `cargo fmt --manifest-path spikes/renderer/Cargo.toml --all --check`.
+- `node scripts/gen-text-fixtures.mjs`, also `--check` (verifies all five fixture font hashes before generation).
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`; `git diff HEAD --check`.
+- Failed: `pnpm test:scripts`: 150 pass, one skip, one existing `missing: R3 taffy: main.rs` failure.
+- Failed: `pnpm cargo:deny`: the three existing Loro-chain unmaintained advisories above; bans, licenses and sources pass.

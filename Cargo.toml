@@ -46,4 +46,4 @@ loro = "1.16.2"
 taffy = "=0.14.0"
 
 # Text stays in its adapter; system/font downloads are supplied by the host as bytes.
-parley = { version = "=0.12.0", default-features = false, features = ["std"] }
+parley = { version = "=0.12.0", default-features = false, features = ["std", "complex-scripts"] }

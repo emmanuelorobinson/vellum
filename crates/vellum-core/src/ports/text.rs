@@ -167,9 +167,16 @@ pub struct TextDecoration {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TextProblem {
     /// Requested family is absent; the named substitute was used.
-    MissingFont { requested: String, substitute: String, range: std::ops::Range<usize> },
+    MissingFont {
+        requested: String,
+        substitute: String,
+        range: std::ops::Range<usize>,
+    },
     /// No supplied font covers this cluster (a .notdef glyph is drawn).
-    MissingGlyph { font: FontHandle, range: std::ops::Range<usize> },
+    MissingGlyph {
+        font: FontHandle,
+        range: std::ops::Range<usize>,
+    },
 }
 
 /// Box dimensions beside the complete content layout. Overflow is reported without truncation.
@@ -199,13 +206,37 @@ pub trait TextEngine {
     /// supplied width; auto-height wraps at it. Fixed preserves both dimensions. Vertical alignment
     /// uses spare space only, so overflowing text always begins at the top. No clipping is performed.
     fn layout_box(&self, text: &RichText, extent: Extent) -> TextBoxLayout {
-        let wrap = if text.resize == TextResize::AutoWidth { f64::INFINITY } else { extent.width };
+        let wrap = if text.resize == TextResize::AutoWidth {
+            f64::INFINITY
+        } else {
+            extent.width
+        };
         let mut layout = self.layout(text, wrap);
-        let width = if text.resize == TextResize::AutoWidth || !extent.width.is_finite() { layout.width } else { extent.width.max(0.0) };
-        let height = if text.resize != TextResize::Fixed || !extent.height.is_finite() { layout.height } else { extent.height.max(0.0) };
+        let width = if text.resize == TextResize::AutoWidth || !extent.width.is_finite() {
+            layout.width
+        } else {
+            extent.width.max(0.0)
+        };
+        let height = if text.resize != TextResize::Fixed || !extent.height.is_finite() {
+            layout.height
+        } else {
+            extent.height.max(0.0)
+        };
         let spare = (height - layout.height).max(0.0);
-        let offset = match text.vertical_align { VerticalAlign::Top => 0.0, VerticalAlign::Middle => spare / 2.0, VerticalAlign::Bottom => spare };
-        for line in &mut layout.lines { line.y += offset; }
-        TextBoxLayout { overflows_x: layout.width > width + 1e-6, overflows_y: layout.height > height + 1e-6, layout, width, height }
+        let offset = match text.vertical_align {
+            VerticalAlign::Top => 0.0,
+            VerticalAlign::Middle => spare / 2.0,
+            VerticalAlign::Bottom => spare,
+        };
+        for line in &mut layout.lines {
+            line.y += offset;
+        }
+        TextBoxLayout {
+            overflows_x: layout.width > width + 1e-6,
+            overflows_y: layout.height > height + 1e-6,
+            layout,
+            width,
+            height,
+        }
     }
 }

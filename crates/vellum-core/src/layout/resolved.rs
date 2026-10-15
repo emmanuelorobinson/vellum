@@ -87,8 +87,13 @@ fn node(r: &ResolvedNode) -> Result<LayoutNode, LayoutError> {
     }
     let content = if let Node::Text(t) = own {
         match t.resize {
-            TextResize::AutoWidth => { style.width = Dimension::Hug { fallback: None }; style.height = Dimension::Hug { fallback: None }; }
-            TextResize::AutoHeight => { style.height = Dimension::Hug { fallback: None }; }
+            TextResize::AutoWidth => {
+                style.width = Dimension::Hug { fallback: None };
+                style.height = Dimension::Hug { fallback: None };
+            }
+            TextResize::AutoHeight => {
+                style.height = Dimension::Hug { fallback: None };
+            }
             TextResize::Fixed => {}
         }
         LayoutContent::Text(RichText {

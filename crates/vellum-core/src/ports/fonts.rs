@@ -25,5 +25,7 @@ pub trait FontSource {
     /// weight resolves to the nearest weight it has; the caller never gets a different family.
     fn resolve(&self, family: &str, weight: u16, style: FontStyle) -> Option<FontHandle>;
     /// Font bytes for a previously issued handle. Fakes without font bytes return none.
-    fn data(&self, _handle: FontHandle) -> Option<FontData> { None }
+    fn data(&self, _handle: FontHandle) -> Option<FontData> {
+        None
+    }
 }

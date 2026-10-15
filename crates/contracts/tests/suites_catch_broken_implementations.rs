@@ -455,3 +455,26 @@ impl ShaderCompiler for CompilesNothing {
 fn shader_compiler_that_accepts_empty_source() {
     suites::shader::run(&CompilesNothing);
 }
+
+struct DropsRichStyle(FixedMetricText);
+impl TextEngine for DropsRichStyle {
+    fn measure(&self, text: &RichText, constraints: Extent) -> TextMetrics {
+        self.0.measure(text, constraints)
+    }
+    fn layout(&self, text: &RichText, width: f64) -> TextLayout {
+        let mut l = self.0.layout(text, width);
+        for line in &mut l.lines {
+            for r in &mut line.glyph_runs {
+                r.link = None;
+                r.underline = None;
+                r.strikethrough = None;
+            }
+        }
+        l
+    }
+}
+#[test]
+#[should_panic(expected = "TextEngine: rich style was dropped")]
+fn text_that_drops_links_and_decorations() {
+    suites::text::rich(&DropsRichStyle(FixedMetricText::new()));
+}

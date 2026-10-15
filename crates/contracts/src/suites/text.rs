@@ -140,3 +140,55 @@ pub fn run(engine: &dyn TextEngine) {
         nothing.width
     );
 }
+
+/// Style ownership is retained across equal-sized runs; box policy never truncates content.
+pub fn rich(engine: &dyn TextEngine) {
+    use vellum_types::{TextResize, VerticalAlign};
+    let mut t = text("TEST DATA ", 12.0);
+    let mut b = text("link", 12.0).runs.remove(0);
+    b.link = Some("https://example.test".into());
+    b.underline = true;
+    b.strikethrough = true;
+    t.runs.push(b);
+    let l = engine.layout(&t, 200.0);
+    assert!(
+        l.lines
+            .iter()
+            .flat_map(|l| &l.glyph_runs)
+            .any(|r| r.source_run == 1
+                && r.link == t.runs[1].link
+                && r.underline.is_some()
+                && r.strikethrough.is_some()),
+        "TextEngine: rich style was dropped"
+    );
+    assert!(
+        l.lines
+            .iter()
+            .flat_map(|l| &l.glyph_runs)
+            .filter(|r| r.source_run == 0)
+            .all(|r| r.link.is_none() && r.underline.is_none()),
+        "TextEngine: style leaked between runs"
+    );
+    t.resize = TextResize::AutoWidth;
+    let l = engine.layout_box(
+        &t,
+        Extent {
+            width: 20.0,
+            height: 100.0,
+        },
+    );
+    assert_eq!(l.layout.lines.len(), 1, "TextEngine: auto-width wrapped");
+    t.resize = TextResize::Fixed;
+    t.vertical_align = VerticalAlign::Bottom;
+    let l = engine.layout_box(
+        &t,
+        Extent {
+            width: 200.0,
+            height: 100.0,
+        },
+    );
+    assert!(
+        (l.layout.lines[0].y + l.layout.height - 100.0).abs() < 0.001,
+        "TextEngine: vertical alignment was dropped"
+    );
+}

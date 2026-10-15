@@ -37,5 +37,6 @@ pub use script::{ScriptApi, ScriptError, ScriptLimits, ScriptOutput, ScriptRunti
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;
 pub use text::{
-    Glyph, GlyphRun, RichText, StyledRun, TextEngine, TextLayout, TextLine, TextMetrics, TextDecoration, TextProblem, TextBoxLayout,
+    Glyph, GlyphRun, RichText, StyledRun, TextBoxLayout, TextDecoration, TextEngine, TextLayout,
+    TextLine, TextMetrics, TextProblem,
 };
