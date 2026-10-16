@@ -1,9 +1,9 @@
-use vellum_core::guard::{GuardState, apply_guarded};
+use vellum_core::guard::{GuardState, LeaseChange, apply_guarded};
 use vellum_core::ops::{Applied, Inputs, Transaction};
 use vellum_core::ports::{
     DocStore, DocumentTarget, ScriptValue, TargetError, TargetMode, Timestamp,
 };
-use vellum_types::Document;
+use vellum_types::{AgentId, Document, NodeId};
 
 use super::{InMemoryDocStore, SequentialIds};
 
@@ -63,6 +63,18 @@ impl DocumentTarget for InMemoryTarget {
         Err(TargetError::Render(
             "the in-memory target draws nothing".into(),
         ))
+    }
+
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+    ) -> Result<(), TargetError> {
+        let doc = self.store.snapshot();
+        self.guard
+            .lease(&doc, frame, agent, change, Timestamp(0))
+            .map_err(TargetError::Lease)
     }
 
     fn save(&mut self) -> Result<(), TargetError> {

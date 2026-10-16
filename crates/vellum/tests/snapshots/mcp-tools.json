@@ -7,6 +7,257 @@
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Claim a frame before working in it, so other agents cannot change it while you do. The claim lapses after 60 seconds without a change from you, and a person can always edit or stop it. Claim fails when another agent holds the frame; pick another one or wait.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "frame": {
+            "description": "The frame, by id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame"
+        ],
+        "title": "LeaseInput",
+        "type": "object"
+      },
+      "name": "claim_frame"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Copy layers, with everything inside them, to a page or layer. Copies get new ids, returned in the order of `copies`. One change for the whole batch.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "copies": {
+            "description": "What to copy and where each copy goes.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The layer.",
+                  "type": "string"
+                },
+                "index": {
+                  "description": "Where among the parent's children, back to front. Defaults to the top (the end).",
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "parent": {
+                  "description": "The page or layer it goes into, by id.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "parent"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "copies"
+        ],
+        "title": "CopyInput",
+        "type": "object"
+      },
+      "name": "copy_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Make layers into components: each layer's tree becomes a component definition and the layer becomes its first instance. Returns the component ids in order; use create_instance to place more.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "ids": {
+            "description": "The layers to make into components. Each stays where it is, as the first instance of its component.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "CreateComponentInput",
+        "type": "object"
+      },
+      "name": "create_component"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Place instances of local components, with their props and overrides. Each is sized like its component unless `set` says otherwise. Returns the new ids in order, as one change.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "instances": {
+            "description": "The instances to place.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "component": {
+                  "description": "The local component, by id (list_components shows them).",
+                  "type": "string"
+                },
+                "index": {
+                  "description": "Where among the parent's children, back to front. Defaults to the top (the end).",
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "parent": {
+                  "description": "The page or layer it goes into, by id.",
+                  "type": "string"
+                },
+                "set": {
+                  "additionalProperties": true,
+                  "default": {},
+                  "description": "Instance properties in the file format: `name`, `position`, `width`, `props` (the component's props by\nname), `overrides`. Size and name default to the component's.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "parent",
+                "component"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "instances"
+        ],
+        "title": "CreateInstanceInput",
+        "type": "object"
+      },
+      "name": "create_instance"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Remove layers and everything inside them, as one change. The person can undo it; still, read what you are removing first.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "ids": {
+            "description": "The layers to remove, each with everything inside it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "DeleteInput",
+        "type": "object"
+      },
+      "name": "delete_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Run a short JavaScript program against the document's `doc` API: loops and variables do in one call what would take many tool calls. The whole script is one change and one undo step; if any call fails, nothing is applied and the error names the line. `validate_only` reports what would change. Limits: 5 seconds, 2,000 calls, 2,000 new layers; no network, files or timers.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "A JavaScript program using `doc` (read_skill \"execute\" documents it): doc.page, get, query, insert,\nupdate, copy, replace, move, delete, setVariables, createComponent, makeSlot, instance, findSpace,\nlayoutProblems, screenshot, export, claim, release. `return` a value to get it back; return\ndoc.screenshot(id) to see the result.",
+            "type": "string"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "validate_only": {
+            "default": false,
+            "description": "Run it and report what would change, without changing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "ExecuteInput",
+        "type": "object"
+      },
+      "name": "execute"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
         "readOnlyHint": true
       },
       "description": "List every distinct value a property takes in a scope, with how many nodes have each and a few example ids. Use it to see what a design already uses (font sizes, colours, radii) before adding more, or to find values that should be a variable. Variable references show as {\"$var\": id}.",
@@ -137,7 +388,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Report what is open and what the person sees: open documents, the active one, its selection and viewport, which frames are leased, which agents are paused, and the notes for agents and context nodes that apply to the selection (or the page, with no selection). Call it first, and again before starting on a new request.",
+      "description": "Report what is open and what the person sees: open documents, the active one, its selection and viewport, which frames are leased (and by which agent; `you` is this client's), which agents are paused, and the notes for agents and context nodes that apply to the selection (or the page, with no selection). Call it first, and again before starting on a new request.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -240,6 +491,59 @@
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Add nodes (with their children) to a page or a layer, as JSON or as a compact tag spec. All of them go in as one change, or none do. Returns the new top-level ids in order. A mistake is reported with the index and field of the node to fix.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "format": {
+            "description": "The spec's format: \"jsx\" or \"json\".",
+            "type": "string"
+          },
+          "index": {
+            "description": "Where among the parent's children, back to front: 0 is the bottom. Defaults to the top (the end).",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "nodes": {
+            "description": "The nodes, in the file format (see read_skill). `id` and `name` may be left out; children nest.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "description": "The page or layer to add them to, by id.",
+            "type": "string"
+          },
+          "spec": {
+            "description": "The nodes as text instead, in `format`. With \"jsx\" (the default) a tag is a node's type, attributes are\nits properties (\"text\" or {json}), nested tags are children and text inside <text> is its content:\n<frame name=\"Card\" width={320} height=\"hug\" layout=\"column\"><text font=\"Inter\" size={14}>Hi</text></frame>",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "title": "InsertInput",
+        "type": "object"
+      },
+      "name": "insert_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
         "readOnlyHint": true
       },
       "description": "List the document's components: id, name, root node, the props an instance can set, the variants, the slots that accept other components, and how many instances use each. Use a component instead of drawing the same thing again.",
@@ -284,6 +588,113 @@
         "type": "object"
       },
       "name": "list_fonts"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Mark empty frames inside a component as slots, which each instance fills with its own content. Suggest the components that usually go there. One change for the batch.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "slots": {
+            "description": "The frames to make into slots.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "An empty frame inside a component definition (not its root).",
+                  "type": "string"
+                },
+                "suggested": {
+                  "default": [],
+                  "description": "Components suggested for the slot, by id. Advisory: anything can fill it.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "slots"
+        ],
+        "title": "MakeSlotInput",
+        "type": "object"
+      },
+      "name": "make_slot"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Move layers to another parent or page, or to another place among their siblings. A layer cannot move into itself or between a page and a component. One change for the whole batch.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "moves": {
+            "description": "What moves where, in order. An index counts the parent's children after the layer has left its old place.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The layer.",
+                  "type": "string"
+                },
+                "index": {
+                  "description": "Where among the parent's children, back to front. Defaults to the top (the end).",
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "parent": {
+                  "description": "The page or layer it goes into, by id.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "parent"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "moves"
+        ],
+        "title": "MoveInput",
+        "type": "object"
+      },
+      "name": "move_nodes"
     },
     {
       "_meta": {
@@ -403,6 +814,194 @@
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Let go of a frame you claimed, when you are done with it, so other agents can work there.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "frame": {
+            "description": "The frame, by id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame"
+        ],
+        "title": "LeaseInput",
+        "type": "object"
+      },
+      "name": "release_frame"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Remove layers and put new ones in exactly their place in the layer order. Use it to swap a layer for a different kind of layer; to change properties use update_nodes. Returns the new ids.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "replacements": {
+            "description": "The layers and what replaces each.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The layer to replace.",
+                  "type": "string"
+                },
+                "node": {
+                  "additionalProperties": true,
+                  "description": "What goes in its place, in the file format. It may keep the old id.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "id",
+                "node"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "replacements"
+        ],
+        "title": "ReplaceInput",
+        "type": "object"
+      },
+      "name": "replace_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Change every use of one value of a property to another, in a scope, as one change: every #111111 text colour to $color/text, every 16 font size to 18. Use find_properties first to see the values in use. Reports how many layers changed; none is not an error.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "from": {
+            "description": "The value to find. `#abc` matches `#AABBCC`; `$color/text` matches a use of that variable."
+          },
+          "property": {
+            "description": "The property, in the file's spelling, dotted into nested objects; lists are looked through. Examples:\n`cornerRadius`, `content.size`, `fills.color`, `stroke.width`.",
+            "type": "string"
+          },
+          "scope": {
+            "description": "Only inside this page, component or layer.",
+            "type": "string"
+          },
+          "to": {
+            "description": "What to put instead. `$color/text` binds the variable of that name (or id)."
+          },
+          "type": {
+            "description": "Only layers of this type.",
+            "enum": [
+              "frame",
+              "group",
+              "rect",
+              "ellipse",
+              "polygon",
+              "star",
+              "line",
+              "vector",
+              "boolean",
+              "text",
+              "image",
+              "icon",
+              "instance",
+              "script",
+              "note",
+              "context",
+              "prompt",
+              "embed",
+              "conflict"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "property",
+          "from",
+          "to"
+        ],
+        "title": "ReplacePropertiesInput",
+        "type": "object"
+      },
+      "name": "replace_properties"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Tell the person how the work is going: what is done and what comes next, and how many plan items are done. It changes nothing in the document. Call it between parts of a long piece of work.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "description": "How many items of the plan are done.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "message": {
+            "description": "One or two plain sentences on what is done and what is next. Shown to the person as it is.",
+            "type": "string"
+          },
+          "total": {
+            "description": "How many items the plan has.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ProgressInput",
+        "type": "object"
+      },
+      "name": "report_progress"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
         "readOnlyHint": true
       },
       "description": "Draw a page or node to a PNG you can look at. It is drawn the way the editor draws it. Use it to check your work; large areas at high scale are refused, so draw one frame at a time.",
@@ -431,6 +1030,47 @@
         "type": "object"
       },
       "name": "screenshot"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Add, change or remove variables (design tokens), as one change. A variable is matched by id or by name, so sending `color/text` again changes it. Returns the id of each by name; bind one with {\"$var\": id}.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "remove": {
+            "default": [],
+            "description": "Variables to remove, by id or name. A variable still in use cannot be removed.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "variables": {
+            "default": [],
+            "description": "Variables to add or change, in the file format: `{\"name\": \"color/text\", \"type\": \"color\", \"values\":\n[{\"value\": \"#111111\"}, {\"value\": \"#EEEEEE\", \"when\": {\"Mode\": \"dark\"}}]}`. One with the `id` or the\n`name` of an existing variable replaces it; otherwise it is new.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "title": "SetVariablesInput",
+        "type": "object"
+      },
+      "name": "set_variables"
     },
     {
       "_meta": {
@@ -470,6 +1110,56 @@
         "type": "object"
       },
       "name": "snapshot_layout"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Set properties of layers: name, size, fills, layout, text content and so on, or null to reset one. All updates apply as one change, or none do; a mistake names the update and property to fix.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "updates": {
+            "description": "The changes, applied in order.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The layer.",
+                  "type": "string"
+                },
+                "set": {
+                  "additionalProperties": true,
+                  "description": "The properties to set, in the file's spelling. `null` puts one back to its default. Children are changed\nwith insert_nodes, move_nodes and delete_nodes.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "id",
+                "set"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "updates"
+        ],
+        "title": "UpdateInput",
+        "type": "object"
+      },
+      "name": "update_nodes"
     }
   ]
 }

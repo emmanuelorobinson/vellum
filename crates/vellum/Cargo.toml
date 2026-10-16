@@ -27,6 +27,7 @@ vellum-layout-taffy = { path = "../adapters/layout-taffy", optional = true }
 vellum-text-parley = { path = "../adapters/text-parley", optional = true }
 vellum-render-skia = { path = "../adapters/render-skia", optional = true }
 vellum-index-rstar = { path = "../adapters/index-rstar", optional = true }
+vellum-script-quickjs = { path = "../adapters/script-quickjs", optional = true }
 getrandom = "=0.4.3"
 serde.workspace = true
 serde_json.workspace = true
@@ -34,7 +35,7 @@ serde_path_to_error.workspace = true
 schemars.workspace = true
 
 [features]
-default = ["scene"]
+default = ["scene", "scripts"]
 # Layout, text and Skia drawing: what snapshot_layout, find_space and screenshot need. The IPC lane builds the
 # daemon without it, so that lane compiles no renderer (ADR-021).
 scene = [
@@ -43,6 +44,8 @@ scene = [
     "dep:vellum-render-skia",
     "dep:vellum-index-rstar",
 ]
+# The QuickJS sandbox `execute` runs in. Without it `execute` says so; every other tool works.
+scripts = ["dep:vellum-script-quickjs"]
 
 [lints]
 workspace = true

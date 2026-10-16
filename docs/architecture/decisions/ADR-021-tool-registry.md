@@ -1,7 +1,7 @@
 # ADR-021: the tool registry, its MCP and CLI front ends, and the read tools
 
-Status: implemented for Prompt 29 in the `vellum` composition root. The write tools and `execute` arrive in
-Prompt 30. Skills and styles in Prompt 31.
+Status: implemented for Prompt 29 in the `vellum` composition root; the write tools, `execute`, batch errors
+and step descriptors for Prompt 30 (section "Prompt 30" below). Skills and styles in Prompt 31.
 
 ## Decision
 
@@ -116,9 +116,8 @@ runbook promised. This replaces ADR-020's consequence "does not build Skia": the
 
 ## Consequences
 
-- Prompt 30 adds mutating tools to the same registry; the MCP and CLI front ends need no change. A mutating
-  tool needs an `Origin` for the session: `Session::client` is already filled from `initialize`, and the
-  `ActorId`, name and hue arrive with sessions (Prompt 34).
+- Prompt 30 added the mutating tools to the same registry (section above). Agent hues arrive with sessions
+  (Prompt 34).
 - One set of scene services serves every document. It has no document path, so **libraries (`imports`) and
   script-node outputs do not resolve in the daemon's layout, screenshots and `find_space`**. Instances of a
   library component draw as missing. Fixing it means services per document (a factory in `Env`).
@@ -131,6 +130,47 @@ runbook promised. This replaces ADR-020's consequence "does not build Skia": the
   Budgets (2,000 nodes, 700 KiB images) keep each call short. Revisit with the first measured stall.
 - An `rmcp` swap, if ever wanted, replaces `mcp.rs` and the line handling in `vellum-ipc-local`; tools do not
   change.
+
+## Prompt 30: write tools, `execute`, batch errors, steps
+
+- **Fifteen mutating tools** join the registry: `execute`, `insert_nodes`, `update_nodes`, `copy_nodes`,
+  `replace_nodes`, `move_nodes`, `delete_nodes`, `replace_properties`, `set_variables`, `create_component`,
+  `create_instance`, `make_slot`, `claim_frame`, `release_frame`, `report_progress`. MCP and the CLI needed no
+  change beyond carrying the new error fields (and the CLI reading a list of objects as JSON).
+- **Attribution.** Each connection is one agent: at its first call the daemon gives it an `AgentId` and a
+  `SessionId` (ULIDs: the clock plus 80 bits from `Env::entropy`) and records its name, which is the client's
+  `initialize` name ("Claude Code"; "MCP client" when it gave none). Every transaction it makes carries
+  `Actor::Agent` and that session. `get_app_state` reports `you` and the known `agents`. Hues arrive with the
+  session store; external MCP calls have no turn (ARCHITECTURE §7.6 records them by session).
+- **One call, one transaction.** A tool turns its input into ops, each labelled with the input item and how the
+  op's fields are spelled in the input, and sends them to the document's target as one `Transaction`. The target
+  applies the Guard (headless: the daemon's; live: the editor's). A refused op comes back as `ToolError` with
+  `op` (the input item, from 0), `path` in the input's spelling (`moves[2].parent`, `nodes[1].opacity`) and the
+  core's plain reason. A node that does not read as the file format is found field by field (serde cannot name
+  the field of an internally tagged enum), so its path is as exact.
+- **`execute` runs on a scratch store**, then sends the diff to the target. The core's `doc_api::execute` takes a
+  `DocStore`, and a live target is not one; a scratch copy of the document as its holder has it lets the same
+  path serve live and headless files, and the target's Guard still decides. Frames the script claimed are
+  claimed at the target before the transaction (released again if it is refused); frames it released are
+  released after. A pause is checked before the script runs, because the doc API reports a Guard rejection as
+  an API error that cannot be told from a bad argument. Cost: a document copy and a store per call, and the
+  editor sees a diff (explicit ids) rather than the script's own ops.
+- **Leases are a target capability.** `DocumentTarget::lease(frame, agent, Claim|Release)` is new on the port,
+  with `GuardState::lease` (only frames; a paused or stopped agent cannot claim) and `TargetError::Lease`. The
+  contract suite covers it, with a broken implementation that keeps no leases. `EditorLink::lease` carries it to
+  an editor, which the editor wire protocol (ADR-020) must now include.
+- **Node specs come from a registry of parsers** (`tools/spec.rs`): `json` and `jsx`, a tag spelling of the
+  file format (tag = `type`, attributes = properties as `"text"` or `{json}`, nested tags = `children`, text in a
+  `<text>` = runs with `font`/`size`/... from the element and `<span>`s). A parser only spells the format; what
+  it produces is checked as JSON is. A spec error names its line and column.
+- **Steps are data.** Every call records a `Step` in its session (`verb` code, `target` frame, counts, thumbnail
+  request for designed steps and scripts, the script itself, progress, error, timing), at most 500, drained by
+  `take_steps`. The panel writes the words, so no copy lives in the daemon. Nothing renders or stores a thumbnail
+  yet; the session store (Prompt 34) does.
+- **Ids.** `Documents` holds one tool id generator (`ToolIds`, from `Env::ids`), and new ids skip every id the
+  document uses. Scripts draw from the same generator. Nodes without a name are named after their text or kind.
+- **`execute` needs a sandbox.** The daemon gains the `scripts` feature (default, QuickJS). Without it `execute`
+  says so and the other tools work; `scripts/ipc.mjs` builds without it.
 
 ## Reference note
 

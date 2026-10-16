@@ -4,9 +4,10 @@
 
 use std::fmt;
 
+use vellum_core::guard::LeaseChange;
 use vellum_core::ops::{Applied, Transaction};
 use vellum_core::ports::{ChangeSet, DocumentTarget, ScriptValue, TargetError, TargetMode};
-use vellum_types::Document;
+use vellum_types::{AgentId, Document, NodeId};
 
 use super::view::EditorView;
 
@@ -29,6 +30,13 @@ pub trait EditorLink {
     fn transact(&mut self, tx: Transaction) -> Result<Applied, TargetError>;
     /// Draws with the editor's renderer.
     fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError>;
+    /// Claims or lets go of a frame in the editor's Guard, which is where leases live while it holds the file.
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+    ) -> Result<(), TargetError>;
     /// Asks the editor to save; answers with the document it wrote.
     fn save(&mut self) -> Result<Document, TargetError>;
     /// Whether the editor has changes the file does not.
@@ -152,6 +160,16 @@ impl DocumentTarget for LiveTarget {
 
     fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError> {
         let result = self.writer.1.render(target, scale);
+        self.check(result)
+    }
+
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+    ) -> Result<(), TargetError> {
+        let result = self.writer.1.lease(frame, agent, change);
         self.check(result)
     }
 

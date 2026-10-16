@@ -308,6 +308,14 @@ impl EditorLink for Screen {
             .collect(),
         ))
     }
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: vellum_core::guard::LeaseChange,
+    ) -> Result<(), TargetError> {
+        self.inner.lease(frame, agent, change)
+    }
     fn save(&mut self) -> Result<Document, TargetError> {
         self.inner.save()
     }

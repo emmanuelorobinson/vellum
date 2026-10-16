@@ -37,6 +37,32 @@ directory, and that directory is where documents are looked up.
 | `find_space` | An empty area for a new frame |
 | `screenshot` | A PNG of a page or node, drawn the way the editor draws it |
 
+## The write tools (Prompt 30)
+
+Every call is one transaction and one undo step, by the agent this connection is, through the Guard. All of it
+applies or none of it does.
+
+| Tool | Use |
+|---|---|
+| `execute` | A JavaScript program against `doc`; `validate_only` reports what would change |
+| `insert_nodes` | Nodes as JSON (`nodes`) or a spec (`spec`, `format` `jsx` or `json`) |
+| `update_nodes`, `copy_nodes`, `replace_nodes`, `move_nodes`, `delete_nodes` | Batches of node changes |
+| `replace_properties` | Every matching value of a property in a scope (`#111` → `$color/text`) |
+| `set_variables` | Add, change (by id or name) or remove variables |
+| `create_component`, `create_instance`, `make_slot` | Components, instances, slots |
+| `claim_frame`, `release_frame` | Hold a frame against other agents; 60 s without activity frees it |
+| `report_progress` | A progress step for the person; changes nothing |
+
+```sh
+vellum tool insert_nodes --parent <frame id> --spec '<rect name="Rule" width={390} height={1}/>'
+vellum tool update_nodes --updates '[{"id":"<id>","set":{"name":"Title"}}]'
+vellum tool execute --code 'return doc.query({type: "text"}).length;'
+```
+
+A refused batch fails with `op` (which item, from 0), `path` (the field, as the input spells it) and the reason;
+a failed script with its `line`. Fix that item and call again. Each call also leaves a step for the Agent panel
+(`Session::steps`).
+
 ## Adding a tool
 
 1. Write a struct implementing `Tool` in `tools/`, with an input struct that derives `Deserialize` and
@@ -44,7 +70,8 @@ directory, and that directory is where documents are looked up.
 2. Parse with `parse_input`, reach documents through `ctx`, return JSON. Say what was cut (`truncated`).
    Error messages say what to do next.
 3. Register it in the module's `register`.
-4. Add tests in `crates/vellum/tests/tools.rs`.
+4. Add tests in `crates/vellum/tests/tools.rs` (read tools) or `write_tools.rs` (mutating tools). A mutating
+   tool sets `verb`, builds a `Batch` with a `Label` per op, and calls `ctx.commit` once.
 5. Review and rewrite the schema snapshot: `VELLUM_UPDATE_SNAPSHOTS=1 cargo test -p vellum --test mcp`.
    Names are stable and schemas only grow (ARCHITECTURE §2.5); a breaking change is a new tool name.
 
@@ -54,6 +81,7 @@ The MCP front end and the CLI need no change.
 
 ```sh
 cargo test -p vellum --test tools      # registry and read tools over fakes (real scene for layout and drawing)
+cargo test -p vellum --test write_tools  # write tools, execute (real QuickJS), batch errors, steps
 cargo test -p vellum --test mcp        # the protocol, errors, images, sessions, the schema snapshot
 cargo test -p vellum --test mcp_stdio  # real `vellum mcp`, real daemon, real files and Skia
 cargo test -p vellum --test cli        # `vellum tool`

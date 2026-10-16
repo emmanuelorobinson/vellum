@@ -16,7 +16,7 @@ use vellum_ipc_local::RpcHandler;
 use vellum_types::brand;
 
 use crate::daemon::Documents;
-use crate::tools::{Client, Registry, Session, ToolCtx, ToolError};
+use crate::tools::{Client, Registry, Session, Step, ToolCtx, ToolError};
 
 /// The protocol revisions with an `initialize` handshake that this server speaks, newest first.
 const VERSIONS: [&str; 4] = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
@@ -25,8 +25,11 @@ const VERSIONS: [&str; 4] = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-
 const INSTRUCTIONS: &str = "Vellum is a design canvas that lives in the repo. Call get_app_state first: it shows \
 what is open, what the person has selected, which frames other agents hold, and any notes the person left for \
 agents. Use open_document for another file. Read before changing anything: get_nodes, query_nodes, \
-snapshot_layout and find_properties show the design, and screenshot draws it. Nodes are named by id. When a \
-call fails, the message says what to fix.";
+snapshot_layout and find_properties show the design, and screenshot draws it. Nodes are named by id. To \
+change it, claim_frame the frame you work in, then use execute for anything that takes more than a few changes \
+(one script, one undo step) or the typed tools (insert_nodes, update_nodes and the rest). Every call is all or \
+nothing. When a call fails, the message says what to fix: the batch item (`op`), the field (`path`) or the script \
+line (`line`).";
 
 fn reply(id: &Value, result: Value) -> Value {
     json!({"jsonrpc": "2.0", "id": id, "result": result})
@@ -73,9 +76,9 @@ impl McpServer {
 
     fn session(&mut self, conn: u64) -> &mut Session {
         let default = &self.default_cwd;
-        self.sessions.entry(conn).or_insert_with(|| Session {
-            client: None,
-            cwd: default.clone(),
+        self.sessions.entry(conn).or_insert_with(|| match default {
+            Some(cwd) => Session::in_dir(cwd.clone()),
+            None => Session::default(),
         })
     }
 
@@ -87,6 +90,16 @@ impl McpServer {
     /// The client on connection `conn`, once it has said who it is.
     pub fn client(&self, conn: u64) -> Option<&Client> {
         self.sessions.get(&conn)?.client.as_ref()
+    }
+
+    /// The agent connection `conn` is, once it has called a tool.
+    pub fn agent(&self, conn: u64) -> Option<&vellum_types::AgentId> {
+        self.sessions.get(&conn)?.agent()
+    }
+
+    /// The steps connection `conn` has taken, for the Agent panel.
+    pub fn steps(&self, conn: u64) -> &[Step] {
+        self.sessions.get(&conn).map_or(&[], Session::steps)
     }
 
     fn tools_list(&self) -> Value {
@@ -223,6 +236,15 @@ fn tool_error(error: &ToolError) -> Value {
     let mut detail = json!({"kind": error.kind().as_str(), "message": error.message()});
     if let Some(path) = error.path() {
         detail["path"] = json!(path);
+    }
+    if let Some(op) = error.op() {
+        detail["op"] = json!(op);
+    }
+    if let Some(line) = error.line() {
+        detail["line"] = json!(line);
+    }
+    if let Some(column) = error.column() {
+        detail["column"] = json!(column);
     }
     json!({
         "content": [{"type": "text", "text": error.to_string()}],

@@ -27,7 +27,7 @@ use std::fmt;
 
 use vellum_types::{Actor, AgentId, ComponentId, Document, Node, NodeId, Origin, PageId, PageKind};
 
-use crate::lease::{BlockedPairs, Leases};
+use crate::lease::{BlockedPairs, LeaseError, Leases};
 use crate::ops::{self, Applied, Edit, Inputs, OpError, Parent, Plan, Transaction};
 use crate::ports::{DocStore, IdGen, Timestamp};
 
@@ -427,6 +427,48 @@ fn touches(write: &Write<'_>, frame: &NodeId) -> bool {
     write.edits.iter().any(|edit| scope.hit_by(edit))
 }
 
+/// What an agent asks of a lease.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeaseChange {
+    /// Hold the frame.
+    Claim,
+    /// Let go of it.
+    Release,
+}
+
+/// Why a claim or release did not happen. Nothing changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LeaseRefused {
+    /// There is no such node.
+    Unknown(NodeId),
+    /// Only frames are leased.
+    NotAFrame(NodeId),
+    /// The agent is paused or stopped.
+    Paused(Rejection),
+    /// The lease itself refused: another agent holds it, it is not held, or a person stopped the agent there.
+    Lease(LeaseError),
+}
+
+impl fmt::Display for LeaseRefused {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unknown(id) => write!(f, "There is no layer {id}."),
+            Self::NotAFrame(id) => write!(f, "Layer {id} is not a frame; only frames are claimed."),
+            Self::Paused(why) => why.fmt(f),
+            Self::Lease(why) => {
+                let text = why.to_string();
+                let mut chars = text.chars();
+                match chars.next() {
+                    Some(first) => write!(f, "{}{}.", first.to_uppercase(), chars.as_str()),
+                    None => Ok(()),
+                }
+            }
+        }
+    }
+}
+
+impl std::error::Error for LeaseRefused {}
+
 /// Everything the Guard checks against, for one open document. Session state, never file content.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GuardState {
@@ -455,6 +497,35 @@ impl GuardState {
     /// Stop on `frame`'s lease tab: the lease is freed and its holder blocked there until resumed.
     pub fn stop_on_lease(&mut self, frame: &NodeId, now: Timestamp) -> Option<AgentId> {
         self.leases.stop(frame, &mut self.blocked, now)
+    }
+
+    /// `agent` claims or lets go of `frame` in `doc` (`claim_frame`, `release_frame`, `doc.claim`). Only a frame
+    /// can be leased, and a paused or stopped agent cannot claim: its next write would be refused anyway.
+    pub fn lease(
+        &mut self,
+        doc: &Document,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+        now: Timestamp,
+    ) -> Result<(), LeaseRefused> {
+        match ops::find(doc, frame) {
+            Some(Node::Frame(_)) => {}
+            Some(_) => return Err(LeaseRefused::NotAFrame(frame.clone())),
+            None => return Err(LeaseRefused::Unknown(frame.clone())),
+        }
+        match change {
+            LeaseChange::Claim => {
+                self.pause.check(agent).map_err(LeaseRefused::Paused)?;
+                self.leases
+                    .claim(frame, agent.clone(), &self.blocked, now)
+                    .map_err(LeaseRefused::Lease)
+            }
+            LeaseChange::Release => self
+                .leases
+                .release(frame, agent, now)
+                .map_err(LeaseRefused::Lease),
+        }
     }
 
     /// [`guard`] with this state.

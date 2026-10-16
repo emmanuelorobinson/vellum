@@ -127,9 +127,9 @@ impl Tool for GetAppState {
     }
     fn description(&self) -> &'static str {
         "Report what is open and what the person sees: open documents, the active one, its selection and \
-         viewport, which frames are leased, which agents are paused, and the notes for agents and context \
-         nodes that apply to the selection (or the page, with no selection). Call it first, and again before \
-         starting on a new request."
+         viewport, which frames are leased (and by which agent; `you` is this client's), which agents are \
+         paused, and the notes for agents and context nodes that apply to the selection (or the page, with no \
+         selection). Call it first, and again before starting on a new request."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<StateInput>()
@@ -166,7 +166,19 @@ impl Tool for GetAppState {
             documents.push(entry);
         }
 
+        let you = json!({
+            "agent": ctx.session().agent().map(|a| a.as_str()),
+            "name": ctx.session().agent_name(),
+        });
+        let agents: Vec<Value> = ctx
+            .docs()
+            .agents()
+            .iter()
+            .map(|(id, name)| json!({"agent": id.as_str(), "name": name}))
+            .collect();
         let mut out = json!({
+            "you": you,
+            "agents": agents,
             "documents": documents,
             "active": focus,
             "selection": [],

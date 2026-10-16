@@ -8,6 +8,15 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-021 "Prompt 30" and synchronize ARCHITECTURE** (Prompt 30). Only a person edits ARCHITECTURE.md.
+  (1) `DocumentTarget` gains `lease(frame, agent, Claim|Release)` and `TargetError::Lease`; `EditorLink` gains
+  `lease` too, so the editor wire protocol (ADR-020, still open) must carry claims. (2) `execute` runs the script
+  on a scratch store and sends the resulting diff to the target as one transaction, instead of running against the
+  target's own store. (3) Each MCP connection is one agent named after its client, with a fresh `AgentId` and
+  `SessionId`; external calls carry no turn. (4) `crates/vellum` now depends on `vellum-script-quickjs` behind a
+  default `scripts` feature. (5) Tool descriptions point agents at `read_skill`, which arrives in Prompt 31; until
+  then that call fails as an unknown tool.
+
 - **Review ADR-021 and synchronize ARCHITECTURE** (Prompt 29). Only a person edits ARCHITECTURE.md. (1) §3.4 `Tool`
   gains `description`, `read_only` and `destructive`, and `run` returns JSON with a picture under an `image` key.
   (2) §7 and §10 say `rmcp`; the MCP front end is hand-written (`crates/vellum/src/mcp.rs`, about 150 lines of
@@ -1904,3 +1913,53 @@ Not verified: Linux and Windows (the `cwd` rule with Windows paths, the producti
 protocol is still open); any MCP client other than the tests (no Claude Code or Codex session was started); large
 documents (every call clones the document; the budgets are 2,000 nodes and 700 KiB images, but no stall was measured).
 No design frames were involved.
+
+## Prompt 30: write tools, `execute`, batch errors, steps
+
+Built (ADR-021 "Prompt 30", `docs/runbooks/tools.md`):
+- Fifteen mutating tools in the registry: `execute`, `insert_nodes`, `update_nodes`, `copy_nodes`, `replace_nodes`,
+  `move_nodes`, `delete_nodes`, `replace_properties`, `set_variables`, `create_component`, `create_instance`,
+  `make_slot`, `claim_frame`, `release_frame`, `report_progress`. Each call is one transaction through the target's
+  Guard, attributed to the connection's agent, and returns the created ids.
+- Batch errors: `ToolError` gains `op` (input item), `line`/`column` (scripts and specs); `path` is in the input's
+  spelling (`updates[1].id`, `nodes[1].opacity`). MCP puts them in `structuredContent.error`.
+- Node specs from a parser registry (`tools/spec.rs`): `json` and a compact `jsx` tag spelling of the file format.
+- Steps: every call records a `Step` (verb code, target frame, counts, thumbnail request, script, progress, error,
+  timing) in its `Session`, at most 500; `McpServer::steps(conn)` exposes them.
+- Core: `GuardState::lease`, `LeaseChange`, `LeaseRefused`; `DocumentTarget::lease` with the contract suite
+  extended (plus a broken "keeps no leases" implementation the suite catches). Contracts samples gain `teal()`/`rose()`.
+- Daemon: `Env::scripts` (QuickJS in production) and `Env::entropy` (ULIDs); `Documents::ulid`, `agents`,
+  `tool_ids` (`ToolIds`), `scratch`; `get_app_state` reports `you` and `agents`. CLI: a list of objects is a JSON
+  flag (`--updates '[...]'`); only string lists split on commas.
+
+Differs from the guide / decisions:
+- `execute` runs on a scratch copy and applies a diff (reason and cost in the ADR). A pause is checked before the
+  script runs, because the doc API reports Guard rejections as plain API errors.
+- Nodes without a name are named after their text or their kind ("Rect"); the doc API uses an empty name.
+- Step verbs are codes, not words, so no Agent panel copy lives in the daemon. No thumbnail is drawn or stored yet.
+- The scripted-agent E2E on the stub endpoint is a tagged, ignored test (`pending: needs the stub model endpoint
+  (Prompt 32)`) that fails with "not implemented yet" if run.
+- Test fixture change: the fake environment's id generators now share one counter (`SharedIds`), so a tool's ids
+  and an engine's copies never collide; production ids are random.
+
+Process note: `tests/write_tools.rs` (27 tests) and the contract-suite lease section were written first; the write
+tests failed to compile (missing API) before the implementation. The CLI list-of-objects test was seen failing
+before its fix. Test corrections made on the way: the rig had to open the document first; two size assertions
+compared `120` with `120.0` and now compare as numbers; opacity is not range-checked, so the retry test uses a bad
+`width`. Two mutation checks (batch errors without `op`; `execute` not claiming at the target) each fail the suite.
+
+Verified on macOS arm64 (exit 0; both telemetry opt-outs set):
+- `cargo test --workspace` (1034 passed, 0 failed, 16 ignored); `cargo test -p vellum --test write_tools` (26 + 1
+  ignored), `--test mcp` (19), `--test cli` (11, the real binary with QuickJS), `--lib` (12, includes spec parser tests);
+  `cargo test -p vellum-contracts` (26); `node scripts/ipc.mjs` (10).
+- `cargo clippy --workspace --all-targets -- -D warnings`; `cargo clippy -p vellum-ipc-local -p vellum --lib --bins
+  --no-default-features -- -D warnings`; `cargo fmt --all --check`; `git diff --check`.
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`, `pnpm format-spec:check`,
+  `pnpm doc-api:check`, `pnpm clean-room`, `pnpm copy-lint`, `pnpm checksum`.
+- Not run: `pnpm test:scripts` (unchanged; its known `R3 taffy: main.rs` failure stands), `cargo deny check advisories`
+  (network).
+
+Not verified: a real editor (live writes and leases are tested with the fake editor only); any real MCP client;
+Linux and Windows; `execute` with `doc.screenshot` through the daemon (scene and scripts were not combined in one
+test); large batches near the Guard's op limit. No design frames were involved.
+

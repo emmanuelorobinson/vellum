@@ -8,13 +8,13 @@ use std::sync::Arc;
 use vellum_codec_json_dir::DirCodec;
 use vellum_core::doc_api::{Method, Services};
 use vellum_core::files::SingleFile;
-use vellum_core::guard::{GuardState, apply_guarded};
+use vellum_core::guard::{GuardState, LeaseChange, apply_guarded};
 use vellum_core::ops::{Applied, Inputs, Transaction};
 use vellum_core::ports::{
     Clock, Codec, DocStore, DocumentFiles, DocumentTarget, FileError, FileSystem, IdGen, Loaded,
     ScriptValue, TargetError, TargetMode,
 };
-use vellum_types::Document;
+use vellum_types::{AgentId, Document, NodeId};
 
 /// A document at a path of a file system: one file, or a folder in the directory format.
 #[derive(Clone)]
@@ -180,6 +180,19 @@ impl DocumentTarget for HeadlessTarget {
                 &[ScriptValue::Text(target.to_owned()), options],
             )
             .map_err(|e| TargetError::Render(e.to_string()))
+    }
+
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+    ) -> Result<(), TargetError> {
+        let doc = self.engine.store.snapshot();
+        let now = self.engine.clock.now();
+        self.guard
+            .lease(&doc, frame, agent, change, now)
+            .map_err(TargetError::Lease)
     }
 
     fn save(&mut self) -> Result<(), TargetError> {

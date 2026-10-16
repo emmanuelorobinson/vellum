@@ -7,10 +7,10 @@
 
 use std::fmt;
 
-use vellum_types::Document;
+use vellum_types::{AgentId, Document, NodeId};
 
 use super::FileError;
-use crate::guard::WriteError;
+use crate::guard::{LeaseChange, LeaseRefused, WriteError};
 use crate::ops::{Applied, Transaction};
 use crate::ports::ScriptValue;
 
@@ -36,6 +36,8 @@ pub enum TargetError {
     File(FileError),
     /// Nothing can draw here, or the drawing failed.
     Render(String),
+    /// A claim or release of a frame was refused.
+    Lease(LeaseRefused),
 }
 
 impl fmt::Display for TargetError {
@@ -46,6 +48,7 @@ impl fmt::Display for TargetError {
             Self::Gone => f.write_str("The editor holding the file closed before it answered."),
             Self::File(e) => e.fmt(f),
             Self::Render(why) => write!(f, "Could not render: {why}"),
+            Self::Lease(why) => why.fmt(f),
         }
     }
 }
@@ -74,6 +77,14 @@ pub trait DocumentTarget {
     fn transact(&mut self, tx: Transaction) -> Result<Applied, TargetError>;
     /// Draws a node or a page to a PNG: the same `{ mime, base64 }` value `doc.screenshot` returns.
     fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError>;
+    /// Claims or lets go of `frame` for `agent` where the Guard lives: the editor's engine when live, the
+    /// daemon's when headless. Leases are session state; the document does not change.
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+    ) -> Result<(), TargetError>;
     /// Writes the document to its file. The file is the truth (Invariant 5).
     fn save(&mut self) -> Result<(), TargetError>;
     /// Whether there are changes the file does not have yet.

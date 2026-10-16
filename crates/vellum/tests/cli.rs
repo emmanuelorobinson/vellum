@@ -239,3 +239,69 @@ fn a_screenshot_is_saved_to_the_file_named_by_image_out() {
         "the picture is not printed"
     );
 }
+
+// ---- Prompt 30: writes through the shipped binary -----------------------------------------------------------
+
+#[test]
+fn writes_and_scripts_reach_the_file_through_the_real_daemon() {
+    let space = Workspace::new();
+    let file = space.repo().join("design/app.vellum");
+    let opened = tool(&space, &["open_document", "--path", "design/app.vellum"]);
+    assert!(opened.status.success(), "{}", text(&opened.stderr));
+
+    let inserted = tool(
+        &space,
+        &[
+            "insert_nodes",
+            "--parent",
+            "frameFoot1",
+            "--spec",
+            r#"<rect name="Rule" width={390} height={1}/>"#,
+        ],
+    );
+    assert!(inserted.status.success(), "{}", text(&inserted.stderr));
+    let id = json_of(&inserted)["created"][0]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    // Headless, every applied transaction is saved: the file is the truth.
+    let saved = std::fs::read_to_string(&file).unwrap();
+    assert!(saved.contains(&id) && saved.contains("\"Rule\""), "{saved}");
+
+    // The production build runs scripts in the QuickJS sandbox.
+    let ran = tool(
+        &space,
+        &[
+            "execute",
+            "--code",
+            "const f = doc.insert(doc.page('Other'), {type: 'frame', name: 'Made by a script', width: 10, height: 10, position: {type: 'absolute', x: 0, y: 0}}); return f;",
+        ],
+    );
+    assert!(ran.status.success(), "{}", text(&ran.stderr));
+    let ran = json_of(&ran);
+    assert_eq!(ran["committed"], true);
+    assert_eq!(ran["changes"]["created"], 1);
+    assert!(
+        std::fs::read_to_string(&file)
+            .unwrap()
+            .contains("Made by a script")
+    );
+
+    // A bad batch exits non-zero, names the item and field, and changes nothing.
+    let before = std::fs::read_to_string(&file).unwrap();
+    let refused = tool(
+        &space,
+        &[
+            "update_nodes",
+            "--updates",
+            r#"[{"id":"textFoot01","set":{"name":"x"}},{"id":"nopeNope01","set":{"name":"y"}}]"#,
+        ],
+    );
+    assert_eq!(refused.status.code(), Some(1));
+    assert!(
+        text(&refused.stderr).contains("updates[1].id"),
+        "{}",
+        text(&refused.stderr)
+    );
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
+}

@@ -643,6 +643,14 @@ impl DocumentTarget for AppliesHalf {
     fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError> {
         self.0.render(target, scale)
     }
+    fn lease(
+        &mut self,
+        frame: &vellum_types::NodeId,
+        agent: &vellum_types::AgentId,
+        change: vellum_core::guard::LeaseChange,
+    ) -> Result<(), TargetError> {
+        self.0.lease(frame, agent, change)
+    }
     fn save(&mut self) -> Result<(), TargetError> {
         self.0.save()
     }
@@ -655,6 +663,46 @@ impl DocumentTarget for AppliesHalf {
 #[should_panic(expected = "a refused transaction must change nothing")]
 fn target_that_applies_half_a_transaction() {
     suites::target::run(|doc| AppliesHalf(vellum_contracts::fakes::InMemoryTarget::new(doc)));
+}
+
+/// A target that grants every claim and keeps no leases.
+struct LeasesNothing(vellum_contracts::fakes::InMemoryTarget);
+impl DocumentTarget for LeasesNothing {
+    fn mode(&self) -> TargetMode {
+        self.0.mode()
+    }
+    fn snapshot(&mut self) -> Result<Document, TargetError> {
+        self.0.snapshot()
+    }
+    fn transact(
+        &mut self,
+        tx: vellum_core::ops::Transaction,
+    ) -> Result<vellum_core::ops::Applied, TargetError> {
+        self.0.transact(tx)
+    }
+    fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError> {
+        self.0.render(target, scale)
+    }
+    fn lease(
+        &mut self,
+        _: &vellum_types::NodeId,
+        _: &vellum_types::AgentId,
+        _: vellum_core::guard::LeaseChange,
+    ) -> Result<(), TargetError> {
+        Ok(())
+    }
+    fn save(&mut self) -> Result<(), TargetError> {
+        self.0.save()
+    }
+    fn is_dirty(&mut self) -> Result<bool, TargetError> {
+        self.0.is_dirty()
+    }
+}
+
+#[test]
+#[should_panic(expected = "a frame another agent holds cannot be claimed")]
+fn target_that_keeps_no_leases() {
+    suites::target::run(|doc| LeasesNothing(vellum_contracts::fakes::InMemoryTarget::new(doc)));
 }
 
 /// A watcher that reports every document, watched or not, every time.

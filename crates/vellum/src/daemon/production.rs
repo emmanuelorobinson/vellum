@@ -66,6 +66,28 @@ impl IdGen for RandomIds {
     }
 }
 
+/// 80 bits from the operating system, for the random part of agent and session ids.
+fn entropy() -> u128 {
+    let mut bytes = [0u8; 16];
+    getrandom::fill(&mut bytes).expect("the operating system provides randomness");
+    u128::from_le_bytes(bytes)
+}
+
+/// The sandbox `execute` scripts run in: QuickJS with a monotonic clock for its time limit. A script never sees
+/// the clock, and its random numbers come from a fixed seed, so a run does not depend on when it happened.
+pub fn script_runtime() -> Option<Rc<dyn vellum_core::ports::ScriptRuntime>> {
+    #[cfg(feature = "scripts")]
+    {
+        let start = std::time::Instant::now();
+        Some(Rc::new(vellum_script_quickjs::QuickJsRuntime::new(
+            move || u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX),
+            0x5EED,
+        )))
+    }
+    #[cfg(not(feature = "scripts"))]
+    None
+}
+
 /// A random Loro peer id. The store wants one below 2^63; the top bit names a document's genesis.
 fn peer() -> u64 {
     std::collections::hash_map::RandomState::new()
@@ -232,6 +254,8 @@ pub fn documents(state: &Path) -> std::io::Result<Documents> {
         store: Box::new(|doc| Box::new(LoroDocStore::new(doc, peer())) as Box<dyn DocStore>),
         ids: Box::new(|| Box::new(RandomIds)),
         services: scene_services(),
+        scripts: script_runtime(),
+        entropy: Box::new(entropy),
     };
     // A machine that cannot watch files still serves tools; an edit made outside is seen at the next open.
     let watcher: Box<dyn FileWatcher> = match NotifyWatcher::new(Duration::from_millis(150)) {

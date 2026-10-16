@@ -5,21 +5,33 @@
 //! [`ToolCtx`], which routes to the daemon's targets, so a tool cannot tell a live editor from a headless file.
 //! Names are stable and schema changes are additive; a breaking change is a new tool name (§2.5).
 
+mod batch;
 mod context;
+mod coordinate;
+mod execute;
 mod library;
+mod model;
 mod nodes;
 mod scene;
+mod spec;
+mod step;
 mod support;
+mod write;
 
 use std::fmt;
 use std::path::PathBuf;
 
 use schemars::Schema;
 use serde_json::Value;
+use vellum_core::guard::WriteError;
 use vellum_core::ports::{FileError, FsError, TargetError};
+use vellum_types::{Actor, AgentId, Origin, SessionId};
 
 use crate::daemon::Documents;
 
+pub use spec::{SpecError, formats as spec_formats, parse_spec};
+use step::StepNote;
+pub use step::{Counts, Outcome, STEP_LIMIT, Step, StepTarget, THUMBNAIL_SCALE, Thumbnail, Verb};
 pub use support::{Index, parse_input};
 
 /// Why a tool did not do what was asked. The message is for the agent that called it: it says what was wrong
@@ -29,6 +41,8 @@ pub struct ToolError {
     kind: ErrorKind,
     message: String,
     path: Option<String>,
+    op: Option<usize>,
+    line: Option<(u32, Option<u32>)>,
 }
 
 /// What sort of failure it was, so a front end can tell a bad call from a missing thing from a refusal.
@@ -69,6 +83,8 @@ impl ToolError {
             kind,
             message: message.into(),
             path: None,
+            op: None,
+            line: None,
         }
     }
 
@@ -79,7 +95,31 @@ impl ToolError {
             kind: ErrorKind::InvalidInput,
             message: message.into(),
             path: (!path.is_empty()).then_some(path),
+            op: None,
+            line: None,
         }
+    }
+
+    /// The same failure, blamed on the `op`th item of a batch (counting from 0).
+    #[must_use]
+    pub fn at_op(mut self, op: usize) -> Self {
+        self.op = Some(op);
+        self
+    }
+
+    /// The same failure, at a line (and column) of a script or spec.
+    #[must_use]
+    pub fn at_line(mut self, line: u32, column: Option<u32>) -> Self {
+        self.line = Some((line, column));
+        self
+    }
+
+    /// The same failure, at another input field.
+    #[must_use]
+    pub fn at_path(mut self, path: impl Into<String>) -> Self {
+        let path = path.into();
+        self.path = (!path.is_empty()).then_some(path);
+        self
     }
 
     /// Something that should be there is not.
@@ -101,6 +141,21 @@ impl ToolError {
     pub fn path(&self) -> Option<&str> {
         self.path.as_deref()
     }
+
+    /// Which item of a batch was at fault, counting from 0. The batch was refused whole.
+    pub fn op(&self) -> Option<usize> {
+        self.op
+    }
+
+    /// The line of a script or spec at fault, counting from 1.
+    pub fn line(&self) -> Option<u32> {
+        self.line.map(|(line, _)| line)
+    }
+
+    /// Its column, counting from 1, when known.
+    pub fn column(&self) -> Option<u32> {
+        self.line.and_then(|(_, column)| column)
+    }
 }
 
 impl fmt::Display for ToolError {
@@ -118,7 +173,12 @@ impl From<TargetError> for ToolError {
     fn from(error: TargetError) -> Self {
         let message = error.to_string();
         match error {
-            TargetError::Write(_) | TargetError::ReadOnly => Self::new(ErrorKind::Refused, message),
+            TargetError::Write(WriteError::Invalid(_)) => {
+                Self::new(ErrorKind::InvalidInput, message)
+            }
+            TargetError::Write(WriteError::Rejected(_))
+            | TargetError::ReadOnly
+            | TargetError::Lease(_) => Self::new(ErrorKind::Refused, message),
             TargetError::Gone => Self::new(ErrorKind::Document, message),
             TargetError::File(FileError::Fs(FsError::NotFound(_))) => Self::not_found(message),
             TargetError::File(_) => Self::new(ErrorKind::Document, message),
@@ -144,15 +204,61 @@ pub struct Session {
     /// The directory the client was started in. When known, a relative document path means a path in it and a
     /// document outside it is refused (until the PermissionBroker decides outside reads, Prompt 35).
     pub cwd: Option<PathBuf>,
+    /// The agent this connection is: every change it makes is attributed to it. Given at its first call.
+    agent: Option<AgentId>,
+    /// The agent session its changes carry.
+    id: Option<SessionId>,
+    /// Its tool calls, oldest first, at most [`STEP_LIMIT`].
+    steps: Vec<Step>,
 }
+
+/// What an agent from a client that did not say its name is called.
+const UNNAMED_CLIENT: &str = "MCP client";
 
 impl Session {
     /// A session whose client was started in `cwd`.
     pub fn in_dir(cwd: impl Into<PathBuf>) -> Self {
         Self {
-            client: None,
             cwd: Some(cwd.into()),
+            ..Self::default()
         }
+    }
+
+    /// The agent this connection is, once it has called a tool.
+    pub fn agent(&self) -> Option<&AgentId> {
+        self.agent.as_ref()
+    }
+
+    /// The agent session its changes carry, once it has called a tool.
+    pub fn id(&self) -> Option<&SessionId> {
+        self.id.as_ref()
+    }
+
+    /// Its recent steps, oldest first.
+    pub fn steps(&self) -> &[Step] {
+        &self.steps
+    }
+
+    /// Its steps, which are removed: what the session store calls to record them.
+    pub fn take_steps(&mut self) -> Vec<Step> {
+        std::mem::take(&mut self.steps)
+    }
+
+    fn record(&mut self, step: Step) {
+        if self.steps.len() == STEP_LIMIT {
+            self.steps.remove(0);
+        }
+        self.steps.push(step);
+    }
+
+    /// The name this connection's agent goes by: its client's (guide: agents are named by client).
+    pub fn agent_name(&self) -> String {
+        self.client
+            .as_ref()
+            .map(|c| c.name.trim())
+            .filter(|name| !name.is_empty())
+            .unwrap_or(UNNAMED_CLIENT)
+            .to_owned()
     }
 }
 
@@ -160,12 +266,39 @@ impl Session {
 pub struct ToolCtx<'a> {
     docs: &'a mut Documents,
     session: &'a mut Session,
+    note: StepNote,
 }
 
 impl<'a> ToolCtx<'a> {
     /// A context over the daemon's documents for one call.
     pub fn new(docs: &'a mut Documents, session: &'a mut Session) -> Self {
-        Self { docs, session }
+        Self {
+            docs,
+            session,
+            note: StepNote::default(),
+        }
+    }
+
+    /// Gives this connection its agent and session ids, the first time, and keeps its name current.
+    fn introduce(&mut self) {
+        if self.session.agent.is_none() {
+            let agent = AgentId::new(self.docs.ulid()).expect("a ULID");
+            self.session.agent = Some(agent);
+            self.session.id = Some(SessionId::new(self.docs.ulid()).expect("a ULID"));
+        }
+        let agent = self.session.agent.clone().expect("just given");
+        let name = self.session.agent_name();
+        if self.docs.agents().get(&agent) != Some(&name) {
+            self.docs.name_agent(agent, name);
+        }
+    }
+
+    /// Who this call's changes are by: this connection's agent, in its session.
+    pub fn origin(&mut self) -> Origin {
+        self.introduce();
+        let session = self.session.id.clone().expect("introduced");
+        let agent = self.session.agent.clone().expect("introduced");
+        Origin::new(Actor::Agent { agent }).in_session(session)
     }
 
     /// The daemon's documents.
@@ -191,6 +324,10 @@ pub trait Tool {
     fn input_schema(&self) -> Schema;
     /// Whether it leaves the document as it found it.
     fn read_only(&self) -> bool;
+    /// What its step shows in the Agent panel.
+    fn verb(&self) -> Verb {
+        Verb::Read
+    }
     /// Whether it can remove or overwrite something the person made. A tool that only adds says no, so a client
     /// need not ask before every call. Read-only tools never do.
     fn destructive(&self) -> bool {
@@ -219,6 +356,10 @@ impl Registry {
         nodes::register(&mut tools);
         scene::register(&mut tools);
         library::register(&mut tools);
+        write::register(&mut tools);
+        model::register(&mut tools);
+        coordinate::register(&mut tools);
+        execute::register(&mut tools);
         Self::new(tools)
     }
 
@@ -232,7 +373,7 @@ impl Registry {
         self.tools().find(|tool| tool.name() == name)
     }
 
-    /// Runs the tool called `name`.
+    /// Runs the tool called `name` and records its step in the session.
     pub fn call(
         &self,
         ctx: &mut ToolCtx<'_>,
@@ -240,7 +381,16 @@ impl Registry {
         input: Value,
     ) -> Result<Value, ToolError> {
         match self.get(name) {
-            Some(tool) => tool.run(ctx, input),
+            Some(tool) => {
+                let started = ctx.docs.now().0;
+                ctx.introduce();
+                ctx.note = StepNote::default();
+                let result = tool.run(ctx, input);
+                let note = std::mem::take(&mut ctx.note);
+                let step = Step::new(name, tool.verb(), note, &result, started, ctx.docs.now().0);
+                ctx.session.record(step);
+                result
+            }
             None => Err(ToolError::not_found(format!(
                 "There is no tool called {name}. The tools are: {}.",
                 self.tools()

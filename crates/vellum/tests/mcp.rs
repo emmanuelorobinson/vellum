@@ -514,3 +514,78 @@ fn a_connection_that_never_said_where_it_started_is_held_to_the_daemons_director
     );
     assert_eq!(other["result"]["isError"], true);
 }
+
+// ---- Prompt 30: writes over MCP ---------------------------------------------------------------------------
+
+#[test]
+fn write_tools_are_listed_with_their_hints() {
+    let mut server = server();
+    let reply = rpc(&mut server, 1, 1, "tools/list", json!({}));
+    let tools = reply["result"]["tools"].as_array().unwrap();
+    let hints = |name: &str| {
+        let tool = tools
+            .iter()
+            .find(|t| t["name"] == name)
+            .unwrap_or_else(|| panic!("{name} is listed"));
+        tool["annotations"].clone()
+    };
+    assert_eq!(
+        hints("insert_nodes"),
+        json!({"readOnlyHint": false, "destructiveHint": false, "openWorldHint": false})
+    );
+    assert_eq!(hints("delete_nodes")["destructiveHint"], true);
+    assert_eq!(hints("execute")["readOnlyHint"], false);
+}
+
+#[test]
+fn a_rejected_batch_says_which_item_and_field_to_fix() {
+    let mut server = server();
+    call(&mut server, "open_document", json!({"path": PATH}));
+    let reply = call(
+        &mut server,
+        "update_nodes",
+        json!({"updates": [{"id": "textTitle1", "set": {"name": "A"}}, {"id": "nopeNope01", "set": {"name": "B"}}]}),
+    );
+    assert_eq!(reply["result"]["isError"], true);
+    let error = &reply["result"]["structuredContent"]["error"];
+    assert_eq!(error["op"], 1);
+    assert_eq!(error["path"], "updates[1].id");
+    assert_eq!(error["kind"], "invalid_input");
+    assert!(text(&reply).contains("nopeNope01"), "{}", text(&reply));
+}
+
+#[test]
+fn writes_over_mcp_are_attributed_to_the_connection_and_leave_steps() {
+    let mut daemon = Daemon::new(&design(), &[PATH]);
+    let editor = FakeEditor::new(&design());
+    daemon
+        .docs
+        .open_editor(PATH, EditorId("tab-1".into()), editor.link())
+        .unwrap();
+    let mut server = server_over(daemon);
+    rpc(
+        &mut server,
+        1,
+        1,
+        "initialize",
+        json!({"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "Claude Code", "version": "2"}}),
+    );
+    let reply = call(
+        &mut server,
+        "insert_nodes",
+        json!({"document": PATH, "parent": "frameFoot1", "nodes": [{"type": "rect", "width": 4, "height": 4}]}),
+    );
+    assert_eq!(reply["result"]["isError"], false, "{reply}");
+    let agent = server.agent(1).expect("the connection is an agent").clone();
+    assert_eq!(
+        editor.0.borrow().actors,
+        vec![vellum_types::Actor::Agent { agent }]
+    );
+    let steps = server.steps(1);
+    assert_eq!(steps.last().unwrap().tool, "insert_nodes");
+    let state = call(&mut server, "get_app_state", json!({}));
+    assert_eq!(
+        state["result"]["structuredContent"]["you"]["name"],
+        "Claude Code"
+    );
+}

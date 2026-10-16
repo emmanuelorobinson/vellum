@@ -4,6 +4,7 @@
 //! The daemon owns none of the document's truth. A file is held either by an editor (live) or by the daemon's
 //! own engine (headless), never both, and whoever holds it is its only writer.
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -15,9 +16,9 @@ use vellum_core::merge::merge;
 use vellum_core::ops::{Applied, Transaction};
 use vellum_core::ports::{
     Clock, Codec, DocStore, DocumentTarget, FileError, FileSystem, FileWatcher, FsError, IdGen,
-    TargetError, TargetMode, Timestamp,
+    ScriptRuntime, TargetError, TargetMode, Timestamp,
 };
-use vellum_types::{Actor, Document, FileReason, Origin};
+use vellum_types::{Actor, AgentId, Document, FileReason, NodeId, Origin};
 
 use super::headless::{DocFile, Engine, HeadlessTarget};
 use super::live::{EditorId, EditorLink, LiveTarget, Role};
@@ -45,6 +46,21 @@ pub struct Env {
     pub ids: Box<dyn Fn() -> Box<dyn IdGen>>,
     /// Scene and drawing for headless renders.
     pub services: Rc<dyn Services>,
+    /// The sandbox `execute` scripts run in; none in a build without one.
+    pub scripts: Option<Rc<dyn ScriptRuntime>>,
+    /// Random bits for the ids of agents and sessions (ULIDs).
+    pub entropy: Box<dyn Fn() -> u128>,
+}
+
+/// A handle on the generator tools draw new ids from. Clones share it, so a script's ids and a tool's never
+/// repeat each other.
+#[derive(Clone)]
+pub struct ToolIds(Rc<RefCell<Box<dyn IdGen>>>);
+
+impl IdGen for ToolIds {
+    fn node_id(&mut self) -> NodeId {
+        self.0.borrow_mut().node_id()
+    }
 }
 
 /// What opening a file in an editor gave it.
@@ -106,6 +122,10 @@ pub struct Documents {
     recovery: Recovery,
     open: BTreeMap<String, Entry>,
     active: Option<String>,
+    /// Ids for nodes, components and variables that tools make before a transaction names them.
+    tool_ids: ToolIds,
+    /// Every agent that has called a tool, by the name it goes by ("Claude Code").
+    agents: BTreeMap<AgentId, String>,
 }
 
 fn file_actor(reason: FileReason) -> Origin {
@@ -115,13 +135,51 @@ fn file_actor(reason: FileReason) -> Origin {
 impl Documents {
     /// Nothing open yet.
     pub fn new(env: Env, watcher: Box<dyn FileWatcher>, recovery: Recovery) -> Self {
+        let tool_ids = ToolIds(Rc::new(RefCell::new((env.ids)())));
         Self {
             env,
             watcher,
             recovery,
             open: BTreeMap::new(),
             active: None,
+            tool_ids,
+            agents: BTreeMap::new(),
         }
+    }
+
+    /// A fresh ULID (guide §9): the clock's milliseconds, then 80 random bits.
+    pub fn ulid(&self) -> String {
+        const CROCKFORD: &[u8; 32] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+        let time = u128::from(self.env.clock.now().0.max(0) as u64) & ((1 << 48) - 1);
+        let value = (time << 80) | ((self.env.entropy)() & ((1 << 80) - 1));
+        (0..26)
+            .map(|i| CROCKFORD[((value >> (5 * (25 - i))) & 31) as usize] as char)
+            .collect()
+    }
+
+    /// Records the name an agent goes by.
+    pub fn name_agent(&mut self, agent: AgentId, name: String) {
+        self.agents.insert(agent, name);
+    }
+
+    /// Every agent that has called a tool, with its name.
+    pub fn agents(&self) -> &BTreeMap<AgentId, String> {
+        &self.agents
+    }
+
+    /// Ids for things a tool makes before its transaction names them. Every handle draws from one generator.
+    pub fn tool_ids(&self) -> ToolIds {
+        self.tool_ids.clone()
+    }
+
+    /// The script sandbox, when this build has one.
+    pub fn scripts(&self) -> Option<Rc<dyn ScriptRuntime>> {
+        self.env.scripts.clone()
+    }
+
+    /// A store of the kind the daemon uses, holding `doc`: where a script runs before its result is applied.
+    pub fn scratch(&self, doc: &Document) -> Box<dyn DocStore> {
+        (self.env.store)(doc)
     }
 
     fn hash(&self, doc: &Document) -> Result<String, FileError> {

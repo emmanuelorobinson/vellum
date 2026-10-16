@@ -11,12 +11,12 @@ use vellum::daemon::{Documents, EditorLink, Env, Recovery};
 use vellum_codec_json::JsonCodec;
 use vellum_contracts::fakes::{InMemoryDocStore, ManualClock, ManualWatcher, MemFs, SequentialIds};
 use vellum_core::doc_api::NoServices;
-use vellum_core::guard::{GuardState, apply_guarded};
+use vellum_core::guard::{GuardState, LeaseChange, apply_guarded};
 use vellum_core::ops::{Applied, Inputs, Transaction};
 use vellum_core::ports::{
     ChangeSet, Clock, DocStore, FileSystem, ScriptValue, TargetError, Timestamp,
 };
-use vellum_types::{Actor, Document};
+use vellum_types::{Actor, AgentId, Document, NodeId};
 
 /// What a fake editor did, for the test to look at.
 pub struct EditorState {
@@ -33,6 +33,8 @@ pub struct EditorState {
     pub snapshots: usize,
     /// Where its saves go.
     pub disk: Option<(Arc<dyn FileSystem>, String)>,
+    /// Its Guard: leases claimed through it hold against other agents' writes.
+    pub guard: GuardState,
 }
 
 /// An editor engine in memory. Clones share the state, so the test keeps one and hands the other to the daemon.
@@ -50,6 +52,7 @@ impl FakeEditor {
             promoted: false,
             snapshots: 0,
             disk: None,
+            guard: GuardState::default(),
         })))
     }
 
@@ -104,12 +107,13 @@ impl EditorLink for FakeEditor {
         let clean = state.store.snapshot() == state.saved;
         let from_file = matches!(tx.origin.actor, Actor::File { .. });
         let actor = tx.origin.actor.clone();
+        let state = &mut *state;
         let applied = apply_guarded(
             &mut state.store,
             &mut SequentialIds::new(),
             tx,
             &Inputs::default(),
-            &mut GuardState::default(),
+            &mut state.guard,
             Timestamp(0),
         )?;
         state.actors.push(actor);
@@ -123,6 +127,21 @@ impl EditorLink for FakeEditor {
     fn render(&mut self, target: &str, _scale: f64) -> Result<ScriptValue, TargetError> {
         self.alive()?;
         Ok(ScriptValue::Text(format!("editor drew {target}")))
+    }
+
+    fn lease(
+        &mut self,
+        frame: &NodeId,
+        agent: &AgentId,
+        change: LeaseChange,
+    ) -> Result<(), TargetError> {
+        self.alive()?;
+        let mut state = self.0.borrow_mut();
+        let doc = state.store.snapshot();
+        state
+            .guard
+            .lease(&doc, frame, agent, change, Timestamp(0))
+            .map_err(TargetError::Lease)
     }
 
     fn save(&mut self) -> Result<Document, TargetError> {
@@ -172,6 +191,8 @@ pub fn decode(bytes: &[u8]) -> Document {
 
 /// An environment where every path is a path in `fs`, with the fake store and no renderer.
 pub fn env(fs: Arc<MemFs>, clock: Arc<ManualClock>) -> Env {
+    let ids = Rc::new(std::cell::Cell::new(0));
+    let entropy = std::cell::Cell::new(0u128);
     Env {
         // An absolute path is a path in the fake disk, as the production locator roots it at the repo.
         locate: Box::new(move |path| {
@@ -184,8 +205,24 @@ pub fn env(fs: Arc<MemFs>, clock: Arc<ManualClock>) -> Env {
         hash,
         clock: clock as Arc<dyn Clock>,
         store: Box::new(|doc| Box::new(InMemoryDocStore::new(doc, 1)) as Box<dyn DocStore>),
-        ids: Box::new(|| Box::new(SequentialIds::new())),
+        ids: Box::new(move || Box::new(SharedIds(ids.clone()))),
         services: Rc::new(NoServices),
+        scripts: None,
+        entropy: Box::new(move || {
+            entropy.set(entropy.get() + 1);
+            entropy.get()
+        }),
+    }
+}
+
+/// Sequential ids from one counter, however many generators the daemon makes, so a tool's new ids and an
+/// engine's copies never collide (each real generator is random).
+struct SharedIds(Rc<std::cell::Cell<u64>>);
+
+impl vellum_core::ports::IdGen for SharedIds {
+    fn node_id(&mut self) -> vellum_types::NodeId {
+        self.0.set(self.0.get() + 1);
+        vellum_types::NodeId::new(format!("id{:08}", self.0.get())).expect("a valid id")
     }
 }
 
@@ -297,6 +334,19 @@ pub fn scene() -> Rc<dyn Services> {
 }
 
 impl Daemon {
+    /// A daemon whose `execute` runs on the real QuickJS sandbox.
+    pub fn with_scripts(doc: &Document, paths: &[&str]) -> Self {
+        let mut daemon = Self::new(doc, paths);
+        let mut env = env(daemon.fs.clone(), daemon.clock.clone());
+        env.scripts = Some(Rc::new(vellum_script_quickjs::QuickJsRuntime::new(|| 0, 1)));
+        daemon.docs = Documents::new(
+            env,
+            Box::new(daemon.watcher.clone()),
+            Recovery::new(daemon.recovery.clone(), Arc::new(JsonCodec::new()), hash),
+        );
+        daemon
+    }
+
     /// A daemon whose documents draw and lay out with the real scene.
     pub fn with_scene(doc: &Document, paths: &[&str]) -> Self {
         let mut daemon = Self::new(doc, paths);

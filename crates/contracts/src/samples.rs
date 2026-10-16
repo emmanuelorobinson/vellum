@@ -2,7 +2,9 @@
 
 use serde_json::{Value as Json, json};
 use vellum_core::ops::{Op, Parent, Place, Transaction};
-use vellum_types::{Actor, DeviceId, Document, Node, NodeId, NodePatch, Origin, Page, PageId};
+use vellum_types::{
+    Actor, AgentId, DeviceId, Document, Node, NodeId, NodePatch, Origin, Page, PageId,
+};
 
 /// A node of `kind` (`"frame"`, `"rect"`, …) with `id`, a name, and a size.
 pub fn node(kind: &str, id: &str) -> Node {
@@ -81,6 +83,16 @@ pub fn bob() -> Actor {
     Actor::Person {
         device: DeviceId::new("01JA0000000000000000000B0B").expect("a ULID"),
     }
+}
+
+/// Teal, a built-in agent.
+pub fn teal() -> AgentId {
+    AgentId::new("01JA00000000000000000TEA10").expect("a ULID")
+}
+
+/// Rose, another built-in agent.
+pub fn rose() -> AgentId {
+    AgentId::new("01JA00000000000000000R0SE0").expect("a ULID")
 }
 
 /// A transaction by `actor` with `ops`.

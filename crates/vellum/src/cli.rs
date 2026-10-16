@@ -24,8 +24,16 @@ fn summary(text: &str) -> String {
     }
 }
 
+/// The kind of flag a property is: a list of strings is its own kind (repeated or comma-separated); any other
+/// list, like an object, is written as JSON.
 fn property_type(schema: &Value) -> &str {
-    schema.get("type").and_then(Value::as_str).unwrap_or("")
+    match schema.get("type").and_then(Value::as_str).unwrap_or("") {
+        "array" if schema.pointer("/items/type").and_then(Value::as_str) == Some("string") => {
+            "array"
+        }
+        "array" => "json",
+        other => other,
+    }
 }
 
 fn flag(name: &str, schema: &Value, required: bool) -> Arg {
@@ -315,5 +323,22 @@ mod tests {
             json!({"type": "text"})
         );
         assert_eq!(parse(&["get_app_state"]), json!({}));
+        // A list of objects is written as JSON; a list of strings still splits on commas.
+        assert_eq!(
+            parse(&[
+                "update_nodes",
+                "--updates",
+                r#"[{"id":"a","set":{"name":"b,c"}}]"#
+            ]),
+            json!({"updates": [{"id": "a", "set": {"name": "b,c"}}]})
+        );
+        assert_eq!(
+            parse(&["delete_nodes", "--ids", "a,b"]),
+            json!({"ids": ["a", "b"]})
+        );
+        assert_eq!(
+            parse(&["execute", "--code", "return 1;", "--validate-only"]),
+            json!({"code": "return 1;", "validate_only": true})
+        );
     }
 }
