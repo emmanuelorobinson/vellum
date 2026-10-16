@@ -6,6 +6,7 @@
 //! Names are stable and schema changes are additive; a breaking change is a new tool name (§2.5).
 
 mod batch;
+mod bridge;
 mod content;
 mod context;
 mod coordinate;
@@ -26,10 +27,11 @@ use schemars::Schema;
 use serde_json::Value;
 use vellum_core::guard::WriteError;
 use vellum_core::ports::{FileError, FsError, TargetError};
-use vellum_types::{Actor, AgentId, Origin, SessionId};
+use vellum_types::{Actor, AgentId, Origin, SessionId, TurnId};
 
 use crate::daemon::Documents;
 
+pub use bridge::RegistryBridge;
 pub use spec::{SpecError, formats as spec_formats, parse_spec};
 use step::StepNote;
 pub use step::{Counts, Outcome, STEP_LIMIT, Step, StepTarget, THUMBNAIL_SCALE, Thumbnail, Verb};
@@ -157,6 +159,24 @@ impl ToolError {
     pub fn column(&self) -> Option<u32> {
         self.line.and_then(|(_, column)| column)
     }
+
+    /// The error as an agent receives it: `{"error": {kind, message, path?, op?, line?, column?}}`.
+    pub fn to_json(&self) -> Value {
+        let mut detail = serde_json::json!({"kind": self.kind.as_str(), "message": self.message});
+        if let Some(path) = self.path() {
+            detail["path"] = path.into();
+        }
+        if let Some(op) = self.op() {
+            detail["op"] = op.into();
+        }
+        if let Some(line) = self.line() {
+            detail["line"] = line.into();
+        }
+        if let Some(column) = self.column() {
+            detail["column"] = column.into();
+        }
+        serde_json::json!({ "error": detail })
+    }
 }
 
 impl fmt::Display for ToolError {
@@ -211,6 +231,9 @@ pub struct Session {
     id: Option<SessionId>,
     /// Its tool calls, oldest first, at most [`STEP_LIMIT`].
     steps: Vec<Step>,
+    /// The built-in agent's turn its changes belong to, so "Undo this turn" can find them. External calls carry
+    /// none.
+    turn: Option<TurnId>,
 }
 
 /// What an agent from a client that did not say its name is called.
@@ -233,6 +256,16 @@ impl Session {
     /// The agent session its changes carry, once it has called a tool.
     pub fn id(&self) -> Option<&SessionId> {
         self.id.as_ref()
+    }
+
+    /// The turn this connection's changes are part of, from now on (`None` ends it).
+    pub fn set_turn(&mut self, turn: Option<TurnId>) {
+        self.turn = turn;
+    }
+
+    /// The turn its changes are part of, when one is running.
+    pub fn turn(&self) -> Option<&TurnId> {
+        self.turn.as_ref()
     }
 
     /// Its recent steps, oldest first.
@@ -299,7 +332,11 @@ impl<'a> ToolCtx<'a> {
         self.introduce();
         let session = self.session.id.clone().expect("introduced");
         let agent = self.session.agent.clone().expect("introduced");
-        Origin::new(Actor::Agent { agent }).in_session(session)
+        let origin = Origin::new(Actor::Agent { agent }).in_session(session);
+        match self.session.turn.clone() {
+            Some(turn) => origin.in_turn(turn),
+            None => origin,
+        }
     }
 
     /// The daemon's documents.

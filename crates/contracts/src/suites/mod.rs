@@ -7,6 +7,7 @@ pub mod codec;
 pub mod content;
 pub mod doc_store;
 pub mod document_files;
+pub mod engine;
 pub mod files;
 pub mod fonts;
 pub mod layout;

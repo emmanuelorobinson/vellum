@@ -26,6 +26,8 @@ pub struct EditorState {
     pub gone: bool,
     /// Who made each transaction it applied.
     pub actors: Vec<Actor>,
+    /// The full origin of each transaction it applied (session and turn included).
+    pub origins: Vec<vellum_types::Origin>,
     /// How many times it followed a writer.
     pub followed: usize,
     pub promoted: bool,
@@ -48,6 +50,7 @@ impl FakeEditor {
             saved: doc.clone(),
             gone: false,
             actors: Vec::new(),
+            origins: Vec::new(),
             followed: 0,
             promoted: false,
             snapshots: 0,
@@ -107,6 +110,7 @@ impl EditorLink for FakeEditor {
         let clean = state.store.snapshot() == state.saved;
         let from_file = matches!(tx.origin.actor, Actor::File { .. });
         let actor = tx.origin.actor.clone();
+        let origin = tx.origin.clone();
         let state = &mut *state;
         let applied = apply_guarded(
             &mut state.store,
@@ -117,6 +121,7 @@ impl EditorLink for FakeEditor {
             Timestamp(0),
         )?;
         state.actors.push(actor);
+        state.origins.push(origin);
         // guide §10.3: an external change is applied as ops and the editor stays in its save state.
         if from_file && clean {
             state.saved = state.store.snapshot();

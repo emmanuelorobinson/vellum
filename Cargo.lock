@@ -3823,6 +3823,7 @@ dependencies = [
  "vellum-contracts",
  "vellum-core",
  "vellum-doc-loro",
+ "vellum-engine-builtin",
  "vellum-index-rstar",
  "vellum-ipc-local",
  "vellum-layout-taffy",
@@ -3912,6 +3913,12 @@ dependencies = [
 [[package]]
 name = "vellum-engine-builtin"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+ "vellum-types",
+]
 
 [[package]]
 name = "vellum-engine-claude-code"

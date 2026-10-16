@@ -66,13 +66,36 @@ impl ModelTransport for ReplayTransport {
 pub struct ScriptedModel {
     scripts: Mutex<VecDeque<Script>>,
     state: ProviderState,
+    caps: ModelCaps,
+    requests: Mutex<Vec<ChatRequest>>,
 }
 impl ScriptedModel {
     pub fn new(scripts: Vec<Script>) -> Self {
         Self {
             scripts: Mutex::new(scripts.into()),
             state: ProviderState::default(),
+            caps: ModelCaps {
+                tools: true,
+                vision: true,
+                reasoning: true,
+                context_tokens: None,
+            },
+            requests: Mutex::new(vec![]),
         }
+    }
+    /// The same model with other capabilities (a small context, no vision).
+    #[must_use]
+    pub fn with_caps(mut self, caps: ModelCaps) -> Self {
+        self.caps = caps;
+        self
+    }
+    /// Every request it accepted, oldest first.
+    pub fn requests(&self) -> Vec<ChatRequest> {
+        self.requests.lock().unwrap().clone()
+    }
+    /// Scripts not yet used.
+    pub fn remaining(&self) -> usize {
+        self.scripts.lock().unwrap().len()
     }
 }
 struct ScriptStream {
@@ -104,12 +127,7 @@ impl ModelProvider for ScriptedModel {
         "scripted"
     }
     fn capabilities(&self) -> ModelCaps {
-        ModelCaps {
-            tools: true,
-            vision: true,
-            reasoning: true,
-            context_tokens: None,
-        }
+        self.caps
     }
     fn status(&self) -> ProviderStatus {
         self.state.status(false)
@@ -124,6 +142,7 @@ impl ModelProvider for ScriptedModel {
             if cancel.is_cancelled() {
                 return Err(ModelError::Cancelled);
             }
+            self.requests.lock().unwrap().push(req);
             let events = self
                 .scripts
                 .lock()

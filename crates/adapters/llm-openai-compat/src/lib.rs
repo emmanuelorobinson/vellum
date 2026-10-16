@@ -110,6 +110,9 @@ fn encode(req: &ChatRequest) -> Result<Value, ModelError> {
                 ChatPart::Continuation(_) => return Err(ModelError::Unsupported),
             }
         }
+        // Tool messages answer the previous assistant message, so they come before any user content (a
+        // screenshot's picture follows its tool result).
+        messages.extend(results);
         if !content.is_empty() || !calls.is_empty() {
             let mut value = json!({"role":if message.role == ChatRole::User { "user" } else { "assistant" },"content":content});
             if !calls.is_empty() {
@@ -117,7 +120,6 @@ fn encode(req: &ChatRequest) -> Result<Value, ModelError> {
             }
             messages.push(value);
         }
-        messages.extend(results);
     }
     let mut body = json!({"model":req.model,"messages":messages,"stream":true,"stream_options":{"include_usage":true},"max_tokens":req.max_output_tokens});
     if !req.tools.is_empty() {

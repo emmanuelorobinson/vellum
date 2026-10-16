@@ -644,3 +644,56 @@ fn cancelling_before_a_request_preserves_the_provider_status() {
     ));
     assert_eq!(provider.status(), ProviderStatus::ApiKeySet);
 }
+
+#[test]
+fn chat_completions_sends_tool_results_before_the_pictures_that_follow_them() {
+    use vellum_contracts::fakes::ReplayTransport;
+    let transport = Arc::new(ReplayTransport::new(vec![vec![
+        Ok(WireEvent::Data(
+            json!({"choices":[{"delta":{},"finish_reason":"stop"}]}),
+        )),
+        Ok(WireEvent::Done),
+    ]]));
+    let provider = vellum_llm_openai_compat::Provider::new(
+        config("https://example.invalid/provider"),
+        secrets(),
+        transport.clone(),
+    )
+    .unwrap();
+    let mut req = request();
+    req.messages.push(ChatMessage {
+        role: ChatRole::Assistant,
+        content: vec![ChatPart::ToolCall(ModelCall {
+            id: "call_1".into(),
+            name: "screenshot".into(),
+            arguments: json!({}),
+            metadata: Value::Null,
+        })],
+    });
+    req.messages.push(ChatMessage {
+        role: ChatRole::User,
+        content: vec![
+            ChatPart::ToolResult {
+                id: "call_1".into(),
+                name: "screenshot".into(),
+                result: json!({"image": "[attached below as a picture]"}),
+                failed: false,
+            },
+            ChatPart::Text("Picture from screenshot (call_1):".into()),
+            ChatPart::Image {
+                mime: "image/png".into(),
+                base64: "aGVsbG8=".into(),
+            },
+        ],
+    });
+    collect(&provider, req).unwrap();
+    let body = &transport.requests()[0];
+    let roles: Vec<_> = body["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["role"].as_str().unwrap())
+        .collect();
+    assert_eq!(roles, ["user", "assistant", "tool", "user"]);
+    assert_eq!(body["messages"][3]["content"][1]["type"], "image_url");
+}

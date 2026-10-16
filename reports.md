@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-024 and synchronize ARCHITECTURE** (Prompt 33). §3.4's `AgentEngine` signature changes:
+  `run_turn` is synchronous and returns a non-`Send` stream borrowing a `ToolBridge` (two sync calls);
+  failures are a final `Ended` event; `interrupt` takes `&TurnId`. Review the defaults (40 rounds, 8 failed
+  calls, 24,000-character results, 128k assumed window, compaction at 80%, two rounds kept) and the prompt
+  pack text in `packages/prompt-packs/packs/builtin.md`. Nothing runs the engine from the daemon or CLI yet,
+  and the TypeScript fake engine for UI work is not built (Rust `FakeEngine` only).
+
 - **Review ADR-023 and synchronize ARCHITECTURE** (Prompt 32). SecretStore now exposes missing vs failed reads
   and deletion; ModelTransport is injected into four independent protocol adapters. Bedrock uses the native
   Messages SSE route; hosts must supply/refresh cloud credentials. Review the exact root-certificate data licence
@@ -17,7 +24,7 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   missing/unreadable folders are explicit; `StyleLibrary` now has typed recipes and list/read methods. Folder
   sources require an explicitly authorized rooted filesystem. Wire these into PermissionBroker and Add skill
   settings in Prompts 35/50. The parity inventory distinguishes active behavior tests from later-prompt placeholders;
-  Prompt 32 now covers a scripted provider-to-registry retry; full built-in-engine E2E remains Prompt 33.
+  Prompt 32 covers a scripted provider-to-registry retry; Prompt 33 adds the built-in engine E2E (tagged lane).
 
 - **Review ADR-021 "Prompt 30" and synchronize ARCHITECTURE** (Prompt 30). Only a person edits ARCHITECTURE.md.
   (1) `DocumentTarget` gains `lease(frame, agent, Claim|Release)` and `TargetError::Lease`; `EditorLink` gains
@@ -2077,3 +2084,48 @@ Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs)
 Not verified: paid/live provider endpoints, cloud IAM/sign-in/refresh, native Windows/Linux keychains or HTTP,
 remote CI, real clients, or the full built-in engine. No UI/design frames involved. Review ADR-023 and synchronize
 ARCHITECTURE before the later hosts consume these ports.
+
+## Prompt 33: built-in engine loop and context management
+
+Built (ADR-024):
+- Ports `AgentEngine`, `ToolBridge`, `TurnRequest`/`TurnLimits`, `TurnEvent`/`TurnEnd`, `EngineError`,
+  `EngineStatus` in `vellum-core`. Contract suite `suites::engine` (bridge-only tool calls, exactly one
+  `Ended`, Stop within 3 s from another thread, no call after Stop) and fakes `FakeEngine`,
+  `RecordingBridge`, `StalledModel`; `ScriptedModel` gains `with_caps`, `requests`, `remaining`. A test
+  proves the suite rejects four broken engines.
+- `vellum-engine-builtin`: prompt pack (versioned file `packages/prompt-packs/packs/builtin.md`, written from
+  scratch) + skills list → tool calls through the bridge → one self-check after writes (screenshot as a
+  picture for vision models, marker otherwise). Large results cut with an explicit marker; old results and
+  pictures pruned to named markers, then older rounds summarized by a tool-less transcript request. Round,
+  failed-call and context limits end the turn as Failed. Stop races every provider wait.
+- `crates/vellum`: `RegistryBridge` over the tool registry; `Session::set_turn` puts the turn on origins;
+  `ToolError::to_json` (shared with MCP). Engine E2E on the stub endpoint (single-frame request through the
+  real registry and scene, Stop against a 30 s-slow reply, turn attribution on a live editor).
+- Fix: the OpenAI-compatible adapter sent pictures before the tool results they followed (invalid for Chat
+  Completions); found by the E2E, now covered by a socket-free provider test.
+
+Decisions: port shape differs from ARCHITECTURE §3.4 (see Needs a person). Fake engine in Rust only. The
+engine E2E is tagged `model-http` like Prompt 32's loopback tests; CI runs it in a new step of `ci.yml`.
+Prompt 34's sessions store `Messages`/steps; the parity rows for the Agent panel and Stop remain with
+Prompts 50/39.
+
+Process: contract tests failed first on the missing fakes, then two broken-engine cases were corrected (the first
+version of the "ignores Stop" case could not fail). Engine tests failed first on the missing crate API. One
+compaction fixture was too small to overflow the window (its own comment said 10k tokens a call); it was
+raised to match, not the assertion. The E2E failed on the adapter ordering bug, and on a live-editor test that
+used a daemon without a scene (the self-check then used `screenshot`, which the fake editor draws).
+
+Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs):
+- `cargo test --workspace` (1,088 passed, 58 ignored); `cargo test -p vellum-engine-builtin` (14 + smoke);
+  `cargo test -p vellum-contracts --test engine` (3).
+- `cargo test -p vellum --test engine -- --ignored` (3); `cargo test -p vellum-testkit --test providers
+  chat_completions_sends` (1; fails with the adapter fix reverted).
+- `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`; `pnpm lint`, `pnpm type-check`,
+  `pnpm deps:check`, `pnpm format:check`, `pnpm parity:check`, `pnpm clean-room`, `pnpm checksum`,
+  `pnpm copy-lint`; `@vellum/prompt-packs` vitest.
+- Failed: `pnpm test:scripts` (169 pass, 4 skipped; only the existing `R3 taffy: main.rs` reference-index failure).
+
+Not verified: real providers or paid endpoints, the `model-http` CI step remotely, Windows/Linux, token
+estimates against real tokenizers, and the Guard half of Invariant 12 (Prompt 39). No UI or design frames
+involved.
+

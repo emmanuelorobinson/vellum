@@ -233,22 +233,9 @@ fn tool_result(mut value: Value) -> Value {
 }
 
 fn tool_error(error: &ToolError) -> Value {
-    let mut detail = json!({"kind": error.kind().as_str(), "message": error.message()});
-    if let Some(path) = error.path() {
-        detail["path"] = json!(path);
-    }
-    if let Some(op) = error.op() {
-        detail["op"] = json!(op);
-    }
-    if let Some(line) = error.line() {
-        detail["line"] = json!(line);
-    }
-    if let Some(column) = error.column() {
-        detail["column"] = json!(column);
-    }
     json!({
         "content": [{"type": "text", "text": error.to_string()}],
-        "structuredContent": {"error": detail},
+        "structuredContent": error.to_json(),
         "isError": true,
     })
 }
