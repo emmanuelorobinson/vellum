@@ -23,7 +23,7 @@
 | Component | Resolved | Guide line | Pinned in | Decision |
 |---|---|---|---|---|
 | Rust toolchain | 1.99.0 | latest stable toolchain | `rust-toolchain.toml` channel; `Cargo.toml` rust-version 1.99 | C1 |
-| tokio | 1.53.2 | 1.53.x | ipc-local (Prompt 27) | latest stable patch of the line |
+| tokio | 1.53.2 | 1.53.x | ipc-local (Prompt 27), model-http (32), engine-claude-code (36) | latest stable patch of the line |
 | axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
 | loro | 1.16.2 | 1.16.x | workspace `Cargo.toml`, used by `crates/adapters/doc-loro` only (Prompt 14); also `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
@@ -238,3 +238,10 @@ edited.
   Tokio =1.53.2, async-channel =2.5.0 and url =2.5.8 live in `vellum-model-http`. TLS resolves to patched
   rustls 0.23.46. The four protocol adapters use only core ports and serde_json. `keyring` =4.2.0
   uses macOS Keychain, Windows Credential Manager and Linux Secret Service through its `v1` interface.
+
+## Installed engines (Prompt 36)
+
+Claude Code 2.1.301 was detected locally on 2026-10-16. Its `--help`, `auth status --help` and official
+headless/MCP documentation were checked. Required flags are probed before accepting a run; no installation
+or version pin is imposed on the person's tool. Native process support uses existing tokio 1.53.2 (`process`
+feature), libc 0.2.190 and windows-sys 0.61.2 (`JobObjects`) behind the installed-engine adapter. ADR-007.

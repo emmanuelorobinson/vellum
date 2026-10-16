@@ -8,6 +8,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Script test expects old ADR statuses** (found in Prompt 36, pre-existing).
+  `architecture-records.test.mjs` still requires D1–D6 to be Proposed; the owner-authorized synchronization
+  recorded Accepted for D1, D2, D3, D5 and D6. The test and ADR-000 are unchanged by Prompt 36.
+
+- **Review ADR-007's installed-engine scope** (Prompt 36). Native Claude tools and ordinary hooks/settings
+  are disabled; canvas calls use a private `vellum mcp` endpoint routed to the existing turn's ToolBridge.
+  Repo commands/files require a future broker integration before enabling native tools. Sandbox auth first
+  reported signed out; native preflight sees the existing sign-in. The engines nightly lane requires a
+  trusted self-hosted `vellum-engines` runner and `VELLUM_ENGINES_ENABLED=true`.
+
 - **Review the permission broker's choices** (Prompt 35). Mine, not from a source: deny rules win over skip-all and
   engine auto mode; "Allow for this session" covers every repo read, but only the same file for a write and the same
   command line and folder for a command; it is never offered outside the repository or for the network (§7.7 "ask
@@ -2082,7 +2092,7 @@ reads); each failed the suite or the core tests, and the first one slipped past 
 independent deny-rule check to it. The canvas test failed first on wrong tool inputs (fixed in the test).
 
 Verified on macOS arm64 (exit 0):
-- `cargo test --workspace -- permissions::` (39: 27 core, 1 trybuild, 3 contracts, 3 unit and 5 integration in
+- `cargo test --workspace` (1,166 passed, 0 failed, 58 ignored); `cargo test --workspace -- permissions::` (39: 27 core, 1 trybuild, 3 contracts, 3 unit and 5 integration in
   `crates/vellum`); `cargo test -p vellum-core -p vellum-contracts -p vellum-sessions-sqlite -p vellum`.
 - `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`; `pnpm checksum`, `pnpm deps:check`,
   `pnpm types:check`, `pnpm format-spec:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm format:check`.
@@ -2091,3 +2101,60 @@ Not done or not verified: see the two new "Needs a person" items (nothing calls 
 refuses outside documents; no network executor, settings loader or CLI command). Windows paths are covered by unit
 tests of the normaliser only; the symlink test is Unix-only. No UI or design frames involved (the Permission card
 is Prompt 50).
+
+## Prompt 36: installed Claude Code engine
+
+Built (ADR-007, `docs/runbooks/installed-engines.md`):
+- `vellum-engine-claude-code` implements AgentEngine with injected launcher and MCP host, explicit install/help/
+  sign-in probes and recheck, structured text/reasoning/messages/usage, typed sign-in and usage-limit states,
+  reported reset time, bounded framing/queues and failed-call limits. Text tool output is cut with a marker;
+  screenshots stay MCP image blocks and history holds a marker. No native diagnostic text is forwarded.
+- Native headless stream-json launcher, own-auth/OS environment allowlist, telemetry opt-outs, no Vellum keys,
+  no persisted native conversation. Stop/drop kills the owned Unix process group or Windows Job Object.
+- `vellum::installed_engines` composes a fresh authenticated private IPC endpoint per turn. The actual
+  `vellum mcp` relay hands requests to the existing RegistryBridge, preserving its agent/session/turn and
+  ordinary registry steps/Guard. The ordinary MCP image encoder is shared. No second document writer/session.
+- Versioned synthetic and real projected 2.1.301 transcripts, default replays and engine contract suite,
+  Python native-process fixture, opt-in recorder script/example, existing IPC CI extended, trusted nightly
+  engines workflow (requires repository variable and signed-in self-hosted runner). Goose launch/projection/
+  usage adapted with attribution, notice row and bundled Apache-2.0 license; reference note in ADR-007.
+
+Decisions/limits: one native process per turn, portable history quoted rather than native resume. Canvas only:
+Claude native tools, ordinary settings/hooks, slash commands and auto memory are disabled; native file/command
+approval and engine-auto mode need later broker integration. Managed Claude policy still applies. Host UI and
+`vellum prompt` remain later prompts. No UI/design frames involved; no architecture source edits except the
+new ADR and version baseline. Windows job attachment compiled, not run natively; Linux not run here.
+
+Process: replay and root-integration tests first failed on missing APIs. Later red tests caught execution
+before the start event, unrecognized native error text leaking into messages, and unbounded tool results;
+fixed without weakening assertions. The incomplete-EOF test fake briefly deadlocked on two mutex locks in
+one expression; stopped those test processes, fixed the fake, restarted the full suite. Live tests first
+failed on invalid TEST DATA TurnIds; corrected them. Sandbox IPC/ps checks required native execution. Sandbox
+auth reported signed out, while native preflight saw the existing account; the actual installed engine then
+completed a read-only MCP turn and Stop test. No account was signed in/out, installed or updated. A signed-out
+recording was refused by native preflight; that negative case and quota rejection remain synthetic tests.
+
+Verified on macOS arm64 (exit 0 unless noted; pnpm 12.11.2 from its existing local cache, Node 24, both telemetry
+opt-outs; the global pnpm bootstrap could not verify the pinned release through the restricted network):
+- `node scripts/skia-build.mjs test --offline --workspace` (1,176 passed, 0 failed, 63 ignored; before the
+  final large-result cap and prompt wording cleanup); the final focused engine, native process and relay
+  checks below pass after those changes.
+- `cargo test --offline -p vellum-engine-claude-code` (12 passed: recording projection, 10 replays, smoke;
+  2 native-process tests tagged); `node --test scripts/__tests__/engine-fixtures.test.mjs` (3).
+- `cargo test --offline -p vellum-engine-claude-code --test native -- --ignored` (2),
+  `cargo test --offline -p vellum --no-default-features --test installed_engine turn_mcp_relay -- --ignored` (1).
+- `cargo test --offline -p vellum --no-default-features --test installed_engine engines_lane -- --ignored
+  --test-threads=1` (2, real Claude Code 2.1.301: MCP/usage and Stop); `bash scripts/record-engine-fixtures.sh
+  --offline` (real success fixture, one get_app_state call; projected output reviewed and replayed).
+- `cargo clippy --offline --workspace --all-targets -- -D warnings`; final
+  `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `cargo clippy --offline -p vellum --lib --bins --examples --no-default-features -- -D warnings`;
+  `cargo clippy --offline -p vellum-engine-claude-code --all-targets --target x86_64-pc-windows-gnu -- -D warnings`.
+- `pnpm type-check`, `pnpm lint`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`, `pnpm parity:check`; `git diff --check`.
+- Failed, pre-existing: `pnpm cargo:deny` (only bitmaps/im/sized-chunks Loro-chain advisories; bans, licences
+  and sources pass); `pnpm test:scripts` (171 pass, 4 skipped, 2 failures: old Proposed ADR assertions and the
+  R3 taffy main.rs reference path). Neither failing source/test was changed by this prompt.
+
+Not verified: native Windows/Linux process lifecycle, remote nightly/IPC CI, paid API/cloud-provider auth,
+a real quota rejection/reset, or a signed-out live transcript. Stop passed locally, not a multi-run p95 study.

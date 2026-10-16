@@ -9,6 +9,7 @@ table is for copied or adapted source only.
 
 | Project | Source repository | Path | Commit | Licence | Vellum file |
 |---|---|---|---|---|---|
+| Goose | block/goose | crates/goose/src/providers/claude_code.rs | 3bd852002903e016ff30947e973f76e2fcfcf90f | Apache-2.0 | crates/adapters/engine-claude-code/src/protocol.rs |
 
 ## Bundled font asset
 

@@ -201,7 +201,7 @@
     ],
     "pending": {
       "prompt": 37,
-      "reason": "Needs installed-engine adapters and tagged transcripts."
+      "reason": "Claude Code and versioned transcript replays exist (36); Codex remains (37)."
     }
   },
   {
@@ -457,7 +457,7 @@
     ],
     "pending": {
       "prompt": 37,
-      "reason": "Provider adapters exist (32); installed engines remain; later-only providers excluded."
+      "reason": "Provider adapters (32) and Claude Code (36) exist; Codex remains (37); later-only providers excluded."
     }
   },
   {

@@ -239,7 +239,7 @@ impl McpServer {
 }
 
 /// A tool's value as MCP content: the value as compact JSON, and a picture as an image block instead of text.
-fn tool_result(mut value: Value) -> Value {
+pub(crate) fn tool_result(mut value: Value) -> Value {
     let mut content = Vec::new();
     let mut image = None;
     if let Some(picture) = value.get_mut("image").and_then(Value::as_object_mut)

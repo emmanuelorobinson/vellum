@@ -1,0 +1,7 @@
+{"mcp_servers":[{"name":"vellum","status":"connected"}],"subtype":"init","type":"system"}
+{"message":{"content":[{"id":"toolu_018EbKQ6PwprPiNdi1w62FW6","input":{},"name":"mcp__vellum__get_app_state","type":"tool_use"}]},"type":"assistant"}
+{"rate_limit_info":{"resetsAt":1792162200,"status":"allowed_warning"},"type":"rate_limit_event"}
+{"event":{"delta":{"text":"Fixture complete","type":"text_delta"},"type":"content_block_delta"},"type":"stream_event"}
+{"message":{"content":[{"text":"Fixture complete","type":"text"}]},"type":"assistant"}
+{"rate_limit_info":{"resetsAt":1792162200,"status":"allowed_warning"},"type":"rate_limit_event"}
+{"is_error":false,"result":"Fixture complete","subtype":"success","type":"result","usage":{"cache_creation_input_tokens":13038,"cache_read_input_tokens":12804,"input_tokens":4,"output_tokens":44}}

@@ -32,6 +32,11 @@ jobs:
         run: cargo test -p vellum-ipc-local --lib
       - name: Daemon lifecycle, socket inventory and bridge (ipc lane)
         run: node scripts/ipc.mjs
+      - name: Installed-engine private MCP relay (no model or account)
+        run: cargo test -p vellum --no-default-features --test installed_engine turn_mcp_relay -- --ignored
+      - name: Installed-engine process lifecycle (Python fixture, Unix)
+        if: runner.os != 'Windows'
+        run: cargo test -p vellum-engine-claude-code --test native -- --ignored
       - name: IPC and CLI clippy
         run: cargo clippy -p vellum-ipc-local -p vellum --lib --bins --no-default-features -- -D warnings
       - name: Specification unchanged

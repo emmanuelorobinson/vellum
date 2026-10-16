@@ -1,0 +1,8 @@
+{
+  "case": "success",
+  "kind": "recorded",
+  "mcpCalls": 1,
+  "projection": "decoder fields only; no raw diagnostics/auth/init metadata",
+  "testData": true,
+  "version": "2.1.301"
+}

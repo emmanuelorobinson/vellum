@@ -3902,6 +3902,7 @@ dependencies = [
  "vellum-core",
  "vellum-doc-loro",
  "vellum-engine-builtin",
+ "vellum-engine-claude-code",
  "vellum-index-rstar",
  "vellum-ipc-local",
  "vellum-layout-taffy",
@@ -4003,6 +4004,15 @@ dependencies = [
 [[package]]
 name = "vellum-engine-claude-code"
 version = "0.0.0"
+dependencies = [
+ "libc",
+ "serde_json",
+ "tokio",
+ "vellum-contracts",
+ "vellum-core",
+ "vellum-types",
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "vellum-engine-codex"

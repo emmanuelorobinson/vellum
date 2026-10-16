@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Placeholder. Real implementation: Prompt 36 (installed engines).
+# Opt-in engines lane: records only a fixed TEST DATA prompt, never raw native stdout/stderr or auth metadata.
 set -euo pipefail
-. "$(dirname "$0")/lib/not-implemented.sh"
-not_implemented "scripts/record-engine-fixtures.sh" "36 (installed engines)"
+export TURBO_TELEMETRY_DISABLED=1 NEXT_TELEMETRY_DISABLED=1
+exec node "$(dirname "$0")/record-engine-fixtures.mjs" "$@"
