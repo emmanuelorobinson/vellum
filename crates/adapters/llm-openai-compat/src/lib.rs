@@ -155,6 +155,7 @@ impl ModelDecoder for Decoder {
                 output_tokens: usage["completion_tokens"].as_u64(),
                 reasoning_tokens: usage["completion_tokens_details"]["reasoning_tokens"].as_u64(),
                 cached_input_tokens: usage["prompt_tokens_details"]["cached_tokens"].as_u64(),
+                cache_write_tokens: None,
             }));
         }
         for choice in value["choices"].as_array().ok_or(ModelError::Protocol)? {

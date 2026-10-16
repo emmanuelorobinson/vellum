@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "checked": "2026-10-16",
+  "source": "Anthropic first-party API rates as listed in Anthropic's Claude API reference (table cached 2026-10-06). Prices are micro-USD per million tokens. Cache writes are 1.25 times input (5-minute cache). Models not listed, and kinds a model does not list, have no estimate. A person reviews this file before release.",
+  "models": [
+    {
+      "id": "claude-fable-5-1",
+      "provider": "anthropic",
+      "input": 10000000,
+      "output": 50000000,
+      "cacheRead": 250000,
+      "cacheWrite": 12500000
+    },
+    {
+      "id": "claude-opus-5-5",
+      "provider": "anthropic",
+      "input": 4000000,
+      "output": 20000000,
+      "cacheRead": 200000,
+      "cacheWrite": 5000000
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "provider": "anthropic",
+      "input": 2000000,
+      "output": 10000000,
+      "cacheRead": 200000,
+      "cacheWrite": 2500000
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "provider": "anthropic",
+      "input": 100000,
+      "output": 500000,
+      "cacheWrite": 125000,
+      "note": "Prompts up to 100K tokens; longer prompts cost more and are underestimated. Cache-read price not listed."
+    }
+  ]
+}

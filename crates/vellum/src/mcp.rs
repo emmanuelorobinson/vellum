@@ -16,6 +16,7 @@ use vellum_ipc_local::RpcHandler;
 use vellum_types::brand;
 
 use crate::daemon::Documents;
+use crate::sessions::SessionLog;
 use crate::tools::{Client, Registry, Session, Step, ToolCtx, ToolError};
 
 /// The protocol revisions with an `initialize` handshake that this server speaks, newest first.
@@ -54,6 +55,8 @@ pub struct McpServer {
     sessions: BTreeMap<u64, Session>,
     /// Where a connection that did not say where it was started is taken to be.
     default_cwd: Option<PathBuf>,
+    /// Where each connection's tool calls are recorded as an external session; none in a daemon without one.
+    log: Option<SessionLog>,
 }
 
 impl McpServer {
@@ -64,7 +67,19 @@ impl McpServer {
             docs,
             sessions: BTreeMap::new(),
             default_cwd: None,
+            log: None,
         }
+    }
+
+    /// Records every connection's tool calls in `log` (ARCHITECTURE §7.6: external sessions keep tool calls only).
+    pub fn with_session_log(mut self, log: Option<SessionLog>) -> Self {
+        self.log = log;
+        self
+    }
+
+    /// The session log, when there is one.
+    pub fn session_log(&self) -> Option<&SessionLog> {
+        self.log.as_ref()
     }
 
     /// Treats a connection that did not say where its client was started (an HTTP client) as started in `cwd`,
@@ -188,7 +203,15 @@ impl McpServer {
         self.session(conn);
         let session = self.sessions.get_mut(&conn).expect("just made");
         let mut ctx = ToolCtx::new(&mut self.docs, session);
-        Ok(match self.registry.call(&mut ctx, name, arguments) {
+        let result = self.registry.call(&mut ctx, name, arguments);
+        if let Some(log) = &self.log
+            && let Err(error) = log.record_steps(&mut self.docs, session)
+        {
+            // The call itself worked; a log that cannot be written must not fail it. The message holds no
+            // event contents.
+            eprintln!("vellum: could not record the session: {error}");
+        }
+        Ok(match result {
             Ok(value) => tool_result(value),
             Err(error) => tool_error(&error),
         })

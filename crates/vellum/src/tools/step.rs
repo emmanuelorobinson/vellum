@@ -12,6 +12,11 @@ use vellum_types::Document;
 use super::ToolError;
 use super::support::Index;
 
+/// A value as the session log keeps it: compact JSON, cut with a marker.
+pub(super) fn preview(value: &Value) -> String {
+    vellum_core::sessions::preview(value, vellum_core::sessions::PREVIEW_CHARS)
+}
+
 /// The most steps a session keeps before the oldest go. The session store (later) drains them.
 pub const STEP_LIMIT: usize = 500;
 
@@ -151,6 +156,16 @@ pub struct Step {
     pub started_at: i64,
     /// How long it took.
     pub duration_ms: i64,
+    /// Whether the Guard or the file's state refused it (a failed step that changed nothing because it was not
+    /// allowed to).
+    #[serde(skip)]
+    pub refused: bool,
+    /// Its input as JSON, cut for the session log.
+    #[serde(skip)]
+    pub arguments: String,
+    /// Its result or error as JSON, cut for the session log.
+    #[serde(skip)]
+    pub result: String,
 }
 
 /// What a tool says about its own step while it runs; the registry adds the rest.
@@ -249,6 +264,12 @@ impl Step {
             error: failed.map(ToString::to_string),
             started_at,
             duration_ms: (ended_at - started_at).max(0),
+            refused: failed.is_some_and(|e| e.kind() == super::ErrorKind::Refused),
+            arguments: String::new(),
+            result: preview(&match result {
+                Ok(value) => value.clone(),
+                Err(error) => error.to_json(),
+            }),
         }
     }
 }

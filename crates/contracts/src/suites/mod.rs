@@ -14,6 +14,7 @@ pub mod layout;
 pub mod model;
 pub mod path;
 pub mod script;
+pub mod sessions;
 pub mod shader;
 pub mod spatial;
 pub mod target;

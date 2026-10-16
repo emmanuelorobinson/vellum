@@ -67,7 +67,7 @@ deny = [
   { crate = "rquickjs", wrappers = ["vellum-script-quickjs"], reason = "scripts run only in ScriptRuntime (Invariant 8)" },
   { crate = "rusqlite", wrappers = ["vellum-sessions-sqlite"], reason = "sessions go through the SessionStore port" },
   { crate = "keyring", wrappers = ["vellum-secrets-keyring"], reason = "keys live in the OS keychain only (Invariant 10)" },
-  { crate = "sha2", wrappers = ["vellum-assets-fs", "secret-service"], reason = "asset hashing and Secret Service encryption only (ADR-018, ADR-023)" },
+  { crate = "sha2", wrappers = ["vellum-assets-fs", "vellum-sessions-sqlite", "secret-service"], reason = "asset hashing, session picture names and Secret Service encryption only (ADR-018, ADR-023, ADR-006)" },
   { crate = "notify", wrappers = ["vellum-watch-notify"], reason = "file events go through the FileWatcher port (ADR-020)" },
   { crate = "wuff", wrappers = ["vellum-text-parley"], reason = "web fonts are unpacked inside the text adapter (ADR-018)" },
 ]

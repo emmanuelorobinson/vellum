@@ -86,7 +86,8 @@ fn chat_completions_streams_tools_vision_effort_and_usage() {
         input_tokens: Some(12),
         output_tokens: Some(7),
         reasoning_tokens: None,
-        cached_input_tokens: None
+        cached_input_tokens: None,
+        cache_write_tokens: None
     })));
     assert_eq!(provider.status(), ProviderStatus::Connected);
     let seen = stub.requests();
@@ -161,7 +162,7 @@ fn messages_streams_native_tools_and_vertex_routes() {
         Deployment::Vertex,
     ] {
         let stub = StubEndpoint::start(vec![StubReply::sse(vec![
-            json!({"type":"message_start","message":{"usage":{"input_tokens":12}}}),
+            json!({"type":"message_start","message":{"usage":{"input_tokens":12,"cache_read_input_tokens":30,"cache_creation_input_tokens":5}}}),
             json!({"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"call_1","name":"insert_nodes","input":{}}}),
             json!({"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"nodes\":[]}"}}),
             json!({"type":"content_block_stop","index":0}),
@@ -181,6 +182,14 @@ fn messages_streams_native_tools_and_vertex_routes() {
                 .iter()
                 .any(|e| matches!(e, ModelEvent::ToolCall(call) if call.name == "insert_nodes"))
         );
+        // Anthropic counts cache reads and writes apart from input; ModelUsage's input includes them.
+        assert!(events.contains(&ModelEvent::Usage(ModelUsage {
+            input_tokens: Some(47),
+            output_tokens: Some(7),
+            reasoning_tokens: None,
+            cached_input_tokens: Some(30),
+            cache_write_tokens: Some(5),
+        })));
         let seen = stub.requests();
         assert_eq!(seen[0].body["tools"][0]["input_schema"]["type"], "object");
         assert_eq!(
@@ -198,7 +207,7 @@ fn messages_streams_native_tools_and_vertex_routes() {
 #[ignore = "model-http: requires loopback sockets; run scripts/model-providers.mjs"]
 fn gemini_preserves_thought_signatures_and_native_tool_results() {
     let stub = StubEndpoint::start(vec![StubReply::sse(vec![
-        json!({"candidates":[{"content":{"parts":[{"functionCall":{"id":"call_1","name":"insert_nodes","args":{"nodes":[]}},"thoughtSignature":"opaque-signature"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":7}}),
+        json!({"candidates":[{"content":{"parts":[{"functionCall":{"id":"call_1","name":"insert_nodes","args":{"nodes":[]}},"thoughtSignature":"opaque-signature"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":7,"thoughtsTokenCount":3}}),
     ], false)]).unwrap();
     let provider = vellum_llm_google::Provider::new(
         config(&stub.url("/streamGenerateContent?alt=sse")),
@@ -208,6 +217,14 @@ fn gemini_preserves_thought_signatures_and_native_tool_results() {
     .unwrap();
     let events = collect(&provider, request()).unwrap();
     assert!(events.iter().any(|e| matches!(e, ModelEvent::ToolCall(call) if call.metadata["thoughtSignature"] == "opaque-signature")));
+    // Gemini counts thoughts apart from candidates; ModelUsage's output includes them.
+    assert!(events.contains(&ModelEvent::Usage(ModelUsage {
+        input_tokens: Some(12),
+        output_tokens: Some(10),
+        reasoning_tokens: Some(3),
+        cached_input_tokens: None,
+        cache_write_tokens: None,
+    })));
     let seen = stub.requests();
     assert_eq!(
         seen[0].body["generationConfig"]["thinkingConfig"]["thinkingLevel"],

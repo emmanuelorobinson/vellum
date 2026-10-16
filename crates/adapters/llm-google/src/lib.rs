@@ -84,9 +84,13 @@ impl ModelDecoder for Decoder {
         if let Some(usage) = value.get("usageMetadata") {
             events.push(ModelEvent::Usage(ModelUsage {
                 input_tokens: usage["promptTokenCount"].as_u64(),
-                output_tokens: usage["candidatesTokenCount"].as_u64(),
+                // Gemini counts thoughts apart from candidates; our output includes reasoning.
+                output_tokens: usage["candidatesTokenCount"]
+                    .as_u64()
+                    .map(|n| n + usage["thoughtsTokenCount"].as_u64().unwrap_or(0)),
                 reasoning_tokens: usage["thoughtsTokenCount"].as_u64(),
                 cached_input_tokens: usage["cachedContentTokenCount"].as_u64(),
+                cache_write_tokens: None,
             }));
         }
         if value["promptFeedback"].get("blockReason").is_some() {

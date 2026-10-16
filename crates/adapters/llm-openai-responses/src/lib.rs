@@ -156,6 +156,7 @@ impl ModelDecoder for Decoder {
                     output_tokens: usage["output_tokens"].as_u64(),
                     reasoning_tokens: usage["output_tokens_details"]["reasoning_tokens"].as_u64(),
                     cached_input_tokens: usage["input_tokens_details"]["cached_tokens"].as_u64(),
+                    cache_write_tokens: None,
                 }));
                 events.push(ModelEvent::Finished(reason));
             }

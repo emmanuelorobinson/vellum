@@ -112,8 +112,14 @@ impl ModelDecoder for Decoder {
         match value["type"].as_str().ok_or(ModelError::Protocol)? {
             "message_start" => {
                 let usage = &value["message"]["usage"];
-                self.usage.input_tokens = usage["input_tokens"].as_u64();
-                self.usage.cached_input_tokens = usage["cache_read_input_tokens"].as_u64();
+                // Anthropic counts cache reads and writes apart from `input_tokens`; ours includes them.
+                let read = usage["cache_read_input_tokens"].as_u64();
+                let write = usage["cache_creation_input_tokens"].as_u64();
+                self.usage.input_tokens = usage["input_tokens"]
+                    .as_u64()
+                    .map(|n| n + read.unwrap_or(0) + write.unwrap_or(0));
+                self.usage.cached_input_tokens = read;
+                self.usage.cache_write_tokens = write;
             }
             "content_block_start" => {
                 let index = value["index"].as_u64().ok_or(ModelError::Protocol)?;

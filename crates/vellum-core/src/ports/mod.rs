@@ -21,6 +21,7 @@ mod layout;
 mod model;
 mod path;
 mod script;
+mod sessions;
 mod shader;
 mod spatial;
 mod target;
@@ -54,6 +55,11 @@ pub use path::{Path, PathOps, PathSegment, StrokeStyle};
 pub use script::{
     ScriptApi, ScriptDiagnostic, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime,
     ScriptValue,
+};
+pub use sessions::{
+    DocKey, DocKeyError, EventBody, EventSeq, ImageRef, NewEvent, NewSession, SessionEvent,
+    SessionKind, SessionMeta, SessionStore, StepOutcome, StepRecord, StoreError, StoredMessage,
+    StoredPart, Tokens, TurnTransition, UsageRecord,
 };
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;

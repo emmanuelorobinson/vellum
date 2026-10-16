@@ -23,6 +23,7 @@ vellum-codec-json = { path = "../adapters/codec-json" }
 vellum-doc-loro = { path = "../adapters/doc-loro" }
 vellum-assets-fs = { path = "../adapters/assets-fs" }
 vellum-watch-notify = { path = "../adapters/watch-notify" }
+vellum-sessions-sqlite = { path = "../adapters/sessions-sqlite" }
 vellum-layout-taffy = { path = "../adapters/layout-taffy", optional = true }
 vellum-text-parley = { path = "../adapters/text-parley", optional = true }
 vellum-render-skia = { path = "../adapters/render-skia", optional = true }

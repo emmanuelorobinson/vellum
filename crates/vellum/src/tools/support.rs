@@ -180,9 +180,12 @@ impl ToolCtx<'_> {
         Ok(self.docs.target(path)?)
     }
 
-    /// The document at `path` as its holder has it, unsaved changes included.
+    /// The document at `path` as its holder has it, unsaved changes included. The first document a call reads
+    /// is the one its step names.
     pub(super) fn snapshot(&mut self, path: &str) -> Result<Document, ToolError> {
-        Ok(self.target(path)?.snapshot()?)
+        let doc = self.target(path)?.snapshot()?;
+        self.note.document.get_or_insert_with(|| path.to_owned());
+        Ok(doc)
     }
 
     /// The path of the document `named` (or the active one) and its content.

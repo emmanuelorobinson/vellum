@@ -127,21 +127,7 @@ fn compose(a: [f32; 6], b: [f32; 6]) -> [f32; 6] {
     ]
 }
 fn base64(bytes: &[u8]) -> String {
-    const CHARS: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::new();
-    for chunk in bytes.chunks(3) {
-        let n = (u32::from(chunk[0]) << 16)
-            | (u32::from(*chunk.get(1).unwrap_or(&0)) << 8)
-            | u32::from(*chunk.get(2).unwrap_or(&0));
-        for i in 0..4 {
-            out.push(if i > chunk.len() {
-                '='
-            } else {
-                CHARS[((n >> (18 - i * 6)) & 63) as usize] as char
-            });
-        }
-    }
-    out
+    crate::base64::encode(bytes)
 }
 #[cfg(test)]
 mod tests {

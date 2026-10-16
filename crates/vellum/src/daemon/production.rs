@@ -275,7 +275,9 @@ pub fn handler(state: PathBuf) -> vellum_ipc_local::HandlerFactory {
     Box::new(move || match documents(&state) {
         Ok(docs) => Box::new(
             crate::mcp::McpServer::new(Registry::standard(), docs)
-                .with_default_cwd(std::env::current_dir().ok()),
+                .with_default_cwd(std::env::current_dir().ok())
+                // A daemon whose session store cannot open still serves tools; nothing is recorded.
+                .with_session_log(crate::sessions::SessionLog::open(&state).ok()),
         ),
         Err(error) => Box::new(Unavailable(error.to_string())),
     })

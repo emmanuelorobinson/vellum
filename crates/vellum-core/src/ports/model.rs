@@ -204,12 +204,16 @@ impl ModelConfig {
         Ok(())
     }
 }
+/// One request's token counts, the same way for every provider (adapters convert): `input_tokens` counts every
+/// input token, cache reads and writes included; `output_tokens` counts every output token, reasoning included.
+/// `reasoning_tokens`, `cached_input_tokens` (cache reads) and `cache_write_tokens` are parts of those totals.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ModelUsage {
     pub input_tokens: Option<u64>,
     pub output_tokens: Option<u64>,
     pub reasoning_tokens: Option<u64>,
     pub cached_input_tokens: Option<u64>,
+    pub cache_write_tokens: Option<u64>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FinishReason {

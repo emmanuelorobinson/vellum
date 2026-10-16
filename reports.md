@@ -8,6 +8,14 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-006 and `crates/vellum/data/pricing.json`** (Prompt 34). Only a person synchronizes ARCHITECTURE
+  §3.4/§7.6: the `SessionStore` port is fallible and gains `create`, `rename` and picture calls; external sessions
+  are one per document; `stopped` shows a done dot. The price file lists only Anthropic models, taken from the
+  Claude API reference table (cached 2026-10-06), with cache writes assumed at 1.25x input and Haiku 5.5's
+  cache-read price missing (so its cache reads give no estimate); other providers have no estimate until someone
+  adds verified prices. Decide cache retention/size limits and whether sessions need search (R16 says searchable).
+  Not done: transaction ids on steps (no transaction id type exists), an engine session started by a host.
+
 - **ADR-021, 022 and 023 are synchronized into ARCHITECTURE** (2026-10-16, on the owner's instruction: §3.4 `Tool`,
   `ToolError`, MCP front end, `DocumentTarget::lease`, scratch-store `execute`, `ModelProvider`/`ModelTransport`/
   `SecretStore`, `SkillSource`/`StyleLibrary`; §7 MCP row; §7.3 "How the daemon runs tools"; §13 adapters).
@@ -2097,4 +2105,52 @@ Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs)
 Not verified: real providers or paid endpoints, the `model-http` CI step remotely, Windows/Linux, token
 estimates against real tokenizers, and the Guard half of Invariant 12 (Prompt 39). No UI or design frames
 involved.
+
+## Prompt 34: session store, usage and estimated cost, turn state machine
+
+Built (ADR-006):
+- `vellum-core`: port `SessionStore` (+ `DocKey`, `NewSession`, `SessionMeta`, `EventBody`, `StepRecord`,
+  `UsageRecord`, `Tokens`, `ImageRef`, `StoreError`); `vellum_core::sessions` (previews, `tokens_of`,
+  `usage_record`, `totals`, the event JSON codec, `check_event`, `store_messages`/`history` for the next turn,
+  `record_transition`/`turn_state`); `vellum_core::sessions::pricing` (`pricing.json` parser, micro-USD estimate);
+  `vellum_core::turns` (guide §10.1 table, Stop by a person only, `stuck` after 120 s, total session dot);
+  `vellum_core::base64` (replaces two private encoders).
+- `vellum-contracts`: `MemorySessions` and `suites::sessions`; six deliberately broken stores fail it.
+- `vellum-sessions-sqlite`: `SqliteSessions` (rusqlite 0.40.2 bundled, WAL, foreign-key cascades, an `UPDATE`
+  trigger makes events append-only, `user_version` 1, newer schema refused, 0600 db in a 0700 folder) and
+  `ImageCache` (SHA-256 names, temp-then-rename).
+- `crates/vellum`: `sessions` module (`SessionLog`, `doc_key`, `step_record`, `record_steps`,
+  `record_turn_event`), `data/pricing.json`; the daemon's MCP server records every connection's tool calls in
+  `~/.vellum/sessions.db` as external sessions, with step thumbnails in `~/.vellum/cache/`.
+- `ModelUsage` now means the same for every provider (input includes cache reads/writes, output includes
+  reasoning; new `cache_write_tokens`). Fixed the Anthropic adapter (cache tokens were left out of input) and
+  the Gemini adapter (thoughts left out of output); covered in the `model-http` provider tests.
+- Steps now name the first document a call read (`ToolCtx::snapshot`), not only the one it wrote, so reads and
+  `open_document` land in the right session. Steps keep argument/result previews (not serialized to clients).
+
+Decisions: SQLite holds the event log too (no JSONL) so one transaction covers an event and its picture
+references; `stopped` maps to the done dot; an engine's `Ended(Stopped)` records nothing (the person's Stop does);
+calls before a connection names a document are not recorded; thumbnails of frames that cannot be drawn (note,
+context or prompt nodes, see the open item from Prompt 29) are left out rather than failing the step.
+
+Process: tests and code for the core modules were written together, not test-first; to show the tests can
+fail I ran five mutations (Stop by any actor, no kind check, cache writes left in input, no rounding, `>=` for
+stuck) and each failed at least one test. The suite was checked against six broken stores. The MCP test failed
+first on unrecorded `open_document` steps (fixed by noting read documents) and on a missing thumbnail (the
+Footer frame holds a note; the test now covers both a drawable frame and that case).
+
+Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs):
+- `cargo test --workspace` (1,127 passed, 0 failed, 58 ignored); `cargo test --workspace -- sessions:: turns::` (37 across core, contracts, the SQLite adapter and `crates/vellum`);
+  `cargo test -p vellum-sessions-sqlite`, `-p vellum-contracts --test sessions`, `-p vellum --test sessions`.
+- `node scripts/model-providers.mjs` (17 `model-http` provider tests); `cargo test -p vellum --test engine --
+  --ignored` (3).
+- `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`; `pnpm lint`, `pnpm type-check`,
+  `pnpm deps:check`, `pnpm format:check`, `pnpm checksum`, `pnpm copy-lint`, `pnpm clean-room`,
+  `pnpm parity:check`, `pnpm types:check`, `pnpm format-spec:check`.
+- Failed, pre-existing: `pnpm cargo:deny` (advisories only: Loro's `bitmaps`, `im`, `sized-chunks`; bans,
+  licences and sources ok), `pnpm test:scripts` (169 pass, 4 skipped; only `R3 taffy: main.rs`).
+
+Not verified: Windows/Linux (file modes, `.git` worktree files, SQLite paths), a real provider's usage numbers
+against the price table, prices themselves (taken from the reference table, not a live price page), cache growth
+over long use. No UI or design frames involved.
 

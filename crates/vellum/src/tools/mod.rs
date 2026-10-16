@@ -26,7 +26,7 @@ use std::path::PathBuf;
 use schemars::Schema;
 use serde_json::Value;
 use vellum_core::guard::WriteError;
-use vellum_core::ports::{FileError, FsError, TargetError};
+use vellum_core::ports::{DocKey, FileError, FsError, ScriptValue, TargetError};
 use vellum_types::{Actor, AgentId, Origin, SessionId, TurnId};
 
 use crate::daemon::Documents;
@@ -234,6 +234,10 @@ pub struct Session {
     /// The built-in agent's turn its changes belong to, so "Undo this turn" can find them. External calls carry
     /// none.
     turn: Option<TurnId>,
+    /// The session-store session its steps go to, per document (see `crate::sessions`).
+    pub(crate) logged: Vec<(DocKey, SessionId)>,
+    /// The document its last step named, for steps that name none.
+    pub(crate) last_document: Option<String>,
 }
 
 /// What an agent from a client that did not say its name is called.
@@ -276,6 +280,13 @@ impl Session {
     /// Its steps, which are removed: what the session store calls to record them.
     pub fn take_steps(&mut self) -> Vec<Step> {
         std::mem::take(&mut self.steps)
+    }
+
+    /// Records this connection's steps on `doc` into the session-store session `id` (an engine's session, made by
+    /// its host). Without this, steps go to an external session made on first use.
+    pub fn log_as(&mut self, doc: DocKey, id: SessionId) {
+        self.logged.retain(|(known, _)| known != &doc);
+        self.logged.push((doc, id));
     }
 
     fn record(&mut self, step: Step) {
@@ -347,6 +358,29 @@ impl<'a> ToolCtx<'a> {
     /// This connection.
     pub fn session(&self) -> &Session {
         self.session
+    }
+}
+
+/// A step's thumbnail as PNG bytes: the frame drawn as `screenshot` draws it. `None` when it cannot be drawn
+/// (a build without the scene, a node that is gone).
+pub fn thumbnail_png(
+    docs: &mut Documents,
+    session: &mut Session,
+    document: &str,
+    thumbnail: &Thumbnail,
+) -> Option<Vec<u8>> {
+    let mut ctx = ToolCtx::new(docs, session);
+    let image = ctx
+        .target(document)
+        .ok()?
+        .render(&thumbnail.node, thumbnail.scale)
+        .ok()?;
+    match image {
+        ScriptValue::Map(fields) => match fields.get("base64") {
+            Some(ScriptValue::Text(data)) => vellum_core::base64::decode(data),
+            _ => None,
+        },
+        _ => None,
     }
 }
 
@@ -435,9 +469,12 @@ impl Registry {
                 let started = ctx.docs.now().0;
                 ctx.introduce();
                 ctx.note = StepNote::default();
+                let arguments = step::preview(&input);
                 let result = tool.run(ctx, input);
                 let note = std::mem::take(&mut ctx.note);
-                let step = Step::new(name, tool.verb(), note, &result, started, ctx.docs.now().0);
+                let mut step =
+                    Step::new(name, tool.verb(), note, &result, started, ctx.docs.now().0);
+                step.arguments = arguments;
                 ctx.session.record(step);
                 result
             }

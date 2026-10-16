@@ -294,24 +294,5 @@ pub fn problem(p: &layout_check::Problem) -> Json {
     }
 }
 fn base64(bytes: &[u8]) -> String {
-    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for c in bytes.chunks(3) {
-        let a = c[0] as usize;
-        let b = c.get(1).copied().unwrap_or(0) as usize;
-        let d = c.get(2).copied().unwrap_or(0) as usize;
-        out.push(CHARS[a >> 2] as char);
-        out.push(CHARS[((a & 3) << 4) | (b >> 4)] as char);
-        out.push(if c.len() > 1 {
-            CHARS[((b & 15) << 2) | (d >> 6)] as char
-        } else {
-            '='
-        });
-        out.push(if c.len() > 2 {
-            CHARS[d & 63] as char
-        } else {
-            '='
-        });
-    }
-    out
+    crate::base64::encode(bytes)
 }
