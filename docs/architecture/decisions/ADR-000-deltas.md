@@ -19,7 +19,7 @@
 
 ## D1 — One Rust renderer everywhere: skia-safe compiled to WASM
 
-Status: Proposed
+Status: Accepted by ADR-001; ARCHITECTURE synchronized on the owner's instruction (2026-10-16)
 - **Confirmed by:** Prompt 4 (writes ADR-001)
 
 **Context.** ARCHITECTURE §3.2 has the editor drawing with CanvasKit from TypeScript and the daemon drawing with
@@ -40,7 +40,7 @@ or the emscripten target cannot be installed for the pinned toolchain in CI (`ru
 
 ## D2 — Layout goldens come from Chrome, not from hand-written expectations
 
-Status: Proposed
+Status: Accepted by ADR-002; ARCHITECTURE synchronized on the owner's instruction (2026-10-16)
 - **Confirmed by:** Prompt 6 (writes ADR-002)
 
 **Context.** Taffy generates its test fixtures by laying out HTML in headless Chrome (`refs/taffy/scripts/gentest`,
@@ -57,7 +57,7 @@ headless Chrome, or the Chrome oracle stops being reproducible in CI.
 
 ## D3 — `vellum mcp` is a stdio-to-socket bridge
 
-Status: Proposed
+Status: Accepted by ADR-003; ARCHITECTURE synchronized on the owner's instruction (2026-10-16)
 - **Confirmed by:** Prompt 27 (writes ADR-003)
 
 **Context.** Codex ships exactly this shape (`refs/codex/codex-rs/stdio-to-uds`, guide §3.2 R12). An MCP client launches
@@ -91,7 +91,7 @@ cannot follow, or Goose's licence stops being Apache-2.0.
 
 ## D5 — `execute` follows the code-mode pattern
 
-Status: Proposed
+Status: Accepted by ADR-005; ARCHITECTURE synchronized on the owner's instruction (2026-10-16)
 - **Confirmed by:** Prompts 25–26 (writes ADR-005)
 
 **Context.** Codex and OpenCode ship code-mode runtimes, where a model writes a program against a typed API rather than
@@ -109,7 +109,7 @@ that cannot be closed (ARCHITECTURE §15, question 5).
 
 ## D6 — Session storage follows rollout-style append-only logs
 
-Status: Proposed
+Status: Accepted by ADR-006; ARCHITECTURE synchronized on the owner's instruction (2026-10-16)
 - **Confirmed by:** Prompt 34 (writes ADR-006)
 
 **Context.** Codex's rollout and thread store, and Goose's session manager (`refs/codex/codex-rs/rollout`,

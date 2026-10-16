@@ -1,6 +1,6 @@
 # ADR-017: renderer appearance, caches and basic fallback
 
-Status: implemented for Prompt 23; other platforms and target-class performance need remote verification.
+Status: implemented for Prompt 23; other platforms and target-class performance need remote verification. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 Date: 2026-10-15. Supplements ADR-015 and ADR-016. Document format and display-list version remain unchanged.
 
 ## Appearance and exports

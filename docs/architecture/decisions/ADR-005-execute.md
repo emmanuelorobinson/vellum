@@ -1,6 +1,6 @@
 # ADR-005: synchronous QuickJS code mode and the document API boundary
 
-- **Status:** Accepted for Prompt 25; the document API implementation and declaration generator are Prompt 26.
+- **Status:** Accepted for Prompt 25; the document API implementation and declaration generator are Prompt 26. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-15
 - **Sources:** guide Invariant 8, §6.1 D5, Prompts 25–26; ARCHITECTURE §3.1 and §7.3; ADR-004's script spike.
 

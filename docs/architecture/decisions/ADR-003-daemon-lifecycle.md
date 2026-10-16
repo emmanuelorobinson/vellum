@@ -1,6 +1,6 @@
 # ADR-003: private local daemon and stdio bridge
 
-Status: implemented for Prompt 27; native Windows/Linux execution awaits the IPC CI lane.
+Status: implemented for Prompt 27; native Windows/Linux execution awaits the IPC CI lane. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 

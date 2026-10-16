@@ -1,6 +1,6 @@
 # ADR-002: Layout oracle and sizing semantics: Chrome writes the layout goldens
 
-- **Status:** Accepted (closes delta D2 of ADR-000).
+- **Status:** Accepted (closes delta D2 of ADR-000). ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-12
 - **Written by:** Prompt 6 (Spike C).
 - **Evidence:** `fixtures/layout-oracle/*.html` (51 fixtures), `fixtures/layout-oracle/expected/` (Chrome's boxes and

@@ -1,6 +1,6 @@
 # ADR-014: occurrence-addressed scene queries
 
-Status: implemented in Prompt 20; architecture signature update needs a person.
+Status: implemented in Prompt 20; architecture signature update needs a person. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 

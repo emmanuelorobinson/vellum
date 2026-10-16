@@ -1,7 +1,7 @@
 # ADR-016: shared Skia renderer, source builds and deterministic font rasterization
 
 - Date: 2026-10-15.
-- Status: implemented locally on macOS arm64; the six-target remote acceptance runs remain unverified.
+- Status: implemented locally on macOS arm64; the six-target remote acceptance runs remain unverified. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - Scope: Prompt 22, extending ADR-001 and ADR-013/015. The guide calls this ADR-010, but that number
   already belongs to the document model. No existing architecture/specification document was rewritten.
 

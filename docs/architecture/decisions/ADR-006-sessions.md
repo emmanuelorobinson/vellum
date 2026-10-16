@@ -1,7 +1,7 @@
 # ADR-006: Session storage, usage and cost, turn state machine
 
-Status: proposed; implemented in Prompt 34. Closes delta D6 (ADR-000). ARCHITECTURE §3.4 and §7.6 are not
-edited here; the differences below are for the owner to synchronize.
+Status: proposed; implemented in Prompt 34. Closes delta D6 (ADR-000). ARCHITECTURE §3.4, §5 and §7.6 synchronized
+on the owner's instruction (2026-10-16).
 
 ## Reference note (guide §3.2 R16)
 

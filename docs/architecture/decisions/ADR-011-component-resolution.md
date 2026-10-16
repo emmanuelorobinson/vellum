@@ -1,6 +1,6 @@
 # ADR-011 — Component props, resolved occurrences and library scope
 
-Date: 2026-10-14. Status: implemented for Prompt 17; the person selected explicit prop bindings in this session.
+Date: 2026-10-14. Status: implemented for Prompt 17; the person selected explicit prop bindings in this session. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 ## Context
 

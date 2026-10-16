@@ -1,7 +1,7 @@
 # ADR-010: The document model: references by id, variants as override sets, and the override shape
 
 - **Status:** Accepted. It amends ARCHITECTURE §4.1 and §4.4 where they are silent or show a name where the file
-  holds an id; only a person edits ARCHITECTURE.md, so the amendments live here until that happens.
+  holds an id; only a person edits ARCHITECTURE.md, so the amendments live here until that happens. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-12
 - **Written by:** Prompt 8 (vellum-types II).
 - **Evidence:** `crates/vellum-types/src/{document,variable,style,component,value,node}.rs`; tests in

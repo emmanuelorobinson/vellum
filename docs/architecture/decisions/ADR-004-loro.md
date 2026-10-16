@@ -1,6 +1,6 @@
 # ADR-004: Loro behind DocStore; directory-codec threshold
 
-- **Status:** Accepted
+- **Status:** Accepted ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-12
 - **Written by:** Prompt 5 (Spike B). It also records the QuickJS-in-WASM numbers the guide asks Prompt 5 for, as
   input to ADR-005 (Prompt 25).

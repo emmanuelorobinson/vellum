@@ -1,6 +1,6 @@
 # ADR-019: atomic document programs and derived script nodes
 
-- **Status:** Accepted for Prompt 26; human review and ARCHITECTURE synchronization pending.
+- **Status:** Accepted for Prompt 26; human review and ARCHITECTURE synchronization pending. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-15
 - **Sources:** PRODUCT script nodes/checked agent edits; ARCHITECTURE §4.1, §7.3; DESIGN C28;
   guide Prompt 26 and Invariants 1–4, 6, 8, 11; ADR-005.

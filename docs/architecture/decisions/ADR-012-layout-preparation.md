@@ -1,6 +1,6 @@
 # ADR-012: Production layout preparation, stroke space and incremental Taffy
 
-- **Status:** Implemented; choices awaiting human architecture review.
+- **Status:** Implemented; choices awaiting human architecture review. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-14
 - **Evidence:** `crates/vellum-core/src/layout/`, `crates/adapters/layout-taffy/`, the 186 Chrome oracle fixtures,
   `scripts/lib/layout-oracle.mjs`, the LayoutEngine contract and incremental/fresh property tests.

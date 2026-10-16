@@ -1,7 +1,7 @@
 # ADR-001: Renderer: skia-safe in WASM everywhere, not CanvasKit in TypeScript
 
 - **Status:** Accepted (closes delta D1 of ADR-000). Frame numbers on an M1 and a mid-range Windows laptop are still
-  owed; see "Not measured".
+  owed; see "Not measured". ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 - **Date:** 2026-10-11
 - **Written by:** Prompt 4 (Spike A). Prompt 5 appended the text results (see "Text (Prompt 5)" at the end).
 - **Evidence:** `spikes/renderer/` (code), `spikes/renderer/results/results.json` (every number below, including each

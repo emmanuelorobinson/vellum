@@ -1,6 +1,6 @@
 # ADR-015: structured layout checks and the display-list boundary
 
-Status: implemented in Prompt 21; architecture rendering sketch update needs a person.
+Status: implemented in Prompt 21; architecture rendering sketch update needs a person. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 

@@ -1,6 +1,6 @@
 # ADR-013: Text layout and explicit font inputs
 
-Status: implemented in Prompt 19; port additions and sizing policy await architecture synchronization.
+Status: implemented in Prompt 19; port additions and sizing policy await architecture synchronization. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 Parley 0.12.0 shapes, resolves bidi, breaks lines and justifies. Renderers consume glyphs, never
 shape again (ADR-001). Enable `std` and `complex-scripts`, disable default/system features.

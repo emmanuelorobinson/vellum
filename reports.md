@@ -8,20 +8,23 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Review ADR-006 and `crates/vellum/data/pricing.json`** (Prompt 34). Only a person synchronizes ARCHITECTURE
-  §3.4/§7.6: the `SessionStore` port is fallible and gains `create`, `rename` and picture calls; external sessions
-  are one per document; `stopped` shows a done dot. The price file lists only Anthropic models, taken from the
-  Claude API reference table (cached 2026-10-06), with cache writes assumed at 1.25x input and Haiku 5.5's
-  cache-read price missing (so its cache reads give no estimate); other providers have no estimate until someone
-  adds verified prices. Decide cache retention/size limits and whether sessions need search (R16 says searchable).
-  Not done: transaction ids on steps (no transaction id type exists), an engine session started by a host.
+- **ARCHITECTURE is synchronized with every ADR so far** (2026-10-16, on the owner's instruction "synchronize all":
+  ADR-001–006, 010–024, and the port, document-model and op choices from Prompts 7–16 that earlier entries asked a
+  person to carry over). Changed: §1, §2.5–2.6, §3.1 (every port as implemented), §3.2 (Skia in WASM, binary display
+  list, goldens), §3.3–3.4 (`DocumentTarget`, `SessionStore`), §4.1–4.5 (ids, props, variants, overrides, conflict
+  node, sizing, containment, Loro and undo, files, libraries, external changes and merge), §5 (modules), §6, §7.1–7.3,
+  §7.6, §10, §12, §13, §15 (questions 1, 2, 3, 5, 8, 10 marked resolved). Each ADR's status and ADR-000 (D1, D2, D3, D5,
+  D6) say so; D4 waits for Prompts 36–37. If you disagree with a choice now stated in ARCHITECTURE, the ADR beside it
+  says what would change. Still yours to decide: the hand-written MCP front end vs `rmcp`; the "only inside the
+  client's directory" rule until the PermissionBroker (Prompt 35); the CDLA-Permissive-2.0 exception for
+  `webpki-root-certs`; who resolves merge conflicts that only the merge report holds. ARCHITECTURE §6 cited "ADR-0006"
+  for Electron over Tauri; that number is now sessions, so the text says "no ADR yet".
 
-- **ADR-021, 022 and 023 are synchronized into ARCHITECTURE** (2026-10-16, on the owner's instruction: §3.4 `Tool`,
-  `ToolError`, MCP front end, `DocumentTarget::lease`, scratch-store `execute`, `ModelProvider`/`ModelTransport`/
-  `SecretStore`, `SkillSource`/`StyleLibrary`; §7 MCP row; §7.3 "How the daemon runs tools"; §13 adapters).
-  Still yours to decide: keep the hand-written MCP front end or move to `rmcp` before MCP features beyond tools are
-  needed; the "only inside the client's directory" rule until the PermissionBroker (Prompt 35); the
-  CDLA-Permissive-2.0 exception for `webpki-root-certs`. Not run: native Windows/Linux keychains and HTTP, remote CI.
+- **Review `crates/vellum/data/pricing.json` and the session-store choices** (Prompt 34, ADR-006). The price file
+  lists only Anthropic models, from the Claude API reference table (cached 2026-10-06), with cache writes assumed at
+  1.25x input and Haiku 5.5's cache-read price missing; other providers have no estimate until someone adds verified
+  prices. Decide cache retention/size limits and whether sessions need search (R16 says searchable). Not done:
+  transaction ids on steps (no transaction id type exists), an engine session started by a host.
 
 - **Review ADR-024** (Prompt 33). ARCHITECTURE §3.4 was synchronized with it on the owner's instruction
   (`AgentEngine`/`ToolBridge` signatures, `PromptPack` format, `builtin` behaviour). Review the defaults (40 rounds, 8 failed
@@ -38,38 +41,23 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   serves every document and has no document path, so `imports` are not loaded and script-node output is empty in
   `snapshot_layout`, `find_space` and `screenshot`. A library instance draws as missing. Fixing it means a services
   factory per document in `Env`; not started.
-- **Review ADR-020 and synchronize ARCHITECTURE** (Prompt 28). New ports `DocumentTarget` and `FileWatcher`;
-  `crates/vellum` is now a library plus binary. External changes go through a three-way merge with unsaved
-  edits, not the plain old-vs-new diff of ARCHITECTURE §4.5 (same result when nothing is unsaved). Decide the
-  editor wire protocol (ops are not serialisable; `EditorLink` is in-process only) and whether an offline editor
-  must always open read-only (`Role::OFFLINE`, per guide §7). Only macOS arm64 (FSEvents) ran; Linux inotify and
-  Windows watcher behaviour and the git tests on Windows (`GIT_CONFIG_GLOBAL=/dev/null`) are unverified.
+- **Decide the editor wire protocol and offline behaviour** (Prompt 28, ADR-020). Ops are not serialisable;
+  `EditorLink` is in-process only. Decide whether an editor without the daemon must always open read-only
+  (`Role::OFFLINE`). Only macOS arm64 (FSEvents) ran; Linux inotify and Windows watcher behaviour and the git tests
+  on Windows (`GIT_CONFIG_GLOBAL=/dev/null`) are unverified.
 
-- **Review ADR-003 and run native IPC CI** (Prompt 27). Private Unix sockets and Windows named pipes,
-  token/version handshakes, lifecycle and the stdio bridge are implemented. macOS arm64 IPC passes;
-  Windows cross-target clippy passes, but native Windows/Linux and cross-user DACL denial have not run
-  here. The new `Native IPC` workflow covers all three platforms. ADR-003 records direct Tokio APIs
-  instead of `interprocess`, the private EOF marker, strict existing-path checks and bounded HTTP
-  `--listen`. Only a person synchronizes ARCHITECTURE.md. Actual host restart wiring is later work.
+- **Run native IPC CI** (Prompt 27, ADR-003). macOS arm64 IPC passes; Windows cross-target clippy passes, but native
+  Windows/Linux and cross-user DACL denial have not run here. The `Native IPC` workflow covers all three platforms.
+  Actual host restart wiring is later work.
 
-- **Review ADR-019 and synchronize ARCHITECTURE** (Prompt 26). The core now owns atomic execute,
-  derived output projection, versioned declarations, scene/render read bindings and script diagnostics.
-  Review the 2,000-node execute ceiling, synchronous image/result caps, per-call reference validation,
-  JSON header grammar and source-cache lifecycle. Only a person edits ARCHITECTURE.md. Remote Linux
-  CI and native Windows/Linux execution have not run here.
+- **Review ADR-019's limits** (Prompt 26): the 2,000-node execute ceiling, synchronous image/result caps, per-call
+  reference validation, the script header grammar and source-cache lifecycle. Remote Linux CI and native
+  Windows/Linux execution have not run here.
 
-- **Review ADR-005 and synchronize ARCHITECTURE** (Prompt 25). `ScriptRuntime` now owns an `Rc<dyn ScriptApi>`;
-  the API has an allowlist and mandatory node-cost planning. Scripts use explicit returns, bounded JSON copies
-  and portable Math; `**`/`**=` refuse in favor of `Math.pow`. Review these restrictions and boundary caps.
-  The new sandbox CI workflow is configured but has not run remotely; only macOS arm64 and WASM ran here.
-  Only a person edits ARCHITECTURE.md.
+- **Review ADR-005's script restrictions** (Prompt 25): explicit returns, bounded JSON copies, portable Math, `**`
+  refused in favour of `Math.pow`, and the boundary caps. The sandbox CI workflow has not run remotely; only macOS
+  arm64 and WASM ran here.
 
-- **Review ADR-018 and synchronize ARCHITECTURE** (Prompt 24). Only a person edits ARCHITECTURE.md. It differs in
-  five places: (1) §3.1 gains three ports, `FileSystem`, `AssetCollect` and `DocumentFiles`; (2) §4.3 calls the directory
-  format "a second `Codec`", but bytes in and out cannot say which page a byte is, so it is `DocumentFiles` (`SingleFile`
-  is the same port over a `Codec`); (3) §4.3 says shader files are assets by hash, but fixtures and `ShaderEffect.src`
-  use plain relative paths, so only a `src` into `<name>.assets/` is an asset; (4) an asset is a file named by its
-  SHA-256 with no extension; (5) `sha2` and `wuff` are new adapter-only dependencies (version-baseline C20).
 - **Decide how far a torn directory save must be prevented** (Prompt 24). A save that changes several files can be cut
   short; every file stays whole, but pages may come from different moments. It is detected (a `.saving` marker, read as
   `Loaded::interrupted`), not prevented or repaired. Options: rely on the daemon's recovery copy (Prompt 28), add
@@ -86,62 +74,18 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   goldens pass locally on macOS arm64/M5 Pro. Run the extended six-target renderer workflow and
   measure on M1/mid-range Windows. Full input/startup and op-to-frame budgets need the later hosts.
   ADR-017 records CPU-composited filters, raster SVG for advanced appearance, conservative cache
-  invalidation and Basic simplifications. Only a person synchronizes ARCHITECTURE.md.
+  invalidation and Basic simplifications.
 
 - **Finish Prompt 22 remote acceptance**. ADR-016 selects source-built Skia with caching. Native behavior
   jobs cover six targets; hardware GPU jobs need six self-hosted `vellum-gpu` runners. Only macOS arm64
   and WASM were executed here. Run the workflows and collect other-target cold/cached timings,
   fresh-clone download times and billed CI minutes. No binary archive publishing is configured.
-- **Review ADR-016 and synchronize ARCHITECTURE** (Prompt 22). Shared Rust renderer, source-only build,
-  data-backed fonts, retired SDK workaround and explicit unsupported cases are recorded. ADR-010 was
-  already occupied by the document model, so the renderer decision uses ADR-016. Only a person edits
-  ARCHITECTURE.md.
-
-- **Review ADR-015 and synchronize ARCHITECTURE** (Prompt 21). Display commands now have a versioned
-  binary ABI and typed shape/appearance resources. Transform sets an absolute device matrix after f64
-  viewport rebasing. The ADR records layout diagnostic semantics, conservative culling and deferred
-  renderer lowering. Only a person edits ARCHITECTURE.md.
-
-- **Review ADR-014 and synchronize ARCHITECTURE** (Prompt 20). `SpatialIndex` now takes occurrence
-  paths, matching layout and resolved components. The ADR records bounds-based selection, rounded clipping,
-  snapping ties and the bounded free-space search. Only a person edits ARCHITECTURE.md.
-
-- **Review ADR-013 and synchronize ARCHITECTURE** (Prompt 19). Text ports now carry renderer-ready glyph
-  offsets, variation/synthesis, decorations/links, shared font bytes and explicit missing-font/glyph ranges.
-  Auto-width hugs both dimensions; auto-height hugs height; fixed text keeps its sizes and reports overflow.
-  Font sources are explicit host-supplied bytes, prioritized by tier. Only a person edits ARCHITECTURE.md.
-  The new `text-fixtures` fonts CI job was verified locally, not on GitHub.
-
 - **Review the existing Loro dependency advisories** (Prompt 17). `pnpm cargo:deny` now fails on
   `bitmaps` ([RUSTSEC-2026-0247](https://rustsec.org/advisories/RUSTSEC-2026-0247)),
   `im` ([RUSTSEC-2026-0248](https://rustsec.org/advisories/RUSTSEC-2026-0248)) and
   `sized-chunks` ([RUSTSEC-2026-0251](https://rustsec.org/advisories/RUSTSEC-2026-0251)), all unmaintained
   through the existing Loro dependency chain. Its report says no safe upgrade is available. Prompt 17 changes
   neither dependencies nor advisory policy; decide the upstream/pin response separately.
-- **Review ADR-011 and synchronize ARCHITECTURE** (Prompt 17). The person selected explicit prop bindings;
-  the ADR also records the new optional instance `library` alias, precedence, text-content binding rule,
-  library scope, cache and paste behavior. Only a person edits ARCHITECTURE.md.
-
-- **Review the Prompt 16 choices that the guide or ARCHITECTURE leave open** (ADR-010 "Prompt 16"). Only a person edits
-  ARCHITECTURE.md. (1) The last entry that applies wins by position, not specificity. (2) A script input
-  (`inputs {name → value | $var}`) takes a variable of any type; a colour arrives as the text `#RRGGBB`. I chose it
-  because `fixtures/documents/content.vellum` already binds a colour variable to a script input, and ARCHITECTURE puts no
-  limit on it; the alternative is to refuse colour there and change that fixture. (3) Variable types are checked when a
-  binding is made, once per transaction, as `OpErrorKind::BindingType`; a variable that changes type while something
-  uses it is refused. (4) A bad theme choice on a frame is ignored and reported, not fatal. (5) The resolver visits every
-  node on every resolve (cheap, no allocation) and recomputes only the dirty ones; skipping whole subtrees needs
-  `ChangeSet` to name the parents of inserted, removed and moved nodes, which I did not change.
-- **Review the conflict node and the new document-level ops** (Prompt 15). ADR-010's "Prompt 15" section. The
-  format gains a 19th node kind, `conflict` (`ours`, `theirs`, `properties`, `children`), which ARCHITECTURE §4.1's
-  table does not list; only a person edits ARCHITECTURE.md. Ops gain `InsertPage`, `DeletePage`, `UpdatePage`,
-  `MovePage`, `SetShell`, `SetComponent`, `UpdateComponent`; `ChangeSet` gains `pages`, `components`, `shell`; `Kept`
-  gains `Page`, `Shell`. Merge rules I chose: a change beats a removal; where no node can hold both versions (both
-  moved one node, both reordered the same children, a variable, style, page or the name changed both ways) ours is
-  kept and the conflict is only in the merge's report, so the editor must show those from the report.
-- **References are now checked once per transaction** (Prompt 15), not after every op. It changes what is accepted:
-  a transaction whose ops pass through a broken state but end valid (an instance inserted before its component is
-  added) is now accepted. A refused one still names the op that first broke a reference. Say if you want the old
-  rule back; the diff would then need another ordering scheme.
 - **Op planning cost** (Prompt 14, mostly fixed in Prompt 15). Checking references once per transaction took planning
   a 200-op batch at 10,000 nodes from about 292 ms to 13 ms. Undo of that batch is 15.0 ms (budget 16, was 14.5).
   What is left: an insert still lists every id in the document, and undo copies the document; an id index would cut
@@ -151,15 +95,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
 - **Decide whether the fuzz targets run anywhere but a laptop** (Prompts 9 and 15). `crates/vellum-core/fuzz/`
   (`merge`) and `crates/adapters/codec-json/fuzz/` (`decode`) need nightly and cargo-fuzz; CI runs neither. The same
   properties run on a fixed corpus in `cargo test` (`fuzz_smoke`, `robustness.rs`).
-- **Review the `DocStore` additions and the undo rules** (Prompt 14). Only a person edits ARCHITECTURE.md. New on
-  the port: `undo_turn(turn, by) -> UndoTurn` (`Nothing`, `Undone(ChangeSet)`, `Revert(Revert)`), `Revert` and
-  `Kept`, `SyncError::DifferentDocument`, and `vellum_core::ops::revert` to apply a `Revert` as a new transaction.
-  Rules I chose (ADR-004 "Prompt 14"): ⌘Z never returns a Revert; it takes the actor's latest change back as far as
-  it can and keeps what later work by others depends on, so pressing it again goes further back. "Undo this turn"
-  is undone outright only when nothing is kept; otherwise it returns a Revert and changes nothing. Setting a
-  property to the value it already has is not a change, so it is not protected from another actor's undo.
-  Changes from another store are attributed to the newest change's origin and cannot be reached by "Undo this turn"
-  here. `ops::revert` does not go through the Guard: a person asks for it.
 - **Guide Prompt 14's FINAL command does not run as written.** `cargo test -p doc-loro` fails ("did not match any
   packages"); the package is `vellum-doc-loro`, as every adapter is `vellum-<dir>`. Use
   `cargo test -p vellum-doc-loro`.
@@ -173,36 +108,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   argument 'lease::'" (cargo takes one filter). The equivalent is `cargo test -p vellum-core -- guard:: lease::`.
   The guide is read-only to me.
 
-- **Review Prompt 12's operation representation and path port addition**. The choices/limits below record the
-  off-page component representation, sparse instance inheritance, geometry inputs and unsupported outline styles.
-  `PathOps::outline_stroke` is needed by the new op and is absent from ARCHITECTURE's port signature. Only a person
-  edits ARCHITECTURE.md; no format/schema change was made.
-- **Review the port signatures that differ from ARCHITECTURE §3.1** (Prompt 10). Only a person edits ARCHITECTURE.md.
-  `Codec::encode` returns a `Result` (done: Prompt 9's open item). `FontSource::resolve` takes a weight as well as a
-  style (a text run has both). `PathOps::bounds` returns `Option<Rect>` (a path can draw nothing) and takes a resolved
-  `StrokeStyle`, not the file's `Stroke`, whose widths can still be variables. `DocStore` gains `adapter_id()` and
-  `cursor()` (`export_updates` needs a cursor to be given); `undo`/`redo` take `&Actor` (Prompt 11); `apply` takes a `Commit`, not a `Transaction` (Prompt 11). `SpatialIndex::query_point`
-  takes `x, y`. `AssetStore::put` takes `&[u8]`, not owned bytes, and there is no `bytes` crate in core. `ScriptApi` and
-  `ScriptValue` are minimal (Prompt 26 fills in the functions).
-- **Review the Prompt 11 choices that the guide or ARCHITECTURE leave open** (Prompt 11). Only a person edits
-  ARCHITECTURE.md and the guide, so these live in the code until you say otherwise:
-  (1) Invariant 1 says `DocStore::apply` is "`pub(crate)` to `vellum-core::ops`". A trait method cannot be, and
-  adapters live in other crates, so `apply` takes a `Commit` that only the op layer can build (private fields, a
-  `pub(crate)` constructor, no `Clone` or `Default`). The trybuild cases in `crates/vellum-core/tests/write-path/` show
-  that a transaction, a hand-built commit and a copied commit do not compile.
-  (2) `Actor`'s inner words are mine: `FileReason` is `external-change`, `merge` or `recovery`; `Subsystem` is
-  `importer`, `migration` or `sync`. A person is known by a `DeviceId`; `DeviceId`, `AgentId`, `SessionId` and `TurnId`
-  are ULIDs (upper-case Crockford, as guide §9 says for ids outside the file).
-  (3) Parent kinds: frames, groups and canvas pages hold anything; a boolean holds rect, ellipse, polygon, star,
-  line, vector, boolean, text and group; a slides page holds frames, notes, context and prompts at its top level.
-  Nothing in ARCHITECTURE says this; tell me if a kind is wrong.
-  (4) Page boundaries: a node may move between pages, but not between a page and a component, nor between components.
-  A component's root cannot be moved or deleted by these ops (Prompt 12's component ops will).
-  (5) Wrap, group and ungroup rebase absolute positions by the wrapper's position and refuse a rotated or flipped
-  wrapper or group (positions cannot be kept through a rotation without baking it into each child). Ungroup drops the
-  group's opacity, blend mode and effects. A wrapper at `auto` leaves its children's coordinates as they were.
-  (6) In an `Update`, `null` puts a property back to its default (and fails for a required one such as `width`).
-  (7) `Move` and `Reorder` count the index where the node ends up, after it left its old place.
 - **Decide whether `ops::apply` may snapshot the whole document per transaction** (Prompt 11). It validates against
   `DocStore::snapshot()`, which clones the document. That is fine for the fake and for tests; for Loro (Prompt 14) a
   10,000-node document would clone on every keystroke-sized edit. Prompt 14 kept the port as it is: the Loro store
@@ -224,44 +129,14 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   inside `scripts/gentest/`, and the real file is `scripts/gentest/src/main.rs`. Reproduced on `HEAD` in a separate
   worktree with this machine's `refs/`. The fix is in the guide row or in `scripts/reference-index.mjs`; I did not touch
   either.
-- **Review ADR-010 and update ARCHITECTURE §4.1 and §4.4** (Prompt 8). The ADR makes three decisions that differ from
-  ARCHITECTURE: a `$var` (and an alias) names a variable by its id, not its name path, so the example
-  `{"$var": "color/primary"}` now describes a name, not the file; variants are override sets on the component's one tree,
-  not separate trees; and an override is one of `props`, `replace` or `children`, with props checked against the node
-  property names. Only a person edits ARCHITECTURE.md. The ADR lists the costs and the things it leaves undecided.
 - **Confirm the two CI steps added in Prompt 8 pass on GitHub**: `pnpm types:check` and `pnpm format-spec:check`. Both
   pass on this Mac; the generated schema and bindings have not been checked on the Ubuntu runner.
-- **Review the Prompt 7 choices where ARCHITECTURE §4.1 was silent or contradicted itself** (Prompt 7). Only a person
-  edits ARCHITECTURE.md, so these live in the code until you say otherwise: (1) an `icon` node's icon name is `icon`,
-  not `name`, because `name` is already the layer name on every node; (2) a frame gets `cornerRadius` (the table gives it
-  to `rect` and `polygon` only); (3) a variable reference is `{"$var": "<key>"}` with an opaque non-empty key, and it is
-  not settled whether the key is a variable id (no `/` allowed) or a name path like `color/primary` (the examples use
-  that); Prompt 8 must decide; (4) text runs have no colour of their own, so a text node's `fills` colour the whole
-  node; (5) a prototype transition is `instant`, `dissolve` or four slides plus `durationMs`, which is my guess; (6) a
-  mesh paint is `columns` x `rows` points row by row, each with a colour and optional four handles, also my reading;
-  (7) padding is `n`, `[vertical, horizontal]` or `[top, right, bottom, left]`, corner radius `n` or four values, and a
-  stroke width `n` or four values; (8) node structs are named `FrameNode`, `TextNode` and so on, so the TypeScript
-  names do not shadow `Boolean`, `Text` or `Image`. Item (3) is decided by Prompt 8: a reference names a variable by
-  its id (ADR-010), so the name path in the examples is the variable's name.
 - **Decide whether `proptest` stays** (Prompt 7). It is now a dev-dependency of `vellum-types` and on the allowlist
   (version-baseline C18). The guide asks for property tests in Prompts 7, 9, 10, 14 and later; the alternative is a
   hand-rolled generator, which loses shrinking.
-- **Review ADR-002** (Prompt 6). It accepts D2 and fixes Vellum's sizing rules where CSS's defaults disagree with
-  hug, fill and fixed (15 rows, each with a fixture). Decisions worth a look: fill shares space equally and ignores its
-  content (`flex-basis: 0`, `min-width: 0`); fixed and hug never shrink; fill on the main axis of a hugging parent uses
-  its fallback, else hugs; hug on a frame without auto-layout, and fill with nothing to fill, need a fallback; two padding
-  values are vertical then horizontal, as in CSS.
-- **Review ADR-012 and synchronize ARCHITECTURE** (Prompt 18). Grid keeps equal column/optional row counts;
-  `layoutIncludesStroke` reserves the frame's own inward stroke beside padding (inside full, center half,
-  outside zero), preserving absolute outer-edge coordinates. Layout ids/results/dirty entries use occurrence
-  paths, and results expose typed problems. Preparation scans all inputs; Taffy reuses clean computations.
-  Only a person edits ARCHITECTURE.md.
 - **Watch the first CI run of the new `layout-oracle` job** (Prompt 6). It has not run on GitHub yet. It installs Chrome
   for Testing 155.0.8059.39 on Ubuntu and runs `--check` against boxes written by Chrome on macOS. No fixture has text,
   so the boxes should not depend on the OS, but that is unproven until the job passes.
-- **Review ADR-004 and ADR-001's new "Text" section** (Prompt 5). ADR-004 keeps Loro behind DocStore and sets the S06
-  directory-codec suggestion at 10,000 nodes or 4 MB of `.vellum` JSON. ADR-001 now says: Parley lays text out, Skia
-  only draws glyphs, no skia-safe `textlayout`, and every renderer uses Skia's FreeType font manager.
 - **Undo cost grows with the document** (Prompt 5, ADR-004). Undoing a 200-node batch took 13 ms at 10k nodes and 109 ms
   at 50k, while applying it took under 2 ms. Prompt 14 has to measure per-actor undo and get it under 16 ms at 10k, or
   ADR-004 is revisited. Nothing for you to do now; it is here so it is not lost.
@@ -271,9 +146,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   Copy `spikes/renderer/web/` with its built `dist/` (or build it, see `docs/runbooks/renderer-spike.md`), run
   `pnpm install`, then `node measure.mjs --frames-only` there. It writes `results/frames-<host>.json`. If B is slower
   than A on either machine, ADR-001 says to revisit.
-- **Review ADR-001 and update ARCHITECTURE §3.2** (Prompt 4). ADR-001 accepts D1: skia-safe in WASM for the editor,
-  the same code natively for headless, no CanvasKit. ARCHITECTURE.md still describes CanvasKit in TypeScript; only a
-  person edits it.
 - **Decide where the gpu lane runs** (Prompt 4). The gpu-tagged tests (`VELLUM_LANES=gpu`, plus `fonts` for the text
   test) need Chrome with a real GPU, emsdk 4.0.6, ninja and the fixture fonts. CI has no such runner, so they have only
   run on this machine. Prompt 5 added two more lanes, `fonts` (needs `pnpm spike:fonts`, network once) and `wasm`
@@ -2154,3 +2026,7 @@ Not verified: Windows/Linux (file modes, `.git` worktree files, SQLite paths), a
 against the price table, prices themselves (taken from the reference table, not a live price page), cache growth
 over long use. No UI or design frames involved.
 
+
+After Prompt 34, on the owner's instruction ("synchronize all"), ARCHITECTURE.md was synchronized with every ADR so far
+(ADR-001–006, 010–024) and the Prompt 7–16 port and model choices; the separate "synchronize ARCHITECTURE" items in
+Needs a person are folded into one. Docs only: no code changed, `pnpm checksum` still covers the read-only spec.

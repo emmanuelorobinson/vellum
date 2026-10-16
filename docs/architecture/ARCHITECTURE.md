@@ -18,7 +18,7 @@
         ┌────────────────────────────────────────────────────────┐
         │  EDITOR (same bundle everywhere)                        │
         │  editor-react (UI) → editor-core (tools, commands)      │
-        │  vellum-wasm (engine)  ·  Renderer (CanvasKit today)    │
+        │  vellum-wasm: engine + Skia renderer, one WASM module   │
         └───────────────┬──────────────────────────┬─────────────┘
                         │ Daemon protocol (v1)     │ Sync protocol (v1)
                         │ local socket / pipe      │
@@ -73,7 +73,7 @@ This section is the contract for how the codebase is shaped. It exists so any pa
 - **Core is pure.** No file system, network, clock or randomness in `vellum-core`; those come in through ports (`Clock`, `IdGen`, `AssetStore`). This makes it deterministic, testable, and runnable in WASM, native and workers alike.
 - **Enforced, not hoped for.**
   - Rust: `vellum-core` and `vellum-types` have an allowlist of dependencies checked in CI (`cargo-deny` bans + a script over `cargo tree`). Adding `loro` or `tokio` to core fails the build.
-  - TypeScript: `dependency-cruiser` rules: `editor-core` can't import React or CanvasKit; apps can't import `better-auth`, `@polar-sh/*` or `@aws-sdk/*` directly, only our wrapper packages.
+  - TypeScript: `dependency-cruiser` rules: `editor-core` can't import React or a renderer; apps can't import `better-auth`, `@polar-sh/*` or `@aws-sdk/*` directly, only our wrapper packages.
 
 ### 2.2 What gets abstracted (and what doesn't)
 
@@ -112,13 +112,13 @@ Vendor lock-in usually hides in persisted formats, not code. So:
 | Script node files | `@schema` header in each `.js` file | Scripts written for an older schema keep running |
 | Daemon protocol (editor ↔ daemon) | `v` in handshake | Daemon supports current and previous version |
 | Sync protocol | Envelope version + CRDT adapter ID | Server refuses mismatched clients with a clear upgrade error |
-| Display list | `DISPLAY_LIST_VERSION` const | Internal; core and renderers ship together, checked at init |
+| Display list | `DISPLAY_LIST_VERSION` in a versioned binary ABI (ADR-015) | Internal; core and renderers ship together. Any change to opcodes, resource schemas or semantics bumps it; renderers refuse a version they do not know |
 | Public REST API | `/v1/` path prefix | Deprecation header, 6 months notice |
 
 ### 2.6 Decisions are written down
 
-- `docs/adr/NNNN-title.md` for every Tier A choice and every tier change: context, decision, alternatives, **"revisit when"** (the condition that should trigger reconsidering it).
-- Example: *ADR-0004 Renderer: CanvasKit.* Revisit when WebGPU ships in all three VS Code platforms and Vello text passes our golden suite.
+- `docs/architecture/decisions/ADR-NNN-title.md` for every Tier A choice and every tier change: context, decision, alternatives, **"revisit when"** (the condition that should trigger reconsidering it). This document is kept in step with accepted ADRs.
+- Example: *ADR-001 Renderer: skia-safe in WASM everywhere.* Revisit `render-vello` when Vello's CPU and GPU renderers agree within our golden tolerance, our hosts enable WebGPU by default (or its WebGL2 path is stable), and it beats the Skia module's 10,000-node frame p95 on the same machine.
 
 ### 2.7 How a swap is done (the playbook)
 
@@ -138,127 +138,204 @@ Because modules talk only through ports with fakes, they can be built in paralle
 
 ### 3.1 Engine ports (`vellum-core::ports`)
 
-Trait sketches; final signatures are settled in M0.
+Signatures as implemented (Prompts 10–28). Every port has a fake and a contract suite in `crates/contracts`, and
+each suite is checked against deliberately broken implementations.
 
 ```rust
-/// Document storage and history. Today: Loro. Alternatives: Automerge, Yrs, plain in-memory.
+/// Document storage and history. Today: Loro (ADR-004). Alternatives: Automerge, Yrs, plain in-memory.
 pub trait DocStore {
-    fn snapshot(&self) -> DocumentData;                     // our types, not the CRDT's
-    fn apply(&mut self, tx: Transaction) -> Result<ChangeSet, OpError>;
-    fn undo(&mut self, actor: ActorId) -> Option<ChangeSet>;
-    fn redo(&mut self, actor: ActorId) -> Option<ChangeSet>;
-    fn export_updates(&self, since: &SyncCursor) -> SyncPayload; // opaque bytes + adapter id
-    fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError>;
+    fn adapter_id(&self) -> &'static str;
+    fn snapshot(&self) -> Document;                         // our types, not the CRDT's
+    fn apply(&mut self, commit: Commit) -> ChangeSet;       // a Commit only `ops` can build: the one write path
+    fn undo(&mut self, actor: &Actor) -> Option<ChangeSet>;
+    fn redo(&mut self, actor: &Actor) -> Option<ChangeSet>;
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> UndoTurn; // Nothing | Undone(ChangeSet) | Revert(Revert)
+    fn cursor(&self) -> SyncCursor;
+    fn export_updates(&self, since: &SyncCursor) -> SyncPayload;    // opaque bytes + adapter id
+    fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError>; // DifferentDocument refused
 }
 
-/// Auto-layout. Today: Taffy. Alternatives: Yoga, our own.
+/// Auto-layout. Today: Taffy (ADR-012). Ids, dirty entries and boxes are occurrence paths (`NodeIdPath`), so a
+/// definition node used by two instances keeps two boxes.
 pub trait LayoutEngine {
     fn layout(&mut self, tree: &LayoutTree, dirty: &DirtySet, text: &dyn TextEngine) -> LayoutResult;
 }
 
-/// Text shaping and paragraph layout. Today: Parley. Alternatives: cosmic-text, Skia Paragraph.
+/// Text shaping and paragraph layout. Today: Parley (ADR-013). Renderers draw its glyphs, never shape again.
 pub trait TextEngine {
-    fn measure(&self, text: &RichText, constraints: Size) -> TextMetrics;
-    fn layout(&self, text: &RichText, width: f32) -> TextLayout;  // glyph runs, our types
+    fn measure(&self, text: &RichText, constraints: Extent) -> TextMetrics;
+    fn layout(&self, text: &RichText, width: f64) -> TextLayout;         // glyph runs, our types
+    fn layout_box(&self, text: &RichText, extent: Extent) -> TextBoxLayout; // applies auto-width / auto-height / fixed
 }
 
-/// Fonts. Today: bundled + Google Fonts + project folder.
+/// Fonts as bytes the host supplies, tiered: document fonts, Google Fonts cache, system, bundled Inter (ADR-013).
 pub trait FontSource {
-    fn resolve(&self, family: &str, style: FontStyle) -> Option<FontHandle>;
+    fn resolve(&self, family: &str, weight: u16, style: FontStyle) -> Option<FontHandle>;
+    fn data(&self, handle: FontHandle) -> Option<FontData>;  // shared immutable SFNT bytes + collection index
+    fn families(&self) -> Vec<String>;
 }
 
-/// Hit-testing, culling, snapping. Today: rstar.
+/// Hit-testing, culling, snapping. Today: rstar (ADR-014). Keyed by occurrence path.
 pub trait SpatialIndex {
-    fn rebuild(&mut self, items: &[(NodeId, Rect)]);
-    fn update(&mut self, changed: &[(NodeId, Rect)], removed: &[NodeId]);
-    fn query_rect(&self, r: Rect) -> Vec<NodeId>;
-    fn query_point(&self, p: Point) -> Vec<NodeId>;
+    fn rebuild(&mut self, items: &[(NodeIdPath, Rect)]);
+    fn update(&mut self, changed: &[(NodeIdPath, Rect)], removed: &[NodeIdPath]);
+    fn query_rect(&self, r: Rect) -> Vec<NodeIdPath>;
+    fn query_point(&self, x: f64, y: f64) -> Vec<NodeIdPath>;
 }
 
-/// Path booleans and tessellation. Today: kurbo + i_overlay.
+/// Path booleans, stroke outlines and bounds. Today: kurbo + i_overlay.
 pub trait PathOps {
     fn boolean(&self, a: &Path, b: &Path, op: BoolOp) -> Path;
-    fn bounds(&self, p: &Path, stroke: Option<&Stroke>) -> Rect;
+    fn outline_stroke(&self, path: &Path, stroke: &StrokeStyle) -> Result<Path, String>;
+    fn bounds(&self, path: &Path, stroke: Option<&StrokeStyle>) -> Option<Rect>; // None: draws nothing
 }
 
-/// File format. Today: JSON single file, JSON directory. Later maybe binary.
+/// File format, bytes in and out. Today: JSON. Later maybe binary.
 pub trait Codec {
     fn id(&self) -> &'static str;
-    fn decode(&self, bytes: &[u8]) -> Result<DocumentData, CodecError>; // runs migrations
-    fn encode(&self, doc: &DocumentData) -> Vec<u8>;                    // deterministic
+    fn decode(&self, bytes: &[u8]) -> Result<Document, CodecError>; // runs migrations; a newer format is refused
+    fn encode(&self, doc: &Document) -> Result<Vec<u8>, CodecError>; // deterministic
 }
 
-/// Assets (images, fonts) by content hash. Today: local folder, S3-compatible.
+/// A document at a path: one file (`SingleFile` over a `Codec`) or the directory format (ADR-018).
+pub trait DocumentFiles {
+    fn id(&self) -> &'static str;
+    fn read(&self, fs: &dyn FileSystem, path: &str) -> Result<Loaded, FileError>;   // orphans, interrupted
+    fn write(&self, fs: &dyn FileSystem, path: &str, doc: &Document) -> Result<Saved, FileError>;
+}
+
+/// Whole files under a root the implementation owns; `/`-separated relative paths, no `..`. Today: `StdFs`.
+/// `files::atomic_write` (temp file, sync, rename, sync folder) is built on it.
+pub trait FileSystem {
+    fn read(&self, path: &str) -> Result<Vec<u8>, FsError>;
+    fn write(&self, path: &str, bytes: &[u8]) -> Result<(), FsError>;
+    fn sync_file(&self, path: &str) -> Result<(), FsError>;
+    fn rename(&self, from: &str, to: &str) -> Result<(), FsError>;
+    fn remove_file(&self, path: &str) -> Result<(), FsError>;
+    fn list(&self, dir: &str) -> Result<Vec<String>, FsError>;
+    fn create_dir_all(&self, dir: &str) -> Result<(), FsError>;
+    fn sync_dir(&self, dir: &str) -> Result<(), FsError>;
+    fn exists(&self, path: &str) -> Result<bool, FsError>;
+}
+
+/// Assets (images, fonts) by the SHA-256 of their bytes. Today: local folder, S3-compatible.
 pub trait AssetStore {
-    fn get(&self, hash: &AssetHash) -> Result<Bytes, AssetError>;
-    fn put(&self, bytes: Bytes, mime: &str) -> Result<AssetHash, AssetError>;
+    fn get(&self, hash: &AssetHash) -> Result<Vec<u8>, AssetError>;   // re-hashes; a mismatch is damage
+    fn put(&self, bytes: &[u8], mime: &str) -> Result<AssetHash, AssetError>;
+}
+pub trait AssetCollect: AssetStore {                                  // stores that can list and remove
+    fn list(&self) -> Result<Vec<AssetHash>, AssetError>;
+    fn remove(&self, hash: &AssetHash) -> Result<(), AssetError>;
 }
 
-pub trait Clock { fn now(&self) -> Timestamp; }
-pub trait IdGen { fn node_id(&mut self) -> NodeId; }
+/// Which document names changed on disk; never their content. Today: notify (ADR-020).
+pub trait FileWatcher {
+    fn id(&self) -> &'static str;
+    fn watch(&mut self, path: &str) -> Result<(), FsError>;
+    fn unwatch(&mut self, path: &str);
+    fn changed(&mut self) -> Vec<String>;                             // non-blocking
+}
+
+pub trait Clock { fn now(&self) -> Timestamp; }                       // UTC milliseconds
+pub trait IdGen {                                                     // page, component, variable and style ids too
+    fn node_id(&mut self) -> NodeId;
+}
 
 /// Sandboxed JavaScript. Used by the `execute` agent tool (§7.3) AND by script nodes on the canvas (§4.1).
-/// Today: QuickJS via `rquickjs` (native and WASM). Alternatives: Boa, a WASM-isolated V8.
+/// Today: QuickJS via `rquickjs` (native and WASM; ADR-005). Alternatives: Boa, a WASM-isolated V8.
 pub trait ScriptRuntime {
-    fn run(&self, src: &str, api: &dyn ScriptApi, limits: ScriptLimits) -> Result<ScriptOutput, ScriptError>;
+    fn run(&self, src: &str, api: Rc<dyn ScriptApi>, limits: ScriptLimits) -> Result<ScriptOutput, ScriptError>;
+    fn run_diagnostic(&self, src: &str, api: Rc<dyn ScriptApi>, limits: ScriptLimits)
+        -> Result<ScriptOutput, ScriptDiagnostic>;                  // typed cause, line/column, excerpt
+}
+pub trait ScriptApi {
+    fn constants(&self) -> BTreeMap<String, ScriptValue>;            // frozen data on `doc`
+    fn functions(&self) -> &[&str];                                   // the allowlist
+    fn node_cost(&self, function: &str, args: &[ScriptValue]) -> Result<u32, ScriptError>; // reserved before `call`
+    fn call(&self, function: &str, args: &[ScriptValue]) -> Result<ScriptValue, ScriptError>;
 }
 pub struct ScriptLimits { pub time_ms: u32, pub max_ops: u32, pub max_nodes: u32, pub memory_mb: u32 }
-// No network, file system, timers or async. Math.random is seeded per run, so output is deterministic.
+// No network, file system, timers, Date, Promise or async. Math.random is a seeded LCG per run and Math uses
+// pinned soft-float libm, so output is the same natively and in WASM; `**` refuses (use Math.pow).
 
 /// Runtime shaders for shader fills and effects. Our shader dialect is a small, documented subset;
-/// the compiler turns it into what the active renderer runs. Today: SkSL for CanvasKit and skia-safe.
+/// the compiler turns it into what the active renderer runs. Today: SkSL for skia-safe (native and WASM).
 /// Alternatives: WGSL for Vello. Importing GLSL ES fragment shaders goes through the same port.
 pub trait ShaderCompiler {
     fn compile(&self, src: &str, target: ShaderTarget) -> Result<CompiledShader, ShaderError>;
 }
 ```
 
-The `ScriptApi` handed to scripts is a thin binding over **Ops** (§5): every call a script makes becomes an ordinary validated op, so a script can never do anything the op layer doesn't allow.
+The `ScriptApi` handed to scripts is a thin binding over **Ops** (§5): every mutating call plans an ordinary op against a staged copy of the document, so a script can never do anything the op layer doesn't allow, and a successful run is committed as one transaction (ADR-005, ADR-019). Each run gets a fresh runtime; arguments and results are copied as bounded JSON; source is a strict function body with an explicit `return`.
+
+Not every swap point is a trait on this list. `LibrarySource` (resolver) hands the core decoded library files by normalized path, and `Services` / `RenderRead` (document API) are the bounded, in-memory scene and render reads `execute` and screenshots use; hosts inject both.
 
 The `Engine` struct in core is constructed with these as generics/trait objects. Hot paths (layout, spatial index) use generics for zero-cost dispatch; cold paths (codec, assets) use `dyn`.
 
 ### 3.2 Rendering port
 
-The core never draws. It produces a **display list** (our types, versioned), and a renderer consumes it.
+The core never draws. It produces a **display list** (our types in `vellum-types::display`, versioned), and a renderer consumes it (ADR-015).
 
 ```rust
+pub struct DisplayList { pub commands: Vec<DrawCmd>, pub resources: Vec<Resource> }
 pub enum DrawCmd {
-    Save, Restore, Transform(Affine), Clip(ClipShape),
-    Path { path: PathRef, paint: Paint },
-    GlyphRun { font: FontHandle, glyphs: GlyphSlice, paint: Paint },
-    Image { asset: AssetHash, dst: Rect, fit: ImageFit },
-    Effect { kind: EffectKind },            // shadows, blurs
-    Layer { opacity: f32, blend: BlendMode },
+    Save, Restore,
+    Transform([f32; 6]),                     // SETS the absolute local-to-device matrix (f64 viewport rebase, then f32)
+    Clip { shape: u32 },                     // stays in device space once established
+    Path { shape: u32, paint: u32, stroke: Option<u32> },
+    GlyphRun { glyphs: u32, paint: u32, stroke: Option<u32> },
+    Image { image: u32, dst: [f32; 4] },
+    Effect { effect: u32 },                  // configures the enclosing Layer
+    Layer { opacity: f32, blend: BlendMode },// one isolated group; Restore composites it
 }
+pub enum Resource { Shape(Shape), Paint(RenderPaint), Stroke(RenderStroke), Glyphs(RenderGlyphRun),
+                    Image(RenderImage), Effect(RenderEffect) }   // first-use ordered, referenced by index
 ```
+
+Shapes are typed descriptors (rect with radii, ellipse arcs and rings, polygon, star, line, SVG path data with a
+fill rule, boolean operands), not vendor paths; renderers lower them. Glyph runs carry exact font, glyph and cluster
+identities, variation coordinates, synthesis, decorations and links; font bytes travel beside the buffer. The list
+crosses the WASM boundary as one byte buffer with fixed opcodes (see `docs/runbooks/display-list.md`); the decoder
+refuses unknown versions, malformed lengths, bad references, unbalanced state, non-finite scalars and trailing
+bytes, and caps input at 64 MiB.
 
 ```ts
 // TypeScript side, packages/renderer-api
 export interface Renderer {
-  readonly id: string;                       // "canvaskit" | "vello" | "canvas2d"
-  init(surface: HTMLCanvasElement, opts: RendererOptions): Promise<void>;
-  draw(list: DisplayListView, viewport: Viewport): void;
-  resize(w: number, h: number, dpr: number): void;
-  capabilities(): RendererCaps;              // effects, blend modes, max texture
+  readonly state: "ready" | "context-lost" | "disposed";
+  resize(viewport: Viewport): void;          // width, height, dpr
+  draw(frame: Frame): void;                  // displayList bytes + font and image resources; a failed frame keeps the last good one
+  readPixels(): Uint8Array;                  // unpremultiplied RGBA
   dispose(): void;
 }
 ```
 
 | Implementation | Where | Status |
 |---|---|---|
-| `renderer-canvaskit` (TS, WebGL2) | Editor | v1 default |
-| `render-skia` (Rust, `skia-safe`) | Daemon, CLI, workers | v1 default |
-| `renderer-canvas2d` (TS) | Editor fallback, tests | v1, no effects; also the reference fake |
-| `render-vello` (Rust → WASM, WebGPU) | Editor + native | Later, behind flag |
+| `render-skia` (Rust, `skia-safe` 0.153, source-built) | Daemon, CLI, workers natively; editor through `renderer-skia` (the same crate compiled to `wasm32-unknown-emscripten` in one module with `vellum-core`, drawing into WebGL2) | v1 default everywhere (ADR-001, ADR-016) |
+| `renderer-canvas2d` (TS over the same WASM module's geometry and glyph rasterization) | Editor fallback (S02), tests | v1 basic: no effects, mesh averaged, shader paints transparent, linear burn as normal; it reports these simplifications. Exports always use the full renderer (ADR-017) |
+| `render-vello` (Rust → WASM, WebGPU) | Editor + native | Later, behind a flag, on ADR-001's revisit conditions |
 
-The golden suite renders every fixture through every renderer and compares against reference images with a per-renderer tolerance.
+CanvasKit is not used: one module means a frame never crosses the JS boundary per draw call. Skia never lays out
+text (no `textlayout`); it draws Parley's glyphs. Every renderer uses Skia's FreeType manager with fonts passed in as
+bytes (`FontMgr::custom_empty`); CoreText, DirectWrite and fontconfig are compiled out, so the same document draws the
+same everywhere. Skia is built from source with CI caching, with low-precision raster pipelines disabled so native
+and WASM CPU rasters agree (ADR-016). Gradients, meshes, all 18 blend modes, shadows and blurs are drawn; filtered
+scenes are rasterized on the CPU and composited, so GPU and CPU agree (ADR-017). Prepared scenes and raster tiles
+are cached with fixed limits (8 frames, 32 MiB of input; 512 px tiles, 16 MiB per scene).
+
+**Goldens compare like with like:** CPU raster against CPU raster (native and WASM agree within 1), GPU against GPU,
+and a cross-backend comparison (an agent's headless screenshot against the editor's canvas) uses an edge tolerance:
+per channel 2, at most 2% of pixels differing, p95 delta at most 1. Text tolerates per channel 3 and 0.01% of
+pixels. The golden suite renders every fixture through every renderer, including the basic projection against
+Canvas2D, and compares premultiplied colour plus alpha.
 
 ### 3.3 Editor ports (TypeScript)
 
 | Port | Purpose | Implementations |
 |---|---|---|
 | `Host` | File I/O, watching, daemon discovery, opening links, clipboard, theme | `host-vscode`, `host-electron`, `host-browser`, `host-fake` |
-| `Renderer` | §3.2 | `canvaskit`, `canvas2d` |
+| `Renderer` | §3.2 | `renderer-skia` (the WASM module), `renderer-canvas2d` |
 | `EngineClient` | Typed wrapper over the WASM engine, so UI never touches `wasm-bindgen` output | `engine-wasm`, `engine-fake` (tests, Storybook) |
 | `DaemonClient` | Live-mode link to the daemon | `daemon-ws`, `daemon-fake` |
 | `SyncClient` | Multiplayer link | `sync-ws`, `sync-noop` |
@@ -311,7 +388,21 @@ spec line. A failed tool is a result the agent can read and fix, not a protocol 
 | Built-in agent (`AgentEngine`) | Agent loop calling tools through a `ToolBridge` over the registry |
 | Future protocols | New adapter only; tools unchanged |
 
-`ToolCtx` routes to a **`DocumentTarget`** port with two implementations: `LiveTarget` (forward ops to the editor that has the file open) and `HeadlessTarget` (native engine + file). Tools don't know which they're talking to. Leases are a target capability (`DocumentTarget::lease(frame, agent, Claim | Release)`), so the editor wire protocol carries claims too. `execute` runs its script on a scratch copy of the document and sends the resulting diff to the target as one transaction; the target's Guard still decides (ADR-021).
+`ToolCtx` routes to a **`DocumentTarget`** port (in `vellum-core`, ADR-020) with two implementations: `LiveTarget` (forward ops to the editor that has the file open, through an `EditorLink`) and `HeadlessTarget` (native engine + file, saved after every transaction). Tools don't know which they're talking to.
+
+```rust
+pub trait DocumentTarget {
+    fn mode(&self) -> TargetMode;                                   // live or headless
+    fn snapshot(&mut self) -> Result<Document, TargetError>;        // unsaved changes included
+    fn transact(&mut self, tx: Transaction) -> Result<Applied, TargetError>; // through the Guard
+    fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError>;
+    fn lease(&mut self, frame: &NodeId, agent: &AgentId, change: LeaseChange) -> Result<(), TargetError>;
+    fn save(&mut self) -> Result<(), TargetError>;
+    fn is_dirty(&mut self) -> Result<bool, TargetError>;
+}
+// TargetError: Write (the Guard's rejection), ReadOnly, Gone, File, Render, Lease
+```
+ Leases are a target capability (`DocumentTarget::lease(frame, agent, Claim | Release)`), so the editor wire protocol carries claims too. `execute` runs its script on a scratch copy of the document and sends the resulting diff to the target as one transaction; the target's Guard still decides (ADR-021).
 
 ```rust
 pub trait ModelProvider: Send + Sync {    // built-in agent and `vellum prompt`
@@ -365,12 +456,17 @@ pub trait ToolBridge {
     fn call(&self, name: &str, input: Value) -> ToolReply; // JSON, or the error as JSON with `failed`
 }
 
-/// Conversations live on the user's computer, never in the design file.
+/// Conversations live on the user's computer, never in the design file (ADR-006).
 pub trait SessionStore {
-    fn sessions(&self, doc: &DocKey) -> Vec<SessionMeta>;
-    fn append(&self, session: SessionId, event: SessionEvent) -> Result<(), StoreError>;
-    fn events(&self, session: SessionId, since: Option<EventSeq>) -> Vec<SessionEvent>;
-    fn delete(&self, session: SessionId);
+    fn create(&self, session: NewSession) -> Result<(), StoreError>;
+    fn sessions(&self, doc: &DocKey) -> Result<Vec<SessionMeta>, StoreError>;   // newest activity first
+    fn session(&self, id: &SessionId) -> Result<Option<SessionMeta>, StoreError>;
+    fn rename(&self, id: &SessionId, title: &str) -> Result<(), StoreError>;    // the only metadata write
+    fn append(&self, session: &SessionId, event: NewEvent) -> Result<EventSeq, StoreError>; // places from 1, no gaps
+    fn events(&self, session: &SessionId, since: Option<EventSeq>) -> Result<Vec<SessionEvent>, StoreError>;
+    fn put_image(&self, bytes: &[u8]) -> Result<ImageRef, StoreError>;          // content-addressed cache
+    fn image(&self, image: &ImageRef) -> Result<Option<Vec<u8>>, StoreError>;
+    fn delete(&self, id: &SessionId) -> Result<(), StoreError>;                 // events + pictures only it named
 }
 
 /// Requests from an agent to do something outside the canvas (read or write a repo file, run a command).
@@ -394,7 +490,7 @@ pub trait StyleLibrary {
 | Port | Implementations |
 |---|---|
 | `AgentEngine` | `builtin` (our loop over any `ModelProvider`: one self-check after writes; long tool results cut with a marker; old results pruned to markers, then older rounds summarized, near the context limit; Stop races every provider wait), `claude-code` (the user's installed Claude Code, run headlessly with our MCP server attached; uses whatever sign-in it already has: Claude subscription, API key, Bedrock, Vertex), `codex` (same for Codex CLI, including ChatGPT sign-in), `fake`. Later adapters: `gemini-cli`, `copilot` (GitHub sign-in), `cursor-agent`, `opencode`. A new engine is one adapter. |
-| `SessionStore` | `sqlite` at `~/.vellum/sessions.db` (keyed by the file's repo-relative path + repo root), `memory` |
+| `SessionStore` | `sqlite` at `~/.vellum/sessions.db` (keyed by the file's repo-relative path + repo root; rusqlite with bundled SQLite; events append-only, enforced by a trigger; pictures in `~/.vellum/cache/` by SHA-256), `memory` |
 | `PermissionBroker` | `editor` (shows a Permission card in the Agent panel), `cli` (prompts in the terminal, or `--allow`/`--deny` flags), `policy` (pre-approved rules from settings, e.g. "read anything in this repo") |
 | `SkillSource` | `builtin` (format schema, `execute` API, workflows), `design-system` (each system's `guidelines.md`), `folder` (user-added `SKILL.md` folders), stacked in that order; a later source owns a duplicate path. Folder sources read only explicitly configured files through an authorized rooted `FileSystem` (no recursive scan, no home-directory discovery) (ADR-022) |
 | `StyleLibrary` | Visual styles (palette, type, radius, density and a short description) that agents can apply when no design system is set. `builtin` (six recipes) + `folder` (registered JSON files). Recipes are starting points for canvas work; existing variables, guidelines and the person's decisions win, and fonts are preferences, not claims they are installed. |
@@ -414,13 +510,13 @@ Each is a small trait with a registry, so adding SwiftUI tokens is one new file 
 
 | Port | Purpose | Implementations | Release |
 |---|---|---|---|
-| `Importer` | Turn foreign content into our `DocumentData` subtree | `svg`, `image` (PNG/JPEG/WEBP as image nodes), `figma-clipboard` (paste), `figma-file` (via Figma's REST API with the user's token; reading a locally exported `.fig` file only after legal review), `html` (DOM + computed styles → frames, from `BrowserPort`) | `svg`, `image`, `figma-clipboard` v1; the rest v1.1 |
+| `Importer` | Turn foreign content into our `Document` subtree | `svg`, `image` (PNG/JPEG/WEBP as image nodes), `figma-clipboard` (paste), `figma-file` (via Figma's REST API with the user's token; reading a locally exported `.fig` file only after legal review), `html` (DOM + computed styles → frames, from `BrowserPort`) | `svg`, `image`, `figma-clipboard` v1; the rest v1.1 |
 | `BrowserPort` | Load a URL (including `localhost` dev servers), screenshot the page or an element, return a DOM + computed-style snapshot for the `html` importer | `chromium-cdp` (desktop: Electron's own Chromium; daemon: a managed headless Chromium via CDP), `fake` | v1.1 |
 | `IconLibrary` | Searchable icon sets inserted as vector nodes | `lucide`, `material-symbols` (outlined, rounded, sharp), `phosphor`, `feather`, user folder of SVGs | v1 |
 | `ImageSource` | Fill image slots with real pictures | `stock` (a licensed stock API, key in `SecretStore`), `generate` (any image model through `ModelProvider`-style adapter), `local` | `stock` v1, `generate` v1.1 |
 | `ImageOps` | Remove background, trace image to vectors | `local` (ONNX segmentation model, `vtracer` for tracing), `fake` | v1.1 |
 
-All importers produce `DocumentData` and go through Ops like everything else, so imported content is undoable, attributed and diffable.
+All importers produce `Document` content and go through Ops like everything else, so imported content is undoable, attributed and diffable.
 
 ### 3.7 Cloud service ports
 
@@ -453,16 +549,20 @@ Document
  ├ imports     alias → relative path of a library file (*.lib.vellum)
  ├ themes      axis → ordered values, e.g. {Mode: [Light, Dark], Device: [Phone, Tablet]}; first value is the default
  ├ variables   id → {name, type: color | number | string | boolean,
- │                   values: [{value | $alias, when: {axis: value}}]}   last matching entry wins
+ │                   values: [{value | $alias: <variable id>, when: {axis: value}}]}
+ │                   the last entry whose `when` matches wins, by position, not specificity
  ├ styles      text styles, effect styles
  ├ fonts       custom fonts carried with the document (files in <name>.assets/fonts/)
- ├ components  id → node tree + props + variants
+ ├ components  id → node tree + props (typed, each with optional bindings [{node: path, property}])
+ │                   + variants (each an override set on the one tree, chosen by its axis values)
  └ pages[]     id, name, kind: canvas | slides, children: Node[]
 
 Node (tagged union)
-  frame      layout: none | row | column | grid; gap; padding (1, 2 or 4 values); justify: start | center | end
-             | space-between | space-around; align; layoutIncludesStroke; clip; theme? {axis: value};
-             slot? {suggested: componentId[]}
+  frame      layout: none | row | column | grid; grid columns, rows? (equal tracks, auto placement); gap;
+             padding (n, [vertical, horizontal] or [top, right, bottom, left]); justify: start | center | end
+             | space-between | space-around (rows and columns only); align; cornerRadius;
+             layoutIncludesStroke (reserves this frame's own inward stroke beside padding: inside full width,
+             center half, outside none); clip; theme? {axis: value}; slot? {suggested: componentId[]}
   group      children, effects
   rect       cornerRadius (1 or 4 values)
   ellipse    innerRadius, startAngle, sweepAngle            (rings, arcs, pie slices)
@@ -473,15 +573,20 @@ Node (tagged union)
              strikethrough, link), align: left | center | right | justify, verticalAlign: top | middle | bottom,
              resize: auto-width | auto-height | fixed, textStyle?
   image      asset, fit: fill | fit | stretch, crop (affine transform)
-  icon       library, name, weight (100–700), fill
-  instance   componentId, variant, props, overrides {nodeIdPath → props | replacement node | children},
+  icon       library, icon (the icon's name; `name` is the layer name), weight (100–700), fill
+  instance   componentId, library? (an import alias; absent = local), variant, props (literal values),
+             overrides {nodeIdPath → exactly one of props (a checked NodePatch) | replace (a node) | children},
              slotContent {slotId → Node[]}
-  script     src (.js file relative to the document), inputs {name → value | $var}, clip
+  script     src (.js file relative to the document), inputs {name → value | $var (any type; a colour arrives
+             as the text #RRGGBB)}, clip
              children are derived output: rendered, never saved, not in undo history
   note       sticky note for people (content, colour); agents can read it
   context    canvas-placed instructions for agents (content); read with the frame it sits in or points at
   prompt     a saved request on the canvas (content, engine/model?); Run sends it to the agent panel
   embed      live web view (url, device, zoom, scroll, radius, stroke, effects) — v1.1, uses BrowserPort
+  conflict   left by a three-way merge in the conflicted node's place and id: ours?, theirs? (each side's
+             version without children; absent when that side removed it), properties (what both changed),
+             children (merged, live). Choosing a version is a Replace with that version
 
 Common to every node: id, name, visible (or $boolean var), locked, opacity, rotation, flipX, flipY,
                       position: auto | absolute (inside a layout), width/height: number | $var | hug | fill
@@ -501,14 +606,22 @@ Effects:  drop-shadow, inner-shadow (offset, blur, spread, color, blendMode), la
 BlendMode: normal, darken, multiply, color-burn, linear-burn, lighten, screen, color-dodge, linear-dodge,
           overlay, soft-light, hard-light, difference, exclusion, hue, saturation, color, luminosity
 
-Every property can be a literal or a variable reference: {"$var": "color/primary"}
+Every property that takes a variable can be a literal or a variable reference by id: {"$var": "<variable id>"}.
+The variable's `name` (a path such as color/primary) is for people; tools accept names and resolve them to ids
+at their own boundary. Text runs have no colour of their own: a text node's fills colour it.
 ```
 
-- **Themes and modes.** Variables can vary along several **axes** at once (Mode: Light/Dark, Device: Phone/Tablet, Brand: A/B). A frame can set a theme value for its subtree; children inherit it unless they set the same axis themselves. The first value of each axis is the document default.
-- **Aliases.** A variable's value can reference another variable of the same type.
-- **Overrides.** Instances can override any property, replace a descendant node entirely, or replace its children, addressed by an ID path (`card/actions/button`). Inherited layers can't be reparented inside an instance; that's what slots are for.
+- **References are ids** (ADR-010). Variable, component, style, asset and node references hold ids, never names, so a rename on one branch and a use on another still merge cleanly.
+- **Themes and modes.** Variables can vary along several **axes** at once (Mode: Light/Dark, Device: Phone/Tablet, Brand: A/B). A frame can set a theme value for its subtree; children inherit it unless they set the same axis themselves. The first value of each axis is the document default. A frame's choice naming an axis or value the document lacks is ignored and reported as a problem on that node.
+- **Aliases.** A variable's value can reference another variable of the same type, followed under the same theme. A cycle along the entries a theme selects is an error; the op layer refuses any alias loop when it is set.
+- **Binding types** are checked when a binding is made, once per transaction: opacity takes a number variable, `visible` a boolean, a colour a colour, an icon's name a string. A variable that changes type while something uses it is refused.
+- **Props** drive the nodes and properties their `bindings` name (ADR-011). A text prop bound to `content` replaces the characters with one run in the first run's style. Two props cannot drive the same property, and identity and children are not prop targets.
+- **Overrides.** Instances can override any property, replace a descendant node entirely, or replace its children, addressed by an ID path (`card/actions/button`), including paths through nested instances. Expansion order: definition, props, selected variant, instance overrides, slot content, then the instance's own common fields. Inherited layers can't be reparented inside an instance; that's what slots are for.
 - **Slots** are empty frames inside a component that instances fill with their own content. `suggested` lists components that usually go there; suggestions guide humans and agents but never restrict.
-- **Script nodes** point at a `.js` file beside the document. The file's header declares inputs (`@input columns: number(min=1) = 3`), which become controls in the properties panel; inputs can bind to variables. The `ScriptRuntime` port runs it with hard limits (1,000 nodes, 2 s, no I/O, seeded randomness) and its returned nodes render inside the script node's bounds. **Convert to layers** replaces it with a frame holding a snapshot of the output. Scripts use the same node schema as the file, so agents can write them.
+- **Sizing** (ADR-002, ADR-012) matches the browser, checked against Chrome on 186 fixtures. Children sit at the start unless they fill; fixed and hug never shrink; fill children share the space equally and ignore their content. Fill on the main axis of a hugging parent, fill with nothing to fill (a top-level frame, a child of a `layout: none` frame, an absolute child) and hug on a `layout: none` frame use their fallback (else hug, or refused). Top-level and absolute frames hug at max-content; `x`, `y` are measured from the parent's outer edge. Grid `justify`/`align` place items in their cells. Text: auto-width hugs both axes, auto-height hugs its height at the given width, fixed keeps both and reports overflow (ADR-013).
+- **Containment.** Frames, groups and canvas pages hold any node; a boolean holds shapes, text, groups and booleans; a slides page holds frames, notes, context and prompts at its top level. A node may move between pages but not between a page and a component. Wrap, group and ungroup keep positions (and refuse a rotated or flipped wrapper); in an update, `null` puts a property back to its default.
+- **Field spellings** are those of the generated reference in `docs/format/`; the sketch above names concepts.
+- **Script nodes** point at a `.js` file beside the document. The file's leading comments declare a schema (1) and up to 128 inputs (`@input columns: number(min=1) = 3`; types number, string, enum, color, boolean, ref), which become controls in the properties panel; inputs can bind to variables. The `ScriptRuntime` port runs it with hard limits (1,000 nodes, 2 s, 64 MiB, no I/O, seeded randomness); the program sees only frozen `doc.inputs` and `doc.apiVersion` and returns an array of nodes, checked through ops on an isolated page and given ephemeral ids. The output is kept outside the document and the store and rendered inside the script node's bounds; a failed run removes the old output. **Convert to layers** replaces it with a frame holding a snapshot of the output, in one attributed, undoable transaction (ADR-019). Scripts use the same node schema as the file, so agents can write them.
 - **Shaders** are runtime shader files beside the document, used as a fill or an effect. Uniforms can bind to variables; the renderer supplies the node's size and, for effects, its rendered content. A `ShaderCompiler` port (§3.1) turns our shader dialect into whatever the active renderer runs.
 - **Agent context on the canvas.** `agentNotes` (on any node), `context` nodes (a block of instructions placed beside frames) and `note` nodes (sticky notes for people) are all returned by `get_app_state`, `get_nodes` and `execute` reads; skills tell agents to respect notes and context. `prompt` nodes keep a reusable request on the canvas next to what it's about.
 - **Slides** are frames on a `slides` page, ordered for presenting and for multi-page PDF export.
@@ -518,29 +631,33 @@ These types are plain Rust structs with `serde`, `schemars` and `ts-rs`. They ar
 
 ### 4.2 `DocStore` today: Loro
 
-The Loro adapter (`adapters/doc-loro`) maps our tree onto Loro's **movable tree** (reparenting merges correctly), maps for properties and lists for child order. Undo, history and binary sync updates come from Loro, exposed only through the `DocStore` trait.
+The Loro adapter (`adapters/doc-loro`, loro 1.16) maps our tree onto Loro's **movable tree** with fractional indexes (reparenting merges correctly): the pages in order and one root per component, each document node one tree node whose meta map holds each property as its own entry, so concurrent edits to different properties merge (ADR-004). Binary sync updates come from Loro, exposed only through the `DocStore` trait; nothing depends on Loro's iteration order or snapshot bytes, which differ between native and WASM. Two stores opened from the same file share a genesis change derived from its content, so they sync without duplicating it.
+
+**Undo is not Loro's.** Loro's undo is per peer and grows with the document; Vellum's is per actor and per turn. `vellum_core::history`, shared by every store, records each commit's inverse and footprint and replays it adjusted to the document as it is: someone else's later change to a property, a node someone built on, a later move are kept. ⌘Z takes the actor's latest change back as far as it can. "Undo this turn" is undone outright when nothing later depends on it; otherwise the store changes nothing and returns a `Revert` that `ops::revert` applies as a new, undoable transaction. Writing a property's current value is not a change. A 200-node batch on a 10,000-node document undoes in about 15 ms.
 
 ### 4.3 On-disk format: `.vellum`
 
 - **Deterministic serialization:** keys in a fixed order, 2-space indent, numbers normalized.
 - **Stable IDs** so a moved node diffs as a move.
-- **Assets** beside the file in `<name>.assets/`, by content hash, via `AssetStore`: images, custom fonts (TTF, OTF, WOFF, WOFF2; they travel with the document) and shader files. Script `.js` files and library files are referenced by relative path, so a design folder can be moved or zipped as a unit.
-- **Directory format** (`app.vellum/`, one file per page) as a second `Codec` for large documents.
-- **Spec and schema** published in `docs/format/`, generated from `vellum-types`.
+- **Quantized in the codec only:** positions, sizes, radii, gaps and paddings to 1/100 px; ratios, opacities and gradient stops to 1/1000; angles to 1/100 degree. A file in a newer format is refused with the version it needs.
+- **Assets** beside the file in `<name>.assets/<sha-256>`, one file per hash with no extension, via `AssetStore` (ADR-018): images and custom fonts (TTF, OTF, WOFF, WOFF2, stored as imported and unpacked on load; they travel with the document and are served before bundled fonts). Unreferenced assets are removed only on an explicit save, keeping any the undo history can still bring back. Script `.js` files, shader files and library files are referenced by relative path (a `src` into `<name>.assets/` is an asset), so a design folder can be moved or zipped as a unit.
+- **Writes are atomic:** a temporary file beside the target, synced, renamed over it, and the folder synced.
+- **Directory format** (`app.vellum/`: `index.json` with page stubs, `pages/<page-id>.json`, a `.saving` marker during multi-file saves) is a second `DocumentFiles`, not a `Codec`: bytes in and out cannot say which page a byte belongs to. Every file is a normal document written by the single-file codec. A save cut short leaves whole files but possibly pages from different moments, reported as `interrupted`. Suggested (never required) at 10,000 nodes or 4 MB of JSON; its benefit is per-page Git diffs, not faster saves.
+- **Spec and schema** published in `docs/format/` (including `files.md`), generated from `vellum-types`.
 
 ### 4.4 Libraries
 
-- **A library is a document with `kind: library`**, saved as `*.lib.vellum`. Turning a document into a library is a one-way change (the editor asks first).
-- **Importing** adds an alias to `imports` with a relative path. Instances from a library keep a link; when the library changes, importing documents pick up the change on next open (and live, when both are open in the same editor).
+- **A library is a document with `kind: library`**, saved as `*.lib.vellum`. Turning a document into a library is a one-way change in the editor and its helper (the editor asks first); the op underneath (`SetShell`) can still set it back, because a checkout of an older file arrives as ops.
+- **Importing** adds an alias to `imports` with a relative `.lib.vellum` path. An instance names a library component with `library: <alias>` beside its `componentId`. A library's definitions resolve their variables, themes and nested components in the library; the instance's own overrides and slot content resolve in the importing document. Instances keep a link; when the library changes, importing documents pick up the change on next open (and live, when both are open in the same editor). The core reads libraries through an injected `LibrarySource`.
 - **Overrides win** over library changes, as with local components.
-- **Pasting between documents:** content from a library into a document that hasn't imported it asks **Link to library** (adds the import) or **Paste as copies** (independent). Pasting from an ordinary document copies without a link. Variables (and their theme values) travel with pasted content; on a name clash the person chooses **Use existing** or **Add renamed**.
-- **Missing library:** if the path no longer resolves, the editor shows the library as missing and offers **Locate…**; instances keep rendering from the last known copy cached in `~/.vellum/cache/`.
+- **Pasting between documents:** content from a library into a document that hasn't imported it asks **Link to library** (adds the import) or **Paste as copies** (independent). Pasting from an ordinary document copies without a link. Variables (and their theme values), styles, fonts and component dependencies travel with pasted content; on a name clash the person chooses **Use existing** (same type) or **Add renamed**. Paste produces ordinary ops; asset, font and script bytes are carried by the host, which reports any that are missing (ADR-011, ADR-018).
+- **Missing library:** if the path no longer resolves, the editor shows the library as missing and offers **Locate…**; instances keep rendering from the last known copy cached in `~/.vellum/cache/` (flagged as missing; the copy holds the document only, so its images are missing too).
 - **Starter design systems** ship as libraries.
 
 ### 4.5 External changes and Git
 
-- **External change** (`git checkout`, merge, an agent editing the file directly): the daemon's watcher fires, core **diffs old vs new `DocumentData` by node ID** and applies the difference as ops. Open editors update in place.
-- **Merge driver:** `vellum merge-driver` does a three-way merge by node ID and property, leaving a conflict marker node only when the same property changed on both sides. It works on `DocumentData`, so it doesn't care which `DocStore` or `Codec` is in use.
+- **External change** (`git checkout`, merge, an agent editing the file directly): the daemon's watcher fires and the daemon re-reads the file; a content hash equal to the last known file is a self-write and is ignored. Otherwise core runs the three-way merge (last file, the engine's document with any unsaved edits, the new file), diffs the engine's document against the result by node ID, and applies that as one transaction by `Actor::File`. With no unsaved edits this equals diffing old against new. A file with text-merge markers, a half-written file, an interrupted folder save or a deleted file is reported and nothing is applied (ADR-020). Open editors update in place.
+- **Merge driver:** `vellum merge-driver` does a three-way merge by node ID and property (ADR-010). A change beats a removal. The same property changed both ways gives a `conflict` node holding both versions; where no node can hold both (both moved one node, both reordered the same children, a variable, style, page or the name changed both ways) ours is kept and the conflict is reported. It works on `Document`, so it doesn't care which `DocStore` or `Codec` is in use.
 
 ---
 
@@ -548,17 +665,21 @@ The Loro adapter (`adapters/doc-loro`) maps our tree onto Loro's **movable tree*
 
 | Module | Responsibility | Ports it uses |
 |---|---|---|
-| **Ops** | The only way to change a document: `insert`, `update`, `delete`, `move`, `copy`, `replace`, `set_variable`, `create_component`, `detach`, `toggle_component`, `replace_in_instance`, `make_slot`, `convert_script`, `wrap_in_frame`, `group` / `ungroup`, `boolean`, `align` / `distribute`, `reorder`, `flip`, `scale` (resizes content, text, strokes, radii, spacing and effects together; variable-bound sizes become fixed values and instances get overrides), `outline_stroke`. Validated, applied as one transaction, one undo step. Every transaction carries an **origin** `{actor, session?, turn?}`, which is what makes per-person undo, "Undo this turn" and the History ledger possible. | `DocStore`, `IdGen` |
-| **Guard** | Checked before every agent transaction: is this actor paused, is the target inside a frame leased by someone else, is the batch within limits. Rejections are returned to the agent with a reason and recorded in History. Human edits skip lease checks (your edits win). | — |
-| **Layout check** | Finds problems agents should fix: text overflowing its box, children clipped by a parent, overlapping siblings in a flex container, nodes off any frame. Feeds `snapshot_layout(problems_only)`. | `TextEngine`, `SpatialIndex` |
-| **Resolver** | Variables (per mode), component instances and overrides → resolved tree. Cached per subtree. | — |
-| **Layout** | Builds the `LayoutTree` from resolved frames; incremental via dirty sets. | `LayoutEngine`, `TextEngine` |
-| **Scene** | Hit-testing, marquee, snapping, viewport culling. | `SpatialIndex` |
-| **Display list** | Visible nodes → `DrawCmd` buffer in shared memory. | `FontSource`, `PathOps` |
-| **Diff / merge** | `DocumentData` diff → ops; three-way merge. | — |
+| **Ops** | The only way to change a document: `insert`, `update`, `delete`, `move`, `copy`, `replace`, `set_variable`, `create_component`, `detach`, `toggle_component`, `replace_in_instance`, `make_slot`, `convert_script`, `wrap_in_frame`, `group` / `ungroup`, `boolean`, `align` / `distribute`, `reorder`, `flip`, `scale` (resizes content, text, strokes, radii, spacing and effects together; variable-bound sizes become fixed values and instances get overrides), `outline_stroke`, and for whole documents `insert_page`, `delete_page`, `update_page`, `move_page`, `set_shell` (meta, imports, themes, styles, fonts), `set_component`, `update_component`. Validated, applied as one transaction, one undo step; references and binding types are checked once, against where the transaction ends (a refusal still names the op that first broke it). `DocStore::apply` takes a `Commit` that only `ops` can build. Every transaction carries an **origin** `{actor, session?, turn?}`, which is what makes per-person undo, "Undo this turn" and the History ledger possible. | `DocStore`, `IdGen`, `PathOps` |
+| **Guard** | Checked before every agent transaction: is this actor paused, is the target inside a frame leased by someone else, is the batch within limits (default 1,000 ops and 1,000 new layers per transaction). Rejections are typed, returned to the agent with a reason and recorded in History. Human edits skip lease checks (your edits win). | — |
+| **History** | Per-actor undo/redo and "Undo this turn" for every store: inverses with footprints, replayed around later work by others (§4.2). | — |
+| **Layout check** | Finds problems agents should fix, as typed problems with world-space boxes addressed by occurrence path: text overflowing its box (from the same text layout the display list uses), children clipped by any clipping ancestor (rounded and transformed), overlapping flow siblings, nodes outside every frame, broken hug cycles. Feeds `snapshot_layout(problems_only)` (ADR-015). | `TextEngine`, `SpatialIndex` |
+| **Resolver** | Variables (per theme), component instances, props, variants, overrides, slots and libraries → a tree of resolved **occurrences** (each with its address, source and problems). An unresolved reference stays a reference and is reported, never guessed. Cached per node and kept good by the change set and a variable-to-readers index (ADR-010, ADR-011). | `LibrarySource` |
+| **Layout** | Builds the `LayoutTree` from resolved occurrences and resolves hug / fill / fixed (ADR-002) before any vendor style; incremental via dirty sets. A fill on the main axis of a hugging parent uses its fallback or hugs, and says so (ADR-012). | `LayoutEngine`, `TextEngine` |
+| **Scene** | One scene per page from resolved roots and layout boxes: point and marquee selection on transformed boxes, inherited visibility and locking, rounded clips, snapping from indexed candidates only, `find_space` (deterministic best-first search, bounded at 10,000 probes). Bounds-based, not shape coverage (ADR-014). | `SpatialIndex` |
+| **Display list** | Visible occurrences → a versioned binary `DrawCmd` buffer plus resources (§3.2). Culls conservatively: strokes, shadows, blurs and text overflow widen the query; SVG paths and shaders are never culled. | `FontSource`, `PathOps`, `TextEngine` |
+| **Diff / merge** | `Document` diff → ops in an order the op layer accepts; three-way merge by id and property, with conflict nodes (§4.5). | — |
+| **Document API** | The `execute` program API and script-node semantics: one method registry that also generates `vellum-doc.d.ts` and `doc.apiVersion`; staged calls, one commit (§7.3, ADR-019). | `ScriptRuntime`, `Services` |
+| **Files** | Atomic writes, asset collection on explicit save, fonts, library files and cache, the directory format, the large-file suggestion (§4.3). | `FileSystem`, `AssetStore`, `Codec` |
+| **Sessions and turns** | The session event codec, usage by token kind, estimated cost from `pricing.json` (micro-USD, always an estimate), conversation history for the next turn, and the turn state machine as a table (§7.6, ADR-006). | `SessionStore` |
 | **Export** | SVG, specs, tokens via registries. | `TokenFormat`, `SpecFormat` |
 
-**WASM boundary:** the engine owns the document. JS sends ops and input events in and gets back display-list buffers (shared memory, no JSON) plus change notifications. The React UI never holds its own copy of the tree.
+**WASM boundary:** the engine and the Skia renderer are one emscripten module (ADR-001), with plain C exports and a thin hand-written JS layer. The engine owns the document. JS sends ops and input events in and gets back change notifications; display-list buffers stay in WASM memory (no JSON, no per-command calls), and a frame needs only the view transform from JS. The React UI never holds its own copy of the tree.
 
 ---
 
@@ -569,7 +690,7 @@ The Loro adapter (`adapters/doc-loro`) maps our tree onto Loro's **movable tree*
 | Build | Vite (static bundle; a VS Code webview can't run a server) | — (Tier C) |
 | Controller | `editor-core` (TS, Zustand vanilla) | Framework-agnostic by design |
 | UI | `editor-react`: React + shadcn + Base UI | Replaceable without touching `editor-core` |
-| Canvas | `Renderer` port, CanvasKit on WebGL2 | §3.2 |
+| Canvas | `Renderer` port: Skia in the WASM module, on WebGL2; Canvas2D basic fallback | §3.2 |
 | Overlays | Second lightweight canvas: handles, guides, agent cursors and leases | Owned by `editor-core` |
 | i18n | `i18next`, your 13 target languages, RTL layout for Arabic | Strings in `locales/`, not code |
 
@@ -587,7 +708,7 @@ The Loro adapter (`adapters/doc-loro`) maps our tree onto Loro's **movable tree*
 - **Crash recovery (desktop):** unsaved changes to an existing file are written to a recovery copy in `~/.vellum/recovery/` every few seconds. After an unexpected quit, reopening offers Save, Save As…, Discard backup or Cancel. Recovery copies are not history; Git is. In the IDE, VS Code's own hot exit does this job.
 - **Local preferences** (pixel grid, snapping, nudge amounts, zoom behaviour, animations) are stored per user by the host, never in the file.
 
-**Electron over Tauri** (ADR-0006): Tauri uses each OS's web engine, so WebGL, fonts and canvas behave slightly differently per platform. *Revisit when* Tauri can bundle a single engine or our golden suite passes on WebKit and WebView2. Because the shell only implements `Host`, switching is a contained job.
+**Electron over Tauri** (no ADR yet): Tauri uses each OS's web engine, so WebGL, fonts and canvas behave slightly differently per platform. *Revisit when* Tauri can bundle a single engine or our golden suite passes on WebKit and WebView2. Because the shell only implements `Host`, switching is a contained job.
 
 ---
 
@@ -598,31 +719,35 @@ One static Rust binary: MCP server, CLI, agent runner, headless renderer and fil
 | Need | Crate |
 |---|---|
 | MCP adapter | Hand-written over the IPC transport (ADR-021); `rmcp` not used |
-| Local IPC to editors and CLI | `tokio` + `interprocess` (Unix domain socket on macOS/Linux, named pipe on Windows) |
+| Local IPC to editors and CLI | Tokio's own Unix socket and named-pipe APIs plus direct Win32 security calls, in `vellum-ipc-local` (ADR-003); `interprocess` not used |
 | Script runtime (`execute`, script nodes) | `rquickjs` behind `ScriptRuntime` |
 | File watching | `notify` |
 | Headless rendering | `render-skia` adapter |
 | Headless browser (v1.1) | `chromiumoxide` (CDP) behind `BrowserPort` |
-| Session store | `rusqlite` behind `SessionStore` |
+| Session store | `rusqlite` (bundled SQLite) behind `SessionStore` (ADR-006) |
 | CLI adapter | `clap` |
 | Logging | `tracing` |
 
 ### 7.1 Live vs headless
 
-Per file: if an editor holds it, `LiveTarget` forwards ops to that editor (canvas updates in real time, agent cursors shown). Otherwise `HeadlessTarget` loads it into a native engine, applies ops, renders and saves. External agents work in both modes, so an agent can design with no app open, in CI, or on a server.
+Per file: if an editor holds it, `LiveTarget` forwards ops to that editor (canvas updates in real time, agent cursors shown). Otherwise `HeadlessTarget` loads it into a native engine, applies ops through the Guard, renders, and saves after every transaction; a failed save keeps the change and retries on the next save. External agents work in both modes, so an agent can design with no app open, in CI, or on a server.
+
+- **One writer per file** (ADR-020). The first editor becomes the writer; a headless target hands over only once everything is saved. Later editors attach and follow every applied transaction, unsaved changes included. When the writer closes, the first attached editor is promoted; when nobody is left, the next tool call opens the file headless again. A writer that stops answering is dropped. Without the daemon an editor cannot know who writes, so it opens read-only.
+- **Recovery copies.** For a live file with unsaved changes the daemon writes a copy to `~/.vellum/recovery/` at most every 5 s (two atomic files named by a hash of the path). A save, Discard backup or a deliberate close removes it; a lost writer keeps it. Restoring applies it as one transaction by `Actor::File`.
 
 ### 7.2 Local connection security
 
-- The daemon listens on a **Unix domain socket** (macOS/Linux) or **named pipe** (Windows) inside `~/.vellum/run/`, a directory only the user can read. There is no TCP port, so no web page in any browser can reach it, which removes the whole DNS-rebinding class of attacks.
+- The daemon listens on a **Unix domain socket** (`vellum.sock`, 0600, macOS/Linux) or **named pipe** (`\\.\pipe\vellum-<user SID>-<run-dir hash>`, Windows, a DACL for the current user only, remote clients refused) inside `~/.vellum/run/`, a directory only the user can read (ADR-003). There is no TCP port, so no web page in any browser can reach it, which removes the whole DNS-rebinding class of attacks. Unsafe existing paths (wrong owner, broad permissions, symlinks) are refused, never repaired.
+- **One daemon per runtime directory.** `startup.lock` serializes starts and the daemon holds `daemon.lock` for its lifetime (OS file locks, released on a crash). Hosts and `vellum mcp` start or reuse it; there is no PID killing.
 - Editor webviews never connect directly: the VS Code extension host and Electron's main process hold the connection and relay messages to the webview.
-- Each connection still presents a token from `~/.vellum/run/daemon.json` (0600) and a protocol version.
-- A TCP listener exists only behind an explicit `vellum daemon --listen` flag for remote dev containers, with the token required and `Origin`/`Host` checks on.
+- Each connection sends a bounded hello with a token from `~/.vellum/run/daemon.json` (0600; a fresh 256-bit token each start), a protocol version, a channel and the client's working directory. Authentication comes before version negotiation. At most 64 sessions; handshakes have a 3 s deadline; frames are capped at 1 MiB.
+- A TCP listener exists only behind an explicit `vellum daemon --listen <ip:port>` flag for remote dev containers: one bounded `POST /rpc` per connection with a Bearer token, an exact `Host`, and an allowlisted `Origin` when present (`null` refused). No CORS, cookies or websockets.
 
 ### 7.3 Tools
 
 **Two layers over one registry.** Both are thin front ends over Ops (§5), so they share validation, the Guard, attribution and undo.
 
-**Layer 1 — `execute`: one script, many operations.** The agent sends a short JavaScript program that runs in the `ScriptRuntime` sandbox against a `doc` API. Loops and variables let one call do what would otherwise take dozens of calls, which cuts tokens and round trips sharply. The whole script is **one transaction and one undo step**; if any op fails, nothing is applied and the agent gets the failing line and reason.
+**Layer 1 — `execute`: one script, many operations.** The agent sends a short JavaScript program that runs in the `ScriptRuntime` sandbox against a `doc` API. Loops and variables let one call do what would otherwise take dozens of calls, which cuts tokens and round trips sharply. The whole script is **one transaction and one undo step**; if any op fails, nothing is applied and the agent gets the failing line and reason. Each mutating call plans its op against a staged copy; the finished stage is diffed back into ops, planned once more against the live document and committed once, so the target's Guard still decides (ADR-019). In the daemon the script runs on a scratch copy and the diff goes to the target as one transaction (ADR-021).
 
 ```js
 // execute({ code })
@@ -637,9 +762,10 @@ return doc.screenshot(step, { scale: 1 });   // image returned to the agent
 ```
 
 - The `doc` API is ours and documented in the `execute` skill: `page`, `get`, `query`, `insert`, `update`, `copy`, `replace`, `move`, `delete`, `setVariables`, `createComponent`, `makeSlot`, `instance`, `findSpace`, `layoutProblems`, `screenshot`, `export`, `fillImage`, `icon`, `claim`, `release`.
-- Limits per call: 5 s, 2,000 ops, 64 MB. No network, file system or timers.
+- Limits per call: 5 s, 2,000 API calls, 2,000 created nodes (counted before each call, descendants and instance content included), 64 MiB; callers may lower them and the Guard's own limits still apply. Each mutating call must leave valid references on its own. No network, file system, timers, Date or async; `**` refuses (use `Math.pow`); the program ends with an explicit `return`.
+- Screenshots and exports from a script are capped at 8,192 px per side and 16.7 megapixels, and return MIME, base64 and size; nothing is written to disk.
 - `execute({ code, validate_only: true })` dry-runs the script and reports what would change.
-- The API is versioned (`doc.apiVersion`); breaking changes ship as a new major version with the old one kept for two minor releases (§2.5).
+- The API is versioned (`doc.apiVersion`) from one registry that also generates `vellum-doc.d.ts` for agents; breaking changes ship as a new major version with the old one kept for two minor releases (§2.5).
 
 **Layer 2 — typed tools.** One tool per operation, for clients and smaller models that do better with schemas than with code, and for quick reads.
 
@@ -661,7 +787,7 @@ Mutating tools take a batch, run as one transaction and one undo step, and retur
 
 - **One thread owns the documents.** Requests run one at a time; a tool that panics is answered as an error and the thread carries on.
 - **Each MCP connection is one agent**, named after its client's `initialize` name, with its own `AgentId` and `SessionId`; its transactions carry them. External calls carry no turn; the built-in engine's do.
-- **Every call is a step** (verb, target frame, counts, thumbnail request, error, timing) kept in the session for the Agent panel and the session store.
+- **Every call is a step** (verb, target frame, the first document it read or wrote, counts, thumbnail request, error, timing). After each call the daemon moves the connection's steps into the session store as an external session, one per document, with thumbnails drawn and cached (§7.6).
 - **Where a document may be.** The connection's hello carries the client's working directory. A relative path means a path in it, and anything outside it is refused until the `PermissionBroker` can ask (§7.7).
 - **The `vellum tool <name>` CLI** has a subcommand per tool and a flag per schema property, and goes to the daemon like any client.
 
@@ -758,10 +884,12 @@ Checked against pen.dev's public docs (October 2026) and its earlier tool set as
 
 ### 7.6 Sessions and turns
 
-- `SessionStore` keeps an append-only event log per session: your message and context, plan, each step (tool, arguments preview, result preview, thumbnail reference, duration, outcome), usage (input/output tokens, cache hits), and the turn's origin ID.
-- Thumbnails and screenshots are cached in `~/.vellum/cache/` by content hash, not stored in the database.
-- Sessions are keyed by repo root + the file's repo-relative path, so renaming a branch doesn't lose them. Deleting a session removes its events and cached images.
-- External MCP sessions are recorded the same way (their tool calls only), which is what lets them appear in the Agent panel and History.
+- `SessionStore` keeps an append-only event log per session (ADR-006): your message and context, the messages a turn added (the next turn's history), plan, each step (tool, arguments and result previews cut at 2,000 characters with a marker, thumbnail reference, duration, outcome done / failed / rejected), usage, and each turn transition. Every event carries its origin (actor, session, turn) and the store refuses an event from another session.
+- **Usage** is counted per token kind (input, output, cache read, cache write; `ModelUsage` means the same for every provider) with an estimated cost in micro-USD from the shipped `pricing.json`, always labelled as an estimate. A model or kind with no price has no estimate, never a guessed one.
+- Thumbnails and screenshots are cached in `~/.vellum/cache/` by SHA-256, not stored in the database; messages hold references to them.
+- Sessions are keyed by repo root (the nearest folder holding `.git`) + the file's repo-relative path, so renaming a branch doesn't lose them. Deleting a session removes its events and the cached images no other session uses.
+- External MCP sessions are recorded the same way (their tool calls only, one session per document), which is what lets them appear in the Agent panel and History.
+- **Turns** follow guide §10.1 as a table: queued → planning → (awaiting plan →) running ⇄ awaiting permission → done | failed, and Stop from any non-terminal state — only a person stops a turn. A step running over 120 s is flagged stuck without changing state. Every transition appends one event with its actor. The session dot is a total function of the state; a stopped turn shows done ("Stopped by you").
 
 ### 7.7 Permissions
 
@@ -869,7 +997,7 @@ codec     = "json"          # or "json-dir"
 
 [render]
 native = "skia"
-editor = "canvaskit"        # "canvas2d" fallback, "vello" experimental
+editor = "skia"             # "canvas2d" fallback, "vello" experimental
 
 [ai]
 engine   = "builtin"        # or "claude-code", "codex"
@@ -929,9 +1057,9 @@ enabled = false
 | Drag a node | Input → frame under 16 ms |
 | Open a 2 MB file | Under 500 ms to first paint |
 | Agent batch of 200 nodes | Applied and painted under 100 ms |
-| WASM bundle | Core under 2 MB gzipped; CanvasKit loaded in parallel and cached |
+| WASM bundle | Core and Skia renderer in one module, about 2 MB gzipped with Parley text (measured 1.95 MB in ADR-001; QuickJS adds about 0.4 MB); fonts load as side resources |
 
-Port design respects these: hot-path ports are generic (static dispatch), the display list crosses the WASM boundary as shared memory, and benchmarks run against every adapter, not just the default.
+Port design respects these: hot-path ports are generic (static dispatch), the display list stays in WASM memory with the renderer, and benchmarks run against every adapter, not just the default. Measured so far on an Apple M5 Pro only: 232 fps panning 10,000 nodes in the spike (ADR-001), a 200-node batch planned in 13 ms and undone in 15 ms at 10,000 nodes (ADR-004).
 
 ---
 
@@ -947,22 +1075,23 @@ vellum/
     contracts/           contract test suites for every Rust port + fakes
     adapters/
       doc-loro/  layout-taffy/  text-parley/  index-rstar/  pathops-kurbo/
-      codec-json/  codec-json-dir/  assets-fs/  assets-s3/
-      render-skia/  render-vello/ (later)
+      codec-json/  codec-json-dir/  assets-fs/  assets-s3/  watch-notify/  ipc-local/
+      render-skia/  render-vello/ (later)  shader-sksl/ (v1.1)
       llm-openai-compat/  llm-openai-responses/  llm-anthropic/  llm-google/  model-http/  secrets-keyring/
       script-quickjs/  sessions-sqlite/  browser-cdp/ (v1.1)
       engine-builtin/  engine-claude-code/  engine-codex/
-      import-svg/  import-image/  import-figma/  import-html/ (v1.1)
+      import-svg/  import-image/  import-figma-clipboard/  import-figma-api/ (v1.1)  import-html/ (v1.1)
       icons/  images-stock/  image-ops/ (v1.1)
-      export-html/  export-raster/
-    vellum-wasm/         composition root: browser engine
+      export-tokens/  export-html/  export-raster/
+    vellum-wasm/         composition root: browser engine + Skia renderer (one emscripten module)
     vellum/              composition root: daemon (tool registry, MCP + CLI adapters, live/headless targets)
     sync-server/         composition root: sync (ports + Postgres/Redis/R2 and SQLite/disk adapters)
+    vellum-testkit/      stub model endpoint, fixture documents, Chrome layout oracle runner, pixel diff
 
   packages/
     types-ts/            generated from vellum-types (never hand-edited)
     renderer-api/        Renderer interface
-    renderer-canvaskit/  renderer-canvas2d/
+    renderer-skia/       renderer-canvas2d/
     host-api/            Host interface
     host-vscode/  host-electron/  host-browser/  host-fake/
     engine-client/       EngineClient over vellum-wasm (+ fake)
@@ -974,22 +1103,23 @@ vellum/
     prompt-packs/        versioned prompts
     skills/              built-in skills served by read_skill (format, execute API, workflows)
     styles/              built-in visual styles served by get_style
-    ui/                  shared tokens, icons
+    ui-tokens/           shared tokens (light, dark, high contrast)
+    config/              brand and exact copy strings
 
   apps/
     extension/  desktop/  account/  api/  web/  docs/
 
   docs/
-    adr/                 architecture decision records
+    architecture/decisions/  architecture decision records (ADR-NNN-title.md)
     format/              .vellum spec + generated JSON Schema
-  fixtures/              golden documents and reference images
+  fixtures/              golden documents, reference images, layout-oracle HTML
 ```
 
 ### Work packages
 
 | Package | Port(s) | Fake for others to build against | Done when |
 |---|---|---|---|
-| WP1 Types + ports | all `vellum-core::ports` | fakes in `contracts/` | Ports reviewed, ADRs 0001–0006 written |
+| WP1 Types + ports | all `vellum-core::ports` | fakes in `contracts/` | Ports reviewed, ADRs 001–006 written |
 | WP2 Core ops + resolver | `DocStore` (fake) | — | Op contract tests pass on fake store |
 | WP3 Loro adapter | `DocStore` | — | Passes `DocStore` contract + round-trip |
 | WP4 Layout + text | `LayoutEngine`, `TextEngine`, `FontSource` | fixed-metric fake text | Layout goldens pass |
@@ -1008,7 +1138,7 @@ vellum/
 
 | Milestone | Scope | Done when |
 |---|---|---|
-| **M0: Spine** | WP1 + fakes, minimal core ops, Taffy + Parley adapters, CanvasKit + canvas2d drawing a display list in a web page, CI gates (§11) wired | Pan/zoom a 1,000-node document at 60 fps, and a dependency-rule violation fails CI |
+| **M0: Spine** | WP1 + fakes, minimal core ops, Taffy + Parley adapters, the Skia WASM module + canvas2d drawing a display list in a web page, CI gates (§11) wired | Pan/zoom a 1,000-node document at 60 fps, and a dependency-rule violation fails CI |
 | **M1: Headless + MCP** | Codec v0, Loro adapter, tool registry, MCP + CLI adapters, `execute` + typed tools, `read_skill`, `snapshot_layout`, `find_space`, `render-skia`, `screenshot` | Claude Code designs a login screen headlessly with `execute`; PNG matches the editor's golden |
 | **M2: Editor in VS Code** | `editor-core`, `editor-react`, `host-vscode`, live target | Watch an agent build a screen live inside VS Code |
 | **M3: Real design tool** | Auto-layout UI, text editing, pen tool, booleans, images, components, variables, undo | You'd design your own next screen in it |
@@ -1024,14 +1154,14 @@ The spine comes first on purpose: ports, fakes and CI gates in M0 are cheap, and
 
 ## 15. Open questions to resolve early
 
-1. **Text in the display list:** Parley glyph runs drawn via CanvasKit `drawGlyphs`, or CanvasKit Paragraph feeding sizes back? The `TextEngine` port makes this swappable, but `render-skia` must match the editor either way. Prototype both in M0.
-2. **`DocStore` granularity:** is the trait at the right level (transactions over our types), or does it leak CRDT concepts? Test by writing the in-memory fake and a spike Automerge adapter against it in M0.
-3. **Loro at scale:** load time and memory on 10k+ node files; when to default to the directory codec.
+1. ~~**Text in the display list.**~~ Resolved by ADR-001 and ADR-013: Parley lays out, Skia draws positioned glyphs; no Skia paragraph layout.
+2. ~~**`DocStore` granularity.**~~ Resolved by ADR-004: transactions over our types with an in-memory store and Loro behind one contract suite; undo lives in core, not in the CRDT. An Automerge adapter was not built.
+3. ~~**Loro at scale.**~~ Resolved by ADR-004 and ADR-018: about 29 ms to open and 4 MB of heap at 10,000 nodes; the directory format is suggested at 10,000 nodes or 4 MB and never required.
 4. **`execute` vs typed tools:** which should the skill recommend by default, per model size? Measure token cost, error rate and design quality with 2–3 models in M1. Same question for the compact JSX-like insert syntax vs JSON.
-5. **QuickJS in the editor:** script nodes must run in the WASM editor too. Check the size and speed of `rquickjs` compiled to WASM; fall back to running scripts in the daemon and streaming results if it's too heavy.
+5. ~~**QuickJS in the editor.**~~ Resolved by ADR-004 and ADR-005: about 0.4 MB gzip in the editor module and 0.2 ms for a 500-op script; the same corpus runs natively and in WASM with identical results.
 6. **Stock and generated images:** pick a stock provider with a licence that allows use in shipped products, and decide whether generated images need a visible "generated" marker in the file.
 7. **Installed-engine contracts:** Claude Code and Codex headless modes and their permission systems change between releases; pin tested versions per Vellum release and detect unsupported ones at start-up.
-8. **CanvasKit vs Vello:** revisit per ADR-0004.
+8. ~~**CanvasKit vs Vello.**~~ Resolved by ADR-001: Skia in WASM, no CanvasKit; Vello on its revisit conditions.
 9. **Interop:** Figma import via their REST API and SVG paste are fine; reading other tools' proprietary formats (including `.pen`) needs legal review first. Matching a competitor's *capabilities* is fine, and plain descriptive tool names (`execute`, `get_variables`) that happen to match help agents carry habits over. Copying its script API, prompts, skills text, docs or UI is not; ours are written from scratch.
-10. **Daemon lifecycle:** one per user vs per workspace; how extension and desktop share it.
+10. ~~**Daemon lifecycle.**~~ Resolved by ADR-003: one daemon per runtime directory (by default one per user), started or reused through a startup lock by every host and `vellum mcp`.
 11. **License:** Apache-2.0 for core, CLI, format and ports (adoption) vs AGPL for the sync server (protects hosted business).

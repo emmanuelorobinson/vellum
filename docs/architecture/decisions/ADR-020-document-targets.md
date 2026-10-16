@@ -1,7 +1,7 @@
 # ADR-020: document targets, the file watcher and recovery copies
 
 Status: implemented for Prompt 28 as a library in the `vellum` composition root. Tools reach it from
-Prompt 29. The host relay that connects real editors comes with the hosts.
+Prompt 29. The host relay that connects real editors comes with the hosts. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 

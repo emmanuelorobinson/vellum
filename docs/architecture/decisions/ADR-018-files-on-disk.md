@@ -1,6 +1,6 @@
 # ADR-018: files on disk — assets, custom fonts, libraries, the directory format
 
-Status: implemented for Prompt 24. Only macOS arm64 was executed; Linux and Windows disks are not verified.
+Status: implemented for Prompt 24. Only macOS arm64 was executed; Linux and Windows disks are not verified. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 Date: 2026-10-15. Supplements ADR-004 (the directory-codec threshold) and ADR-011 (library scope, "persistence is
 Prompt 24"). The document format version is unchanged (1); `docs/format/files.md` is new and generated.
 
