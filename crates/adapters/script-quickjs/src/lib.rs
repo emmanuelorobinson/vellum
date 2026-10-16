@@ -8,14 +8,15 @@ mod values;
 use allocator::LimitedAllocator;
 use rquickjs::{
     CatchResultExt, CaughtError, Context, Ctx, Exception, Function, Runtime, Value,
-    context::intrinsic,
+    context::{EvalOptions, intrinsic},
 };
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
 };
 use vellum_core::ports::{
-    ScriptApi, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime, ScriptValue,
+    ScriptApi, ScriptDiagnostic, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime,
+    ScriptValue,
 };
 
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
@@ -26,12 +27,14 @@ const BOOTSTRAP: &str = include_str!("bootstrap.js");
 pub struct QuickJsRuntime {
     clock: Rc<dyn Fn() -> u64>,
     seed: u32,
+    location: Rc<Cell<Option<(u32, u32)>>>,
 }
 impl QuickJsRuntime {
     pub fn new(clock: impl Fn() -> u64 + 'static, seed: u32) -> Self {
         Self {
             clock: Rc::new(clock),
             seed,
+            location: Rc::new(Cell::new(None)),
         }
     }
 }
@@ -69,12 +72,29 @@ impl State {
     }
 }
 impl ScriptRuntime for QuickJsRuntime {
+    fn run_diagnostic(
+        &self,
+        src: &str,
+        api: Rc<dyn ScriptApi>,
+        limits: ScriptLimits,
+    ) -> Result<ScriptOutput, ScriptDiagnostic> {
+        self.run(src, api, limits).map_err(|e| {
+            let position = self.location.get().or_else(|| match &e {
+                ScriptError::Syntax { message } | ScriptError::Runtime { message } => {
+                    source_position(message)
+                }
+                _ => None,
+            });
+            ScriptDiagnostic::new(e, src, position)
+        })
+    }
     fn run(
         &self,
         src: &str,
         api: Rc<dyn ScriptApi>,
         limits: ScriptLimits,
     ) -> Result<ScriptOutput, ScriptError> {
+        self.location.set(None);
         if limits.time_ms == 0 {
             return Err(ScriptError::Timeout);
         }
@@ -144,6 +164,28 @@ impl ScriptRuntime for QuickJsRuntime {
                     }
                 }
                 let name_json = serde_json::to_string(names).expect("string list");
+                let constants = api.constants();
+                for name in constants.keys() {
+                    if names.contains(&name.as_str())
+                        || name.is_empty()
+                        || !name.bytes().enumerate().all(|(i, c)| {
+                            c.is_ascii_alphabetic() || c == b'_' || (i > 0 && c.is_ascii_digit())
+                        })
+                        || matches!(name.as_str(), "__proto__" | "prototype" | "constructor")
+                    {
+                        return Err(state.throw(
+                            &ctx,
+                            ScriptError::Api {
+                                message: "Invalid or duplicate script API constant name".into(),
+                            },
+                        ));
+                    }
+                }
+                let constants = values::encode(&ScriptValue::Map(constants), state.bytes.get())
+                    .map_err(|e| state.throw(&ctx, e))?;
+                state
+                    .charge(constants.len())
+                    .map_err(|e| state.throw(&ctx, e))?;
                 let names: Value = ctx.eval(format!("({name_json})"))?;
                 let s = state.clone();
                 let deny = Function::new(ctx.clone(), move |what: String| {
@@ -164,9 +206,14 @@ impl ScriptRuntime for QuickJsRuntime {
                 let api = api.clone();
                 let clock = self.clock.clone();
                 let began = start.clone();
+                let location = self.location.clone();
                 let call = Function::new(
                     ctx.clone(),
-                    move |ctx: Ctx<'_>, name: String, json: String| -> rquickjs::Result<String> {
+                    move |ctx: Ctx<'_>,
+                          name: String,
+                          json: String,
+                          stack: String|
+                          -> rquickjs::Result<String> {
                         let operation = (|| -> Result<String, ScriptError> {
                             if clock().saturating_sub(began.get()) >= u64::from(limits.time_ms) {
                                 return Err(ScriptError::Timeout);
@@ -209,21 +256,30 @@ impl ScriptRuntime for QuickJsRuntime {
                             s.charge(result.len())?;
                             Ok(result)
                         })();
-                        operation.map_err(|error| s.throw(&ctx, error))
+                        operation.map_err(|error| {
+                            if location.get().is_none() {
+                                location.set(source_position(&stack));
+                            }
+                            s.throw(&ctx, error)
+                        })
                     },
                 )?;
                 math::install(&ctx)?;
                 let setup: Function = ctx.eval(BOOTSTRAP)?;
                 let bridge: rquickjs::Object =
-                    setup.call((call, deny, random, names, state.bytes.get()))?;
+                    setup.call((call, deny, random, names, state.bytes.get(), constants))?;
                 let encode: Function = bridge.get("encode")?;
                 describe.replace(Some(bridge.get::<_, Function>("describe")?));
                 if (self.clock)().saturating_sub(started) >= u64::from(limits.time_ms) {
                     return Err(state.throw(&ctx, ScriptError::Timeout));
                 }
                 active.set(true);
-                let value: Value =
-                    ctx.eval(format!("(function(){{\"use strict\";\n{src}\n}})()"))?;
+                let mut options = EvalOptions::default();
+                options.filename = Some("vellum-script.js".into());
+                let value: Value = ctx.eval_with_options(
+                    format!("(function(){{\"use strict\";\n{src}\n}})()"),
+                    options,
+                )?;
                 if let Some(error) = state.error() {
                     return Err(state.throw(&ctx, error));
                 }
@@ -253,6 +309,16 @@ impl ScriptRuntime for QuickJsRuntime {
         }
         result
     }
+}
+// QuickJS includes one-based lines and columns. The strict function wrapper adds one line.
+fn source_position(stack: &str) -> Option<(u32, u32)> {
+    let (_, tail) = stack.split_once("vellum-script.js:")?;
+    let mut parts = tail
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|s| !s.is_empty());
+    let line = parts.next()?.parse::<u32>().ok()?.saturating_sub(1).max(1);
+    let column = parts.next().and_then(|s| s.parse().ok()).unwrap_or(1);
+    Some((line, column))
 }
 fn classify<'js>(error: CaughtError<'js>, describe: Option<&Function<'js>>) -> ScriptError {
     match error {

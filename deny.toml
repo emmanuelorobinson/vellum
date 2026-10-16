@@ -54,6 +54,7 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 deny = [
+  { crate = "tokio", wrappers = ["vellum-ipc-local"], reason = "native transport/runtime stays inside the IPC adapter (ADR-003)" },
   # A vendor crate is reached only through the adapter that wraps it (guide §8, §13).
   { crate = "loro", wrappers = ["vellum-doc-loro"], reason = "Loro sits behind DocStore (Invariant 5)" },
   { crate = "taffy", wrappers = ["vellum-layout-taffy"], reason = "layout goes through the LayoutEngine port" },

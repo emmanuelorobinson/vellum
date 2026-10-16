@@ -41,7 +41,7 @@ pub enum Problem {
     InvalidLayout(LayoutError),
 }
 impl Problem {
-    fn nodes(&self) -> Vec<&NodeIdPath> {
+    pub(crate) fn nodes(&self) -> Vec<&NodeIdPath> {
         match self {
             Self::TextOverflow { node, .. } | Self::OutsideFrame { node } => vec![node],
             Self::ClippedChild { node, parent } => vec![node, parent],

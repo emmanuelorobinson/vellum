@@ -507,6 +507,9 @@ importers:
 
   packages/skills:
     devDependencies:
+      '@vellum/types-ts':
+        specifier: workspace:*
+        version: link:../types-ts
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

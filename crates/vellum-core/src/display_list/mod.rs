@@ -86,10 +86,13 @@ pub fn build<S: SpatialIndex>(
         if !r.value.visible {
             return Ok(());
         }
-        if r.problems
-            .iter()
-            .any(|p| matches!(p, crate::resolver::components::Problem::Component(_)))
-        {
+        if r.problems.iter().any(|p| {
+            matches!(
+                p,
+                crate::resolver::components::Problem::Component(_)
+                    | crate::resolver::components::Problem::Script { .. }
+            )
+        }) {
             return Err(Error::UnresolvedValue);
         }
         let n = &r.value.node;

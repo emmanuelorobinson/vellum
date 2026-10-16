@@ -8,6 +8,7 @@
       "!docs",
       "!refs",
       "!packages/types-ts/src/generated",
+      "!packages/skills/src/generated",
       "!packages/types-ts/src/index.ts",
       "!pnpm-lock.yaml",
       "!spikes/*/results",

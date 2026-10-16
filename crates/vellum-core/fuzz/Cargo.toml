@@ -22,3 +22,10 @@ bench = false
 
 # Its own workspace: a fuzz build needs nightly and must not join the product graph.
 [workspace]
+
+[[bin]]
+name = "script_header"
+path = "fuzz_targets/script_header.rs"
+test = false
+doc = false
+bench = false

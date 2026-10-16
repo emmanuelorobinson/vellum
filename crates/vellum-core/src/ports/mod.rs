@@ -37,7 +37,10 @@ pub use layout::{
     LayoutStyle, LayoutTree,
 };
 pub use path::{Path, PathOps, PathSegment, StrokeStyle};
-pub use script::{ScriptApi, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime, ScriptValue};
+pub use script::{
+    ScriptApi, ScriptDiagnostic, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime,
+    ScriptValue,
+};
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;
 pub use text::{

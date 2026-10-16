@@ -10,6 +10,7 @@
 
 pub mod diff;
 pub mod display_list;
+pub mod doc_api;
 pub mod export;
 pub mod files;
 pub mod guard;
@@ -22,6 +23,7 @@ pub mod ops;
 pub mod ports;
 pub mod resolver;
 pub mod scene;
+pub mod script_nodes;
 
 /// The Cargo package name, used by the smoke test and by diagnostics.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");

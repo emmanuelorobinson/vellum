@@ -1,5 +1,7 @@
-//! WASM-lane harness only. No product exports or document mutations. TEST DATA.
+//! WASM-lane harness only. TEST DATA; document mutations stay in fake in-memory storage.
 #![allow(unsafe_code)]
+#[path = "doc-transcript/mod.rs"]
+mod doc_transcript;
 use std::cell::RefCell;
 use vellum_script_quickjs::QuickJsRuntime;
 
@@ -21,7 +23,13 @@ pub extern "C" fn script_check() {
     let rt = QuickJsRuntime::new(clock, 42);
     vellum_contracts::suites::script::run(&rt);
     vellum_testkit::script::check_escapes(&rt);
-    RESULT.with_borrow_mut(|out| *out = vellum_testkit::script::transcript(&rt));
+    RESULT.with_borrow_mut(|out| {
+        *out = format!(
+            "{}{}",
+            vellum_testkit::script::transcript(&rt),
+            doc_transcript::transcript(&rt)
+        )
+    });
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn script_result_ptr() -> *const u8 {

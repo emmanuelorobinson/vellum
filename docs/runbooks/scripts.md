@@ -52,4 +52,5 @@ cargo clean -p rquickjs-sys --target wasm32-unknown-emscripten
 
 The WASM fixture harness imports exactly `env.vellum_script_now_ms` (deadline only) and
 `env.__rquickjs_host_now_us` (QuickJS initialization, fixed at zero in the harness). Script-visible
-Date/performance/host imports are absent. The production editor host wiring belongs to Prompt 26.
+Date/performance/host imports are absent. The document API and derived output pipeline are documented in `doc-api.md` (Prompt 26).
+Production daemon/editor tool wiring and C28 controls arrive in their later prompts.

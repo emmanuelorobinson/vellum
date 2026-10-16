@@ -17,6 +17,7 @@ libm = { version = "=0.2.16", default-features = false, features = ["force-soft-
 rquickjs = { version = "=0.14.0", default-features = false, features = ["std", "bindgen"] }
 
 [dev-dependencies]
+vellum-types = { path = "../../vellum-types" }
 vellum-contracts = { path = "../../contracts" }
 vellum-testkit = { path = "../../vellum-testkit" }
 

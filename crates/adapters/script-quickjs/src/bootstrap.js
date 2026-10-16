@@ -1,5 +1,5 @@
 // Vellum's synchronous data-only bridge. All references are captured before running user code.
-(call, deny, random, names, byteLimit) => {
+(call, deny, random, names, byteLimit, constantsJson) => {
   const { freeze, getPrototypeOf, getOwnPropertyDescriptors, defineProperty, create } = Object;
   const ownKeys = Reflect.ownKeys;
   const stringify = JSON.stringify,
@@ -8,6 +8,7 @@
   const finite = Number.isFinite;
   const SetType = Set;
   const ErrorType = Error;
+  const errorStack = getOwnPropertyDescriptors(Error.prototype).stack?.get;
   const syntaxPrototype = SyntaxError.prototype;
   const objectPrototype = Object.prototype,
     arrayPrototype = Array.prototype;
@@ -65,8 +66,10 @@
     return stringify(visit(value, 0));
   };
   const doc = create(null);
+  const constants = parse(constantsJson);
+  for (const key of ownKeys(constants)) doc[key] = constants[key];
   for (const name of names) {
-    doc[name] = (...args) => parse(call(name, validate(args)));
+    doc[name] = (...args) => parse(call(name, validate(args), new ErrorType().stack));
   }
   defineProperty(globalThis, "doc", { value: freeze(doc), writable: false, configurable: false });
   defineProperty(Math, "random", { value: random, writable: false, configurable: false });
@@ -108,7 +111,9 @@
       typeof d.message?.value === "string"
         ? d.message.value.slice(0, 1024)
         : "Script threw an error";
-    const stack = typeof d.stack?.value === "string" ? d.stack.value.slice(0, 4096) : "";
+    // QuickJS's intrinsic getter reads the internal captured trace. Never invoke a supplied getter.
+    const rawStack = typeof d.stack?.value === "string" ? d.stack.value : errorStack?.call(error);
+    const stack = typeof rawStack === "string" ? rawStack.slice(0, 4096) : "";
     return stringify([
       getPrototypeOf(error) === syntaxPrototype,
       `${message}${stack ? `\n${stack}` : ""}`,

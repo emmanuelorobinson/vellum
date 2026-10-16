@@ -14,6 +14,7 @@ mod bindings;
 pub mod brand;
 mod color;
 mod component;
+pub mod daemon;
 mod defaults;
 pub mod display;
 mod document;

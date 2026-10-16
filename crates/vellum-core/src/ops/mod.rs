@@ -112,6 +112,8 @@ pub enum Alignment {
 /// Missing derived data is refused, never guessed. Fixed literal boxes need no entry.
 #[derive(Default)]
 pub struct Inputs<'a> {
+    /// Successful derived script output, never document content. ConvertScript snapshots it.
+    pub script_outputs: BTreeMap<NodeId, Vec<Node>>,
     /// Measured boxes (needed for hug/fill and bound dimensions).
     pub bounds: BTreeMap<NodeId, crate::ports::Rect>,
     /// Theme-resolved numeric variables.
@@ -282,7 +284,7 @@ pub enum Op {
         /// Axis.
         axis: Axis,
     },
-    /// Explicitly unavailable until the script output pipeline in Prompt 26.
+    /// Replaces a script with a frame holding its successful derived output, with fresh ids.
     ConvertScript {
         /// Script node.
         id: NodeId,

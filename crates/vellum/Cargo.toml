@@ -12,12 +12,14 @@ path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
+vellum-ipc-local = { path = "../adapters/ipc-local" }
 vellum-types = { path = "../vellum-types" }
 
 [lints]
 workspace = true
 
 [dev-dependencies]
+vellum-script-quickjs = { path = "../adapters/script-quickjs" }
 serde_json.workspace = true
 vellum-core = { path = "../vellum-core" }
 vellum-render-skia = { path = "../adapters/render-skia" }

@@ -28,6 +28,10 @@ pub enum ScriptValue {
 
 /// What a script may call. Prompt 26 defines the functions; the port only carries them.
 pub trait ScriptApi {
+    /// Copied data properties, frozen with `doc`; never host handles.
+    fn constants(&self) -> BTreeMap<String, ScriptValue> {
+        BTreeMap::new()
+    }
     /// The only functions exposed as `doc.<name>`. Names are unique identifiers.
     fn functions(&self) -> &[&str] {
         &[]
@@ -118,6 +122,16 @@ impl std::error::Error for ScriptError {}
 
 /// Runs scripts in a sandbox.
 pub trait ScriptRuntime {
+    /// Runs with source diagnostics. Runtimes with engine locations override this method.
+    fn run_diagnostic(
+        &self,
+        src: &str,
+        api: Rc<dyn ScriptApi>,
+        limits: ScriptLimits,
+    ) -> Result<ScriptOutput, ScriptDiagnostic> {
+        self.run(src, api, limits)
+            .map_err(|error| ScriptDiagnostic::new(error, src, None))
+    }
     /// Runs `src` with `api` within `limits`.
     fn run(
         &self,
@@ -126,3 +140,51 @@ pub trait ScriptRuntime {
         limits: ScriptLimits,
     ) -> Result<ScriptOutput, ScriptError>;
 }
+
+/// A failure with a one-based source position when the engine can provide one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScriptDiagnostic {
+    pub error: ScriptError,
+    pub line: Option<u32>,
+    pub column: Option<u32>,
+    /// At most three source lines, bounded to 512 characters each.
+    pub excerpt: String,
+}
+impl ScriptDiagnostic {
+    pub fn new(error: ScriptError, source: &str, position: Option<(u32, u32)>) -> Self {
+        let (line, column) = position.map_or((None, None), |(l, c)| (Some(l), Some(c)));
+        let index = line.unwrap_or(1).saturating_sub(1) as usize;
+        let excerpt = source
+            .lines()
+            .enumerate()
+            .skip(index.saturating_sub(1))
+            .take(3)
+            .map(|(i, s)| {
+                let start = if i == index {
+                    column.unwrap_or(1).saturating_sub(1).saturating_sub(256) as usize
+                } else {
+                    0
+                };
+                format!(
+                    "{} | {}{}",
+                    i + 1,
+                    if start > 0 { "…" } else { "" },
+                    s.chars().skip(start).take(512).collect::<String>()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        Self {
+            error,
+            line,
+            column,
+            excerpt,
+        }
+    }
+}
+impl fmt::Display for ScriptDiagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.error.fmt(f)
+    }
+}
+impl std::error::Error for ScriptDiagnostic {}

@@ -30,15 +30,9 @@ fn mcp_help_exits_zero() {
 }
 
 #[test]
-fn mcp_is_honest_that_it_is_not_built_yet() {
-    let out = vellum(&["mcp"]);
-    assert!(
-        !out.status.success(),
-        "a placeholder must not pretend to be an MCP server"
-    );
-    assert!(
-        text(&out.stderr).contains("not implemented"),
-        "stderr: {}",
-        text(&out.stderr)
-    );
+fn daemon_help_describes_opt_in_tcp() {
+    let out = vellum(&["daemon", "--help"]);
+    assert!(out.status.success());
+    assert!(text(&out.stdout).contains("--listen"));
+    assert!(text(&out.stdout).contains("--allow-origin"));
 }

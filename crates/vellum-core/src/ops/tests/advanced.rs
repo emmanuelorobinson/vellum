@@ -4,7 +4,7 @@ use crate::ops::{self, Alignment, Axis, Inputs, Op, OpErrorKind};
 use crate::ports::{Path, PathOps, Rect, StrokeStyle};
 use serde_json::json;
 use std::collections::BTreeMap;
-use vellum_types::{BoolOp, ComponentId, Node, NodeIdPath, Point, Size, Value};
+use vellum_types::{BoolOp, ComponentId, Node, NodeIdPath, NodeKind, Point, Size, Value};
 
 fn component_id(s: &str) -> ComponentId {
     ComponentId::new(s).unwrap()
@@ -636,11 +636,17 @@ fn outline_stroke_delegates_and_replaces_with_painted_vector() {
     );
 }
 #[test]
-fn convert_script_is_an_explicit_placeholder() {
+fn convert_script_requires_a_script() {
     let error = refused(vec![Op::ConvertScript {
         id: id("frame00001"),
     }]);
-    assert_eq!(error.kind, OpErrorKind::NotImplemented("convert_script"));
+    assert_eq!(
+        error.kind,
+        OpErrorKind::WrongKind {
+            expected: NodeKind::Script,
+            found: NodeKind::Frame
+        }
+    );
 }
 
 #[test]

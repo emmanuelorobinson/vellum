@@ -23,7 +23,7 @@
 | Component | Resolved | Guide line | Pinned in | Decision |
 |---|---|---|---|---|
 | Rust toolchain | 1.99.0 | latest stable toolchain | `rust-toolchain.toml` channel; `Cargo.toml` rust-version 1.99 | C1 |
-| tokio | 1.53.2 | 1.53.x | not yet used | latest stable patch of the line |
+| tokio | 1.53.2 | 1.53.x | ipc-local (Prompt 27) | latest stable patch of the line |
 | axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
 | loro | 1.16.2 | 1.16.x | workspace `Cargo.toml`, used by `crates/adapters/doc-loro` only (Prompt 14); also `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
@@ -219,3 +219,8 @@ edited.
   because Vellum stores the imported file as it came. `deny.toml` bans both with a wrapper, and
   `scripts/rust-deps-allowlist.txt` keeps them out of `vellum-core` and `vellum-types`. WOFF fixtures in
   `crates/adapters/text-parley/tests/fonts/` come from `@fontsource/inter` 5.3.0 (OFL 1.1).
+
+- **C21: native IPC** (Prompt 27, ADR-003). `vellum-ipc-local` pins Tokio 1.53.2 (the recorded baseline),
+  `getrandom` 0.4.3, `windows-sys` 0.61.2 and Unix `libc` 0.2.190. Tokio supplies both Unix sockets and
+  Windows named pipes; `interprocess` remains unused. The small Win32 boundary creates and checks explicit
+  user-only DACLs. Tokio is wrapper-banned outside this adapter. No OS dependency enters the pure crates.

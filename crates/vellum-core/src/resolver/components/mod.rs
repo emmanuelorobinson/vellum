@@ -18,6 +18,8 @@ use vellum_types::{
 /// A component expansion failure or a variable/theme resolution failure.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Problem {
+    /// A cached derived script result no longer matches its inputs or source path.
+    Script { message: String },
     /// The definition, prop, override, slot or library cannot be used.
     Component(ComponentError),
     /// An own property could not resolve under its source document's theme.
@@ -83,12 +85,24 @@ struct Entry {
 /// variables and theme axes. It is safe to reuse after edits or library refresh without manual invalidation.
 #[derive(Default)]
 pub struct Resolver {
+    script_outputs: BTreeMap<(String, vellum_types::NodeId), crate::script_nodes::Output>,
     entries: BTreeMap<(String, NodeIdPath), Entry>,
     scopes: BTreeMap<String, ScopeState>,
     seen: BTreeSet<(String, NodeIdPath)>,
     seen_scopes: BTreeSet<String>,
 }
 impl Resolver {
+    /// Replace successful derived outputs for this pass. Missing/failed scripts have no entry, so
+    /// stale output cannot survive an error. Paths distinguish library scripts from local scripts.
+    pub fn set_script_outputs(
+        &mut self,
+        outputs: BTreeMap<(String, vellum_types::NodeId), crate::script_nodes::Output>,
+    ) {
+        self.script_outputs = outputs
+            .into_iter()
+            .map(|((path, id), output)| ((normalize(&path), id), output))
+            .collect();
+    }
     /// An empty resolver.
     pub fn new() -> Self {
         Self::default()
@@ -357,6 +371,34 @@ impl Walk<'_, '_, '_> {
         }
         if let Node::Instance(instance) = node {
             return self.instance(doc, path, instance, address, theme, depth);
+        }
+        if matches!(node, Node::Script(_))
+            && let Some(output) = self
+                .resolver
+                .script_outputs
+                .get(&(path.to_owned(), node.id().clone()))
+                .cloned()
+        {
+            if !crate::script_nodes::is_current(&output, doc, node, theme) {
+                return self.finish(
+                    doc,
+                    path,
+                    node,
+                    address,
+                    theme,
+                    None,
+                    vec![Problem::Script {
+                        message: "Script inputs changed; run the script again".into(),
+                    }],
+                    vec![],
+                    vec![],
+                );
+            }
+            let mut frame = node.as_frame(output.nodes);
+            if let Node::Frame(n) = &mut frame {
+                n.clip = matches!(node,Node::Script(script) if script.clip);
+            }
+            return self.node(doc, path, &frame, address, theme, depth + 1);
         }
         let value = self
             .resolver

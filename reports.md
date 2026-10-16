@@ -8,6 +8,19 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-003 and run native IPC CI** (Prompt 27). Private Unix sockets and Windows named pipes,
+  token/version handshakes, lifecycle and the stdio bridge are implemented. macOS arm64 IPC passes;
+  Windows cross-target clippy passes, but native Windows/Linux and cross-user DACL denial have not run
+  here. The new `Native IPC` workflow covers all three platforms. ADR-003 records direct Tokio APIs
+  instead of `interprocess`, the private EOF marker, strict existing-path checks and bounded HTTP
+  `--listen`. Only a person synchronizes ARCHITECTURE.md. Actual host restart wiring is later work.
+
+- **Review ADR-019 and synchronize ARCHITECTURE** (Prompt 26). The core now owns atomic execute,
+  derived output projection, versioned declarations, scene/render read bindings and script diagnostics.
+  Review the 2,000-node execute ceiling, synchronous image/result caps, per-call reference validation,
+  JSON header grammar and source-cache lifecycle. Only a person edits ARCHITECTURE.md. Remote Linux
+  CI and native Windows/Linux execution have not run here.
+
 - **Review ADR-005 and synchronize ARCHITECTURE** (Prompt 25). `ScriptRuntime` now owns an `Rc<dyn ScriptApi>`;
   the API has an allowlist and mandatory node-cost planning. Scripts use explicit returns, bounded JSON copies
   and portable Math; `**`/`**=` refuse in favor of `Math.pow`. Review these restrictions and boundary caps.
@@ -1636,3 +1649,130 @@ Verified (exited 0 unless listed as failed; pnpm used both dev-telemetry opt-out
 Not verified: remote CI, native Windows/Linux, production editor host wiring (Prompt 26), or a real document
 API's node-cost plans and transaction rollback (also Prompt 26). The emscripten target compiled/type-checked;
 execution/parity used wasm32-unknown-unknown in Node. No new format/schema or source-specification edits.
+
+## Prompt 26: script nodes and document API
+
+Built (ADR-019, `docs/runbooks/doc-api.md`):
+- All 21 doc methods bind through a versioned registry. Writes stage validated Ops, reads see the stage,
+  and success commits one final attributed transaction/undo entry. Exceptions, limits, rejected writes
+  and dry runs leave storage and leases untouched. Leases refresh on own-frame activity.
+- SceneServices uses shared resolver/layout/spatial/inspection/display-list paths; RenderRead supplies
+  the existing renderer. PNG/SVG/PDF pass with real QuickJS, Taffy, Parley and Skia. Child screenshots
+  preserve ancestor themes/transforms. Image fill/icon operations use existing resource references.
+- Generated `vellum-doc.d.ts` and script-node input surface, strict positive/negative TS examples,
+  regeneration/drift tests, pnpm commands and an explicit CI generation check. No vendor dependencies added.
+- Bounded schema/input header parser (number/string/boolean/color/enum/ref, arguments/defaults), theme-aware
+  variable inputs, 1,000-node/2-second script evaluation, separate derived outputs and resolver projection.
+  Changed inputs/variables/themes/references/source paths explicitly refuse stale cached results. ConvertScript
+  snapshots successful output with fresh IDs and preserved appearance/clip in one undoable Ops transaction.
+- Typed errors with safe QuickJS source positions and bounded excerpts; native/WASM transcripts now cover
+  real document programs and derived script output as well as the existing escape corpus. Header fuzz target,
+  two 1,024-case property tests and a seeded local fuzz campaign. No document schema/specification changes.
+
+Decisions and limits:
+- ADR-019 records the explicit 2,000-node execute ceiling, existing Guard limits, independently valid references
+  per API call, consumed-but-never-recycled dry-run/refused IDs and final diff-to-Ops commit. Script node programs
+  return schema nodes and have only frozen inputs/version; no document or I/O capability.
+- Render/export results are in-memory MIME/base64 data, capped at 8,192 pixels per axis, 16,777,216 pixels total
+  and 700 KiB before base64, also subject to the runtime's cumulative JSON budget. Resources/library snapshots
+  must be loaded before execution. Host callbacks remain synchronous/bounded and cannot be JS-preempted.
+- The host must refresh/remove output after source-file reload/failure; core independently checks input cache
+  validity. Only macOS arm64 and Node WASM executed. Production daemon/editor wiring and C28 controls belong
+  to later prompts. Remote CI, other native targets and prolonged fuzzing are unverified.
+- Read Penpot ExecuteCodeTool, Codex code-mode/cell actors and OpenCode tool-runtime/schema discovery.
+  Penpot forwards programs to a persistent plugin; Codex isolates cells; OpenCode describes copied, allowlisted
+  tools with generated signatures/budgets. Vellum keeps explicit returns, copying and one registry, uses fresh
+  synchronous realms and stages one Ops commit. Sibling searches found no reusable document API/parser.
+  No reference code ported; no pen.dev source or design file was used or changed.
+
+Failures found and fixed:
+- Initial red tests failed on absent APIs. Regressions caught block-comment closing, required generated node names,
+  icon library fields, lazy QuickJS stack access, missing lease refresh, child screenshot ancestry, stale derived
+  output, omitted local-instance dimensions, block terminators inside line-comment strings and long-line excerpts.
+- Corrected test setup/expectations: stored script fixtures need a name and a tagged absolute position;
+  find-space can choose left/above the origin; Skia SVG starts with an svg element, without an XML declaration.
+  One policy-clamp regression was added after its implementation. Existing behavioral assertions were retained.
+- Restricted pnpm could not verify its package-manager identity; the permitted offline cache invocation passed.
+  Initial fuzz rerun used the wrong working directory; rerunning in crates/vellum-core passed. Initial clippy
+  findings (collapsed conditional and unit-struct construction) were fixed.
+
+Verified (exited 0 unless listed as failed; pnpm used both dev-telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace` (877 pass, five tagged ignores on the final run);
+  `cargo test --offline -p vellum-core --test script_nodes -p vellum-script-quickjs --test doc_api`
+  (six parser/diagnostic tests plus 16 real-runtime API/script-node tests).
+- `node scripts/script-sandbox.mjs --offline` (47 escape cases and 10 deterministic native/WASM transcripts,
+  including real document Ops and derived script output);
+  `node scripts/skia-build.mjs check --offline -p vellum-script-quickjs --target wasm32-unknown-emscripten`;
+  `node scripts/skia-build.mjs clippy --offline -p vellum-script-quickjs --target wasm32-unknown-emscripten -- -D warnings`.
+- From `crates/vellum-core`: `CARGO_NET_OFFLINE=true cargo +nightly fuzz run script_header -- -max_total_time=20 -max_len=4096`
+  (seeded final run: 227,338 executions in 21 seconds, no crash; initial empty-corpus run: 251,389).
+- `pnpm lint` (includes workspace/all-target clippy), `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`,
+  `pnpm doc-api:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`;
+  `cargo fmt --all --check`; `git diff --check`.
+- `node --test scripts/__tests__/doc-api-gen.test.mjs` (two pass);
+  `packages/skills/node_modules/.bin/vitest run --root packages/skills` (one pass).
+- Failed: `pnpm test:scripts` (165 pass, four tagged skips, existing `missing: R3 taffy: main.rs` failure).
+- Failed: `pnpm cargo:deny` (the same three Loro-chain unmaintained advisories;
+  bans, licenses and sources pass). No advisory or reference-path policy changed.
+
+## Prompt 27: local IPC, lifecycle and stdio bridge
+
+Built (ADR-003, `docs/runbooks/daemon.md`):
+- `vellum-ipc-local`: native Unix sockets (0700 directory, 0600 socket/files), Windows named pipes
+  with explicit current-user owner/DACL and remote-client denial. Existing unsafe paths, symlinks,
+  reparse points and Unix hardlinked discovery/lock files refuse. Tokens use 256-bit OS entropy.
+- Versioned, authenticated MCP/control handshake in `vellum-types`; generated TypeScript declarations.
+  Private discovery, fixed refusal diagnostics, token-free status and no credential Debug output.
+- `vellum daemon`, `status`, `daemon stop`, optional `--run-dir`; autostart/reuse/crash restart for
+  `vellum mcp` and a host-callable `ensure_daemon`. OS instance/startup locks, bounded startup,
+  SIGINT/SIGTERM/control shutdown, stale socket replacement and token rotation. No document writes.
+- Optional HTTP `--listen` only: Bearer token, exact bound Host and allowlisted Origin, no null Origin,
+  duplicate headers, chunking or CORS. Connection/frame/header/body/deadline limits are explicit.
+- Isolated `scripts/ipc.mjs` and macOS/Linux/Windows CI lane; ten real-process tests plus six local
+  adapter tests (Windows adds a broad-DACL rejection test). The IPC lane needs no renderer build.
+
+Decisions and limits:
+- Tokio's own sockets/pipes plus a small Win32 boundary replace the planned `interprocess` dependency.
+  Windows pipe names include the SID and runtime-directory hash. Private blank-line EOF markers supply
+  named-pipe half-close; the bridge strips the handshake/markers from stdout. No requests are replayed.
+- The on-disk local rendezvous token is the explicit ARCHITECTURE §7.2 exception; provider credentials
+  remain keychain-only. No token is passed in argv or exposed by status. HTTP is plaintext for an
+  explicitly configured trusted tunnel/container. Existing nonprivate directories are refused, not repaired.
+- MCP initialization/tools return explicit method-not-found until Prompt 29; this is the transport
+  scaffold. Real editor/desktop restart wiring arrives with the hosts. No UI/design frames involved.
+- Read R12's Codex bridge/UDS sources and the sibling Outpost startup/private-socket patterns.
+  Codex forwards concurrently and half-closes on stdin EOF. Vellum keeps concurrent forwarding,
+  adds authentication/autostart and a portable EOF marker. No reference code was ported.
+
+Failures found and fixed:
+- Initial lifecycle test failed because daemon/status commands were absent. Socket tests then failed
+  with sandbox OS permission denied; the permitted lane runs them successfully.
+- Concurrent macOS process launches inherited another client's pipe and held its stdout open.
+  The launcher marks inherited descriptors CLOEXEC before exec and detaches the process group.
+- An immediate-restart regression failed while graceful HTTP draining retained the instance lock.
+  Startup now waits for its release before launching the replacement.
+- A new disconnect regression failed: Tokio's uncancellable stdin read held runtime shutdown open.
+  Bounded runtime shutdown now permits bridge exit with stdin open; abrupt daemon EOF is an error.
+- Windows cross-check caught private re-exports and a Unix-only test import; fixed. A generated-binding
+  check raced regeneration and temporarily missed DaemonHello; final generation/script checks pass it.
+- Plain clippy with renderer dev-dependencies attempted sandbox-blocked Skia cache writes; use the
+  repository wrapper for workspace/all-target checks. Restricted pnpm stalled; permitted cache use worked.
+
+Verified (exit 0 except the two existing failures below; pnpm used both dev-telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace` (all ordinary Rust tests passed; IPC cases
+  explicitly tagged/ignored here and executed separately).
+- `node scripts/ipc.mjs --offline` (ten pass on macOS arm64, including actual no-TCP inventory,
+  concurrent startup, crash recovery, EOF/disconnect, auth/version, permissions and TCP checks).
+- `cargo test --offline -p vellum-ipc-local --lib` (six pass).
+- `cargo clippy --offline -p vellum-ipc-local -p vellum --lib --bins -- -D warnings`;
+  `cargo clippy --offline -p vellum-ipc-local --all-targets -- -D warnings`;
+  `cargo clippy --offline -p vellum-ipc-local --all-targets --target x86_64-pc-windows-gnu -- -D warnings`.
+- `pnpm lint` (workspace/all-target clippy), `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`,
+  `node scripts/types-gen.mjs --check`, `pnpm format-spec:check`, `pnpm clean-room`, `pnpm checksum`;
+  `cargo fmt --all --check`; `git diff --check`.
+- Failed: `pnpm test:scripts` (165 pass, four tagged skips, existing `missing: R3 taffy: main.rs`).
+- Failed: `cargo deny check` (the same three Loro-chain unmaintained advisories;
+  bans, licenses and sources pass). No reference/advisory policy was weakened.
+
+Not verified: remote CI, native Windows/Linux execution, another user's denied connection, real
+host restart wiring or later MCP tools. Existing Prompt 26 working-tree changes were preserved.

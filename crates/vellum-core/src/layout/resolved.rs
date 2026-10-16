@@ -8,10 +8,13 @@ pub fn from_resolved(root: &ResolvedNode) -> Result<LayoutTree, LayoutError> {
 fn node(r: &ResolvedNode) -> Result<LayoutNode, LayoutError> {
     // Resolver diagnostics unrelated to geometry (including ignored theme choices) stay on the
     // resolver output. Missing component structure is fatal here; numeric references are checked below.
-    if r.problems
-        .iter()
-        .any(|problem| matches!(problem, crate::resolver::components::Problem::Component(_)))
-    {
+    if r.problems.iter().any(|problem| {
+        matches!(
+            problem,
+            crate::resolver::components::Problem::Component(_)
+                | crate::resolver::components::Problem::Script { .. }
+        )
+    }) {
         return Err(LayoutError::UnresolvedValue {
             node: r.address.clone(),
         });

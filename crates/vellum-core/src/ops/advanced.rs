@@ -833,8 +833,30 @@ impl Planner {
                     .map_err(|e| ("id".into(), patch_error(e)))?;
                 self.replace(id, next)
             }
-            Op::ConvertScript { .. } => {
-                Err(("id".into(), OpErrorKind::NotImplemented("convert_script")))
+            Op::ConvertScript { id } => {
+                let node = self.node(id)?;
+                let Node::Script(script) = &node else {
+                    return Err((
+                        "id".into(),
+                        OpErrorKind::WrongKind {
+                            expected: NodeKind::Script,
+                            found: node.kind(),
+                        },
+                    ));
+                };
+                let output = inputs
+                    .script_outputs
+                    .get(id)
+                    .ok_or_else(|| ("id".into(), missing("successful script output")))?;
+                if output.iter().map(crate::doc_api::count).sum::<usize>() > 1000 {
+                    return Err(("id".into(), invalid("script output exceeds 1,000 nodes")));
+                }
+                let children = output.iter().map(|n| renumbered(n, ids)).collect();
+                let mut frame = node.as_frame(children);
+                if let Node::Frame(n) = &mut frame {
+                    n.clip = script.clip;
+                }
+                self.replace(id, frame)
             }
             _ => unreachable!("structural ops are lowered in lower.rs"),
         }
