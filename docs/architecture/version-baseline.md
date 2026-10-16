@@ -37,14 +37,14 @@
 | rstar | 0.13.0 | 0.13.x | =0.13.0 | spatial index (Prompt 20) |
 | libm | 0.2.16 | portable math (not in §5) | `crates/adapters/script-quickjs`; no defaults, `force-soft-floats` | identical Math in native/WASM (Prompt 25, ADR-005) |
 | rquickjs | 0.14.0 | 0.14.x | `crates/adapters/script-quickjs` only; `std`, emscripten-only `bindgen`; also the Prompt 5 spikes | ScriptRuntime (Prompt 25, ADR-005); explicit bounded allocator, no loader/futures |
-| rmcp | 3.5.1 | 3.5.x | not yet used | MCP adapter (Prompt 29) |
+| rmcp | 3.5.1 | 3.5.x | not used: Prompt 29 wrote the MCP front end itself (ADR-021, C22) | read for the wire shapes only |
 | schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |
 | ts-rs | 12.0.1 | 12.x | `Cargo.toml` workspace.dependencies | TypeScript bindings from vellum-types |
 | wasm-bindgen | 0.2.129 | 0.2.129+ | not yet used | ADR-001 uses emscripten C exports for the renderer; not needed there |
 | notify | 8.2.0 | 8.2.x | `crates/adapters/watch-notify` (pinned `=8.2.0`, default features off, `macos_fsevent`) | FileWatcher (Prompt 28, ADR-020) |
 | rusqlite | 0.40.2 | 0.40.x | not yet used | session store, bundled SQLite (Prompt 34) |
 | keyring | 4.2.0 | 4.2.x | not yet used | SecretStore (Prompt 32) |
-| clap | 4.6.7 | 4.6.x | `Cargo.toml` workspace.dependencies | CLI (Prompt 59) |
+| clap | 4.6.7 | 4.6.x | `Cargo.toml` workspace.dependencies (`derive`, `string`) | CLI; `vellum tool` is generated from the registry (Prompt 29, C22) |
 | chromiumoxide | 0.9.1 | 0.9.x | not yet used | BrowserPort, v1.1 (Prompt 65) |
 | naga | 30.0.1 | 30.x | not yet used | shader translation, v1.1, only if ADR-008 uses it |
 | cargo-deny | 0.20.2 | 0.20.x | `scripts/check-deps.sh` and `pnpm cargo:deny` (installed, not a dependency) | C5 |
@@ -224,3 +224,12 @@ edited.
   `getrandom` 0.4.3, `windows-sys` 0.61.2 and Unix `libc` 0.2.190. Tokio supplies both Unix sockets and
   Windows named pipes; `interprocess` remains unused. The small Win32 boundary creates and checks explicit
   user-only DACLs. Tokio is wrapper-banned outside this adapter. No OS dependency enters the pure crates.
+
+- **C22: the MCP front end is not `rmcp`; `vellum` takes more normal dependencies** (Prompt 29, ADR-021). The daemon already
+  owns the transport (ADR-003), the documents are not `Send`, and the HTTP listener is one request per connection, so
+  `crates/vellum/src/mcp.rs` answers `initialize`, `ping`, `tools/list`, `tools/call` and `server/discover` itself. `rmcp`
+  3.5.1 stays recorded, unused. `crates/vellum` now depends on `getrandom` 0.4.3 (the same pin as the IPC adapter, for node
+  ids) and, behind its default `scene` feature, on the four scene adapters (Taffy, Parley, rstar, Skia), so the shipped binary
+  draws; the IPC lane builds it with `--no-default-features`. clap gains its `string` feature, which lets the CLI name
+  subcommands and flags after the registry's tools at run time. `serde_path_to_error` 0.1.20 (already a workspace
+  dependency) names the field at fault in a tool's input.

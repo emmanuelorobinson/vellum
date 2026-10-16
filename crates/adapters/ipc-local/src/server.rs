@@ -1,5 +1,5 @@
 use crate::{
-    DEADLINE, MAX_CLIENTS, MAX_FRAME, frame, invalid,
+    DEADLINE, HandlerFactory, MAX_CLIENTS, MAX_FRAME, Worker, frame, invalid,
     private::{Metadata, RunDir, token},
     rpc, runtime, send,
     transport::{Listener, Stream},
@@ -10,12 +10,14 @@ use tokio::{
     sync::{Semaphore, watch},
     task::JoinSet,
 };
-use vellum_types::daemon::{DAEMON_PROTOCOL_VERSION, DaemonHello, DaemonWelcome};
+use vellum_types::daemon::{DAEMON_PROTOCOL_VERSION, DaemonHello, DaemonWelcome, MAX_CWD};
 
 pub struct DaemonConfig {
     pub dir: RunDir,
     pub listen: Option<SocketAddr>,
     pub allowed_origins: Vec<String>,
+    /// Answers the JSON-RPC requests; built on the worker thread that runs it.
+    pub handler: HandlerFactory,
 }
 struct Cleanup(RunDir);
 impl Drop for Cleanup {
@@ -55,6 +57,7 @@ async fn serve(config: DaemonConfig) -> io::Result<()> {
     let interrupt = tokio::signal::ctrl_c();
     tokio::pin!(interrupt);
     let (shutdown, mut stopped) = watch::channel(false);
+    let worker = Arc::new(Worker::start(config.handler)?);
     let semaphore = Arc::new(Semaphore::new(MAX_CLIENTS));
     let origins = Arc::new(config.allowed_origins);
     let mut tasks = JoinSet::new();
@@ -64,15 +67,15 @@ async fn serve(config: DaemonConfig) -> io::Result<()> {
             result=local.accept()=> {
                 let stream=result?;
                 if let Ok(permit)=semaphore.clone().try_acquire_owned() {
-                    let m=metadata.clone(); let stop=shutdown.clone(); let mut closed=shutdown.subscribe();
-                    tasks.spawn(async move { let _permit=permit; tokio::select! { _=session(stream,m,stop)=>(), _=closed.changed()=>() } });
+                    let m=metadata.clone(); let stop=shutdown.clone(); let mut closed=shutdown.subscribe(); let w=worker.clone();
+                    tasks.spawn(async move { let _permit=permit; let conn=w.connection(); tokio::select! { _=session(stream,m,stop,&w,conn)=>(), _=closed.changed()=>() } w.closed(conn); });
                 }
             },
             result=async { match &tcp { Some(l)=>l.accept().await.map(|(s,_)|s), None=>std::future::pending().await } }=> {
                 let stream=result?;
                 if let Ok(permit)=semaphore.clone().try_acquire_owned() {
-                    let m=metadata.clone(); let allowed=origins.clone();
-                    tasks.spawn(async move { let _permit=permit; let _=tokio::time::timeout(DEADLINE,http(stream,&m,&allowed)).await; });
+                    let m=metadata.clone(); let allowed=origins.clone(); let w=worker.clone();
+                    tasks.spawn(async move { let _permit=permit; let _=http(stream,&m,&allowed,&w).await; });
                 }
             },
             _=stopped.changed()=>break,
@@ -97,9 +100,11 @@ async fn session(
     stream: Stream,
     metadata: Arc<Metadata>,
     shutdown: watch::Sender<bool>,
+    worker: &Worker,
+    conn: u64,
 ) -> io::Result<()> {
     let mut stream = BufReader::new(stream);
-    let hello = tokio::time::timeout(DEADLINE, frame(&mut stream, 4096))
+    let hello = tokio::time::timeout(DEADLINE, frame(&mut stream, 4096 + MAX_CWD))
         .await
         .map_err(|_| invalid("handshake timed out"))??
         .ok_or_else(|| invalid("missing handshake"))?;
@@ -146,13 +151,18 @@ async fn session(
             }
         }
         vellum_types::daemon::DaemonChannel::Mcp => {
+            // Only an absolute directory means anything; anything else is a client that does not know its own.
+            let cwd = hello
+                .cwd
+                .filter(|cwd| cwd.len() <= MAX_CWD && std::path::Path::new(cwd).is_absolute());
+            worker.opened(conn, cwd);
             while let Some(bytes) = frame(&mut stream, MAX_FRAME).await? {
                 // A blank line is the private transport end marker. It gives named pipes an
                 // application-level half-close; the bridge never forwards it to MCP stdout.
                 if bytes == b"\n" {
                     break;
                 }
-                if let Some(response) = rpc(&bytes) {
+                if let Some(response) = rpc(&bytes, worker, conn).await {
                     send(stream.get_mut(), &response).await?;
                 }
             }
@@ -183,16 +193,25 @@ async fn http(
     stream: tokio::net::TcpStream,
     metadata: &Metadata,
     origins: &[String],
+    worker: &Worker,
 ) -> io::Result<()> {
     let mut stream = BufReader::new(stream);
-    let result = http_request(&mut stream, metadata, origins).await;
+    // The deadline bounds reading the request, not the tool that answers it.
+    let result = tokio::time::timeout(DEADLINE, http_request(&mut stream, metadata, origins))
+        .await
+        .unwrap_or(Err(408));
     let (code, body) = match result {
-        Ok(bytes) => (
-            200,
-            rpc(&bytes)
-                .map(|r| serde_json::to_vec(&r).unwrap())
-                .unwrap_or_default(),
-        ),
+        Ok(bytes) => {
+            let conn = worker.connection();
+            let answer = rpc(&bytes, worker, conn).await;
+            worker.closed(conn);
+            (
+                200,
+                answer
+                    .map(|r| serde_json::to_vec(&r).unwrap())
+                    .unwrap_or_default(),
+            )
+        }
         Err(code) => (code, Vec::new()),
     };
     let header = format!(
@@ -291,7 +310,8 @@ mod tests {
                 let (client,server)=tokio::io::duplex(8192);
                 let metadata=Arc::new(Metadata { v:1,pid:1,endpoint:String::new(),token:"a".repeat(64),tcp:None });
                 let (shutdown,_)=watch::channel(false);
-                let task=tokio::spawn(session(Box::new(server),metadata,shutdown));
+                let worker=Arc::new(Worker::start(crate::no_tools()).unwrap());
+                let task=tokio::spawn(async move { session(Box::new(server),metadata,shutdown,&worker,1).await });
                 let mut client=BufReader::new(client); send(client.get_mut(),&hello).await.unwrap();
                 let reply=frame(&mut client,4096).await.unwrap().unwrap();
                 assert!(std::str::from_utf8(&reply).unwrap().contains(expected));

@@ -21,7 +21,15 @@ pub struct DaemonHello {
     pub v: u32,
     pub token: String,
     pub channel: DaemonChannel,
+    /// The directory the client was started in. Relative document paths mean paths in it, and documents
+    /// outside it are out of reach until the PermissionBroker exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub cwd: Option<String>,
 }
+
+/// The longest `cwd` a hello may carry, in bytes.
+pub const MAX_CWD: usize = 4096;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(tag = "status", rename_all = "kebab-case")]

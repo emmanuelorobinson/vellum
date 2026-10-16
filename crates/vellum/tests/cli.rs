@@ -36,3 +36,206 @@ fn daemon_help_describes_opt_in_tcp() {
     assert!(text(&out.stdout).contains("--listen"));
     assert!(text(&out.stdout).contains("--allow-origin"));
 }
+
+// ---- the tool command, generated from the registry (guide Prompt 29) ----------------------------------------
+
+mod common;
+
+use common::workspace::Workspace;
+use serde_json::Value;
+
+/// `vellum tool ...` in the workspace's repo, against its daemon.
+fn tool(space: &Workspace, args: &[&str]) -> Output {
+    space
+        .vellum()
+        .arg("tool")
+        .args(args)
+        .current_dir(space.repo())
+        .output()
+        .expect("run vellum tool")
+}
+
+fn json_of(out: &Output) -> Value {
+    serde_json::from_slice(&out.stdout)
+        .unwrap_or_else(|e| panic!("{e}: {} / {}", text(&out.stdout), text(&out.stderr)))
+}
+
+#[test]
+fn tool_help_lists_every_tool_in_the_registry_without_a_daemon() {
+    let out = vellum(&["tool", "--help"]);
+    assert!(out.status.success(), "{}", text(&out.stderr));
+    let help = text(&out.stdout);
+    for name in vellum::tools::Registry::standard()
+        .tools()
+        .map(|t| t.name())
+    {
+        assert!(help.contains(name), "{name} in {help}");
+    }
+}
+
+#[test]
+fn a_tools_flags_come_from_its_schema() {
+    let out = vellum(&["tool", "query_nodes", "--help"]);
+    assert!(out.status.success(), "{}", text(&out.stderr));
+    let help = text(&out.stdout);
+    assert!(
+        help.contains("--type <type>") || help.contains("--type <TYPE>"),
+        "{help}"
+    );
+    assert!(
+        help.contains("frame") && help.contains("instance"),
+        "the node types are listed: {help}"
+    );
+    assert!(
+        help.contains("--limit") && help.contains("--variable"),
+        "{help}"
+    );
+
+    let help = text(&vellum(&["tool", "snapshot_layout", "--help"]).stdout);
+    assert!(
+        help.contains("--problems-only"),
+        "snake_case fields are kebab-case flags: {help}"
+    );
+}
+
+#[test]
+fn a_missing_required_flag_or_a_wrong_value_is_a_usage_error() {
+    let out = vellum(&["tool", "get_nodes"]);
+    assert_eq!(out.status.code(), Some(2));
+    assert!(text(&out.stderr).contains("--ids"), "{}", text(&out.stderr));
+    let out = vellum(&["tool", "query_nodes", "--type", "button"]);
+    assert_eq!(out.status.code(), Some(2));
+    let out = vellum(&["tool", "query_nodes", "--limit", "many"]);
+    assert_eq!(out.status.code(), Some(2));
+    let out = vellum(&["tool", "no_such_tool"]);
+    assert_eq!(out.status.code(), Some(2));
+}
+
+#[test]
+fn a_tool_runs_against_the_daemon_and_prints_its_result_as_json() {
+    let space = Workspace::new();
+    let opened = tool(&space, &["open_document", "--path", "design/app.vellum"]);
+    assert!(opened.status.success(), "{}", text(&opened.stderr));
+    assert_eq!(json_of(&opened)["pages"][0]["name"], "Home");
+
+    // The document stays open in the daemon, so the next call needs no --document.
+    let nodes = tool(
+        &space,
+        &[
+            "get_nodes",
+            "--ids",
+            "frameHero1",
+            "--ids",
+            "textTitle1",
+            "--depth",
+            "0",
+        ],
+    );
+    assert!(nodes.status.success(), "{}", text(&nodes.stderr));
+    let nodes = json_of(&nodes);
+    assert_eq!(nodes["nodes"][0]["name"], "Hero");
+    assert_eq!(nodes["nodes"][1]["name"], "Title");
+
+    let found = tool(
+        &space,
+        &[
+            "query_nodes",
+            "--type",
+            "text",
+            "--name",
+            "title",
+            "--document",
+            "design/app.vellum",
+        ],
+    );
+    assert_eq!(json_of(&found)["nodes"][0]["id"], "textTitle1");
+
+    let layout = tool(
+        &space,
+        &["snapshot_layout", "--problems-only", "--node", "frameHero1"],
+    );
+    assert!(layout.status.success(), "{}", text(&layout.stderr));
+    assert!(json_of(&layout)["problems"].is_array());
+
+    let theme = tool(&space, &["get_variables", "--theme", r#"{"Mode":"dark"}"#]);
+    assert_eq!(
+        json_of(&theme)["theme"],
+        serde_json::json!({"Mode": "dark"})
+    );
+}
+
+#[test]
+fn a_failing_tool_exits_non_zero_and_says_why_on_stderr() {
+    let space = Workspace::new();
+    let out = tool(
+        &space,
+        &[
+            "get_nodes",
+            "--ids",
+            "frameHero1",
+            "--document",
+            "design/missing.vellum",
+        ],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert!(out.stdout.is_empty(), "{}", text(&out.stdout));
+    assert!(
+        text(&out.stderr).contains("missing.vellum"),
+        "{}",
+        text(&out.stderr)
+    );
+
+    let out = tool(&space, &["get_nodes", "--ids", "frameHero1"]);
+    assert_eq!(out.status.code(), Some(1), "no document is open yet");
+    assert!(
+        text(&out.stderr).contains("open_document"),
+        "{}",
+        text(&out.stderr)
+    );
+}
+
+#[test]
+fn json_prints_the_whole_mcp_result_even_for_a_failure() {
+    let space = Workspace::new();
+    let out = tool(
+        &space,
+        &[
+            "--json",
+            "get_nodes",
+            "--ids",
+            "x",
+            "--document",
+            "design/missing.vellum",
+        ],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let result = json_of(&out);
+    assert_eq!(result["isError"], true);
+    assert_eq!(result["structuredContent"]["error"]["kind"], "not_found");
+}
+
+#[test]
+fn a_screenshot_is_saved_to_the_file_named_by_image_out() {
+    let space = Workspace::new();
+    let file = space.root.join("card.png");
+    let out = tool(
+        &space,
+        &[
+            "screenshot",
+            "--document",
+            "design/app.vellum",
+            "--node",
+            "rectCard01",
+            "--image-out",
+            file.to_str().unwrap(),
+        ],
+    );
+    assert!(out.status.success(), "{}", text(&out.stderr));
+    let png = std::fs::read(&file).expect("the picture was written");
+    assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
+    assert_eq!(json_of(&out)["image"]["mime"], "image/png");
+    assert!(
+        !text(&out.stdout).contains("iVBOR"),
+        "the picture is not printed"
+    );
+}

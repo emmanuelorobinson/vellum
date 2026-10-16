@@ -8,6 +8,8 @@ use vellum_core::ops::{Applied, Transaction};
 use vellum_core::ports::{ChangeSet, DocumentTarget, ScriptValue, TargetError, TargetMode};
 use vellum_types::Document;
 
+use super::view::EditorView;
+
 /// Which editor connection: one per open editor tab or window, named by the host.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EditorId(pub String);
@@ -31,6 +33,10 @@ pub trait EditorLink {
     fn save(&mut self) -> Result<Document, TargetError>;
     /// Whether the editor has changes the file does not.
     fn is_dirty(&mut self) -> Result<bool, TargetError>;
+    /// The editor's session state: selection, viewport, leases and pauses. An editor that cannot say reports none.
+    fn view(&mut self) -> Result<EditorView, TargetError> {
+        Ok(EditorView::default())
+    }
     /// For an attached editor: the writer's engine changed; show `document`.
     fn follow(&mut self, changes: &ChangeSet, document: &Document) -> Result<(), TargetError>;
     /// For an attached editor: it is now the writer. Its engine already holds what it was following.
@@ -160,6 +166,12 @@ impl DocumentTarget for LiveTarget {
 }
 
 impl LiveTarget {
+    /// The writer's session state.
+    pub fn view(&mut self) -> Result<EditorView, TargetError> {
+        let result = self.writer.1.view();
+        self.check(result)
+    }
+
     /// Saves through the writer and returns what it wrote.
     pub fn save_returning(&mut self) -> Result<Document, TargetError> {
         let result = self.writer.1.save();

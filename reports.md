@@ -8,6 +8,24 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-021 and synchronize ARCHITECTURE** (Prompt 29). Only a person edits ARCHITECTURE.md. (1) §3.4 `Tool`
+  gains `description`, `read_only` and `destructive`, and `run` returns JSON with a picture under an `image` key.
+  (2) §7 and §10 say `rmcp`; the MCP front end is hand-written (`crates/vellum/src/mcp.rs`, about 150 lines of
+  dispatch) because the daemon already owns the transport and the documents are not `Send`. Decide whether that
+  stands or `rmcp` should replace it before MCP features beyond tools (resources, progress, elicitation) are needed.
+  (3) The daemon hello gains an optional `cwd`, and **a client can reach only `.vellum` documents inside the
+  directory it was started in**; that is stricter than "the repo" and stays until the PermissionBroker (Prompt 35).
+  (4) The shipped `vellum` binary now builds Skia (default `scene` feature); the IPC lane builds without it.
+  (5) The daemon runs tools one at a time on one thread.
+- **Decide how the canvas draws note, context and prompt nodes** (Prompt 29). The display list has no drawing for
+  them, so `screenshot` (and `doc.screenshot`) of any frame that holds one fails, naming the node. A design with a
+  context node on its Hero frame, which is what `get_app_state` tells agents to read, cannot be screenshotted.
+  Options: draw them as the editor will (Invariant 6), or leave them out of exports and screenshots and say so.
+  Needs the design (`C12`) and `DESIGN-DECISIONS.md`.
+- **Libraries and script outputs do not resolve in the daemon's scene** (Prompt 29). One set of scene services
+  serves every document and has no document path, so `imports` are not loaded and script-node output is empty in
+  `snapshot_layout`, `find_space` and `screenshot`. A library instance draws as missing. Fixing it means a services
+  factory per document in `Env`; not started.
 - **Review ADR-020 and synchronize ARCHITECTURE** (Prompt 28). New ports `DocumentTarget` and `FileWatcher`;
   `crates/vellum` is now a library plus binary. External changes go through a three-way merge with unsaved
   edits, not the plain old-vs-new diff of ARCHITECTURE §4.5 (same result when nothing is unsaved). Decide the
@@ -1828,3 +1846,61 @@ Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs)
 Not verified: Linux/Windows watchers and git on Windows, the IPC/CI lanes remotely, real editors or hosts.
 No design frames were involved (A06 is UI for Prompt 58; only its data is here).
 
+
+## Prompt 29: tool registry, MCP adapter, read tools
+
+Built (ADR-021, `docs/runbooks/tools.md`):
+- `crates/vellum/src/tools/`: `Tool`, `Registry`, `ToolCtx`, `ToolError` (kinds, field path) and the eleven read tools:
+  `get_app_state`, `open_document`, `get_nodes`, `query_nodes`, `find_properties`, `get_variables`, `list_components`,
+  `list_fonts`, `snapshot_layout`, `find_space`, `screenshot`. Input schemas come from `JsonSchema` on each input struct
+  (optionals written as plain types, subschemas inlined). Every list says when it is cut.
+- `mcp.rs`: the MCP front end (`initialize`, `ping`, `tools/list`, `tools/call`, `server/discover`). A tool failure is an
+  error result the agent can read; a picture is an image block. `tests/snapshots/mcp-tools.json` is the schema snapshot
+  (rewrite with `VELLUM_UPDATE_SNAPSHOTS=1`).
+- `cli.rs`: `vellum tool <name> --field value`, subcommands and flags generated from the schemas; `--json`,
+  `--image-out`; exit 1 for a failed tool, 2 for usage.
+- `vellum-ipc-local`: the daemon now runs an injected `RpcHandler` on one dedicated thread (`opened`, `request`, `closed`,
+  `idle`), catching panics; the hello carries an optional `cwd`; `exchange` is a one-shot client for the CLI; replies up to
+  16 MiB are read (a screenshot reply was within 10% of the old 1 MiB limit).
+- `daemon::production`: the real parts (StdFs per repo, JsonCodec, Loro, OS-random ids, monotonic clock, notify watcher,
+  Taffy/Parley/rstar/Skia scene). `Documents` gained `view`, `exists`, `create_blank`, `active`, `headless_guard`;
+  `EditorLink::view` reports selection, viewport, leases and pauses. This is the first caller of Prompt 28's code, and the
+  watcher now runs (a poll before each call, and every 250 ms).
+- Core: `Services::layout` and `font_families`, `FontSource::families`, `PauseSet::paused/stopped`, `Problem::nodes` public,
+  `problem_json`; the incomplete-render error names the node and kind in words.
+
+Differs from the guide / decisions (all in ADR-021):
+- **No `rmcp`.** The MCP front end is hand-written. Reasons are in the ADR; the cost is that protocol conformance is ours.
+- `Tool` has `description`, `read_only` and `destructive` besides the four members; a result carries a picture under `image`.
+- `open_document` opens headless (or reports the editor that holds the file). Asking an editor to open a file needs the
+  host relay.
+- A client reaches only `.vellum` documents inside the directory it was started in (and sees only those). Stricter than
+  "in the repo"; kept until Prompt 35.
+- The default `scene` feature: the shipped binary builds Skia; `scripts/ipc.mjs` and `ipc.yml` clippy use
+  `--no-default-features`. This replaces ADR-020's "does not build Skia".
+
+Process note: the registry, read tools, MCP and CLI tests were written first and failed to compile (the red state was a
+missing module, not a wrong answer); the implementation then went in until they passed. The `RpcHandler` worker and its two
+tests, and `daemon::production`, were written together with their code. Two bugs the tests found: the Loro peer id must be
+below 2^63 (a random one panicked a tool call about half the time; the worker caught the panic, so the daemon survived
+and the stdio test flaked until the cause was read from the daemon's output); and `get_app_state` skipped the
+working-directory check for a document it was handed (found by the cross-client test). Two mutation checks (the
+inside-the-directory test always true; the containment check removed) both fail the suite.
+
+Verified on macOS arm64 (exit 0 unless noted; both telemetry opt-outs set):
+- `cargo test --workspace` (996 passed, 0 failed, 15 ignored, before the last two fixes); after them `cargo test -p vellum`
+  (lib 7, cli 10, daemon_documents 27, daemon_watch 8, files 3, mcp 16, mcp_stdio 3, renderer_text 3, script_doc_api 1,
+  tools 36), `cargo test -p vellum-ipc-local --lib` (7), `node scripts/ipc.mjs` (10, real daemon with the registry).
+- `cargo clippy --workspace --all-targets -- -D warnings`; `cargo clippy -p vellum-ipc-local -p vellum --lib --bins
+  --no-default-features -- -D warnings`; `cargo fmt --all --check`.
+- `pnpm format:check` (biome now skips `crates/vellum/tests/snapshots`), `pnpm lint`, `pnpm type-check`, `pnpm deps:check`,
+  `pnpm clean-room`, `pnpm checksum`, `pnpm types:check` (`DaemonHello.cwd`), `pnpm format-spec:check`, `pnpm copy-lint`,
+  `git diff --check`.
+- Failed: `pnpm test:scripts`, the existing `R3 taffy: main.rs` failure only.
+- Not run: `cargo deny check advisories` (needs the network; bans, licences and sources pass in `deps:check`).
+
+Not verified: Linux and Windows (the `cwd` rule with Windows paths, the production locator, the stdio tests, the changed
+`ipc.yml` clippy line); a real editor (a live file is tested in process with a fake editor, because the editor wire
+protocol is still open); any MCP client other than the tests (no Claude Code or Codex session was started); large
+documents (every call clones the document; the budgets are 2,000 nodes and 700 KiB images, but no stall was measured).
+No design frames were involved.

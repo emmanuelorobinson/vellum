@@ -20,7 +20,12 @@ use vellum_types::Document;
 /// Windows), and returns it. Recovery copies hold design content, so a folder that is a symlink, or is
 /// readable by others, is refused rather than used or repaired.
 pub fn recovery_dir(home: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
-    let base = home.join(".vellum");
+    recovery_dir_in(&home.join(".vellum"))
+}
+
+/// As [`recovery_dir`], inside the daemon's private folder `base` (`~/.vellum`).
+pub fn recovery_dir_in(base: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+    let base = base.to_path_buf();
     let dir = base.join("recovery");
     for path in [&base, &dir] {
         match std::fs::symlink_metadata(path) {

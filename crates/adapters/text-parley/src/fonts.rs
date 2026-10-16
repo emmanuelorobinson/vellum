@@ -233,6 +233,18 @@ impl FontSource for ParleyFonts {
             .find(|f| f.blob_id == blob.id() && f.data.index == info.index())
             .map(|f| f.handle)
     }
+    fn families(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .state
+            .borrow()
+            .families
+            .iter()
+            .map(|f| f.name.clone())
+            .collect();
+        names.sort_by_key(|name| name.to_lowercase());
+        names.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+        names
+    }
     fn data(&self, handle: FontHandle) -> Option<FontData> {
         self.state
             .borrow()

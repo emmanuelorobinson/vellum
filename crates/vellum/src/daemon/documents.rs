@@ -10,17 +10,19 @@ use std::sync::Arc;
 
 use vellum_core::diff::diff;
 use vellum_core::doc_api::Services;
+use vellum_core::guard::GuardState;
 use vellum_core::merge::merge;
 use vellum_core::ops::{Applied, Transaction};
 use vellum_core::ports::{
     Clock, Codec, DocStore, DocumentTarget, FileError, FileSystem, FileWatcher, FsError, IdGen,
-    TargetError, Timestamp,
+    TargetError, TargetMode, Timestamp,
 };
 use vellum_types::{Actor, Document, FileReason, Origin};
 
 use super::headless::{DocFile, Engine, HeadlessTarget};
 use super::live::{EditorId, EditorLink, LiveTarget, Role};
 use super::recovery::{RECOVERY_INTERVAL_MS, Recovery, RecoveryCopy};
+use super::view::{DocumentView, EditorView, LeaseInfo, Paused};
 
 /// Finds where a document path lives: the file system and the path inside it.
 pub type Locate = Box<dyn Fn(&str) -> Result<(Arc<dyn FileSystem>, String), FsError>>;
@@ -103,6 +105,7 @@ pub struct Documents {
     watcher: Box<dyn FileWatcher>,
     recovery: Recovery,
     open: BTreeMap<String, Entry>,
+    active: Option<String>,
 }
 
 fn file_actor(reason: FileReason) -> Origin {
@@ -117,6 +120,7 @@ impl Documents {
             watcher,
             recovery,
             open: BTreeMap::new(),
+            active: None,
         }
     }
 
@@ -201,6 +205,129 @@ impl Documents {
         Ok(match &mut entry.holder {
             Holder::Headless(target) => &mut **target,
             Holder::Live(target) => target,
+        })
+    }
+
+    /// The scene and drawing services headless reads use: layout, free space, problems.
+    pub fn services(&self) -> Rc<dyn Services> {
+        self.env.services.clone()
+    }
+
+    /// The font families the daemon can draw with, sorted.
+    pub fn font_families(&self) -> Vec<String> {
+        self.env.services.font_families()
+    }
+
+    /// The daemon's clock.
+    pub fn now(&self) -> Timestamp {
+        self.env.clock.now()
+    }
+
+    /// Whether a document is at `path`, on disk or open.
+    pub fn exists(&self, path: &str) -> Result<bool, TargetError> {
+        if self.open.contains_key(path) {
+            return Ok(true);
+        }
+        let (fs, inner) = (self.env.locate)(path).map_err(FileError::Fs)?;
+        Ok(fs.exists(&inner).map_err(FileError::Fs)?)
+    }
+
+    /// Writes a new document at `path`, which must not exist yet, and opens it headless.
+    pub fn create(&mut self, path: &str, doc: &Document) -> Result<(), TargetError> {
+        if self.exists(path)? {
+            return Err(TargetError::File(FileError::Fs(FsError::Unavailable(
+                format!("{path} already exists."),
+            ))));
+        }
+        self.file(path)?.write(doc)?;
+        self.load(path)
+    }
+
+    /// Writes a new, empty document called `name` at `path`, which must not exist yet, and opens it headless. It
+    /// gets one page, so there is somewhere to put a first frame.
+    pub fn create_blank(&mut self, path: &str, name: &str) -> Result<(), TargetError> {
+        let mut doc = Document::new(name);
+        let id = (self.env.ids)().page_id();
+        doc.pages.push(vellum_types::Page {
+            id,
+            name: "Page 1".to_owned(),
+            kind: Default::default(),
+            children: Vec::new(),
+        });
+        self.create(path, &doc)
+    }
+
+    /// The document tools use when a call does not name one: the one most recently opened or used, if it is
+    /// still open.
+    pub fn active(&self) -> Option<&str> {
+        self.active
+            .as_deref()
+            .filter(|path| self.open.contains_key(*path))
+    }
+
+    /// Makes `path` the document tools use when a call does not name one.
+    pub fn set_active(&mut self, path: &str) {
+        if self.active.as_deref() != Some(path) {
+            self.active = Some(path.to_owned());
+        }
+    }
+
+    /// The Guard state of `path` when the daemon's own engine holds it: leases, pauses and limits. A file an
+    /// editor holds has its Guard in the editor, and a file that is not open has none.
+    pub fn headless_guard(&mut self, path: &str) -> Option<&mut GuardState> {
+        match &mut self.open.get_mut(path)?.holder {
+            Holder::Headless(target) => Some(target.guard_mut()),
+            Holder::Live(_) => None,
+        }
+    }
+
+    /// Who holds `path` and its session state. Opens the file headless when nobody does.
+    pub fn view(&mut self, path: &str) -> Result<DocumentView, TargetError> {
+        self.target(path)?;
+        let now = self.env.clock.now();
+        let entry = self.open.get_mut(path).expect("just opened");
+        Ok(match &mut entry.holder {
+            Holder::Headless(target) => {
+                let dirty = target.is_dirty()?;
+                let guard = target.guard_mut();
+                let leases = guard
+                    .leases
+                    .live(now)
+                    .filter_map(|(frame, agent)| match guard.leases.state(frame) {
+                        vellum_core::lease::LeaseState::Held { expires_at, .. } => {
+                            Some(LeaseInfo {
+                                frame: frame.clone(),
+                                agent: agent.clone(),
+                                expires_at: expires_at.0,
+                            })
+                        }
+                        vellum_core::lease::LeaseState::Free => None,
+                    })
+                    .collect();
+                DocumentView {
+                    mode: TargetMode::Headless,
+                    writer: None,
+                    dirty,
+                    state: EditorView {
+                        leases,
+                        paused: Paused {
+                            all: guard.pause.is_all_paused(),
+                            agents: guard.pause.paused().cloned().collect(),
+                            stopped: guard.pause.stopped().cloned().collect(),
+                        },
+                        ..EditorView::default()
+                    },
+                }
+            }
+            Holder::Live(live) => {
+                let state = live.view()?;
+                DocumentView {
+                    mode: TargetMode::Live,
+                    writer: Some(live.writer().clone()),
+                    dirty: live.is_dirty()?,
+                    state,
+                }
+            }
         })
     }
 

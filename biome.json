@@ -13,7 +13,8 @@
       "!pnpm-lock.yaml",
       "!spikes/*/results",
       "!fixtures/layout-oracle/expected",
-      "!fixtures/text/prompt5.json"
+      "!fixtures/text/prompt5.json",
+      "!crates/vellum/tests/snapshots"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

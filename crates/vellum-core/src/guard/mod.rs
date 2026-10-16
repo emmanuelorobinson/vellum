@@ -194,6 +194,16 @@ impl PauseSet {
         self.stopped.remove(agent);
     }
 
+    /// The agents paused one by one, sorted.
+    pub fn paused(&self) -> impl Iterator<Item = &AgentId> {
+        self.paused.iter()
+    }
+
+    /// The agents stopped, sorted.
+    pub fn stopped(&self) -> impl Iterator<Item = &AgentId> {
+        self.stopped.iter()
+    }
+
     /// Whether `agent` may write at all: stopped first, then Pause all, then its own pause.
     pub fn check(&self, agent: &AgentId) -> Result<(), Rejection> {
         if self.stopped.contains(agent) {

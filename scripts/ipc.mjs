@@ -15,7 +15,8 @@ function cargo(args, env = {}) {
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
-cargo(["build", "-p", "vellum", "--bin", "vellum"]);
+// Without the `scene` feature: this lane tests the transport and builds no renderer (ADR-021).
+cargo(["build", "-p", "vellum", "--bin", "vellum", "--no-default-features"]);
 const binary = resolve(
   root,
   process.env.CARGO_TARGET_DIR ?? "target",

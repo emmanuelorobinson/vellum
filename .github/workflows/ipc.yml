@@ -33,6 +33,6 @@ jobs:
       - name: Daemon lifecycle, socket inventory and bridge (ipc lane)
         run: node scripts/ipc.mjs
       - name: IPC and CLI clippy
-        run: cargo clippy -p vellum-ipc-local -p vellum --lib --bins -- -D warnings
+        run: cargo clippy -p vellum-ipc-local -p vellum --lib --bins --no-default-features -- -D warnings
       - name: Specification unchanged
         run: node scripts/spec-checksums.mjs check

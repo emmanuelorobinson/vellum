@@ -1,0 +1,475 @@
+{
+  "tools": [
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "List every distinct value a property takes in a scope, with how many nodes have each and a few example ids. Use it to see what a design already uses (font sizes, colours, radii) before adding more, or to find values that should be a variable. Variable references show as {\"$var\": id}.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "The most distinct values to list (default 100, at most 500).",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "property": {
+            "description": "The property, in the file's spelling, with dots into nested objects. Lists are looked through, so\n`content.size` is every text run's size and `fills.color` is every fill colour. Examples: `cornerRadius`,\n`gap`, `content.font`, `stroke.width`.",
+            "type": "string"
+          },
+          "scope": {
+            "description": "Only look inside this page, component or node.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Only nodes of this type.",
+            "enum": [
+              "frame",
+              "group",
+              "rect",
+              "ellipse",
+              "polygon",
+              "star",
+              "line",
+              "vector",
+              "boolean",
+              "text",
+              "image",
+              "icon",
+              "instance",
+              "script",
+              "note",
+              "context",
+              "prompt",
+              "embed",
+              "conflict"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "property"
+        ],
+        "title": "FindInput",
+        "type": "object"
+      },
+      "name": "find_properties"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Find an empty area of the canvas of a given size, clear of every frame already on the page. Use it to place a new top-level frame instead of guessing coordinates. Returns the rectangle.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "height": {
+            "description": "The height of the area needed.",
+            "format": "double",
+            "type": "number"
+          },
+          "near": {
+            "description": "Prefer the free area nearest this point.",
+            "properties": {
+              "x": {
+                "description": "Canvas x.",
+                "format": "double",
+                "type": "number"
+              },
+              "y": {
+                "description": "Canvas y.",
+                "format": "double",
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "type": "object"
+          },
+          "page": {
+            "description": "The page to look on. Defaults to the first page.",
+            "type": "string"
+          },
+          "width": {
+            "description": "The width of the area needed.",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "SpaceInput",
+        "type": "object"
+      },
+      "name": "find_space"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Report what is open and what the person sees: open documents, the active one, its selection and viewport, which frames are leased, which agents are paused, and the notes for agents and context nodes that apply to the selection (or the page, with no selection). Call it first, and again before starting on a new request.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document whose selection, leases and notes to report. Defaults to the active document.",
+            "type": "string"
+          }
+        },
+        "title": "StateInput",
+        "type": "object"
+      },
+      "name": "get_app_state"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Read nodes by id, with their children down to `depth`. Use it to look at a frame before changing it. Children past the depth are counted in `childCount`; nodes past `max_nodes` come back as stubs.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "depth": {
+            "description": "How many levels of children to include: 0 is the node alone with a `childCount`, 1 (the default) adds\nits children. At most 8.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "ids": {
+            "description": "The ids of the nodes to read. Page ids are not nodes; use query_nodes with `scope` to list a page.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_nodes": {
+            "description": "Stop after this many nodes in all (default 300, at most 2000). Nodes past it come back as stubs with\n`truncated: true`.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "GetInput",
+        "type": "object"
+      },
+      "name": "get_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "List the document's variables (colours, numbers, strings, booleans) and its theme axes. Each shows its id, name and type, the value it has under the theme, and every value it can take. Bind a property to a variable with {\"$var\": id}; prefer a variable over a literal that matches one.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Only variables whose name contains this, ignoring case.",
+            "type": "string"
+          },
+          "theme": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Theme axis values to resolve under, such as {\"Mode\": \"dark\"}. Axes left out take their first value.",
+            "type": "object"
+          }
+        },
+        "title": "VariablesInput",
+        "type": "object"
+      },
+      "name": "get_variables"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "List the document's components: id, name, root node, the props an instance can set, the variants, the slots that accept other components, and how many instances use each. Use a component instead of drawing the same thing again.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Only components whose name contains this, ignoring case.",
+            "type": "string"
+          }
+        },
+        "title": "ComponentsInput",
+        "type": "object"
+      },
+      "name": "list_components"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "List the fonts text can use: the families the engine can draw, the fonts stored in this document, and the families its text already uses. A text run names a family; one that is not listed is drawn with a fallback and looks different from what you asked for.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          }
+        },
+        "title": "FontsInput",
+        "type": "object"
+      },
+      "name": "list_fonts"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Open a .vellum document, or create it with `create: true`. If an editor has the file open, work happens in that editor; otherwise the file is opened without one. Returns the pages. Calls that leave out `document` use the document opened last.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "create": {
+            "default": false,
+            "description": "Make the file when it is not there. An existing file is opened, never replaced.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name for a new document. Defaults to the file name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "The path of the .vellum file, relative to the repo.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "OpenInput",
+        "type": "object"
+      },
+      "name": "open_document"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Find nodes by name, type, text, component or variable use, optionally inside one page or node. Returns short summaries in reading order; use get_nodes for the detail. All filters given must match.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "description": "Only instances of this component, by component id.",
+            "type": "string"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "The most nodes to list (default 50, at most 500). `total` is the full count.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "description": "Only nodes whose name contains this, ignoring case.",
+            "type": "string"
+          },
+          "scope": {
+            "description": "Only look inside this page, component or node.",
+            "type": "string"
+          },
+          "text": {
+            "description": "Only text, notes and prompts whose characters contain this, ignoring case.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Only nodes of this type.",
+            "enum": [
+              "frame",
+              "group",
+              "rect",
+              "ellipse",
+              "polygon",
+              "star",
+              "line",
+              "vector",
+              "boolean",
+              "text",
+              "image",
+              "icon",
+              "instance",
+              "script",
+              "note",
+              "context",
+              "prompt",
+              "embed",
+              "conflict"
+            ],
+            "type": "string"
+          },
+          "variable": {
+            "description": "Only nodes that use this variable, by variable id or exact name.",
+            "type": "string"
+          }
+        },
+        "title": "QueryInput",
+        "type": "object"
+      },
+      "name": "query_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Draw a page or node to a PNG you can look at. It is drawn the way the editor draws it. Use it to check your work; large areas at high scale are refused, so draw one frame at a time.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "node": {
+            "description": "The page or node to draw.",
+            "type": "string"
+          },
+          "scale": {
+            "description": "Pixels per canvas unit, above 0 and at most 4 (default 1).",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "node"
+        ],
+        "title": "ShotInput",
+        "type": "object"
+      },
+      "name": "screenshot"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Show the computed layout of a page or node: each node's parent and bounds in page coordinates, and the layout problems found (text overflow, clipped children, overlapping siblings, nodes outside their frame). With `problems_only`, list just the problems and the nodes they involve. Use it after a change to check the result without drawing it.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "max_nodes": {
+            "description": "The most nodes to list (default 300, at most 2000). Past it, `truncated` is true.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "node": {
+            "description": "A page or node id. Defaults to the first page.",
+            "type": "string"
+          },
+          "problems_only": {
+            "default": false,
+            "description": "Only the nodes that have a layout problem, and the problems: text that overflows, children a frame clips,\nsiblings that overlap, nodes outside their frame.",
+            "type": "boolean"
+          }
+        },
+        "title": "LayoutInput",
+        "type": "object"
+      },
+      "name": "snapshot_layout"
+    }
+  ]
+}

@@ -2649,8 +2649,11 @@ name = "vellum"
 version = "0.0.0"
 dependencies = [
  "clap",
+ "getrandom 0.4.3",
+ "schemars",
  "serde",
  "serde_json",
+ "serde_path_to_error",
  "vellum-assets-fs",
  "vellum-codec-json",
  "vellum-codec-json-dir",

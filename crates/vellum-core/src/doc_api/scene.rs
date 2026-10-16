@@ -44,14 +44,14 @@ impl<S: SpatialIndex> SceneServices<S> {
         Self { config, make_index }
     }
 }
-impl<S: SpatialIndex> Services for SceneServices<S> {
-    fn read(
+impl<S: SpatialIndex> SceneServices<S> {
+    /// The resolved roots of the page or node `target` names, laid out.
+    fn inspect(
         &self,
-        method: Method,
         doc: &Document,
-        args: &[ScriptValue],
-    ) -> Result<ScriptValue, ScriptError> {
-        let target = text(args, 0)?;
+        target: &str,
+        method: Option<Method>,
+    ) -> Result<(Vec<Arc<crate::resolver::ResolvedNode>>, LayoutResult), ScriptError> {
         let roots: Vec<Arc<crate::resolver::ResolvedNode>> = {
             let mut resolver = Resolver::new();
             resolver.set_script_outputs(self.config.script_outputs.clone());
@@ -59,7 +59,7 @@ impl<S: SpatialIndex> Services for SceneServices<S> {
             if let Some(page) = doc.pages.iter().find(|p| p.id.as_str() == target) {
                 resolver.resolve_page(doc, &self.config.path, page, &mut libraries)
             } else {
-                if method == Method::FindSpace {
+                if method == Some(Method::FindSpace) {
                     return Err(error("findSpace requires a page"));
                 }
                 let id = NodeId::new(target).map_err(error)?;
@@ -95,6 +95,26 @@ impl<S: SpatialIndex> Services for SceneServices<S> {
             boxes.boxes.extend(result.boxes);
             boxes.problems.extend(result.problems);
         }
+        Ok((roots, boxes))
+    }
+}
+impl<S: SpatialIndex> Services for SceneServices<S> {
+    fn font_families(&self) -> Vec<String> {
+        self.config.fonts.families()
+    }
+    fn layout(&self, doc: &Document, target: &str) -> Result<layout_check::Report, ScriptError> {
+        let (roots, boxes) = self.inspect(doc, target, None)?;
+        layout_check::check(&roots, &boxes, &*self.config.text, (self.make_index)())
+            .map_err(|e| error(format!("{e:?}")))
+    }
+    fn read(
+        &self,
+        method: Method,
+        doc: &Document,
+        args: &[ScriptValue],
+    ) -> Result<ScriptValue, ScriptError> {
+        let target = text(args, 0)?;
+        let (roots, boxes) = self.inspect(doc, target, Some(method))?;
         let mut scene = Scene::new((self.make_index)());
         scene
             .sync(&scene::from_resolved(&roots, &boxes).map_err(|e| error(format!("{e:?}")))?)
@@ -206,7 +226,15 @@ impl<S: SpatialIndex> Services for SceneServices<S> {
                 )
                 .map_err(|e| error(format!("{e:?}")))?;
                 if !output.problems.is_empty() {
-                    return Err(error(format!("Incomplete render: {:?}", output.problems)));
+                    return Err(error(format!(
+                        "Incomplete render: {}",
+                        output
+                            .problems
+                            .iter()
+                            .map(render_problem)
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    )));
                 }
                 let image = self
                     .config
@@ -223,7 +251,18 @@ impl<S: SpatialIndex> Services for SceneServices<S> {
         }
     }
 }
-fn problem(p: &layout_check::Problem) -> Json {
+fn render_problem(problem: &display_list::Problem) -> String {
+    use display_list::Problem::*;
+    match problem {
+        UnsupportedNode { node, kind } => {
+            format!("the {} node {node} cannot be drawn yet", kind.as_str())
+        }
+        MissingFontData { node, .. } => format!("the font of {node} has no data to draw with"),
+        Text { node, problem } => format!("the text of {node} could not be laid out ({problem:?})"),
+    }
+}
+/// A layout problem as the JSON `doc.layoutProblems` and `snapshot_layout` show.
+pub fn problem(p: &layout_check::Problem) -> Json {
     use layout_check::Problem::*;
     match p {
         TextOverflow {

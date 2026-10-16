@@ -28,4 +28,9 @@ pub trait FontSource {
     fn data(&self, _handle: FontHandle) -> Option<FontData> {
         None
     }
+    /// The family names this source can draw with, sorted and without repeats (`list_fonts`). A source that
+    /// cannot list its families returns none.
+    fn families(&self) -> Vec<String> {
+        Vec::new()
+    }
 }

@@ -144,7 +144,12 @@ fn ipc_bridge_autostarts_reuses_and_restarts_after_crash() {
     );
     let reply: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(reply["id"], 42);
-    assert_eq!(reply["error"]["code"], -32601); // Registry arrives in Prompt 29.
+    // The daemon answers with the tool registry (Prompt 29), through the bridge.
+    assert!(
+        reply["result"]["tools"]
+            .as_array()
+            .is_some_and(|t| t.len() >= 11)
+    );
     let first = d.metadata();
     assert!(d.bridge(request).status.success());
     assert!(d.metadata() == first, "discovery changed unexpectedly");

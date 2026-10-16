@@ -1,6 +1,8 @@
 //! TEST DATA. Shared pieces for the daemon document tests: a fake editor engine and an environment over fakes.
 #![allow(dead_code)]
 
+pub mod workspace;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -171,7 +173,13 @@ pub fn decode(bytes: &[u8]) -> Document {
 /// An environment where every path is a path in `fs`, with the fake store and no renderer.
 pub fn env(fs: Arc<MemFs>, clock: Arc<ManualClock>) -> Env {
     Env {
-        locate: Box::new(move |path| Ok((fs.clone() as Arc<dyn FileSystem>, path.to_owned()))),
+        // An absolute path is a path in the fake disk, as the production locator roots it at the repo.
+        locate: Box::new(move |path| {
+            Ok((
+                fs.clone() as Arc<dyn FileSystem>,
+                path.trim_start_matches('/').to_owned(),
+            ))
+        }),
         codec: Arc::new(JsonCodec::new()),
         hash,
         clock: clock as Arc<dyn Clock>,
@@ -222,5 +230,85 @@ impl Daemon {
 
     pub fn on_disk(&self, path: &str) -> Document {
         decode(&self.fs.read(path).expect("read"))
+    }
+}
+
+// ---- Prompt 29: tools ----------------------------------------------------------------------------------------
+
+use serde_json::json;
+use vellum_core::doc_api::Services;
+
+/// TEST DATA. A small design: a Home page with a Hero frame (text in two sizes, a card bound to a colour variable,
+/// a Button instance, notes for agents and a context node), another frame, a Button component, a dark theme.
+pub fn design() -> Document {
+    serde_json::from_value(json!({
+        "meta": {"formatVersion": 1, "name": "TEST DATA: tools", "createdWith": "Vellum 0.0.0"},
+        "themes": {"Mode": ["light", "dark"]},
+        "variables": {
+            "varSurface1": {"type": "color", "name": "color/surface", "values": [
+                {"value": "#FFFFFF"}, {"value": "#111111", "when": {"Mode": "dark"}}]},
+            "varSpace004": {"type": "number", "name": "space/4", "values": [{"value": 16}]},
+            "varAlias001": {"type": "color", "name": "color/card", "values": [{"$alias": "varSurface1"}]}
+        },
+        "fonts": {"fontAsset01": {"family": "Geist", "weight": 600}},
+        "components": {
+            "compButton1": {
+                "name": "Button",
+                "props": {"label": {"type": "text", "default": "Press"}},
+                "root": {"type": "frame", "id": "buttonRoot", "name": "Button", "width": 120, "height": 40,
+                    "children": [
+                        {"type": "text", "id": "buttonText", "name": "Label", "width": "hug", "height": "hug",
+                         "content": [{"text": "Press", "font": "Inter", "size": 14}]}]}
+            }
+        },
+        "pages": [
+            {"id": "pageHome01", "name": "Home", "children": [
+                {"type": "frame", "id": "frameHero1", "name": "Hero", "position": {"type": "absolute", "x": 0, "y": 0}, "width": 390, "height": 300,
+                 "agentNotes": "Keep the hero short.",
+                 "children": [
+                    {"type": "text", "id": "textTitle1", "name": "Title", "position": {"type": "absolute", "x": 20, "y": 20}, "width": 200, "height": 40,
+                     "content": [{"text": "Welcome back", "font": "Inter", "size": 32}]},
+                    {"type": "text", "id": "textBody01", "name": "Body", "position": {"type": "absolute", "x": 20, "y": 80}, "width": 200, "height": 20,
+                     "content": [{"text": "Pick up where you left off", "font": "Inter", "size": 16}]},
+                    {"type": "rect", "id": "rectCard01", "name": "Card", "position": {"type": "absolute", "x": 20, "y": 120}, "width": 160, "height": 80,
+                     "fills": [{"type": "solid", "color": {"$var": "varSurface1"}}]},
+                    {"type": "instance", "id": "instBtn001", "name": "Primary button", "position": {"type": "absolute", "x": 20, "y": 220},
+                     "width": 120, "height": 40, "componentId": "compButton1"},
+                    {"type": "context", "id": "ctxHero001", "name": "Voice", "position": {"type": "absolute", "x": 300, "y": 20}, "width": 80, "height": 80,
+                     "content": "Write like a friend, not a brochure."}
+                 ]},
+                {"type": "frame", "id": "frameFoot1", "name": "Footer", "position": {"type": "absolute", "x": 0, "y": 400}, "width": 390, "height": 100,
+                 "children": [
+                    {"type": "text", "id": "textFoot01", "name": "Legal", "position": {"type": "absolute", "x": 20, "y": 20}, "width": 200, "height": 20,
+                     "content": [{"text": "All rights reserved", "font": "Inter", "size": 12}]},
+                    {"type": "note", "id": "noteFoot01", "name": "Todo", "position": {"type": "absolute", "x": 250, "y": 20}, "width": 100, "height": 60,
+                     "content": "Check the legal copy."}
+                 ]}
+            ]},
+            {"id": "pageOther1", "name": "Other", "children": []}
+        ]
+    }))
+    .expect("the test design is a valid document")
+}
+
+/// The real scene: Taffy layout, Parley text, rstar index and Skia drawing, exactly as the daemon wires them.
+pub fn scene() -> Rc<dyn Services> {
+    vellum::daemon::production::scene_services()
+}
+
+impl Daemon {
+    /// A daemon whose documents draw and lay out with the real scene.
+    pub fn with_scene(doc: &Document, paths: &[&str]) -> Self {
+        let mut daemon = Self::new(doc, paths);
+        let fs = daemon.fs.clone();
+        let clock = daemon.clock.clone();
+        let mut env = env(fs, clock);
+        env.services = scene();
+        daemon.docs = Documents::new(
+            env,
+            Box::new(daemon.watcher.clone()),
+            Recovery::new(daemon.recovery.clone(), Arc::new(JsonCodec::new()), hash),
+        );
+        daemon
     }
 }

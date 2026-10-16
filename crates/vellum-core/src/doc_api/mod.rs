@@ -12,7 +12,7 @@ use crate::{
     },
 };
 pub use registry::{API_VERSION, Descriptor, Method, REGISTRY, declarations};
-pub use scene::{RenderRead, Rendered, SceneConfig, SceneServices};
+pub use scene::{RenderRead, Rendered, SceneConfig, SceneServices, problem as problem_json};
 use serde_json::{Value as Json, json};
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use vellum_types::{Actor, Document, Node, NodeId, NodePatch, Origin};
@@ -32,6 +32,19 @@ pub trait Services {
         document: &Document,
         args: &[ScriptValue],
     ) -> Result<ScriptValue, ScriptError>;
+    /// The font families text can be drawn with, sorted (`list_fonts`).
+    fn font_families(&self) -> Vec<String> {
+        Vec::new()
+    }
+    /// Computed bounds and layout problems of a page or node: what `snapshot_layout` shows. Not part of the
+    /// script API, so a host without a scene says so rather than guessing.
+    fn layout(
+        &self,
+        _document: &Document,
+        _target: &str,
+    ) -> Result<crate::layout_check::Report, ScriptError> {
+        Err(error("Layout requires a host scene service".to_owned()))
+    }
 }
 pub struct NoServices;
 impl Services for NoServices {

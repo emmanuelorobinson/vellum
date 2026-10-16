@@ -4,9 +4,14 @@
 mod documents;
 mod headless;
 mod live;
+pub mod production;
 mod recovery;
+mod view;
 
 pub use documents::{Documents, Env, External, Opened};
 pub use headless::{DocFile, Engine, HeadlessTarget};
 pub use live::{EditorId, EditorLink, LiveTarget, Role};
-pub use recovery::{DamagedCopy, RECOVERY_INTERVAL_MS, Recovery, RecoveryCopy, recovery_dir};
+pub use recovery::{
+    DamagedCopy, RECOVERY_INTERVAL_MS, Recovery, RecoveryCopy, recovery_dir, recovery_dir_in,
+};
+pub use view::{DocumentView, EditorView, LeaseInfo, Paused, Viewport};

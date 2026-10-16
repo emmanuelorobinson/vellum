@@ -3,7 +3,7 @@
 Start the foreground daemon with `cargo run -p vellum -- daemon`. Its default runtime directory is
 `~/.vellum/run/`. `vellum status` authenticates without starting it. `vellum daemon stop` requests a
 clean stop. `vellum mcp` starts/reuses the daemon and bridges stdio; stdout is exclusively MCP traffic.
-The tool registry arrives in Prompt 29; currently requests receive an explicit method-not-found error.
+The daemon answers MCP with the tool registry (ADR-021, `docs/runbooks/tools.md`).
 No account, model, network access or renderer is needed for this transport.
 
 For isolated development use `vellum --run-dir /path/to/private/run daemon` and give the same
@@ -37,12 +37,14 @@ Run the IPC lane (requires permission to bind local sockets and loopback TCP):
 ```sh
 node scripts/ipc.mjs --offline
 cargo test --offline -p vellum-ipc-local --lib
-cargo clippy --offline -p vellum-ipc-local -p vellum --lib --bins -- -D warnings
+cargo clippy --offline -p vellum-ipc-local -p vellum --lib --bins --no-default-features -- -D warnings
 pnpm checksum
 ```
 
 Remove `--offline` when dependencies are not cached. The script builds the daemon binary and runs
-all tagged process tests using `VELLUM_IPC_BINARY`; it does not compile renderer dev-dependencies.
+all tagged process tests using `VELLUM_IPC_BINARY`. It builds the daemon with `--no-default-features`
+(no `scene` feature), so it compiles no renderer; `screenshot`, `snapshot_layout` and `find_space` report that
+they need a scene in that build.
 Inventory checks require `lsof` on macOS, `/proc` on Linux, and PowerShell/Get-NetTCPConnection on
 Windows. `.github/workflows/ipc.yml` runs all three platforms. Ordinary workspace tests show the
 process cases as explicitly ignored; the IPC lane executes them. Windows DACL tests inspect actual

@@ -19,20 +19,38 @@ vellum-ipc-local = { path = "../adapters/ipc-local" }
 vellum-types = { path = "../vellum-types" }
 vellum-core = { path = "../vellum-core" }
 vellum-codec-json-dir = { path = "../adapters/codec-json-dir" }
+vellum-codec-json = { path = "../adapters/codec-json" }
+vellum-doc-loro = { path = "../adapters/doc-loro" }
+vellum-assets-fs = { path = "../adapters/assets-fs" }
+vellum-watch-notify = { path = "../adapters/watch-notify" }
+vellum-layout-taffy = { path = "../adapters/layout-taffy", optional = true }
+vellum-text-parley = { path = "../adapters/text-parley", optional = true }
+vellum-render-skia = { path = "../adapters/render-skia", optional = true }
+vellum-index-rstar = { path = "../adapters/index-rstar", optional = true }
+getrandom = "=0.4.3"
 serde.workspace = true
 serde_json.workspace = true
+serde_path_to_error.workspace = true
+schemars.workspace = true
+
+[features]
+default = ["scene"]
+# Layout, text and Skia drawing: what snapshot_layout, find_space and screenshot need. The IPC lane builds the
+# daemon without it, so that lane compiles no renderer (ADR-021).
+scene = [
+    "dep:vellum-layout-taffy",
+    "dep:vellum-text-parley",
+    "dep:vellum-render-skia",
+    "dep:vellum-index-rstar",
+]
 
 [lints]
 workspace = true
 
 [dev-dependencies]
-vellum-script-quickjs = { path = "../adapters/script-quickjs" }
-vellum-render-skia = { path = "../adapters/render-skia" }
-vellum-text-parley = { path = "../adapters/text-parley" }
-vellum-codec-json = { path = "../adapters/codec-json" }
 vellum-layout-taffy = { path = "../adapters/layout-taffy" }
+vellum-text-parley = { path = "../adapters/text-parley" }
+vellum-render-skia = { path = "../adapters/render-skia" }
 vellum-index-rstar = { path = "../adapters/index-rstar" }
-vellum-assets-fs = { path = "../adapters/assets-fs" }
+vellum-script-quickjs = { path = "../adapters/script-quickjs" }
 vellum-contracts = { path = "../contracts" }
-vellum-watch-notify = { path = "../adapters/watch-notify" }
-vellum-doc-loro = { path = "../adapters/doc-loro" }

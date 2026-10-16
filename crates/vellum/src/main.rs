@@ -30,26 +30,43 @@ enum Command {
     },
     /// Show authenticated daemon status without starting it.
     Status,
+    /// Run one of the tools an MCP client sees: `vellum tool get_nodes --ids frame1`. `vellum tool --help`
+    /// lists them.
+    #[command(disable_help_flag = true)]
+    Tool {
+        /// The tool, then its flags.
+        #[arg(num_args = 0.., trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
 #[derive(Subcommand)]
 enum DaemonAction {
     Stop,
 }
-fn execute(cli: Cli) -> std::io::Result<()> {
+fn execute(cli: Cli) -> std::io::Result<ExitCode> {
     let dir = match cli.run_dir {
         Some(path) => RunDir::new(path)?,
         None => RunDir::for_user()?,
     };
+    // The daemon's private folder holds the run directory; recovery copies sit beside it.
+    let state = dir
+        .path()
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| dir.path().to_path_buf());
     match cli.command {
-        Command::Mcp => vellum_ipc_local::bridge(&dir, &std::env::current_exe()?),
+        Command::Mcp => {
+            vellum_ipc_local::bridge(&dir, &std::env::current_exe()?).map(|()| ExitCode::SUCCESS)
+        }
         Command::Status => {
             println!("{}", vellum_ipc_local::status(&dir)?);
-            Ok(())
+            Ok(ExitCode::SUCCESS)
         }
+        Command::Tool { args } => vellum::cli::run(&dir, &std::env::current_exe()?, args),
         Command::Daemon {
             action: Some(DaemonAction::Stop),
             ..
-        } => vellum_ipc_local::stop(&dir),
+        } => vellum_ipc_local::stop(&dir).map(|()| ExitCode::SUCCESS),
         Command::Daemon {
             listen,
             allow_origin,
@@ -58,12 +75,14 @@ fn execute(cli: Cli) -> std::io::Result<()> {
             dir,
             listen,
             allowed_origins: allow_origin,
-        }),
+            handler: vellum::daemon::production::handler(state),
+        })
+        .map(|()| ExitCode::SUCCESS),
     }
 }
 fn main() -> ExitCode {
     match execute(Cli::parse()) {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(code) => code,
         Err(error) => {
             eprintln!("vellum: {error}");
             ExitCode::FAILURE

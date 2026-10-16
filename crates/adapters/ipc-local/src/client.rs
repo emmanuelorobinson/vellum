@@ -1,5 +1,5 @@
 use crate::{
-    DEADLINE, MAX_FRAME, frame, invalid,
+    DEADLINE, MAX_FRAME, MAX_REPLY, frame, invalid,
     private::RunDir,
     runtime, send,
     transport::{self, Stream},
@@ -11,7 +11,9 @@ use std::{
     time::Duration,
 };
 use tokio::io::{AsyncWriteExt, BufReader};
-use vellum_types::daemon::{DAEMON_PROTOCOL_VERSION, DaemonChannel, DaemonHello, DaemonWelcome};
+use vellum_types::daemon::{
+    DAEMON_PROTOCOL_VERSION, DaemonChannel, DaemonHello, DaemonWelcome, MAX_CWD,
+};
 
 async fn connect(dir: &RunDir, channel: DaemonChannel) -> io::Result<BufReader<Stream>> {
     let metadata = dir.metadata()?;
@@ -23,6 +25,10 @@ async fn connect(dir: &RunDir, channel: DaemonChannel) -> io::Result<BufReader<S
             v: DAEMON_PROTOCOL_VERSION,
             token: metadata.token,
             channel,
+            cwd: std::env::current_dir()
+                .ok()
+                .and_then(|dir| dir.to_str().map(str::to_owned))
+                .filter(|dir| dir.len() <= MAX_CWD),
         },
     )
     .await?;
@@ -165,6 +171,39 @@ fn reap(mut child: Child) {
     });
 }
 
+/// Sends JSON-RPC `requests` to the daemon over one connection (starting the daemon if needed) and returns the
+/// replies, one for each request that has an `id`, in order. A request is never sent twice, so a caller that
+/// gets an error cannot tell whether the daemon acted on it.
+pub fn exchange(
+    dir: &RunDir,
+    executable: &Path,
+    requests: &[serde_json::Value],
+) -> io::Result<Vec<serde_json::Value>> {
+    let runtime = runtime()?;
+    runtime.block_on(async {
+        ensure(dir, executable).await?;
+        let mut stream = tokio::time::timeout(DEADLINE, connect(dir, DaemonChannel::Mcp))
+            .await
+            .map_err(|_| invalid("daemon handshake timed out"))??;
+        let mut replies = Vec::new();
+        for request in requests {
+            send(stream.get_mut(), request).await?;
+            if request.get("id").is_none() {
+                continue;
+            }
+            let bytes = frame(&mut stream, MAX_REPLY).await?.ok_or_else(|| {
+                io::Error::new(io::ErrorKind::UnexpectedEof, "daemon disconnected")
+            })?;
+            replies
+                .push(serde_json::from_slice(&bytes).map_err(|_| invalid("invalid daemon reply"))?);
+        }
+        // The private end marker: the daemon answers it with its own and closes.
+        stream.get_mut().write_all(b"\n").await?;
+        stream.get_mut().flush().await?;
+        Ok(replies)
+    })
+}
+
 pub fn bridge(dir: &RunDir, executable: &Path) -> io::Result<()> {
     let runtime = runtime()?;
     let result = runtime.block_on(async {
@@ -191,7 +230,7 @@ pub fn bridge(dir: &RunDir, executable: &Path) -> io::Result<()> {
             let mut reader = BufReader::new(reader);
             let mut output = tokio::io::stdout();
             loop {
-                let bytes = frame(&mut reader, MAX_FRAME).await?.ok_or_else(|| {
+                let bytes = frame(&mut reader, MAX_REPLY).await?.ok_or_else(|| {
                     io::Error::new(io::ErrorKind::UnexpectedEof, "daemon disconnected")
                 })?;
                 if bytes == b"\n" {
