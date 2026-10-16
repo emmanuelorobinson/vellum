@@ -15,7 +15,9 @@ mod path;
 mod script;
 mod shader;
 mod spatial;
+mod target;
 mod text;
+mod watch;
 
 pub use assets::InMemoryAssets;
 pub use clock::{ManualClock, SequentialIds};
@@ -28,4 +30,6 @@ pub use path::IdentityPathOps;
 pub use script::NoopScriptRuntime;
 pub use shader::PassthroughShaderCompiler;
 pub use spatial::NaiveSpatialIndex;
+pub use target::InMemoryTarget;
 pub use text::FixedMetricText;
+pub use watch::ManualWatcher;

@@ -104,3 +104,14 @@ fn ports_are_object_safe() {
     let _: &dyn ScriptRuntime = &NoopScriptRuntime;
     let _: &dyn ShaderCompiler = &PassthroughShaderCompiler;
 }
+
+#[test]
+fn document_target() {
+    suites::target::run(vellum_contracts::fakes::InMemoryTarget::new);
+}
+
+#[test]
+fn file_watcher() {
+    let watcher = vellum_contracts::fakes::ManualWatcher::new();
+    suites::watch::run(&mut watcher.clone(), &mut suites::watch::ToldDisk(watcher));
+}

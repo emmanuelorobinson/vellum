@@ -617,3 +617,74 @@ fn document_files_that_ignore_a_change() {
         &[samples::document()],
     );
 }
+
+/// A target that applies the ops it can and skips the rest.
+struct AppliesHalf(vellum_contracts::fakes::InMemoryTarget);
+impl DocumentTarget for AppliesHalf {
+    fn mode(&self) -> TargetMode {
+        self.0.mode()
+    }
+    fn snapshot(&mut self) -> Result<Document, TargetError> {
+        self.0.snapshot()
+    }
+    fn transact(
+        &mut self,
+        tx: vellum_core::ops::Transaction,
+    ) -> Result<vellum_core::ops::Applied, TargetError> {
+        let mut last = None;
+        for op in tx.ops {
+            last = Some(self.0.transact(vellum_core::ops::Transaction::new(
+                tx.origin.clone(),
+                vec![op],
+            )));
+        }
+        last.expect("an op")
+    }
+    fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError> {
+        self.0.render(target, scale)
+    }
+    fn save(&mut self) -> Result<(), TargetError> {
+        self.0.save()
+    }
+    fn is_dirty(&mut self) -> Result<bool, TargetError> {
+        self.0.is_dirty()
+    }
+}
+
+#[test]
+#[should_panic(expected = "a refused transaction must change nothing")]
+fn target_that_applies_half_a_transaction() {
+    suites::target::run(|doc| AppliesHalf(vellum_contracts::fakes::InMemoryTarget::new(doc)));
+}
+
+/// A watcher that reports every document, watched or not, every time.
+struct ReportsEverything(vellum_contracts::fakes::ManualWatcher, Vec<String>);
+impl FileWatcher for ReportsEverything {
+    fn id(&self) -> &'static str {
+        "reports-everything"
+    }
+    fn watch(&mut self, path: &str) -> Result<(), FsError> {
+        self.1.push(path.to_owned());
+        self.0.watch(path)
+    }
+    fn unwatch(&mut self, path: &str) {
+        self.0.unwatch(path)
+    }
+    fn changed(&mut self) -> Vec<String> {
+        let _ = self.0.changed();
+        let mut all = self.1.clone();
+        all.sort();
+        all.dedup();
+        all
+    }
+}
+
+#[test]
+#[should_panic(expected = "FileWatcher:")]
+fn watcher_that_reports_everything() {
+    let watcher = vellum_contracts::fakes::ManualWatcher::new();
+    suites::watch::run(
+        &mut ReportsEverything(watcher.clone(), vec![]),
+        &mut suites::watch::ToldDisk(watcher),
+    );
+}

@@ -43,6 +43,11 @@ fn hash_of(bytes: &[u8]) -> AssetHash {
     AssetHash::new(hex).expect("hex is a valid hash")
 }
 
+/// The SHA-256 of `bytes`, lower-case hex. The daemon tells its own writes from outside changes by it.
+pub fn content_hash(bytes: &[u8]) -> String {
+    hash_of(bytes).as_str().to_owned()
+}
+
 fn unavailable(error: FsError) -> AssetError {
     AssetError::Unavailable(error.to_string())
 }

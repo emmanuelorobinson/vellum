@@ -20,7 +20,9 @@ mod path;
 mod script;
 mod shader;
 mod spatial;
+mod target;
 mod text;
+mod watch;
 
 pub use assets::{AssetCollect, AssetError, AssetHash, AssetHashError, AssetStore, check_mime};
 pub use clock::{Clock, IdGen, Timestamp};
@@ -43,7 +45,9 @@ pub use script::{
 };
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;
+pub use target::{DocumentTarget, TargetError, TargetMode};
 pub use text::{
     Glyph, GlyphRun, RichText, StyledRun, TextBoxLayout, TextDecoration, TextEngine, TextLayout,
     TextLine, TextMetrics, TextProblem,
 };
+pub use watch::FileWatcher;

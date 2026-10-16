@@ -6,6 +6,9 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "vellum"
 path = "src/main.rs"
@@ -14,19 +17,22 @@ path = "src/main.rs"
 clap.workspace = true
 vellum-ipc-local = { path = "../adapters/ipc-local" }
 vellum-types = { path = "../vellum-types" }
+vellum-core = { path = "../vellum-core" }
+vellum-codec-json-dir = { path = "../adapters/codec-json-dir" }
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true
 
 [dev-dependencies]
 vellum-script-quickjs = { path = "../adapters/script-quickjs" }
-serde_json.workspace = true
-vellum-core = { path = "../vellum-core" }
 vellum-render-skia = { path = "../adapters/render-skia" }
 vellum-text-parley = { path = "../adapters/text-parley" }
 vellum-codec-json = { path = "../adapters/codec-json" }
 vellum-layout-taffy = { path = "../adapters/layout-taffy" }
 vellum-index-rstar = { path = "../adapters/index-rstar" }
-vellum-codec-json-dir = { path = "../adapters/codec-json-dir" }
 vellum-assets-fs = { path = "../adapters/assets-fs" }
 vellum-contracts = { path = "../contracts" }
+vellum-watch-notify = { path = "../adapters/watch-notify" }
+vellum-doc-loro = { path = "../adapters/doc-loro" }

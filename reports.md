@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-020 and synchronize ARCHITECTURE** (Prompt 28). New ports `DocumentTarget` and `FileWatcher`;
+  `crates/vellum` is now a library plus binary. External changes go through a three-way merge with unsaved
+  edits, not the plain old-vs-new diff of ARCHITECTURE §4.5 (same result when nothing is unsaved). Decide the
+  editor wire protocol (ops are not serialisable; `EditorLink` is in-process only) and whether an offline editor
+  must always open read-only (`Role::OFFLINE`, per guide §7). Only macOS arm64 (FSEvents) ran; Linux inotify and
+  Windows watcher behaviour and the git tests on Windows (`GIT_CONFIG_GLOBAL=/dev/null`) are unverified.
+
 - **Review ADR-003 and run native IPC CI** (Prompt 27). Private Unix sockets and Windows named pipes,
   token/version handshakes, lifecycle and the stdio bridge are implemented. macOS arm64 IPC passes;
   Windows cross-target clippy passes, but native Windows/Linux and cross-user DACL denial have not run
@@ -1776,3 +1783,48 @@ Verified (exit 0 except the two existing failures below; pnpm used both dev-tele
 
 Not verified: remote CI, native Windows/Linux execution, another user's denied connection, real
 host restart wiring or later MCP tools. Existing Prompt 26 working-tree changes were preserved.
+
+## Prompt 28: live/headless targets, file watcher, recovery copies
+
+Built (ADR-020):
+- `vellum-core` ports `DocumentTarget` (+ `TargetError`, `TargetMode`) and `FileWatcher`; fakes `InMemoryTarget`,
+  `ManualWatcher`; contract suites `suites::target`, `suites::watch` with broken implementations they reject.
+- `vellum-watch-notify` (notify `=8.2.0`, deny.toml wrapper, version baseline row): parent-folder watches that
+  follow atomic-save renames, recursive watches for folder documents, own per-document debounce.
+- `crates/vellum/src/daemon/`: `HeadlessTarget` (loads either format, Guarded transactions, saves after each,
+  renders through `doc_api::Services`), `LiveTarget` over `EditorLink`, `Documents` (one writer per file, attach,
+  promote, fall back to headless when the writer closes or answers `Gone`), external changes as one transaction by
+  `Actor::File { ExternalChange }` (self-writes ignored by canonical SHA-256, merge with unsaved edits, typed
+  `Unreadable`/`Interrupted`/`Missing`/`Refused`), recovery copies every 5 s in `~/.vellum/recovery/` (removed on
+  save, discard or deliberate close; listed on open; restore by `Actor::File { Recovery }`), private `recovery_dir`.
+- `vellum_assets_fs::content_hash` exposes the SHA-256 so `sha2` stays in its adapter.
+
+Differs from the guide / decisions:
+- External changes are `merge(last file, engine doc, new file)` then diff, so unsaved edits survive a checkout.
+- Headless targets autosave every transaction; a failed save leaves the change applied and the target dirty.
+- Not wired into the running daemon process yet (no caller until Prompt 29's tools), and the editor's socket
+  channel waits for the host relay. No production `IdGen` exists yet. `FileReason::Merge` is not inferred from
+  `git merge`; a git merge is an external change. The real Skia render is wired only in tests, so the IPC lane
+  still needs no renderer build.
+
+Process note: the daemon library was written before its tests, against the TDD order. To make up for it, three
+mutation checks were run (no hash fast path, diff instead of merge, recovery interval). The first survived:
+without the hash the merge is a no-op anyway. The self-write test now asserts that the editor is not asked for
+its document, and all three mutations fail the suite. The watcher adapter and the port suites were test-first.
+A bug the tests found: a crashed writer that had not failed a call yet got a new editor attached to it.
+`open_editor` now checks the writer is alive first.
+
+Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace`; `cargo test -p vellum --test daemon_documents` (27)
+  and `--test daemon_watch` (8, real FSEvents + git checkout/merge/conflict fixtures + Skia render);
+  `cargo test -p vellum-watch-notify` (3); `cargo test -p vellum-contracts`.
+- `cargo clippy` on the touched crates `--all-targets -D warnings`, and `--target x86_64-pc-windows-gnu` for
+  `vellum-watch-notify` and `vellum --lib`; `pnpm lint`, `pnpm type-check`, `pnpm format:check`, `pnpm deps:check`,
+  `pnpm checksum`, `pnpm clean-room`, `node scripts/types-gen.mjs --check`, `pnpm format-spec:check`,
+  `git diff --check`.
+- Failed: `pnpm test:scripts` (165 pass, 4 skipped, the existing `R3 taffy: main.rs` failure).
+- Failed: `cargo deny check`, the same three Loro-chain unmaintained advisories (bans, licences and sources pass).
+
+Not verified: Linux/Windows watchers and git on Windows, the IPC/CI lanes remotely, real editors or hosts.
+No design frames were involved (A06 is UI for Prompt 58; only its data is here).
+

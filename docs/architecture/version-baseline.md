@@ -41,7 +41,7 @@
 | schemars | 1.2.2 | 1.2.x | `Cargo.toml` workspace.dependencies | JSON Schema from vellum-types |
 | ts-rs | 12.0.1 | 12.x | `Cargo.toml` workspace.dependencies | TypeScript bindings from vellum-types |
 | wasm-bindgen | 0.2.129 | 0.2.129+ | not yet used | ADR-001 uses emscripten C exports for the renderer; not needed there |
-| notify | 8.2.0 | 8.2.x | not yet used | file watcher (Prompt 28) |
+| notify | 8.2.0 | 8.2.x | `crates/adapters/watch-notify` (pinned `=8.2.0`, default features off, `macos_fsevent`) | FileWatcher (Prompt 28, ADR-020) |
 | rusqlite | 0.40.2 | 0.40.x | not yet used | session store, bundled SQLite (Prompt 34) |
 | keyring | 4.2.0 | 4.2.x | not yet used | SecretStore (Prompt 32) |
 | clap | 4.6.7 | 4.6.x | `Cargo.toml` workspace.dependencies | CLI (Prompt 59) |

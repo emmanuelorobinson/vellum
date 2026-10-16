@@ -1,0 +1,18 @@
+[package]
+name = "vellum-watch-notify"
+description = "FileWatcher over notify: debounced, follows atomic-save renames, folder documents."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+# Native file events. Only this adapter may use it (deny.toml).
+notify = { version = "=8.2.0", default-features = false, features = ["macos_fsevent"] }
+
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+
+[lints]
+workspace = true

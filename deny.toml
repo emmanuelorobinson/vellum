@@ -65,6 +65,7 @@ deny = [
   { crate = "rusqlite", wrappers = ["vellum-sessions-sqlite"], reason = "sessions go through the SessionStore port" },
   { crate = "keyring", wrappers = ["vellum-secrets-keyring"], reason = "keys live in the OS keychain only (Invariant 10)" },
   { crate = "sha2", wrappers = ["vellum-assets-fs"], reason = "an asset's hash is made by the file-system asset adapter (ADR-018)" },
+  { crate = "notify", wrappers = ["vellum-watch-notify"], reason = "file events go through the FileWatcher port (ADR-020)" },
   { crate = "wuff", wrappers = ["vellum-text-parley"], reason = "web fonts are unpacked inside the text adapter (ADR-018)" },
 ]
 

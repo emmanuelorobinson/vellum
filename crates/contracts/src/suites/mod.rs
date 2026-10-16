@@ -13,7 +13,9 @@ pub mod path;
 pub mod script;
 pub mod shader;
 pub mod spatial;
+pub mod target;
 pub mod text;
+pub mod watch;
 
 /// Two numbers are the same, give or take rounding.
 pub(crate) fn close(a: f64, b: f64) -> bool {
