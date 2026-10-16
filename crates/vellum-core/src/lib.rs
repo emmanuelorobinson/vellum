@@ -29,6 +29,8 @@ pub mod resolver;
 pub mod scene;
 pub mod script_nodes;
 pub mod sessions;
+pub mod spec;
+pub mod tokens;
 pub mod turns;
 
 /// The Cargo package name, used by the smoke test and by diagnostics.

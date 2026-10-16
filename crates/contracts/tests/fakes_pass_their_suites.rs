@@ -6,6 +6,7 @@ use vellum_contracts::fakes::{
     StaticFonts,
 };
 use vellum_contracts::{samples, suites};
+use vellum_core::ports::TokenFormat;
 
 #[test]
 fn clock() {
@@ -114,4 +115,16 @@ fn document_target() {
 fn file_watcher() {
     let watcher = vellum_contracts::fakes::ManualWatcher::new();
     suites::watch::run(&mut watcher.clone(), &mut suites::watch::ToldDisk(watcher));
+}
+
+#[test]
+fn tokens_and_spec() {
+    let set = samples::token_set();
+    let fake = vellum_contracts::fakes::MemoryTokens::default();
+    suites::tokens::format(&fake, &set, &fake.default_options(&set.themes));
+    suites::spec::format(
+        &vellum_contracts::fakes::MemorySpec,
+        &samples::document(),
+        &samples::node_id("frame00001"),
+    );
 }

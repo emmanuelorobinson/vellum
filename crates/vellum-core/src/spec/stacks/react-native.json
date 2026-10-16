@@ -1,0 +1,43 @@
+{
+  "id": "react-native",
+  "label": "React Native",
+  "language": "tsx",
+  "summary": "React Native components styled with StyleSheet. Layout is flexbox with a column main axis by default; sizes are density-independent points, not CSS pixels. Design tokens live in one theme object that components read.",
+  "elements": {
+    "frame": "A View. Use a ScrollView or FlatList when the content is taller than the frame and the spec says it scrolls.",
+    "group": "A View with no style of its own.",
+    "text": "A Text. Set fontFamily, fontSize, fontWeight, lineHeight and letterSpacing from the text style.",
+    "image": "An Image (expo-image in an Expo project) with resizeMode cover or contain.",
+    "icon": "The icon of the same name from the project's icon set (lucide-react-native or @expo/vector-icons).",
+    "vector": "An SvgXml or Svg Path from react-native-svg with the path data from the spec.",
+    "rect": "A View with backgroundColor and borderRadius.",
+    "ellipse": "A View with borderRadius half its size.",
+    "instance": "The project's component of the same name, with the instance's props."
+  },
+  "layout": {
+    "row": "flexDirection: 'row'",
+    "column": "flexDirection: 'column' (the default)",
+    "grid": "No grid: rows of Views, or a FlatList with numColumns equal to the frame's columns.",
+    "none": "position: 'relative' on the frame; children with an absolute position use position: 'absolute' with left and top from x and y.",
+    "gap": "gap: N.",
+    "padding": "padding: N, paddingVertical and paddingHorizontal for two values, paddingTop paddingRight paddingBottom paddingLeft for four.",
+    "justify": "justifyContent: 'flex-start', 'center', 'flex-end' or 'space-between'.",
+    "align": "alignItems: 'flex-start', 'center', 'flex-end' or 'stretch'.",
+    "fill": "flex: 1 along the parent's main axis, alignSelf: 'stretch' across it.",
+    "hug": "No width or height; the content decides.",
+    "fixed": "width: N and height: N."
+  },
+  "tokens": {
+    "reference": "Read tokens from the theme object (theme.colors.primary, theme.spacing[4]), never write the value in a style.",
+    "naming": "A token name's slashes become object keys: color/primary is theme.color.primary, space/4 is theme.space[4].",
+    "modes": "Theme values such as Dark select the dark theme object; choose it with useColorScheme. Never branch on the theme in a component."
+  },
+  "components": "One component per component in the spec, with its props as typed props and its variants as a variant prop. An instance is that component with the instance's props, not a copy of its layers.",
+  "rules": [
+    "Follow the spec's sizes and spacing exactly; they are points.",
+    "Build styles with StyleSheet.create outside the render function.",
+    "Respect safe areas on frames that touch a screen edge (react-native-safe-area-context).",
+    "Use theme tokens for every color, spacing and radius the spec names a token for.",
+    "A layer with notes in the spec carries instructions from the designer; follow them."
+  ]
+}

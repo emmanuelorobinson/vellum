@@ -18,6 +18,7 @@ mod scene;
 mod spec;
 mod step;
 mod support;
+mod tokens;
 mod write;
 
 use std::fmt;
@@ -27,6 +28,7 @@ use schemars::Schema;
 use serde_json::Value;
 use vellum_core::guard::WriteError;
 use vellum_core::ports::{DocKey, FileError, FsError, ScriptValue, TargetError};
+use vellum_core::spec::StackProfiles;
 use vellum_types::{Actor, AgentId, Origin, SessionId, TurnId};
 
 use crate::daemon::Documents;
@@ -489,6 +491,17 @@ impl Registry {
             std::rc::Rc::new(crate::content::BuiltinSkills),
             std::rc::Rc::new(crate::content::BuiltinStyles),
             settings,
+            StackProfiles::builtin(),
+        )
+    }
+
+    /// The tools Vellum ships, with `get_spec` knowing these stacks instead of the built-in three.
+    pub fn with_stacks(stacks: StackProfiles) -> Self {
+        Self::configured(
+            std::rc::Rc::new(crate::content::BuiltinSkills),
+            std::rc::Rc::new(crate::content::BuiltinStyles),
+            &AgentSettings::default(),
+            stacks,
         )
     }
 
@@ -497,13 +510,19 @@ impl Registry {
         skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
         styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
     ) -> Self {
-        Self::configured(skills, styles, &AgentSettings::default())
+        Self::configured(
+            skills,
+            styles,
+            &AgentSettings::default(),
+            StackProfiles::builtin(),
+        )
     }
 
     fn configured(
         skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
         styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
         settings: &AgentSettings,
+        stacks: StackProfiles,
     ) -> Self {
         let mut tools: Vec<Box<dyn Tool>> = Vec::new();
         content::register(&mut tools, skills, styles);
@@ -515,6 +534,7 @@ impl Registry {
         model::register(&mut tools);
         coordinate::register(&mut tools, settings);
         execute::register(&mut tools);
+        tokens::register(&mut tools, stacks);
         Self::new(tools)
     }
 

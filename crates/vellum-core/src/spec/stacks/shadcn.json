@@ -1,0 +1,43 @@
+{
+  "id": "shadcn",
+  "label": "shadcn/ui (React, Tailwind CSS)",
+  "language": "tsx",
+  "summary": "React components styled with Tailwind CSS utilities on top of shadcn/ui primitives. Design tokens are CSS custom properties in the Tailwind theme, so a token is used by name and changes with the theme.",
+  "elements": {
+    "frame": "A div, or the semantic element for its role (section, nav, header, main, ul). Add overflow-hidden when the frame clips.",
+    "group": "A div with no layout classes of its own.",
+    "text": "A p, span or heading (h1 to h6) chosen by its role. Use the text style's size, weight and line height from the theme.",
+    "image": "An img, or next/image in a Next.js project. Keep the fit as object-cover or object-contain.",
+    "icon": "The lucide-react icon of the same name. Set size and stroke width from the spec.",
+    "vector": "An inline svg with the path data from the spec.",
+    "rect": "A div with a background and rounded classes.",
+    "ellipse": "A div with rounded-full and a background.",
+    "instance": "The shadcn/ui component for the same purpose (Button, Card, Input, Badge, Dialog) when one exists; otherwise the component the spec lists under components."
+  },
+  "layout": {
+    "row": "flex flex-row",
+    "column": "flex flex-col",
+    "grid": "grid with grid-cols-N, N being the frame's columns.",
+    "none": "relative on the frame; children with an absolute position are absolute with left and top set from x and y.",
+    "gap": "gap-N where N is the gap divided by 4, or gap-[Npx] when it is not a multiple of 4.",
+    "padding": "p-N for all sides, px-N py-N for two values, pt- pr- pb- pl- for four.",
+    "justify": "justify-start, justify-center, justify-end or justify-between for the main axis.",
+    "align": "items-start, items-center, items-end or items-stretch for the cross axis.",
+    "fill": "flex-1 along the parent's main axis, self-stretch or w-full across it.",
+    "hug": "No width or height class; the content decides (w-fit when the parent would stretch it).",
+    "fixed": "w-[Npx] h-[Npx], or the Tailwind step when the number is a multiple of 4."
+  },
+  "tokens": {
+    "reference": "Use the token, never its value. A color token is bg-name, text-name or border-name when the theme defines it as --color-name; any other token is var(--property) in an arbitrary value, such as p-[var(--spacing-4)].",
+    "naming": "A token name's slashes become hyphens and its first word is the theme namespace: color/primary is --color-primary, radius/md is --radius-md, space/4 is --spacing-4. export_tokens with tailwind-v4 writes exactly these.",
+    "modes": "Theme values such as Dark are the .dark class and other selectors in the exported file. Never branch on the theme in a component."
+  },
+  "components": "One React component per component in the spec, with its props as TypeScript props and its variants as a variant prop (cva). An instance is that component with the instance's props, not a copy of its layers. Put them in components/ and reuse an existing one before writing another.",
+  "rules": [
+    "Follow the spec's sizes and spacing; do not round them to what looks close.",
+    "Use shadcn/ui primitives from @/components/ui before writing your own.",
+    "Style with Tailwind utilities and the theme's tokens. No hard-coded colors or pixel values that a token covers.",
+    "Keep the layer tree's structure unless the spec says a layer is only decoration.",
+    "A layer with notes in the spec carries instructions from the designer; follow them."
+  ]
+}

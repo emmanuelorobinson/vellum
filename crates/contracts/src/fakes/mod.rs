@@ -22,6 +22,7 @@ mod shader;
 mod spatial;
 mod target;
 mod text;
+mod tokens;
 mod watch;
 
 pub use assets::InMemoryAssets;
@@ -42,4 +43,5 @@ pub use shader::PassthroughShaderCompiler;
 pub use spatial::NaiveSpatialIndex;
 pub use target::InMemoryTarget;
 pub use text::FixedMetricText;
+pub use tokens::{MemorySpec, MemoryTokens};
 pub use watch::ManualWatcher;

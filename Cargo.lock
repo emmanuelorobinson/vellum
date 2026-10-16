@@ -3904,6 +3904,7 @@ dependencies = [
  "vellum-engine-builtin",
  "vellum-engine-claude-code",
  "vellum-engine-codex",
+ "vellum-export-tokens",
  "vellum-index-rstar",
  "vellum-ipc-local",
  "vellum-layout-taffy",
@@ -4039,6 +4040,12 @@ version = "0.0.0"
 [[package]]
 name = "vellum-export-tokens"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+ "vellum-types",
+]
 
 [[package]]
 name = "vellum-icons"

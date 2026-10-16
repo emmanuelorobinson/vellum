@@ -22,6 +22,7 @@ vellum-types = { path = "../vellum-types" }
 vellum-core = { path = "../vellum-core" }
 vellum-codec-json-dir = { path = "../adapters/codec-json-dir" }
 vellum-codec-json = { path = "../adapters/codec-json" }
+vellum-export-tokens = { path = "../adapters/export-tokens" }
 vellum-doc-loro = { path = "../adapters/doc-loro" }
 vellum-assets-fs = { path = "../adapters/assets-fs" }
 vellum-watch-notify = { path = "../adapters/watch-notify" }

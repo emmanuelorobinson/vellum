@@ -2355,3 +2355,34 @@ Not run: the engines lane (`installed_parallel`, needs signed-in Claude Code and
 `--no-default-features` the placement tests fail as Prompt 38's already did. Noticed, not mine: parity still lists
 the installed-agents and model-providers rows as pending on Prompt 37, which is committed.
 
+
+## Prompt 40: tokens, spec, stack profiles (UNFINISHED: see "Not run")
+
+Built:
+- `vellum_core::tokens` (pure): `TokenSet`/`Token` (default value plus the value under each single non-default theme
+  value), `collect` (document → set, with warnings), `ThemeMapping` (person-editable theme value → selector),
+  `TokenOptions`, `plan` (set vs document: added/changed/removed diff, the variables and themes that make the
+  document match). `ports::TokenFormat`, `ports::SpecFormat`.
+- `vellum-export-tokens`: `css-vars`, `tailwind-v4` (`@theme` plus plain blocks), `dtcg-json`. Real-world CSS is read
+  (oklch/hsl/rgb, `@theme inline`, `@layer`; `@media` skipped with a warning).
+- `vellum_core::spec`: `LayoutSpecV1` and `StackProfiles` (shadcn, react-native, swiftui as embedded JSON, swappable).
+- Tools `get_spec`, `import_tokens` (has `dry_run`, `remove_missing`), `export_tokens`; MCP snapshot regenerated.
+  Contract suites `suites::tokens` / `suites::spec` with fakes and broken-implementation tests.
+
+Decisions (mine, please review): tools take and return file text, never paths (no broker use; the caller reads and
+writes files). A name CSS cannot round-trip carries a `/* name: … */` comment. Numbers are `px` by name prefix
+(`TokenOptions::lengths`); `rem` is read as 16 px. Tailwind renames `space` to `spacing`. DTCG holds modes, themes
+and original names in `$extensions.<brand>`; strings and booleans use the non-standard types `string`/`boolean`;
+colours are hex strings. Values depending on several axes at once are written per axis, with a warning. Stack
+profiles cover shadcn, React Native and SwiftUI only (DESIGN C19 also names CSS and Tailwind; those are Prompt 41).
+
+Process: the core `tokens` implementation was written before its tests (they passed first time); the adapter, spec,
+contract and tool tests were written first. No mutation checks were run.
+
+Passed: `cargo test --offline -p vellum-core --lib tokens:: spec::`, `-p vellum-export-tokens`, `-p vellum-contracts`,
+`-p vellum --test tokens_tools --test mcp`.
+
+Not run (do these next): `cargo clippy --workspace --all-targets -D warnings`, full `cargo test --workspace`,
+`pnpm deps:check` (vellum-core allowlist unchanged, adapter is new; `export-tokens` may need a line),
+`pnpm lint`, `pnpm types:check`, `pnpm checksum`, `pnpm parity:check`. Not done: CLI `tokens` commands and the C20/C19
+editor UI (later prompts), `cargo deny`.

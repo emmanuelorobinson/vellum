@@ -160,3 +160,82 @@ pub fn find<'a>(doc: &'a Document, id: &str) -> Option<&'a Node> {
         .flat_map(|p| &p.children)
         .find_map(|n| walk(n, id))
 }
+
+/// A token set every format can hold in full: each type, an alias, a name that needs a hint, a string that looks
+/// like a colour, and values under non-default theme values on two axes.
+pub fn token_set() -> vellum_core::tokens::TokenSet {
+    use vellum_core::tokens::{ModeValue, Token, TokenSet, TokenValue};
+    use vellum_types::{Color, VariableType};
+    let token = |name: &str, kind, value, modes| Token {
+        name: name.into(),
+        kind,
+        value,
+        modes,
+    };
+    let mode = |axis: &str, mode: &str, value| ModeValue {
+        axis: axis.into(),
+        mode: mode.into(),
+        value,
+    };
+    TokenSet {
+        themes: [
+            (
+                "Device".to_owned(),
+                vec!["Desktop".to_owned(), "Phone".to_owned()],
+            ),
+            (
+                "Mode".to_owned(),
+                vec!["Light".to_owned(), "Dark".to_owned()],
+            ),
+        ]
+        .into(),
+        tokens: vec![
+            token(
+                "color/accent",
+                VariableType::Color,
+                TokenValue::Alias("color/brand/primary".into()),
+                vec![],
+            ),
+            token(
+                "color/brand/primary",
+                VariableType::Color,
+                TokenValue::Color(Color::rgb(0x25, 0x63, 0xEB)),
+                vec![mode(
+                    "Mode",
+                    "Dark",
+                    TokenValue::Color(Color::rgba(0x60, 0xA5, 0xFA, 0xCC)),
+                )],
+            ),
+            token(
+                "flag/dense",
+                VariableType::Boolean,
+                TokenValue::Boolean(false),
+                vec![mode("Device", "Phone", TokenValue::Boolean(true))],
+            ),
+            token(
+                "font/body",
+                VariableType::String,
+                TokenValue::String("Inter, sans-serif".into()),
+                vec![],
+            ),
+            token(
+                "label/hex",
+                VariableType::String,
+                TokenValue::String("#2563eb".into()),
+                vec![],
+            ),
+            token(
+                "radius/md",
+                VariableType::Number,
+                TokenValue::Number(8.0),
+                vec![],
+            ),
+            token(
+                "space/4",
+                VariableType::Number,
+                TokenValue::Number(16.0),
+                vec![mode("Device", "Phone", TokenValue::Number(12.5))],
+            ),
+        ],
+    }
+}

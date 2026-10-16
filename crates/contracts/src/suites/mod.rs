@@ -18,8 +18,10 @@ pub mod script;
 pub mod sessions;
 pub mod shader;
 pub mod spatial;
+pub mod spec;
 pub mod target;
 pub mod text;
+pub mod tokens;
 pub mod watch;
 
 /// Two numbers are the same, give or take rounding.

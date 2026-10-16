@@ -25,8 +25,10 @@ mod script;
 mod sessions;
 mod shader;
 mod spatial;
+mod spec;
 mod target;
 mod text;
+mod tokens;
 mod watch;
 
 pub use assets::{AssetCollect, AssetError, AssetHash, AssetHashError, AssetStore, check_mime};
@@ -68,9 +70,11 @@ pub use sessions::{
 };
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;
+pub use spec::{SpecError, SpecFormat};
 pub use target::{DocumentTarget, TargetError, TargetMode, TurnUndone};
 pub use text::{
     Glyph, GlyphRun, RichText, StyledRun, TextBoxLayout, TextDecoration, TextEngine, TextLayout,
     TextLine, TextMetrics, TextProblem,
 };
+pub use tokens::{TokenError, TokenExport, TokenFormat, TokenImport};
 pub use watch::FileWatcher;

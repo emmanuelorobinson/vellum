@@ -260,6 +260,96 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
+      "description": "Write the document's variables as a token file: CSS variables, a Tailwind v4 `@theme` block, or Design Tokens (DTCG) JSON. Returns the file's text and a file name to suggest; write it into the project yourself. Each theme value (such as dark) is written under the selector in `mapping`, which you can change. `warnings` names every token or value that could not be written.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "description": "The settings both tools share.",
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "format": {
+            "description": "The file format.",
+            "oneOf": [
+              {
+                "const": "css-vars",
+                "description": "CSS custom properties: `:root { --color-primary: #2563EB; }` and a block per theme value.",
+                "type": "string"
+              },
+              {
+                "const": "tailwind-v4",
+                "description": "A Tailwind v4 stylesheet: `@theme { … }` and a block per theme value.",
+                "type": "string"
+              },
+              {
+                "const": "dtcg-json",
+                "description": "W3C Design Tokens JSON.",
+                "type": "string"
+              }
+            ]
+          },
+          "lengths": {
+            "description": "Name prefixes whose numbers are lengths and so are written with `px`. Replaces the defaults (space, spacing,\nradius, size, width, height, gap, border, stroke, blur, container, breakpoint, text, font/size).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "mapping": {
+            "description": "Rows to change in the mapping of theme values to selectors. Only the rows you name change; a value the\ndocument lacks is added to its axis.",
+            "items": {
+              "additionalProperties": false,
+              "description": "Which selector a theme value is written under.",
+              "properties": {
+                "axis": {
+                  "description": "The theme axis, such as `Mode`.",
+                  "type": "string"
+                },
+                "mode": {
+                  "description": "Its value, such as `dark`.",
+                  "type": "string"
+                },
+                "selector": {
+                  "description": "The CSS selector: `.dark`, `[data-theme=\"dark\"]`. The first value of an axis is its default and is always\nwritten under `:root`.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "axis",
+                "mode",
+                "selector"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "namespaces": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Token namespaces written under another name in the file, such as {\"space\": \"spacing\"}.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "format"
+        ],
+        "title": "ExportInput",
+        "type": "object"
+      },
+      "name": "export_tokens"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
       "description": "List every distinct value a property takes in a scope, with how many nodes have each and a few example ids. Use it to see what a design already uses (font sizes, colours, radii) before adding more, or to find values that should be a variable. Variable references show as {\"$var\": id}.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -458,6 +548,41 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
+      "description": "Describe a frame so you can write its code: its layers with layout, sizing, fills and text; every design token it uses, by name, with its value under each theme; and the components its instances use, with props and definition. Pass `stack` (shadcn, react-native or swiftui) to also get that stack's hints for writing each part. The spec is the design's own words, not code. Use tokens by name instead of copying their values, and use snapshot_layout when you need rendered sizes.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "frame": {
+            "description": "The frame (or any layer) to describe, by id.",
+            "type": "string"
+          },
+          "stack": {
+            "description": "The stack you will write the code in: `shadcn`, `react-native` or `swiftui`. Adds that stack's hints on how\nto write each part. Without it, the answer lists the stacks there are.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame"
+        ],
+        "title": "SpecInput",
+        "type": "object"
+      },
+      "name": "get_spec"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
       "description": "List visual styles, or load one by name: palette, typography, radius and density. Use a recipe when no design system is set; existing document variables and system guidelines take precedence. Loading a style does not edit the document or install fonts.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -507,6 +632,111 @@
         "type": "object"
       },
       "name": "get_variables"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Read a token file (CSS variables, Tailwind v4 or DTCG JSON) and make the document's variables match it, as one change. A token whose name the document has keeps its variable; new names become new variables; theme values the document lacks are added to its themes. Returns the diff: added, changed, removed. `dry_run` shows it without changing anything. Variables the file lacks are only listed unless `remove_missing` is set. Pass the file's text, not its path.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "description": "The settings both tools share.",
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "description": "Show the diff and change nothing.",
+            "type": "boolean"
+          },
+          "format": {
+            "description": "The file format.",
+            "oneOf": [
+              {
+                "const": "css-vars",
+                "description": "CSS custom properties: `:root { --color-primary: #2563EB; }` and a block per theme value.",
+                "type": "string"
+              },
+              {
+                "const": "tailwind-v4",
+                "description": "A Tailwind v4 stylesheet: `@theme { … }` and a block per theme value.",
+                "type": "string"
+              },
+              {
+                "const": "dtcg-json",
+                "description": "W3C Design Tokens JSON.",
+                "type": "string"
+              }
+            ]
+          },
+          "lengths": {
+            "description": "Name prefixes whose numbers are lengths and so are written with `px`. Replaces the defaults (space, spacing,\nradius, size, width, height, gap, border, stroke, blur, container, breakpoint, text, font/size).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "mapping": {
+            "description": "Rows to change in the mapping of theme values to selectors. Only the rows you name change; a value the\ndocument lacks is added to its axis.",
+            "items": {
+              "additionalProperties": false,
+              "description": "Which selector a theme value is written under.",
+              "properties": {
+                "axis": {
+                  "description": "The theme axis, such as `Mode`.",
+                  "type": "string"
+                },
+                "mode": {
+                  "description": "Its value, such as `dark`.",
+                  "type": "string"
+                },
+                "selector": {
+                  "description": "The CSS selector: `.dark`, `[data-theme=\"dark\"]`. The first value of an axis is its default and is always\nwritten under `:root`.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "axis",
+                "mode",
+                "selector"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "namespaces": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Token namespaces written under another name in the file, such as {\"space\": \"spacing\"}.",
+            "type": "object"
+          },
+          "remove_missing": {
+            "default": false,
+            "description": "Also remove the variables the file lacks. They are listed under `removed` either way; one that is still\nused cannot be removed, and then nothing is imported.",
+            "type": "boolean"
+          },
+          "text": {
+            "description": "The file's text. Read the file yourself and pass its contents.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "text"
+        ],
+        "title": "ImportInput",
+        "type": "object"
+      },
+      "name": "import_tokens"
     },
     {
       "_meta": {

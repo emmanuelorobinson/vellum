@@ -1,0 +1,43 @@
+{
+  "id": "swiftui",
+  "label": "SwiftUI",
+  "language": "swift",
+  "summary": "SwiftUI views composed from stacks and modifiers. Layout is stack-based; sizes are points. Design tokens live in one Theme type or the asset catalog, so a token is used by name and follows the appearance.",
+  "elements": {
+    "frame": "A VStack for a column, an HStack for a row, a ZStack when children overlap, a LazyVGrid for a grid. A frame with a background or border applies those as modifiers.",
+    "group": "A Group, or the children directly.",
+    "text": "A Text with .font, .fontWeight, .lineSpacing and .tracking from the text style.",
+    "image": "An Image (AsyncImage for a remote one) with .resizable() and .scaledToFill() or .scaledToFit().",
+    "icon": "An Image(systemName:) for the closest SF Symbol, or the project's icon asset of the same name.",
+    "vector": "A Shape with the path data from the spec, or an image asset.",
+    "rect": "A RoundedRectangle or Rectangle filled with the paint.",
+    "ellipse": "A Circle or Ellipse filled with the paint.",
+    "instance": "The project's view of the same name, with the instance's props as initializer arguments."
+  },
+  "layout": {
+    "row": "HStack",
+    "column": "VStack",
+    "grid": "LazyVGrid with the frame's columns as GridItem(.flexible()).",
+    "none": "ZStack(alignment: .topLeading); children with an absolute position use .offset(x:y:) from x and y.",
+    "gap": "spacing: N on the stack.",
+    "padding": ".padding(N) for all sides, .padding(.vertical, N) and .padding(.horizontal, N) for two values, .padding(.top, N) and the others for four.",
+    "justify": "Spacer() between children for space-between; the stack's alignment for start, center and end along its axis.",
+    "align": "The stack's alignment parameter: .leading, .center, .trailing for a VStack; .top, .center, .bottom for an HStack.",
+    "fill": ".frame(maxWidth: .infinity) or .frame(maxHeight: .infinity).",
+    "hug": "No frame modifier; the content decides (.fixedSize() when the parent would stretch it).",
+    "fixed": ".frame(width: N, height: N)."
+  },
+  "tokens": {
+    "reference": "Use the token by name (Theme.color.primary, or Color(\"color/primary\") from the asset catalog), never write the value in a view.",
+    "naming": "A token name's slashes become nested members: color/primary is Theme.color.primary, space/4 is Theme.space.s4.",
+    "modes": "Theme values such as Dark are the asset catalog's appearance variants. Never branch on colorScheme in a view for a token."
+  },
+  "components": "One View per component in the spec, with its props as initializer arguments and its variants as an enum parameter. An instance is that view with the instance's props, not a copy of its layers.",
+  "rules": [
+    "Follow the spec's sizes and spacing exactly; they are points.",
+    "Order modifiers the way SwiftUI applies them: padding before background, background before clipShape.",
+    "Use theme tokens for every color, spacing and radius the spec names a token for.",
+    "Support Dynamic Type for text unless the spec fixes a size on purpose.",
+    "A layer with notes in the spec carries instructions from the designer; follow them."
+  ]
+}
