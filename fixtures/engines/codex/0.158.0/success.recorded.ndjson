@@ -1,0 +1,11 @@
+{"id":1,"result":{}}
+{"id":2,"result":{"config":{}}}
+{"id":3,"result":{"thread":{"id":"TEST-thread"}}}
+{"id":4,"result":{"turn":{"id":"TEST-turn"}}}
+{"id":"TEST-call","method":"item/tool/call","params":{"arguments":{},"callId":"TEST-call","threadId":"TEST-thread","tool":"get_app_state","turnId":"TEST-turn"}}
+{"method":"thread/tokenUsage/updated","params":{"threadId":"TEST-thread","tokenUsage":{"total":{"cacheWriteInputTokens":0,"cachedInputTokens":0,"inputTokens":19060,"outputTokens":152,"reasoningOutputTokens":128}},"turnId":"TEST-turn"}}
+{"method":"item/agentMessage/delta","params":{"delta":"Fixture","itemId":"TEST-message","threadId":"TEST-thread","turnId":"TEST-turn"}}
+{"method":"item/agentMessage/delta","params":{"delta":" complete","itemId":"TEST-message","threadId":"TEST-thread","turnId":"TEST-turn"}}
+{"method":"item/completed","params":{"item":{"id":"TEST-message","text":"Fixture complete","type":"agentMessage"},"threadId":"TEST-thread","turnId":"TEST-turn"}}
+{"method":"thread/tokenUsage/updated","params":{"threadId":"TEST-thread","tokenUsage":{"total":{"cacheWriteInputTokens":0,"cachedInputTokens":18944,"inputTokens":38398,"outputTokens":158,"reasoningOutputTokens":128}},"turnId":"TEST-turn"}}
+{"method":"turn/completed","params":{"threadId":"TEST-thread","turn":{"error":{"codexErrorInfo":"other"},"id":"TEST-turn","status":"completed"},"turnId":"TEST-turn"}}

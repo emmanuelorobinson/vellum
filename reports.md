@@ -12,11 +12,14 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   `architecture-records.test.mjs` still requires D1–D6 to be Proposed; the owner-authorized synchronization
   recorded Accepted for D1, D2, D3, D5 and D6. The test and ADR-000 are unchanged by Prompt 36.
 
-- **Review ADR-007's installed-engine scope** (Prompt 36). Native Claude tools and ordinary hooks/settings
+- **Review ADR-007's installed-engine scope** (Prompts 36–37). Native Claude tools and ordinary hooks/settings
   are disabled; canvas calls use a private `vellum mcp` endpoint routed to the existing turn's ToolBridge.
   Repo commands/files require a future broker integration before enabling native tools. Sandbox auth first
-  reported signed out; native preflight sees the existing sign-in. The engines nightly lane requires a
-  trusted self-hosted `vellum-engines` runner and `VELLUM_ENGINES_ENABLED=true`.
+  reported signed out; native preflight sees the existing sign-in. Prompt 37 adds Codex 0.158.0 (app-server
+  dynamic tools; exec through the private MCP relay). Only that Codex version is supported until another
+  version passes validation; exec attachments are refused. Both engines keep native repo tools disabled.
+  The engines nightly lane requires a trusted self-hosted `vellum-engines` runner and
+  `VELLUM_ENGINES_ENABLED=true`; native Windows/Linux and remote CI remain unverified.
 
 - **Review the permission broker's choices** (Prompt 35). Mine, not from a source: deny rules win over skip-all and
   engine auto mode; "Allow for this session" covers every repo read, but only the same file for a write and the same
@@ -40,7 +43,7 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   list, goldens), §3.3–3.4 (`DocumentTarget`, `SessionStore`), §4.1–4.5 (ids, props, variants, overrides, conflict
   node, sizing, containment, Loro and undo, files, libraries, external changes and merge), §5 (modules), §6, §7.1–7.3,
   §7.6, §10, §12, §13, §15 (questions 1, 2, 3, 5, 8, 10 marked resolved). Each ADR's status and ADR-000 (D1, D2, D3, D5,
-  D6) say so; D4 waits for Prompts 36–37. If you disagree with a choice now stated in ARCHITECTURE, the ADR beside it
+  D6) say so; D4 is implemented in ADR-007 (Prompts 36–37), pending owner review and architecture carryover. If you disagree with a choice now stated in ARCHITECTURE, the ADR beside it
   says what would change. Still yours to decide: the hand-written MCP front end vs `rmcp`; the "only inside the
   client's directory" rule (the broker exists since Prompt 35, but the daemon has nobody to ask yet); the CDLA-Permissive-2.0 exception for
   `webpki-root-certs`; who resolves merge conflicts that only the merge report holds. ARCHITECTURE §6 cited "ADR-0006"
@@ -2158,3 +2161,62 @@ opt-outs; the global pnpm bootstrap could not verify the pinned release through 
 
 Not verified: native Windows/Linux process lifecycle, remote nightly/IPC CI, paid API/cloud-provider auth,
 a real quota rejection/reset, or a signed-out live transcript. Stop passed locally, not a multi-run p95 study.
+
+
+## Prompt 37: installed Codex engine
+
+Built (ADR-007 Codex section; `docs/runbooks/installed-engines.md`):
+- `vellum-engine-codex`: bounded install/help/login probes; cached Ready/Missing/SignedOut/UsageLimit/Failed,
+  Re-check, own ChatGPT/API authentication, explicit supported version 0.158.0. No account/install/update action.
+- App-server first: correlated initialize/config/thread/turn sequence over stdio, ephemeral threads, empty
+  environments, registry schemas as dynamic tools, direct calls to the existing borrowed RegistryBridge.
+  Exec only when app-server is absent: JSONL, stdin prompt, ephemeral mode and the private `vellum mcp` relay.
+  No automatic retry/fallback after work starts. Core owns the shared MCP transport traits; Claude re-exports
+  them, so neither adapter imports the other. The composition root exposes `installed_engines::codex`.
+- Text/reasoning, exactly-once tool events, separate image content, bounded results/history markers, inclusive
+  usage once per completion, reported quota windows/reset in UTC ms, typed auth/quota errors without native
+  diagnostic text. Correlation, duplicate calls, premature completion, malformed/oversize/truncated output
+  fail closed. Stop/drop kill the owned process group/Job Object and discard pending calls.
+- Versioned synthetic and real projected app-server/exec fixtures, default replays and shared engine contract,
+  Python subprocess fixture, Codex recorder options, nightly Codex job and Unix process CI. Goose exec launch/
+  usage adaptation has source attribution and a notice; existing Vellum lifecycle code is reused.
+
+Decisions/limits: canvas only; native repo tools/hooks/apps/plugins/subagents/telemetry disabled. Codex's
+sandboxed code-mode host stays enabled (the installed models otherwise completed without calling tools).
+App-server uses dynamic tools rather than another MCP process. Exec refuses image attachments explicitly
+and reports model usage only at completion, so its in-flight round/output usage cannot be bounded from that
+feedback. Portable Vellum history is quoted; no native session resume. Hosts/`vellum prompt` remain later work.
+Only local installed 0.158.0 is verified, older than baseline C7's 0.162.1; other versions fail pending validation.
+
+Process: initial replay tests failed on missing APIs. Further red tests caught a missing quota reset, exec
+projection collapsing distinct messages, unbounded text before usage, literal MCP names, and premature
+completion; fixed without weakening assertions. Native tests caught stdin not closing at EOF; the exec Stop
+harness first used an unsafe runtime folder (changed to RunDir). First live model was absent from the local
+catalog; `gpt-6-luna` is verified there. IPC needed native access. Concurrent minimal/default CLI builds caused
+a screenshot test collision; the sequential native workspace run passed. No UI/design frames involved.
+
+Verified on macOS arm64 (exit 0; Node 24, cached pnpm 12.11.2 on PATH, both telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace`: 1,196 passed, 0 failed, 69 ignored, before the final
+  literal-name/correlation guards; final focused `cargo test --offline -p vellum-engine-codex --test replay`:
+  21 passed. `cargo test --offline -p vellum-engine-codex` also passed before the final correlation test.
+- `cargo test --offline -p vellum-engine-codex --test native -- --ignored`: 3 passed; final
+  `node scripts/skia-build.mjs test --offline -p vellum --test installed_codex engines_lane -- --ignored
+  --test-threads=1`: 3 passed (real canvas/usage plus app-server and exec Stop).
+- `bash scripts/record-engine-fixtures.sh --engine codex --offline` and the same with `--transport exec`:
+  real success fixtures, one get_app_state each. `node --test scripts/__tests__/engine-fixtures.test.mjs`: 5.
+- `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`; final
+  `cargo clippy --offline -p vellum-engine-codex -p vellum-engine-claude-code --all-targets -- -D warnings`;
+  `cargo clippy --offline -p vellum-engine-codex --all-targets --target x86_64-pc-windows-gnu -- -D warnings`.
+- `pnpm type-check`, `pnpm lint`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`; `git diff --check`.
+
+Failed, pre-existing: `cargo deny check` (only bitmaps/im/sized-chunks Loro-chain advisories; bans/licences/
+sources pass); `node --test 'scripts/__tests__/*.test.mjs'` (173 pass, 4 skipped, 2 failures: old Proposed ADR
+assertions and the R3 taffy main.rs reference path). The initial pnpm bootstrap failed signature verification
+through the restricted network; using the existing pinned local binary on PATH resolved it. The final
+format-spec check also needed the source wrapper’s FORCE_SKIA_BUILD/SKIA_SOURCE_DIR/SKIA_GN_ARGS environment
+to reuse cached Skia rather than attempt registry-source synchronization.
+
+Not verified: native Windows/Linux lifecycle, remote nightly/IPC CI, a real signed-out/quota-rejection/reset
+transcript or API-key auth. Those states have synthetic coverage. Local Stop tests pass, not a multi-run p95
+study. ADR-007/version policy and architecture carryover remain in Needs a person.

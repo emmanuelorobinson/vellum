@@ -11,6 +11,11 @@ table is for copied or adapted source only.
 |---|---|---|---|---|---|
 | Goose | block/goose | crates/goose/src/providers/claude_code.rs | 3bd852002903e016ff30947e973f76e2fcfcf90f | Apache-2.0 | crates/adapters/engine-claude-code/src/protocol.rs |
 
+| Goose | block/goose | crates/goose/src/providers/codex.rs | 3bd852002903e016ff30947e973f76e2fcfcf90f | Apache-2.0 | crates/adapters/engine-codex/src/protocol.rs |
+
+The Goose Apache-2.0 license is bundled at `crates/adapters/engine-claude-code/notices/Goose-Apache-2.0.txt`
+and applies to both installed-engine adaptations.
+
 ## Bundled font asset
 
 `crates/adapters/text-parley/fonts/InterVariable.ttf` is unmodified Inter from google/fonts,

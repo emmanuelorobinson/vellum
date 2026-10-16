@@ -23,7 +23,7 @@
 | Component | Resolved | Guide line | Pinned in | Decision |
 |---|---|---|---|---|
 | Rust toolchain | 1.99.0 | latest stable toolchain | `rust-toolchain.toml` channel; `Cargo.toml` rust-version 1.99 | C1 |
-| tokio | 1.53.2 | 1.53.x | ipc-local (Prompt 27), model-http (32), engine-claude-code (36) | latest stable patch of the line |
+| tokio | 1.53.2 | 1.53.x | ipc-local (Prompt 27), model-http (32), engine-claude-code (36), engine-codex (37) | latest stable patch of the line |
 | axum | 0.8.9 | 0.8.x | not yet used | daemon `--listen` and sync server (later prompts) |
 | interprocess | 2.4.5 | 2.4.x | not yet used | Unix sockets and named pipes (Prompt 27) |
 | loro | 1.16.2 | 1.16.x | workspace `Cargo.toml`, used by `crates/adapters/doc-loro` only (Prompt 14); also `spikes/engine` (Prompt 5) | behind DocStore (Prompt 14, ADR-004) |
@@ -245,3 +245,12 @@ Claude Code 2.1.301 was detected locally on 2026-10-16. Its `--help`, `auth stat
 headless/MCP documentation were checked. Required flags are probed before accepting a run; no installation
 or version pin is imposed on the person's tool. Native process support uses existing tokio 1.53.2 (`process`
 feature), libc 0.2.190 and windows-sys 0.61.2 (`JobObjects`) behind the installed-engine adapter. ADR-007.
+
+
+## Prompt 37 installed Codex verification
+
+Codex CLI **0.158.0** was already installed locally on macOS arm64 and reports ChatGPT sign-in. Both
+app-server stdio/dynamic tools and exec JSONL/MCP were exercised with `gpt-6-luna` from its local model
+catalog. This is older than C7's resolved 0.162.1; no install/update was performed. ADR-007 and the adapter's
+`SUPPORTED_VERSIONS` pin the tested binary to 0.158.0 until another version passes replay and native lanes.
+The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused; no new vendor version.

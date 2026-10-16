@@ -32,3 +32,25 @@ jobs:
         with:
           name: claude-code-projected-transcript
           path: fixtures/engines/claude-code/*/*.recorded.*
+  codex:
+    # A trusted runner with an existing sign-in; never run subscription credentials on PR code.
+    if: vars.VELLUM_ENGINES_ENABLED == 'true'
+    runs-on: [self-hosted, vellum-engines]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Real Codex canvas, usage and Stop (engines lane)
+        run: cargo test -p vellum --no-default-features --test installed_codex engines_lane -- --ignored --test-threads=1
+      - name: Record a transcript for the installed version
+        run: bash scripts/record-engine-fixtures.sh --engine codex
+      - name: Record the exec fallback transcript
+        run: bash scripts/record-engine-fixtures.sh --engine codex --transport exec
+      - name: Specification unchanged
+        run: node scripts/spec-checksums.mjs check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codex-projected-transcript
+          path: fixtures/engines/codex/*/*.recorded.*

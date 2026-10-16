@@ -1,0 +1,9 @@
+{"id":1,"result":{"userAgent":"TEST DATA"}}
+{"id":2,"result":{"config":{"mcp_servers":{"other":{"command":"TEST DATA must not start"}}}}}
+{"id":3,"result":{"thread":{"id":"TEST-thread"}}}
+{"id":4,"result":{"turn":{"id":"TEST-turn","status":"inProgress"}}}
+{"method":"item/agentMessage/delta","params":{"threadId":"TEST-thread","turnId":"TEST-turn","itemId":"msg","delta":"Done"}}
+{"method":"item/completed","params":{"threadId":"TEST-thread","turnId":"TEST-turn","item":{"type":"agentMessage","id":"msg","text":"Done"}}}
+{"method":"thread/tokenUsage/updated","params":{"threadId":"TEST-thread","turnId":"TEST-turn","tokenUsage":{"total":{"inputTokens":20,"cachedInputTokens":10,"outputTokens":3,"reasoningOutputTokens":1}}}}
+{"method":"thread/tokenUsage/updated","params":{"threadId":"TEST-thread","turnId":"TEST-turn","tokenUsage":{"total":{"inputTokens":30,"cachedInputTokens":20,"outputTokens":5,"reasoningOutputTokens":2}}}}
+{"method":"turn/completed","params":{"threadId":"TEST-thread","turn":{"id":"TEST-turn","status":"completed"}}}

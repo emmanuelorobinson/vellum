@@ -37,6 +37,18 @@ pub fn claude(
         Arc::new(LocalMcpHost::new(binary, private_runtime)),
     )
 }
+/// Codex uses the same turn endpoint and borrowed bridge as Claude Code.
+pub fn codex(
+    program: PathBuf,
+    repo: PathBuf,
+    binary: PathBuf,
+    private_runtime: PathBuf,
+) -> vellum_engine_codex::CodexEngine {
+    vellum_engine_codex::CodexEngine::new(
+        Arc::new(vellum_engine_codex::NativeLauncher::new(program, repo)),
+        Arc::new(LocalMcpHost::new(binary, private_runtime)),
+    )
+}
 impl McpHost for LocalMcpHost {
     fn open(&self, tools: &[BridgeTool]) -> Result<Box<dyn McpChannel>, EngineError> {
         let base = RunDir::new(self.base.clone()).map_err(|_| EngineError::Unavailable)?;

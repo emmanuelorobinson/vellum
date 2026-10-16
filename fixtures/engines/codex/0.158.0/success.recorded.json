@@ -1,0 +1,9 @@
+{
+  "case": "success",
+  "kind": "recorded",
+  "toolCalls": 1,
+  "projection": "decoder fields only; no raw diagnostics/auth/config/identity",
+  "testData": true,
+  "transport": "app-server",
+  "version": "0.158.0"
+}

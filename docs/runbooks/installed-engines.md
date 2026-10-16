@@ -61,3 +61,32 @@ label `vellum-engines`, the pinned toolchain, Node 24, and the person's existing
 workflow runs only on schedule/manual dispatch, never on pull-request code. It runs the live MCP/usage and
 Stop tests and uploads the projected versioned transcript as an artifact. No subscription credentials are
 stored in this repository or in GitHub Actions secrets by this workflow.
+
+
+## Codex (Prompt 37)
+
+`installed_engines::codex` composes the installed Codex adapter with the same registry bridge. Supported
+version: 0.158.0, verified on macOS arm64; other versions report Failed pending validation. Re-check probes
+`login status` without retaining account details or the API-key suffix. Existing ChatGPT/API authentication
+belongs to Codex. The adapter never signs in/out or reads Vellum provider keys.
+
+App-server uses stdio with ephemeral, environment-free threads and the registry's dynamic tools. Exec is
+chosen only if app-server is absent, and uses the private MCP relay. Native repository tools, hooks,
+plugins/apps, search, subagents, remote control and telemetry are disabled; the models' code-mode host
+stays enabled to call the declared canvas tools. There is no native permission/auto-mode bypass. Exec
+attachments are rejected explicitly; use app-server for image input. Unknown versions/errors fail closed.
+
+```
+cargo test -p vellum-engine-codex
+cargo test -p vellum-engine-codex --test native -- --ignored
+cargo test -p vellum --no-default-features --test installed_codex engines_lane -- --ignored --test-threads=1
+bash scripts/record-engine-fixtures.sh --engine codex --offline
+bash scripts/record-engine-fixtures.sh --engine codex --transport exec --offline
+```
+
+`VELLUM_CODEX` selects the test executable. Recorder options: `--codex <path>`, `--model <id>`, `--out <folder>`,
+`--case success|signed-out`, `--transport app-server|exec`. The explicit transport option belongs only to
+this test recorder. Default fixture model `gpt-6-luna` was verified in the installed catalog; choose another
+reported model with `--model` if access differs. Records use a fixed read-only prompt and validate a canvas
+call plus completion. The 90-second watchdog stops an unresponsive turn. Never record arbitrary repo prompts.
+The nightly Codex job has the same trusted-runner/opt-in restrictions as Claude Code and records both paths.

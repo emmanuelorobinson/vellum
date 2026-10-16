@@ -13,7 +13,7 @@ use std::{
     future::{Future, poll_fn},
     pin::pin,
     sync::{Arc, Mutex},
-    task::{Context, Poll},
+    task::Poll,
 };
 use vellum_core::ports::*;
 use vellum_types::TurnId;
@@ -28,20 +28,7 @@ pub trait Process {
     /// Bounded NDJSON records. EOF without a result is an error, never success.
     fn next(&mut self) -> EngineFuture<'_, Result<Option<String>, EngineError>>;
 }
-/// A request received by the private `vellum mcp` relay. Executed only on the bridge owner's thread.
-pub struct McpCall {
-    pub name: String,
-    pub input: Value,
-    pub respond: Box<dyn FnOnce(ToolReply) + Send>,
-}
-pub trait McpChannel {
-    fn config(&self) -> Value;
-    fn poll_call(&mut self, cx: &mut Context<'_>) -> Poll<Option<McpCall>>;
-}
-pub trait McpHost: Send + Sync {
-    /// A fresh, private endpoint per turn. Dropping the channel disconnects it.
-    fn open(&self, tools: &[BridgeTool]) -> Result<Box<dyn McpChannel>, EngineError>;
-}
+pub use vellum_core::ports::{McpCall, McpChannel, McpHost};
 
 pub struct ClaudeEngine {
     launcher: Arc<dyn Launcher>,

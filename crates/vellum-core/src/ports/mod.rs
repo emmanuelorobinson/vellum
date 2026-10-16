@@ -41,8 +41,8 @@ pub use doc_store::{
 };
 pub use document_files::{DocumentFiles, FileError, Loaded, Saved};
 pub use engine::{
-    AgentEngine, BridgeTool, EngineError, EngineFuture, EngineStatus, ToolBridge, ToolReply,
-    Truncation, TurnEnd, TurnEvent, TurnLimits, TurnRequest, TurnStream,
+    AgentEngine, BridgeTool, EngineError, EngineFuture, EngineStatus, McpCall, McpChannel, McpHost,
+    ToolBridge, ToolReply, Truncation, TurnEnd, TurnEvent, TurnLimits, TurnRequest, TurnStream,
 };
 pub use files::{FileSystem, FsError, check_path};
 pub use fonts::{FontData, FontHandle, FontSource};

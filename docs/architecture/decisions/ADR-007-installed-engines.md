@@ -1,6 +1,6 @@
 # ADR-007: Installed engines
 
-Status: proposed; Claude Code section implemented in Prompt 36. Codex section belongs to Prompt 37.
+Status: proposed for owner review; Claude Code implemented in Prompt 36, Codex in Prompt 37.
 ARCHITECTURE has not been edited by this prompt.
 
 ## Claude Code
@@ -79,4 +79,83 @@ account or network. The `engines` nightly workflow is opt-in on a trusted signed
 
 ## Codex
 
-Not implemented here. Prompt 37 evaluates app-server first and exec only when app-server is unavailable.
+`vellum-engine-codex` implements the same `AgentEngine` and portable-history contract. Explicit bounded
+probes read `--version`, root/app-server/exec help and `login status`. The retained installation contains
+only version, status and transport. ChatGPT and existing API-key sign-in are recognized; API-key suffixes,
+account names and raw diagnostics are discarded. Availability is cached; Re-check repeats the probes.
+The locally verified executable is 0.158.0, older than the reference pin. `SUPPORTED_VERSIONS` rejects
+unrecorded versions until their flags, protocol, tool isolation and native lifecycle have been checked.
+No installation, account switch, login or update is attempted. Credentials remain with Codex; the adapter
+never reads Vellum SecretStore or credential files.
+
+Prefer one owned `codex app-server --listen stdio://` process per turn. Sequence initialize/initialized,
+config/read, thread/start and turn/start by correlated request IDs. Create an ephemeral thread with empty
+environments, explicit model/effort, portable quoted history, optional data-URL images and the registry's
+schemas as dynamic tools. App-server `item/tool/call` requests go directly to the borrowed ToolBridge.
+Only declared names, object arguments, the active thread/turn, and unique call IDs are accepted. Start is
+emitted before executing, so Stop at that boundary prevents the call. Observed tool lifecycle events
+never execute another call or create another registry step. Tool replies preserve images as separate
+inputImage content, bound text explicitly, and keep picture markers in portable history.
+
+This differs from Claude's MCP attachment deliberately: the initial MCP trial completed without a tool
+call. App-server provides direct tools, so this path avoids an extra MCP subprocess while using the same registry,
+Guard, session and origin. The installed models require Codex's sandboxed code-mode host to expose these
+tools; disabling that host produced completed replies without tool calls in live verification. The host
+is enabled, while shell, stable environment tools, file-image tools, hooks, plugins, apps, browser/computer
+use, image generation, memories, remote control, native subagents and goals are disabled. Web search is
+disabled, native approval policy is never, and unexpected native requests fail closed. User MCP server
+entries are explicitly disabled per thread before starting work. No native repository executor or engine
+auto mode is enabled; those still require PermissionBroker integration. Managed policy remains effective.
+
+Use `codex exec` only when the help probe says app-server is absent. Failure, malformed output, auth or
+quota rejection after choosing app-server never retries through exec (which could repeat edits). Exec
+uses JSONL, ephemeral mode, ignores user configuration/rules, takes the prompt over stdin, and attaches
+only the fresh private `vellum mcp` relay from Prompt 36. Explicit configuration disables native tools and
+telemetry; the sandboxed code-mode host remains available. Exec image attachments are refused explicitly
+because stdin does not support them; no silent image loss or persisted temporary picture files. The
+recorder's explicit `--transport exec` exercises fallback without pretending the installed CLI lacks
+app-server. This override is a test harness, not automatic production failover.
+
+Assistant deltas/final items are deduplicated per item. App-server cumulative token usage is emitted once
+at the terminal event, without adding cached input again; exec completion usage has the same inclusive
+normalization. Cache writes and reasoning are retained when reported. Reported primary/secondary quota
+windows are separate from token usage; reset times are UTC milliseconds and are retained only when the
+native engine supplies them. Structured auth/quota errors become SignedOut/UsageLimit; exec's limited
+error shape uses only known diagnostic prefixes and never forwards native text. Unknown errors are
+Failed, never guessed sign-out or success. No subscription cost or percentage is invented.
+
+Each native record is capped at 4 MiB; both directions have 32-record queues. RPC writes are capped at
+8 MiB, tool text uses TurnLimits, app-server cumulative output/round usage is bounded. Decoded assistant text is also capped at 32 bytes per
+requested output token before usage arrives, and each turn accepts at most 10,000 native records. The exec protocol
+reports model usage only at completion, so round/output limits cannot stop an in-flight request from
+usage feedback; Stop remains available at every wait. Its failed canvas calls are bounded on both paths.
+EOF without a terminal result, incomplete framing, wrong correlation and unknown terminal statuses fail.
+Stop/drop cancel waits and terminate the owned Unix group / Windows Job Object, including MCP relays;
+portable Vellum history remains the conversation owner. App-server's turn/interrupt RPC is not required
+because the entire ephemeral process belongs to this one turn and is terminated directly.
+
+### Codex reference note
+
+Goose's `providers/codex.rs` runs one exec process per turn, sends text on stdin, configures MCP with TOML
+overrides and normalizes inclusive cached usage. Vellum adapts these portions with the source header and
+notice; it does not port Goose's skip-permissions defaults, debug output, buffered conversation or image
+files. `codex_acp.rs` delegates to a separate ACP binary; Vellum keeps the installed Codex executable and
+uses its documented app-server schemas instead. The pinned Codex README/protocol and exec/config docs,
+informed protocol choices. Sibling Outpost paths were checked for Codex integration; Vellum’s existing
+Claude process-tree lifecycle was reused.
+
+### Codex verification and fixtures
+
+Official [app-server](https://developers.openai.com/codex/app-server) and
+[non-interactive mode](https://developers.openai.com/codex/noninteractive) documentation, Context7's
+`/openai/codex` reference, installed help and generated experimental JSON schemas were checked. The local
+catalog includes `gpt-6-luna`, used for the fixed read-only fixture and live acceptance. Hosts still supply
+the requested model; the adapter never substitutes another model.
+
+`fixtures/engines/codex/0.158.0/` separates synthetic from real projected app-server/exec transcripts.
+Configuration/auth replies, native identity, stderr, reasoning text and diagnostics are excluded. Only
+safe item IDs, fixed TEST DATA assistant text, numeric usage and a read-only get_app_state request are
+retained. Negative auth/quota cases are synthetic; no account was logged out or quota exhausted. Default
+replays and shared contracts require no engine/account/network. The native Python fixture tests both
+pipes, framing, output limits and Stop/drop; the trusted nightly lane runs live canvas/usage and Stop,
+then records both transports. macOS arm64 is the local native evidence; Windows/Linux require their lanes.

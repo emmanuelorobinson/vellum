@@ -44,3 +44,31 @@ test("real engine fixture has an explicit version manifest and only projected pr
   assert.equal(records.at(-1).is_error, false);
   assert.doesNotMatch(text, /accessToken|apiKeySource|session_id|"cwd"|@example/);
 });
+
+test("Codex recorder options are validated before any process launch", () => {
+  for (const args of [
+    ["--engine", "unknown"],
+    ["--engine", "codex", "--transport", "unknown"],
+    ["--codex"],
+  ]) {
+    assert.equal(run(...args).status, 2);
+  }
+  assert.match(run("--help").stdout, /--engine claude-code\|codex/);
+});
+test("Codex app-server fixture records a real version and redacts configuration and identity", () => {
+  const base = new URL("../../fixtures/engines/codex/0.158.0/", import.meta.url);
+  const manifest = JSON.parse(readFileSync(new URL("success.recorded.json", base), "utf8"));
+  assert.equal(manifest.kind, "recorded");
+  assert.equal(manifest.testData, true);
+  assert.equal(manifest.version, "0.158.0");
+  assert.equal(manifest.transport, "app-server");
+  assert.ok(manifest.toolCalls > 0);
+  const text = readFileSync(new URL("success.recorded.ndjson", base), "utf8");
+  const records = text
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.ok(records.some((v) => v.method === "item/tool/call"));
+  assert.equal(records.at(-1).params.turn.status, "completed");
+  assert.doesNotMatch(text, /accessToken|apiKeySource|session_id|"cwd"|@example/);
+});

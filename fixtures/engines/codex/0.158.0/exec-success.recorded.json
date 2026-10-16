@@ -1,0 +1,9 @@
+{
+  "case": "exec-success",
+  "kind": "recorded",
+  "projection": "decoder fields only; no raw diagnostics/auth/config/identity",
+  "testData": true,
+  "toolCalls": 1,
+  "transport": "exec",
+  "version": "0.158.0"
+}

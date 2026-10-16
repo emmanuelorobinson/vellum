@@ -182,3 +182,18 @@ pub trait AgentEngine: Send + Sync {
     /// Stops a running turn from any thread. Unknown or finished turns are ignored.
     fn interrupt(&self, turn: &TurnId);
 }
+
+/// Turn-scoped MCP transport supplied by the host to installed engines.
+/// All canvas work returns to the borrowed ToolBridge; transport threads never own a document.
+pub struct McpCall {
+    pub name: String,
+    pub input: Value,
+    pub respond: Box<dyn FnOnce(ToolReply) + Send>,
+}
+pub trait McpChannel {
+    fn config(&self) -> Value;
+    fn poll_call(&mut self, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<McpCall>>;
+}
+pub trait McpHost: Send + Sync {
+    fn open(&self, tools: &[BridgeTool]) -> Result<Box<dyn McpChannel>, EngineError>;
+}

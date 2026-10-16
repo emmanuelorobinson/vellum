@@ -10,3 +10,12 @@ out or exhausted to generate them. `fake-claude.py` is the native process-bounda
 Re-record with `bash scripts/record-engine-fixtures.sh`, then review the projected output and update
 version-specific replay expectations when usage changes. No raw provider transcript or credential belongs
 here. See `docs/runbooks/installed-engines.md` for the account-free and real engines lanes.
+
+
+`codex/0.158.0/success.recorded.ndjson` is the real app-server projection: correlated handshake, a direct
+get_app_state request, assistant text and inclusive cumulative usage. `exec-success.recorded.ndjson` is the
+real exec fallback projection; tool execution arrives separately through the private MCP relay. Both
+manifests record transport and successful canvas calls. Synthetic fixtures and inline negative cases are
+marked TEST DATA. `fake-codex.py` is the account-free native subprocess fixture. No native auth/config,
+identity, stderr or diagnostic text is saved. Re-record with `--engine codex` (and `--transport exec` for
+fallback) and review both projections before updating replay expectations.
