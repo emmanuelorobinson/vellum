@@ -1,0 +1,49 @@
+name: Model providers
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      native_keychain:
+        description: Run actual OS keychain contracts in isolated test services
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: model-providers-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+jobs:
+  providers:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p vellum-contracts --test model
+      - run: cargo test -p vellum-testkit --test canary
+      - run: node scripts/model-providers.mjs
+      - run: node scripts/spec-checksums.mjs check
+  keychain:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.native_keychain }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p vellum-secrets-keyring --test secrets native_os_keychain_contract -- --ignored

@@ -35,3 +35,10 @@ HarfBuzz/ICU are disabled: Parley supplies positioned glyphs and Skia does no te
 files from the npm package `@fontsource/inter` 5.3.0, fetched from jsDelivr at that version. SIL Open Font License
 1.1; copyright and license are in the adjacent `OFL.txt`, and the adjacent README records the URLs and SHA-256.
 They are test inputs only and are not shipped. These are licensed font files, not ported code.
+
+## TLS root certificate data (Prompt 32)
+
+`webpki-root-certs` 1.0.9 (via reqwest/rustls-platform-verifier) includes root-certificate data under
+CDLA-Permissive-2.0. The agreement is preserved in
+`crates/adapters/model-http/notices/CDLA-Permissive-2.0.txt` and must accompany redistributed data.
+This is dependency data, not ported project code. Cargo-deny permits only this exact package/version.

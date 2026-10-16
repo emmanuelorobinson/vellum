@@ -804,12 +804,101 @@ fn the_session_keeps_a_bounded_number_of_steps() {
     assert!(rig.session.steps().is_empty());
 }
 
-// ---- pending ----------------------------------------------------------------------------------------------
+// ---- scripted provider integration ------------------------------------------------------------------------
 
 #[test]
-#[ignore = "pending: needs the stub model endpoint (Prompt 32)"]
+#[ignore = "model-http: requires loopback sockets; node scripts/model-providers.mjs"]
 fn a_scripted_agent_designs_a_screen_on_the_stub_endpoint() {
-    panic!(
-        "not implemented yet: the scripted-agent E2E runs once the stub model endpoint exists (Prompt 32)"
+    use std::sync::Arc;
+    use vellum_contracts::{fakes::MemorySecrets, suites::model::block_on};
+    use vellum_core::ports::*;
+    use vellum_testkit::model::{StubEndpoint, StubReply};
+    let completion = |id: &str, name: &str, arguments: Value| {
+        StubReply::sse(
+            vec![json!({
+                "choices":[{"delta":{"tool_calls":[{"index":0,"id":id,"function":{"name":name,"arguments":arguments.to_string()}}]},"finish_reason":"tool_calls"}]
+            })],
+            true,
+        )
+    };
+    let stub = StubEndpoint::start(vec![
+        completion("call1", "read_skill", json!({"path":"format"})),
+        completion("call2", "insert_nodes", json!({"parent":"pageOther1","nodes":[{"type":"frame","width":"bad","height":240}]})),
+        completion("call3", "insert_nodes", json!({"parent":"pageOther1","nodes":[{"type":"frame","name":"Card","width":320,"height":240,"children":[{"type":"rect","width":40,"height":40}]}]})),
+    ]).unwrap();
+    let provider = vellum_llm_openai_compat::Provider::new(
+        ModelConfig {
+            id: "scripted".into(),
+            endpoint: stub.url("/chat"),
+            secret_key: None,
+            caps: ModelCaps {
+                tools: true,
+                ..Default::default()
+            },
+        },
+        Arc::new(MemorySecrets::default()),
+        Arc::new(vellum_model_http::HttpTransport::default()),
+    )
+    .unwrap();
+    let mut rig = Rig::headless();
+    let before = rig.doc();
+    let mut request = ChatRequest::text("fixture-model", "Build a card");
+    for turn in 0..3 {
+        let mut stream =
+            block_on(provider.complete(request.clone(), Cancellation::default())).unwrap();
+        let mut calls = vec![];
+        while let Some(event) = block_on(stream.next()) {
+            if let ModelEvent::ToolCall(call) = event.unwrap() {
+                calls.push(call);
+            }
+        }
+        assert_eq!(calls.len(), 1);
+        for call in calls {
+            let result = rig.call(&call.name, call.arguments.clone());
+            if turn == 1 {
+                let error = result.as_ref().unwrap_err();
+                assert_eq!(error.op(), Some(0));
+                assert_eq!(error.path(), Some("nodes[0].width"));
+                assert_eq!(rig.doc(), before);
+            } else {
+                assert!(result.is_ok());
+            }
+            let failed = result.is_err();
+            let result = result.unwrap_or_else(|error| json!({"error":{"message":error.message(),"path":error.path(),"op":error.op()}}));
+            request.messages.push(ChatMessage {
+                role: ChatRole::Assistant,
+                content: vec![ChatPart::ToolCall(call.clone())],
+            });
+            request.messages.push(ChatMessage {
+                role: ChatRole::User,
+                content: vec![ChatPart::ToolResult {
+                    id: call.id,
+                    name: call.name,
+                    result,
+                    failed,
+                }],
+            });
+        }
+    }
+    let doc = rig.doc();
+    let page = doc
+        .pages
+        .iter()
+        .find(|p| p.id.as_str() == "pageOther1")
+        .unwrap();
+    assert!(
+        page.children
+            .iter()
+            .any(|n| n.name() == "Card" && n.children().len() == 1)
     );
+    assert_eq!(stub.remaining(), 0);
+    let requests = stub.requests();
+    assert_eq!(requests[2].body["messages"][4]["role"], "tool");
+    assert!(
+        requests[2].body["messages"][4]["content"]
+            .as_str()
+            .unwrap()
+            .contains("nodes[0].width")
+    );
+    assert_eq!(rig.session.steps().len(), 3);
 }

@@ -2016,3 +2016,18 @@ Not verified: real MCP clients, Linux/Windows, installed engines or model-driven
 frames were involved. ADR-022 needs human architecture synchronization; later host settings must authorize
 folder roots before passing them to the source constructors.
 
+
+## Prompt 32 (in progress)
+
+- Added provider/secret contracts and scripted fakes; the first contract run failed on the missing ports/fakes.
+- Initial loopback tests pass for Chat Completions, Responses, Messages deployments and Gemini, including
+  vision, tools, usage and redacted HTTP failures. The HTTP boundary is injected so adapters remain independent.
+- Keyring 4.2.0 requires its new platform-store API, rather than the keyring 3 features used by the reference.
+  Environment fallback is explicit and read-only; locked keychain errors do not silently fall back.
+- The cancellation regression failed on the blocking transport (socket stayed open), then passed after the
+  async transport replaced it. A second red test caught queued tool calls being emitted after cancellation;
+  cancellation now clears that queue. Native macOS Keychain round-trip passed.
+- The first dependency audit rejected the new root-certificate data licence and transitive crypto/runtime
+  wrapper paths, and reported rustls 0.23.45 advisories. Updating TLS to patched 0.23.46 and reviewing the
+  narrow policy entries; no advisory ignore is added. The first full canary scan used a slow debug build;
+  its replacement uses the same scanner optimized.

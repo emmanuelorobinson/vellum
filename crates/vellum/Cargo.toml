@@ -57,3 +57,7 @@ vellum-render-skia = { path = "../adapters/render-skia" }
 vellum-index-rstar = { path = "../adapters/index-rstar" }
 vellum-script-quickjs = { path = "../adapters/script-quickjs" }
 vellum-contracts = { path = "../contracts" }
+
+vellum-testkit = { path = "../vellum-testkit" }
+vellum-llm-openai-compat = { path = "../adapters/llm-openai-compat" }
+vellum-model-http = { path = "../adapters/model-http" }

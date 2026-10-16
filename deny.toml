@@ -40,7 +40,8 @@ allow = [
   # File-level copyleft. Allowed as a dependency; never ported (THIRD_PARTY_NOTICES.md).
   "MPL-2.0",
 ]
-exceptions = []
+# Mozilla root certificate data, read/reviewed under ADR-023; retain its agreement on redistribution.
+exceptions = [{ crate = "webpki-root-certs@=1.0.9", allow = ["CDLA-Permissive-2.0"] }]
 
 [licenses.private]
 # Workspace crates are publish = false and carry no licence field.
@@ -54,7 +55,9 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 deny = [
-  { crate = "tokio", wrappers = ["vellum-ipc-local"], reason = "native transport/runtime stays inside the IPC adapter (ADR-003)" },
+  { crate = "tokio", wrappers = ["vellum-ipc-local", "vellum-model-http", "reqwest", "hyper", "hyper-util", "hyper-rustls", "tower", "tokio-rustls", "wasm-bindgen-futures"], reason = "native runtimes stay in IPC and model HTTP adapters (ADR-003, ADR-023)" },
+  { crate = "reqwest", wrappers = ["vellum-model-http"], reason = "model HTTP stays behind ModelTransport (ADR-023)" },
+  { crate = "secret-service", wrappers = ["zbus-secret-service-keyring-store"], reason = "keyring Linux backend only (ADR-023)" },
   # A vendor crate is reached only through the adapter that wraps it (guide §8, §13).
   { crate = "loro", wrappers = ["vellum-doc-loro"], reason = "Loro sits behind DocStore (Invariant 5)" },
   { crate = "taffy", wrappers = ["vellum-layout-taffy"], reason = "layout goes through the LayoutEngine port" },
@@ -64,7 +67,7 @@ deny = [
   { crate = "rquickjs", wrappers = ["vellum-script-quickjs"], reason = "scripts run only in ScriptRuntime (Invariant 8)" },
   { crate = "rusqlite", wrappers = ["vellum-sessions-sqlite"], reason = "sessions go through the SessionStore port" },
   { crate = "keyring", wrappers = ["vellum-secrets-keyring"], reason = "keys live in the OS keychain only (Invariant 10)" },
-  { crate = "sha2", wrappers = ["vellum-assets-fs"], reason = "an asset's hash is made by the file-system asset adapter (ADR-018)" },
+  { crate = "sha2", wrappers = ["vellum-assets-fs", "secret-service"], reason = "asset hashing and Secret Service encryption only (ADR-018, ADR-023)" },
   { crate = "notify", wrappers = ["vellum-watch-notify"], reason = "file events go through the FileWatcher port (ADR-020)" },
   { crate = "wuff", wrappers = ["vellum-text-parley"], reason = "web fonts are unpacked inside the text adapter (ADR-018)" },
 ]

@@ -15,5 +15,13 @@ png = "0.18.1"
 serde.workspace = true
 serde_json.workspace = true
 
+[dev-dependencies]
+vellum-contracts = { path = "../contracts" }
+vellum-model-http = { path = "../adapters/model-http" }
+vellum-llm-openai-compat = { path = "../adapters/llm-openai-compat" }
+vellum-llm-openai-responses = { path = "../adapters/llm-openai-responses" }
+vellum-llm-anthropic = { path = "../adapters/llm-anthropic" }
+vellum-llm-google = { path = "../adapters/llm-google" }
+
 [lints]
 workspace = true

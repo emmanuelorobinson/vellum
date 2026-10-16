@@ -43,7 +43,7 @@
 | wasm-bindgen | 0.2.129 | 0.2.129+ | not yet used | ADR-001 uses emscripten C exports for the renderer; not needed there |
 | notify | 8.2.0 | 8.2.x | `crates/adapters/watch-notify` (pinned `=8.2.0`, default features off, `macos_fsevent`) | FileWatcher (Prompt 28, ADR-020) |
 | rusqlite | 0.40.2 | 0.40.x | not yet used | session store, bundled SQLite (Prompt 34) |
-| keyring | 4.2.0 | 4.2.x | not yet used | SecretStore (Prompt 32) |
+| keyring | 4.2.0 | 4.2.x | `crates/adapters/secrets-keyring` (`v1` native stores) | SecretStore (Prompt 32, ADR-023) |
 | clap | 4.6.7 | 4.6.x | `Cargo.toml` workspace.dependencies (`derive`, `string`) | CLI; `vellum tool` is generated from the registry (Prompt 29, C22) |
 | chromiumoxide | 0.9.1 | 0.9.x | not yet used | BrowserPort, v1.1 (Prompt 65) |
 | naga | 30.0.1 | 30.x | not yet used | shader translation, v1.1, only if ADR-008 uses it |
@@ -233,3 +233,8 @@ edited.
   draws; the IPC lane builds it with `--no-default-features`. clap gains its `string` feature, which lets the CLI name
   subcommands and flags after the registry's tools at run time. `serde_path_to_error` 0.1.20 (already a workspace
   dependency) names the field at fault in a tool's input.
+
+- **C23: model boundaries** (Prompt 32, ADR-023). `reqwest` =0.13.5 (`rustls`, `json`, no defaults),
+  Tokio =1.53.2, async-channel =2.5.0 and url =2.5.8 live in `vellum-model-http`. TLS resolves to patched
+  rustls 0.23.46. The four protocol adapters use only core ports and serde_json. `keyring` =4.2.0
+  uses macOS Keychain, Windows Credential Manager and Linux Secret Service through its `v1` interface.

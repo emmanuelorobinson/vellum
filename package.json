@@ -44,7 +44,8 @@
     "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\"",
     "doc-api:gen": "node scripts/doc-api-gen.mjs",
     "doc-api:check": "node scripts/doc-api-gen.mjs --check",
-    "parity:check": "node scripts/parity.mjs"
+    "parity:check": "node scripts/parity.mjs",
+    "test:model-providers": "node scripts/model-providers.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

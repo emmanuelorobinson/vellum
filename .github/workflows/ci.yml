@@ -31,6 +31,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: Scripted model tool error and retry (loopback model-http lane)
+        run: cargo test -p vellum --test write_tools a_scripted_agent -- --ignored
       - name: Versioned document API declarations match runtime bindings
         run: node scripts/doc-api-gen.mjs --check
       - uses: taiki-e/install-action@v2

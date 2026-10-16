@@ -17,6 +17,7 @@ mod files;
 mod fonts;
 mod geometry;
 mod layout;
+mod model;
 mod path;
 mod script;
 mod shader;
@@ -43,6 +44,7 @@ pub use layout::{
     Dimension, DirtySet, Insets, LayoutContent, LayoutEngine, LayoutNode, LayoutResult,
     LayoutStyle, LayoutTree,
 };
+pub use model::*;
 pub use path::{Path, PathOps, PathSegment, StrokeStyle};
 pub use script::{
     ScriptApi, ScriptDiagnostic, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime,

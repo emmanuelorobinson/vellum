@@ -3,6 +3,7 @@
 //! So far: the pixel-diff helper for golden images (Prompt 4) and the layout oracle loader (Prompt 6). The rest lands in the prompts that own it.
 
 pub mod layout_oracle;
+pub mod model;
 pub mod pixel_diff;
 pub mod script;
 
