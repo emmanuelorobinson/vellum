@@ -138,7 +138,7 @@ impl ToolCtx<'_> {
             Err(TargetError::Write(WriteError::Invalid(error))) => {
                 return Err(batch_error(&labels, &error));
             }
-            Err(other) => return Err(other.into()),
+            Err(other) => return Err(super::refusal(self.docs.agents(), other)),
         };
         let after = target.snapshot()?;
         self.noted(path, &before, &after, &applied.changes);

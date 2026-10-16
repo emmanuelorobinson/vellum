@@ -11,12 +11,12 @@ use vellum::daemon::{Documents, EditorLink, Env, Recovery};
 use vellum_codec_json::JsonCodec;
 use vellum_contracts::fakes::{InMemoryDocStore, ManualClock, ManualWatcher, MemFs, SequentialIds};
 use vellum_core::doc_api::NoServices;
-use vellum_core::guard::{GuardState, LeaseChange, apply_guarded};
+use vellum_core::guard::{AgentControl, GuardState, LeaseChange, apply_guarded};
 use vellum_core::ops::{Applied, Inputs, Transaction};
 use vellum_core::ports::{
-    ChangeSet, Clock, DocStore, FileSystem, ScriptValue, TargetError, Timestamp,
+    ChangeSet, Clock, DocStore, FileSystem, ScriptValue, TargetError, Timestamp, TurnUndone,
 };
-use vellum_types::{Actor, AgentId, Document, NodeId};
+use vellum_types::{Actor, AgentId, Document, NodeId, TurnId};
 
 /// What a fake editor did, for the test to look at.
 pub struct EditorState {
@@ -147,6 +147,18 @@ impl EditorLink for FakeEditor {
             .guard
             .lease(&doc, frame, agent, change, Timestamp(0))
             .map_err(TargetError::Lease)
+    }
+
+    fn control(&mut self, change: &AgentControl) -> Result<(), TargetError> {
+        self.alive()?;
+        self.0.borrow_mut().guard.control(change, Timestamp(0));
+        Ok(())
+    }
+
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> Result<TurnUndone, TargetError> {
+        self.alive()?;
+        vellum_core::ops::undo_turn(&mut self.0.borrow_mut().store, turn, by)
+            .map_err(|e| TargetError::Write(vellum_core::guard::WriteError::Invalid(e)))
     }
 
     fn save(&mut self) -> Result<Document, TargetError> {

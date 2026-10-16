@@ -75,7 +75,7 @@ impl ToolBridge for RecordingBridge {
 }
 
 /// One thing a scripted turn does.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum FakeStep {
     /// Sends the event as it is.
     Emit(TurnEvent),
@@ -83,6 +83,15 @@ pub enum FakeStep {
     Call { name: String, input: Value },
     /// Waits for Stop.
     Work,
+    /// Waits until the test calls [`FakeEngine::release`]; Stop does not end the wait. For an engine that keeps
+    /// going after Stop or Pause all, so the Guard is what refuses its next write.
+    Wait,
+    /// Calls a tool with input read from the turn's prompt, the way an engine follows its instructions (a frame
+    /// id the orchestrator reserved).
+    FromPrompt {
+        name: String,
+        input: fn(&str) -> Value,
+    },
 }
 
 /// An engine that replays one script per turn, oldest first. A script that runs out ends the turn Done.
@@ -91,6 +100,10 @@ pub struct FakeEngine {
     running: Mutex<BTreeMap<TurnId, Cancellation>>,
     requests: Mutex<Vec<TurnRequest>>,
     status: EngineStatus,
+    /// Ignores Stop: a run ends only when its script does.
+    deaf: bool,
+    /// [`FakeStep::Wait`]: released, and who to wake.
+    gate: Mutex<(bool, Option<std::task::Waker>)>,
 }
 impl FakeEngine {
     pub fn new(scripts: Vec<Vec<FakeStep>>) -> Self {
@@ -99,6 +112,22 @@ impl FakeEngine {
             running: Mutex::default(),
             requests: Mutex::default(),
             status: EngineStatus::Ready,
+            deaf: false,
+            gate: Mutex::default(),
+        }
+    }
+    /// An engine that ignores Stop: its script runs to the end whatever happens.
+    #[must_use]
+    pub fn deaf(mut self) -> Self {
+        self.deaf = true;
+        self
+    }
+    /// Lets the next [`FakeStep::Wait`] (or the one waiting now) go on.
+    pub fn release(&self) {
+        let mut gate = self.gate.lock().unwrap();
+        gate.0 = true;
+        if let Some(waker) = gate.1.take() {
+            waker.wake();
         }
     }
     #[must_use]
@@ -118,6 +147,7 @@ impl FakeEngine {
 struct FakeTurn<'a> {
     engine: &'a FakeEngine,
     turn: TurnId,
+    prompt: String,
     bridge: &'a dyn ToolBridge,
     steps: VecDeque<FakeStep>,
     cancel: Cancellation,
@@ -144,14 +174,35 @@ impl TurnStream for FakeTurn<'_> {
                 if self.ended {
                     return None;
                 }
-                if self.cancel.is_cancelled() {
+                if self.cancel.is_cancelled() && !self.engine.deaf {
                     self.end(TurnEnd::Stopped);
                     continue;
                 }
-                match self.steps.pop_front() {
+                let step = match self.steps.pop_front() {
+                    Some(FakeStep::FromPrompt { name, input }) => Some(FakeStep::Call {
+                        name,
+                        input: input(&self.prompt),
+                    }),
+                    step => step,
+                };
+                match step {
                     None => self.end(TurnEnd::Done),
                     Some(FakeStep::Emit(TurnEvent::Ended(end))) => self.end(end),
                     Some(FakeStep::Emit(event)) => self.queue.push_back(event),
+                    Some(FakeStep::Wait) => {
+                        let engine = self.engine;
+                        poll_fn(|cx| {
+                            let mut gate = engine.gate.lock().unwrap();
+                            if std::mem::take(&mut gate.0) {
+                                std::task::Poll::Ready(())
+                            } else {
+                                gate.1 = Some(cx.waker().clone());
+                                std::task::Poll::Pending
+                            }
+                        })
+                        .await;
+                    }
+                    Some(FakeStep::FromPrompt { .. }) => unreachable!("turned into a call above"),
                     Some(FakeStep::Call { name, input }) => {
                         let call = format!("fake{}", self.messages.len());
                         self.queue.push_back(TurnEvent::ToolStarted {
@@ -220,10 +271,12 @@ impl AgentEngine for FakeEngine {
         }
         let steps = self.scripts.lock().unwrap().pop_front().unwrap_or_default();
         let id = turn.turn.clone();
+        let prompt = turn.prompt.clone();
         self.requests.lock().unwrap().push(turn);
         Ok(Box::new(FakeTurn {
             engine: self,
             turn: id,
+            prompt,
             bridge: tools,
             steps: steps.into(),
             cancel,

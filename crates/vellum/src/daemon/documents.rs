@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use vellum_core::diff::diff;
 use vellum_core::doc_api::Services;
-use vellum_core::guard::GuardState;
+use vellum_core::guard::{AgentControl, GuardState, PauseSet};
 use vellum_core::merge::merge;
 use vellum_core::ops::{Applied, Transaction};
 use vellum_core::plans::Placeholder;
@@ -105,6 +105,13 @@ enum Holder {
     Live(LiveTarget),
 }
 
+fn holder_target(holder: &mut Holder) -> &mut dyn DocumentTarget {
+    match holder {
+        Holder::Headless(target) => &mut **target,
+        Holder::Live(target) => target,
+    }
+}
+
 struct Entry {
     holder: Holder,
     file: DocFile,
@@ -129,6 +136,41 @@ pub struct Documents {
     agents: BTreeMap<AgentId, String>,
     /// Planned frames by document path: session state every agent sees, never written to a file.
     placeholders: BTreeMap<String, Vec<Planned>>,
+    /// Pause all and Stop as a person pressed them: applied to every open file and to each file opened later.
+    held: PauseSet,
+    /// Helper agents external clients asked for with `spawn_agents`, waiting for the host to start them. `None`
+    /// while no host here runs helpers, so asking is refused.
+    spawns: Option<Vec<SpawnRequest>>,
+}
+
+/// An external client's `spawn_agents` call, for the host that runs helper agents.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpawnRequest {
+    /// Who asked.
+    pub by: AgentId,
+    /// What it is called ("Claude Code").
+    pub by_name: String,
+    /// The document the helpers work on.
+    pub document: String,
+    pub tasks: Vec<SpawnTask>,
+}
+
+/// One helper's task.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpawnTask {
+    pub task: String,
+    /// The model it runs on, when not the host's default.
+    pub model: Option<String>,
+}
+
+fn held_controls(held: &PauseSet) -> Vec<AgentControl> {
+    let mut controls = vec![];
+    if held.is_all_paused() {
+        controls.push(AgentControl::PauseAll);
+    }
+    controls.extend(held.paused().cloned().map(AgentControl::Pause));
+    controls.extend(held.stopped().cloned().map(AgentControl::Stop));
+    controls
 }
 
 /// A placeholder as the daemon holds it.
@@ -156,7 +198,50 @@ impl Documents {
             tool_ids,
             agents: BTreeMap::new(),
             placeholders: BTreeMap::new(),
+            held: PauseSet::default(),
+            spawns: None,
         }
+    }
+
+    /// Applies what a person pressed (Pause all, Stop, a resume) to every open file's Guard, and remembers it for
+    /// files opened later. An editor that went away is skipped; its file falls back to a target that gets it.
+    pub fn control_all(&mut self, change: &AgentControl) {
+        match change {
+            AgentControl::PauseAll => self.held.pause_all(),
+            AgentControl::ResumeAll => self.held.resume_all(),
+            AgentControl::Pause(agent) => self.held.pause(agent.clone()),
+            AgentControl::Stop(agent) => self.held.stop(agent.clone()),
+            AgentControl::Resume(agent) => self.held.resume(agent),
+        }
+        for entry in self.open.values_mut() {
+            let _ = holder_target(&mut entry.holder).control(change);
+        }
+    }
+
+    /// What [`Self::control_all`] holds now: whether all agents are paused, and who is paused or stopped.
+    pub fn held(&self) -> &PauseSet {
+        &self.held
+    }
+
+    /// From now on, `spawn_agents` from external clients is queued for this host to start.
+    pub fn accept_spawns(&mut self) {
+        self.spawns.get_or_insert_with(Vec::new);
+    }
+
+    /// Queues an external client's request for helpers. Refused when no host here runs them.
+    pub fn request_spawn(&mut self, request: SpawnRequest) -> Result<(), SpawnRequest> {
+        match &mut self.spawns {
+            Some(queue) => {
+                queue.push(request);
+                Ok(())
+            }
+            None => Err(request),
+        }
+    }
+
+    /// The requests waiting, oldest first, which are removed.
+    pub fn take_spawns(&mut self) -> Vec<SpawnRequest> {
+        self.spawns.as_mut().map(std::mem::take).unwrap_or_default()
     }
 
     /// A fresh ULID (guide §9): the clock's milliseconds, then 80 random bits.
@@ -259,7 +344,10 @@ impl Documents {
     /// Opens `path` headless: loads the file and starts watching it.
     fn load(&mut self, path: &str) -> Result<(), TargetError> {
         let file = self.file(path)?;
-        let (target, loaded) = HeadlessTarget::open(file.clone(), |doc| self.engine(doc))?;
+        let (mut target, loaded) = HeadlessTarget::open(file.clone(), |doc| self.engine(doc))?;
+        for change in held_controls(&self.held) {
+            target.control(&change)?;
+        }
         let base_hash = self.hash(&loaded.document)?;
         self.watcher.watch(path).map_err(FileError::Fs)?;
         self.open.insert(
@@ -503,7 +591,12 @@ impl Documents {
                 entry.base = document.clone();
                 entry.base_hash =
                     (self.env.hash)(&self.env.codec.encode(&document).map_err(FileError::Codec)?);
-                entry.holder = Holder::Live(LiveTarget::new(editor, link));
+                let mut live = LiveTarget::new(editor, link);
+                // The editor's Guard takes over: it starts with what a person pressed.
+                for change in held_controls(&self.held) {
+                    live.control(&change)?;
+                }
+                entry.holder = Holder::Live(live);
                 (Role::Writer, document)
             }
         };

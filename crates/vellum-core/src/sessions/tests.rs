@@ -1,5 +1,6 @@
 //! TEST DATA throughout.
 use super::*;
+use crate::parallel::{Axis, LaneEnd, LaneRecord, Mode, OptionRecord, ParallelEvent};
 use crate::ports::{ChatRole, DocKey, ImageRef, NewSession, SessionMeta, StepOutcome, StepRecord};
 use crate::turns::SessionDot;
 use serde_json::json;
@@ -9,6 +10,7 @@ use vellum_types::{Actor, AgentId, DeviceId, Subsystem};
 const SESSION: &str = "01J0000000000000000000000S";
 const OTHER: &str = "01J0000000000000000000000T";
 const TURN: &str = "01J0000000000000000000000V";
+const AGENT: &str = "01J0000000000000000000000A";
 
 /// Just enough store to drive the helpers; the real contract is `vellum_contracts::suites::sessions`.
 #[derive(Default)]
@@ -259,6 +261,45 @@ fn bodies() -> Vec<EventBody> {
             },
         ]),
         EventBody::Plan(crate::plans::PlanEvent::Ticked(vec![1, 2])),
+        EventBody::Parallel(ParallelEvent::Lanes {
+            mode: Mode::Explore(Axis::Style),
+            lanes: vec![
+                LaneRecord {
+                    agent: vellum_types::AgentId::new(AGENT).unwrap(),
+                    name: "TEST DATA lane".into(),
+                    model: "m".into(),
+                    items: vec![1, 3],
+                    task: None,
+                },
+                LaneRecord {
+                    agent: vellum_types::AgentId::new(AGENT).unwrap(),
+                    name: "TEST DATA helper".into(),
+                    model: "m2".into(),
+                    items: vec![],
+                    task: Some("TEST DATA: icons".into()),
+                },
+            ],
+        }),
+        EventBody::Parallel(ParallelEvent::LaneEnded {
+            agent: vellum_types::AgentId::new(AGENT).unwrap(),
+            end: LaneEnd::Stopped,
+        }),
+        EventBody::Parallel(ParallelEvent::Option(OptionRecord {
+            option: 2,
+            agent: vellum_types::AgentId::new(AGENT).unwrap(),
+            frame: vellum_types::NodeId::new("frameOptB1").unwrap(),
+            label: Some("TEST DATA: serif headings".into()),
+        })),
+        EventBody::Parallel(ParallelEvent::Option(OptionRecord {
+            option: 1,
+            agent: vellum_types::AgentId::new(AGENT).unwrap(),
+            frame: vellum_types::NodeId::new("frameOptA1").unwrap(),
+            label: None,
+        })),
+        EventBody::Undo {
+            changed: 47,
+            kept: 2,
+        },
         EventBody::Step(step()),
         EventBody::Step(StepRecord {
             thumbnail: None,
@@ -321,6 +362,10 @@ fn reading_refuses_what_this_version_did_not_write() {
         json!({"type": "turn", "turn": "x", "from": "running", "input": "done", "to": "done"}),
         json!({"type": "messages", "messages": [{"role": "system", "parts": []}]}),
         json!({"type": "messages", "messages": [{"role": "user", "parts": [{"text": "a", "image": {}}]}]}),
+        json!({"type": "parallel", "event": "lanes", "mode": "spiral", "lanes": []}),
+        json!({"type": "parallel", "event": "laneEnded", "agent": AGENT, "end": "paused"}),
+        json!({"type": "parallel", "event": "option", "option": 1, "agent": AGENT, "frame": "f1", "extra": 1}),
+        json!({"type": "undo", "changed": 1}),
     ] {
         assert!(
             matches!(body_from_json(&bad), Err(StoreError::Corrupt(_))),

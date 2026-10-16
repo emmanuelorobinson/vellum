@@ -316,6 +316,16 @@ impl EditorLink for Screen {
     ) -> Result<(), TargetError> {
         self.inner.lease(frame, agent, change)
     }
+    fn control(&mut self, change: &vellum_core::guard::AgentControl) -> Result<(), TargetError> {
+        self.inner.control(change)
+    }
+    fn undo_turn(
+        &mut self,
+        turn: &vellum_types::TurnId,
+        by: &vellum_types::Actor,
+    ) -> Result<vellum_core::ports::TurnUndone, TargetError> {
+        self.inner.undo_turn(turn, by)
+    }
     fn save(&mut self) -> Result<Document, TargetError> {
         self.inner.save()
     }

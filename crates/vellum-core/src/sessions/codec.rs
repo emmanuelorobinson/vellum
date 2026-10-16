@@ -1,5 +1,6 @@
 //! The JSON an event's origin and body are stored as. Every store uses it, so a log moved between stores reads
 //! the same. Field names are camelCase; reading refuses anything this version did not write.
+use crate::parallel::{LaneEnd, LaneRecord, Mode, OptionRecord, ParallelEvent};
 use crate::plans::{Placeholder, Plan, PlanEvent, PlanItem};
 use crate::ports::Rect;
 use crate::ports::{
@@ -77,6 +78,10 @@ pub fn body_to_json(body: &EventBody) -> Value {
             "messages": messages.iter().map(message_json).collect::<Vec<_>>(),
         }),
         EventBody::Plan(event) => plan_json(event),
+        EventBody::Parallel(event) => parallel_json(event),
+        EventBody::Undo { changed, kept } => {
+            json!({"type": "undo", "changed": changed, "kept": kept})
+        }
         EventBody::Step(step) => {
             let mut out = json!({
                 "type": "step",
@@ -419,6 +424,14 @@ pub fn body_from_json(value: &Value) -> Result<EventBody, StoreError> {
             )
         }
         "plan" => EventBody::Plan(plan_event(value)?),
+        "parallel" => EventBody::Parallel(parallel_event(value)?),
+        "undo" => {
+            let f = Fields::new(value, "undo", &["type", "changed", "kept"])?;
+            EventBody::Undo {
+                changed: f.u32("changed")?,
+                kept: f.u32("kept")?,
+            }
+        }
         "step" => {
             let f = Fields::new(
                 value,
@@ -704,5 +717,116 @@ fn plan_event(value: &Value) -> Result<PlanEvent, StoreError> {
             }
         }
         other => return Err(corrupt(format!("unknown plan event `{other}`"))),
+    })
+}
+
+fn lane_json(lane: &LaneRecord) -> Value {
+    let mut out = json!({
+        "agent": lane.agent.as_str(),
+        "name": lane.name,
+        "model": lane.model,
+        "items": lane.items,
+    });
+    if let Some(task) = &lane.task {
+        out["task"] = json!(task);
+    }
+    out
+}
+
+fn parallel_json(event: &ParallelEvent) -> Value {
+    match event {
+        ParallelEvent::Lanes { mode, lanes } => json!({
+            "type": "parallel",
+            "event": "lanes",
+            "mode": mode.as_str(),
+            "lanes": lanes.iter().map(lane_json).collect::<Vec<_>>(),
+        }),
+        ParallelEvent::LaneEnded { agent, end } => json!({
+            "type": "parallel",
+            "event": "laneEnded",
+            "agent": agent.as_str(),
+            "end": end.as_str(),
+        }),
+        ParallelEvent::Option(option) => {
+            let mut out = json!({
+                "type": "parallel",
+                "event": "option",
+                "option": option.option,
+                "agent": option.agent.as_str(),
+                "frame": option.frame.as_str(),
+            });
+            if let Some(label) = &option.label {
+                out["label"] = json!(label);
+            }
+            out
+        }
+    }
+}
+
+fn lane(value: &Value) -> Result<LaneRecord, StoreError> {
+    let f = Fields::new(
+        value,
+        "parallel.lanes",
+        &["agent", "name", "model", "items", "task"],
+    )?;
+    Ok(LaneRecord {
+        agent: id(f.str("agent")?, "lane agent", AgentId::new)?,
+        name: f.str("name")?.to_owned(),
+        model: f.str("model")?.to_owned(),
+        items: f
+            .array("items")?
+            .iter()
+            .map(|n| {
+                n.as_u64()
+                    .and_then(|n| u32::try_from(n).ok())
+                    .ok_or_else(|| corrupt("parallel.lanes.items holds item numbers"))
+            })
+            .collect::<Result<_, _>>()?,
+        task: f.optional("task", Fields::str)?.map(str::to_owned),
+    })
+}
+
+fn parallel_event(value: &Value) -> Result<ParallelEvent, StoreError> {
+    let kind = value
+        .get("event")
+        .and_then(Value::as_str)
+        .ok_or_else(|| corrupt("a parallel event has no kind"))?;
+    Ok(match kind {
+        "lanes" => {
+            let f = Fields::new(value, "parallel", &["type", "event", "mode", "lanes"])?;
+            let mode = f.str("mode")?;
+            ParallelEvent::Lanes {
+                mode: Mode::parse(mode)
+                    .ok_or_else(|| corrupt(format!("unknown parallel mode `{mode}`")))?,
+                lanes: f
+                    .array("lanes")?
+                    .iter()
+                    .map(lane)
+                    .collect::<Result<_, _>>()?,
+            }
+        }
+        "laneEnded" => {
+            let f = Fields::new(value, "parallel", &["type", "event", "agent", "end"])?;
+            let end = f.str("end")?;
+            ParallelEvent::LaneEnded {
+                agent: id(f.str("agent")?, "lane agent", AgentId::new)?,
+                end: LaneEnd::parse(end)
+                    .ok_or_else(|| corrupt(format!("unknown lane end `{end}`")))?,
+            }
+        }
+        "option" => {
+            let f = Fields::new(
+                value,
+                "parallel",
+                &["type", "event", "option", "agent", "frame", "label"],
+            )?;
+            ParallelEvent::Option(OptionRecord {
+                option: f.u32("option")?,
+                agent: id(f.str("agent")?, "option agent", AgentId::new)?,
+                frame: id(f.str("frame")?, "option frame", NodeId::new)?,
+                label: f.optional("label", Fields::str)?.map(str::to_owned),
+            })
+        }
+        other => return Err(corrupt(format!("unknown parallel event `{other}`"))),
     })
 }

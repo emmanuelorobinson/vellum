@@ -47,14 +47,14 @@
     "capability": "`spawn_agents` (behind a start-up flag)",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_spawn_agents"
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "spawn_agents_starts_helper_lanes_for_built_in_engines"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "external_clients_get_spawn_agents_only_when_the_setting_allows_it"
       }
-    ],
-    "pending": {
-      "prompt": 39,
-      "reason": "Needs orchestration."
-    }
+    ]
   },
   {
     "capability": "Earlier `batch_design` (insert, copy, update, replace, move, delete, image ops)",
@@ -273,40 +273,52 @@
     "capability": "Parallel agents 1–6: Split work, Side by side, per-agent model",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_parallel_agents"
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "split_divides_plan_items_into_lanes_each_with_its_own_run_leases_and_hue"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "side_by_side_gives_each_lane_the_same_brief_its_own_area_and_its_own_model"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "a_split_needs_an_engine_per_lane_and_at_most_six_lanes"
       }
-    ],
-    "pending": {
-      "prompt": 39,
-      "reason": "Needs parallel orchestration."
-    }
+    ]
   },
   {
     "capability": "\"Let it cook\": successive variants exploring Layout or Style, 2–6",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_explore_variants"
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "explore_makes_successive_variants_that_vary_only_one_axis"
       }
-    ],
-    "pending": {
-      "prompt": 39,
-      "reason": "Needs Explore orchestration."
-    }
+    ]
   },
   {
     "capability": "Stop current agent / Stop all",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_stop_all_agents"
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "stop_ends_every_lane_within_the_budgets_and_keeps_what_was_built"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "stop_this_agent_stops_one_lane_and_the_guard_refuses_its_next_write"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "stop_all_stops_every_agent_of_the_turn_and_leaves_external_agents_alone"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "pause_all_rejects_every_agents_next_write_at_once_and_interrupts_the_engines"
+      },
+      {
+        "file": "crates/vellum/tests/parallel.rs",
+        "name": "stop_interrupts_the_built_in_engine_on_a_stalled_model_within_three_seconds"
       }
-    ],
-    "pending": {
-      "prompt": 39,
-      "reason": "Guard exists; engine interruption and coordination remain."
-    }
+    ]
   },
   {
     "capability": "Script nodes (code on canvas: `.js` file, header inputs, sandbox, convert to layers)",

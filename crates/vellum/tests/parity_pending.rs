@@ -2,12 +2,6 @@
 //! Every ignored test deliberately fails when explicitly selected; no pending capability claims to pass.
 
 #[test]
-#[ignore = "pending: needs Prompt 39"]
-fn parity_pending_spawn_agents() {
-    panic!("not implemented yet: needs Prompt 39");
-}
-
-#[test]
 #[ignore = "pending: needs Prompt 42"]
 fn parity_pending_batch_design_images() {
     panic!("not implemented yet: needs Prompt 42");
@@ -59,24 +53,6 @@ fn parity_pending_usage_meter() {
 #[ignore = "pending: needs Prompt 58"]
 fn parity_pending_background_notification() {
     panic!("not implemented yet: needs Prompt 58");
-}
-
-#[test]
-#[ignore = "pending: needs Prompt 39"]
-fn parity_pending_parallel_agents() {
-    panic!("not implemented yet: needs Prompt 39");
-}
-
-#[test]
-#[ignore = "pending: needs Prompt 39"]
-fn parity_pending_explore_variants() {
-    panic!("not implemented yet: needs Prompt 39");
-}
-
-#[test]
-#[ignore = "pending: needs Prompt 39"]
-fn parity_pending_stop_all_agents() {
-    panic!("not implemented yet: needs Prompt 39");
 }
 
 #[test]

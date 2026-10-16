@@ -808,6 +808,27 @@ pub fn revert<S: DocStore + ?Sized>(store: &mut S, revert: Revert) -> Result<App
     })
 }
 
+/// "Undo this turn" on `store`, asked for by `by`: the turn is undone outright when nothing later depends on it,
+/// otherwise reverted as a new transaction by `by` that keeps what others built on. What every target does.
+pub fn undo_turn<S: DocStore + ?Sized>(
+    store: &mut S,
+    turn: &vellum_types::TurnId,
+    by: &vellum_types::Actor,
+) -> Result<crate::ports::TurnUndone, OpError> {
+    use crate::ports::{TurnUndone, UndoTurn};
+    Ok(match store.undo_turn(turn, by) {
+        UndoTurn::Nothing => TurnUndone::Nothing,
+        UndoTurn::Undone(changes) => TurnUndone::Undone(changes),
+        UndoTurn::Revert(revert_tx) => {
+            let kept = revert_tx.kept().to_vec();
+            TurnUndone::Reverted {
+                applied: revert(store, revert_tx)?,
+                kept,
+            }
+        }
+    })
+}
+
 /// Hands a checked plan to the store. Only callers that planned against the store's current document may use it:
 /// `apply` here and the Guard's `apply_guarded`.
 pub(crate) fn commit<S: DocStore + ?Sized>(store: &mut S, origin: Origin, plan: Plan) -> Applied {

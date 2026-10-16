@@ -1,9 +1,9 @@
-use vellum_core::guard::{GuardState, LeaseChange, apply_guarded};
-use vellum_core::ops::{Applied, Inputs, Transaction};
+use vellum_core::guard::{AgentControl, GuardState, LeaseChange, WriteError, apply_guarded};
+use vellum_core::ops::{self, Applied, Inputs, Transaction};
 use vellum_core::ports::{
-    DocStore, DocumentTarget, ScriptValue, TargetError, TargetMode, Timestamp,
+    DocStore, DocumentTarget, ScriptValue, TargetError, TargetMode, Timestamp, TurnUndone,
 };
-use vellum_types::{AgentId, Document, NodeId};
+use vellum_types::{Actor, AgentId, Document, NodeId, TurnId};
 
 use super::{InMemoryDocStore, SequentialIds};
 
@@ -75,6 +75,16 @@ impl DocumentTarget for InMemoryTarget {
         self.guard
             .lease(&doc, frame, agent, change, Timestamp(0))
             .map_err(TargetError::Lease)
+    }
+
+    fn control(&mut self, change: &AgentControl) -> Result<(), TargetError> {
+        self.guard.control(change, Timestamp(0));
+        Ok(())
+    }
+
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> Result<TurnUndone, TargetError> {
+        ops::undo_turn(&mut self.store, turn, by)
+            .map_err(|e| TargetError::Write(WriteError::Invalid(e)))
     }
 
     fn save(&mut self) -> Result<(), TargetError> {

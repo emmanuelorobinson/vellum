@@ -651,6 +651,16 @@ impl DocumentTarget for AppliesHalf {
     ) -> Result<(), TargetError> {
         self.0.lease(frame, agent, change)
     }
+    fn control(&mut self, change: &vellum_core::guard::AgentControl) -> Result<(), TargetError> {
+        self.0.control(change)
+    }
+    fn undo_turn(
+        &mut self,
+        turn: &vellum_types::TurnId,
+        by: &vellum_types::Actor,
+    ) -> Result<vellum_core::ports::TurnUndone, TargetError> {
+        self.0.undo_turn(turn, by)
+    }
     fn save(&mut self) -> Result<(), TargetError> {
         self.0.save()
     }
@@ -691,6 +701,16 @@ impl DocumentTarget for LeasesNothing {
     ) -> Result<(), TargetError> {
         Ok(())
     }
+    fn control(&mut self, change: &vellum_core::guard::AgentControl) -> Result<(), TargetError> {
+        self.0.control(change)
+    }
+    fn undo_turn(
+        &mut self,
+        turn: &vellum_types::TurnId,
+        by: &vellum_types::Actor,
+    ) -> Result<vellum_core::ports::TurnUndone, TargetError> {
+        self.0.undo_turn(turn, by)
+    }
     fn save(&mut self) -> Result<(), TargetError> {
         self.0.save()
     }
@@ -703,6 +723,110 @@ impl DocumentTarget for LeasesNothing {
 #[should_panic(expected = "a frame another agent holds cannot be claimed")]
 fn target_that_keeps_no_leases() {
     suites::target::run(|doc| LeasesNothing(vellum_contracts::fakes::InMemoryTarget::new(doc)));
+}
+
+/// A target that takes Pause all and Stop and does nothing with them.
+struct IgnoresStop(vellum_contracts::fakes::InMemoryTarget);
+impl DocumentTarget for IgnoresStop {
+    fn mode(&self) -> TargetMode {
+        self.0.mode()
+    }
+    fn snapshot(&mut self) -> Result<Document, TargetError> {
+        self.0.snapshot()
+    }
+    fn transact(
+        &mut self,
+        tx: vellum_core::ops::Transaction,
+    ) -> Result<vellum_core::ops::Applied, TargetError> {
+        self.0.transact(tx)
+    }
+    fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError> {
+        self.0.render(target, scale)
+    }
+    fn lease(
+        &mut self,
+        frame: &vellum_types::NodeId,
+        agent: &vellum_types::AgentId,
+        change: vellum_core::guard::LeaseChange,
+    ) -> Result<(), TargetError> {
+        self.0.lease(frame, agent, change)
+    }
+    fn control(&mut self, _: &vellum_core::guard::AgentControl) -> Result<(), TargetError> {
+        Ok(())
+    }
+    fn undo_turn(
+        &mut self,
+        turn: &vellum_types::TurnId,
+        by: &vellum_types::Actor,
+    ) -> Result<vellum_core::ports::TurnUndone, TargetError> {
+        self.0.undo_turn(turn, by)
+    }
+    fn save(&mut self) -> Result<(), TargetError> {
+        self.0.save()
+    }
+    fn is_dirty(&mut self) -> Result<bool, TargetError> {
+        self.0.is_dirty()
+    }
+}
+
+#[test]
+#[should_panic(expected = "a stopped agent's next write must be rejected")]
+fn target_that_ignores_stop() {
+    suites::target::run(|doc| IgnoresStop(vellum_contracts::fakes::InMemoryTarget::new(doc)));
+}
+
+/// A target whose Undo this turn takes back every agent's changes.
+struct UndoesEveryone(vellum_contracts::fakes::InMemoryTarget);
+impl DocumentTarget for UndoesEveryone {
+    fn mode(&self) -> TargetMode {
+        self.0.mode()
+    }
+    fn snapshot(&mut self) -> Result<Document, TargetError> {
+        self.0.snapshot()
+    }
+    fn transact(
+        &mut self,
+        tx: vellum_core::ops::Transaction,
+    ) -> Result<vellum_core::ops::Applied, TargetError> {
+        self.0.transact(tx)
+    }
+    fn render(&mut self, target: &str, scale: f64) -> Result<ScriptValue, TargetError> {
+        self.0.render(target, scale)
+    }
+    fn lease(
+        &mut self,
+        frame: &vellum_types::NodeId,
+        agent: &vellum_types::AgentId,
+        change: vellum_core::guard::LeaseChange,
+    ) -> Result<(), TargetError> {
+        self.0.lease(frame, agent, change)
+    }
+    fn control(&mut self, change: &vellum_core::guard::AgentControl) -> Result<(), TargetError> {
+        self.0.control(change)
+    }
+    fn undo_turn(
+        &mut self,
+        turn: &vellum_types::TurnId,
+        by: &vellum_types::Actor,
+    ) -> Result<vellum_core::ports::TurnUndone, TargetError> {
+        // Then back to the last save, whoever changed what since.
+        let undone = self.0.undo_turn(turn, by);
+        let saved = self.0.saved().clone();
+        self.0 = vellum_contracts::fakes::InMemoryTarget::new(&saved);
+        undone
+    }
+    fn save(&mut self) -> Result<(), TargetError> {
+        self.0.save()
+    }
+    fn is_dirty(&mut self) -> Result<bool, TargetError> {
+        self.0.is_dirty()
+    }
+}
+
+#[test]
+#[should_panic(expected = "undo_turn must")]
+fn target_whose_undo_turn_takes_back_everyone() {
+    suites::target::run(|doc| UndoesEveryone(vellum_contracts::fakes::InMemoryTarget::new(doc)));
 }
 
 /// A watcher that reports every document, watched or not, every time.

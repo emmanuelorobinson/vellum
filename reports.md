@@ -8,6 +8,23 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the parallel, Stop and Undo choices** (Prompt 39). Mine, not from a source: all lanes of a parallel
+  turn share the one turn id, so Undo this turn takes every lane back; each lane therefore needs its own engine
+  instance (`Orchestrator::with_helpers`), since `interrupt` is per turn. A turn is done when every lane a person did
+  not stop is done, and failed if any of them failed. Stop this agent on the last working lane stops the turn. Stop
+  and Stop all leave the lanes' agents stopped in the Guard until their next turn; Pause all pauses every agent in
+  every open file (and files opened later) and stops every running turn (guide §10.1 rule 1), and Resume all lifts it.
+  Side by side and Explore put each option in a frame reserved like a placeholder, lettered A–F; Explore makes the
+  first result and then count − 1 variants, each a copy of the first sized like it, labelled from its last
+  `report_progress`. Helper names come from the host (`with_helpers(engines, names)`): the hue names are design data
+  and guide §11 rule 14 keeps "Teal"/"Saffron" out of product code, so no hue list is built in. `spawn_agents` takes
+  `tasks` only, not ARCHITECTURE §7.3's `mode`; helpers are capped by free engines and 6 lanes. External clients get
+  the tool only with `AgentSettings::spawn_agents_external`, and then only queue a request for a host that accepts
+  spawns (`Documents::accept_spawns`); the daemon accepts none and has no flag or settings loader for it yet, so it
+  refuses. ARCHITECTURE §3.4 (`DocumentTarget` gains `control` and `undo_turn`, `EditorLink` likewise) and §7.3 need
+  your edit. Not done: Keep / discard for options (Agent panel, Prompt 50), `vellum prompt --parallel/--mode`, and
+  the real editor link implementing `control`/`undo_turn` (only test links exist).
+
 - **Review the plan and placeholder choices** (Prompt 38). Mine, not from a source: a plan is needed at 2 or more
   frames or an estimate above 20 changes (`PlanSettings`, a setting); the engine decides by calling `propose_plan`
   (offered only to engines Vellum runs, not to MCP clients), and its first write without a proposal counts as "no
@@ -2277,3 +2294,64 @@ Verified on macOS arm64 (exit 0; Node 24, pnpm 12.11.2, both telemetry opt-outs)
 
 Not run: `pnpm format-spec:check` and `pnpm cargo:deny` (no types or dependencies changed), the engines lane (no
 installed engine runs the orchestrator yet), Windows/Linux.
+
+## Prompt 39: parallel (Split, Side by side, Explore), spawn_agents, Stop/Pause, Undo this turn
+
+Built:
+- `vellum_core::guard::AgentControl` (Pause all, Resume all, Pause, Stop, Resume) and `GuardState::control`; Stop
+  frees the agent's leases. `DocumentTarget` gains `control` and `undo_turn` (`TurnUndone`: nothing, undone, or a
+  Revert that keeps what others built on, via the new `ops::undo_turn`); the contract suite covers both and catches
+  a target that ignores Stop and one whose undo takes back everyone's changes. Headless and live targets implement
+  them; `EditorLink` has both. `Documents::control_all` applies a control to every open file and remembers it for
+  files opened later (headless or a new editor writer).
+- `vellum_core::parallel` (pure): `split` (contiguous, sizes within one, never an empty lane), lane and variant limits
+  (1–6, 2–6), option letters, the words each lane is told (Split share, Side by side area, Explore first result and
+  variant with its axis, helper task), and `ParallelEvent` (lanes, lane ended, option) replayed by `parallel_state`.
+  The session log has `EventBody::Parallel` and `EventBody::Undo {changed, kept}` with strict codecs.
+- `vellum::orchestrate` is now a module: `lanes` (every engine run is a lane with its own bridge; lanes of a turn
+  are polled together on the daemon's thread; spawned helpers join the set), `parallel` (`build_split`/`run_split`,
+  `side_by_side`, `explore`, `run_spawned`), `control` (`stop`, `stop_agent`, `stop_all`, `pause_all`, `resume_all`,
+  `undo_turn`). Prompt 38's single run is the one-lane case of the same code. Engines Vellum runs are offered
+  `spawn_agents`; `Registry::standard_with(&AgentSettings)` adds it for external clients.
+- Fixed on the way (found by the new tests): a lane's tool calls default to its turn's document; an engine turn's
+  steps are now recorded in its session (`Session::log_path_as`; before, they were silently dropped when the
+  document had no repository key); a lane's leases are released when it ends; Guard rejections name agents as the
+  daemon knows them ("Frame leased by Teal", was the agent id).
+- `FakeEngine` gains `Wait`/`release`, `deaf` (ignores Stop) and `FromPrompt` steps. Parity rows for spawn_agents,
+  parallel agents, Explore and Stop/Stop all now name active tests (26 active, 26 pending). Nightly engines lane:
+  `installed_parallel.rs` (two Claude Code engines, Side by side) and a step in `engines.yml`; it builds the scene, so
+  that job's timeout went from 10 to 30 minutes.
+
+Measured in tests (fake engines, same thread): Stop and Pause all end every lane on the next poll; the deaf lane's
+next write after Pause all is refused ("Agents paused") well under 100 ms; the built-in engine on a stalled model (and
+one that ignores cancellation) stops under 3 s. External agents are refused after Pause all, including with nothing
+running.
+
+Differs from the guide/ARCHITECTURE: see Needs a person (one turn per parallel request, no `mode` on spawn_agents,
+host-supplied names, the port additions). No guide §3.2 row names this prompt, so no reference code was read. No ADR
+was asked for; none written.
+
+Process: the Guard, target-suite, codec and orchestration tests were written first and failed (compile errors on the
+missing API); the pure `parallel` module's tests were written first but I did not run them before writing the
+module. Seven orchestration tests then failed on real gaps (the four fixed above, plus a pending Stop that was only
+applied on a lane's next call and so never reached the Guard when a lane just ended) and two on test mistakes (a
+prompt parser, and which engine a host-run helper lands on; the test now expects the main engine, which is free).
+Mutation check: removing the Guard flush before each tool call fails the Stop-this-agent and Pause-all tests.
+
+Verified on macOS arm64 (exit 0; Node 24, pnpm 12.11.2, both telemetry opt-outs):
+- `cargo test --offline -p vellum --test parallel --test orchestration` (14 + 13 passed);
+  `cargo test --offline -p vellum-core --lib -- guard:: parallel:: sessions::`; `cargo test --offline -p
+  vellum-contracts target`.
+- `cargo test --offline --workspace --no-fail-fast`: 1,250 passed, 0 failed, 66 ignored.
+- `cargo clippy --offline --workspace --all-targets -- -D warnings`; `cargo clippy --offline -p vellum --lib --bins
+  --examples --tests --no-default-features -- -D warnings`; `cargo fmt --all -- --check`.
+- `pnpm type-check`, `pnpm lint`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`, `pnpm parity:check`.
+- Failed, pre-existing and unchanged: `node --test scripts/__tests__/*.test.mjs` (173 pass, 4 skipped, 2 failures:
+  the old Proposed ADR assertions and the R3 taffy main.rs reference path).
+
+Not run: the engines lane (`installed_parallel`, needs signed-in Claude Code and model quota), `pnpm cargo:deny`
+(no dependency changed), Windows/Linux. The orchestration tests need the default `scene` feature (find_space); with
+`--no-default-features` the placement tests fail as Prompt 38's already did. Noticed, not mine: parity still lists
+the installed-agents and model-providers rows as pending on Prompt 37, which is committed.
+

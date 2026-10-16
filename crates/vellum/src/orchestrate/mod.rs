@@ -1,37 +1,48 @@
-//! Orchestrating an engine turn: planning, plans, placeholders and leases (ARCHITECTURE §7.5; guide §10.1,
-//! Prompt 38).
+//! Orchestrating engine turns: planning, plans, placeholders and leases (Prompt 38), and parallel lanes, helper
+//! agents, Stop, Pause all and Undo this turn (Prompt 39) (ARCHITECTURE §7.5; guide §10.1).
 //!
-//! A turn starts in `planning`. The engine is offered one more tool than MCP clients get, `propose_plan`. A plan
-//! over the threshold ([`PlanSettings`]) moves the turn to `awaiting_plan`: it is logged, the engine is told to end
-//! its run, and any write it still tries is refused. A plan under the threshold, or a first write without a plan,
-//! means no plan is needed and the run goes on building. The person then presses Build (with the plan as they
-//! edited it), asks again (Edit request, a new planning run) or stops.
+//! A turn starts in `planning`. The engine is offered two more tools than MCP clients get: `propose_plan` and
+//! `spawn_agents`. A plan over the threshold ([`PlanSettings`]) moves the turn to `awaiting_plan`: it is logged,
+//! the engine is told to end its run, and any write it still tries is refused. A plan under the threshold, or a
+//! first write without a plan, means no plan is needed and the run goes on building. The person then presses Build
+//! (with the plan as they edited it, on one agent or split across several), asks again (Edit request, a new
+//! planning run) or stops.
 //!
-//! Build places a placeholder for every new frame: an id reserved for the frame, held by the building agent, with
-//! planned bounds from `find_space` that keep clear of the page's frames and of every other placeholder. They live
-//! in the daemon's documents (session state, never the file), so every agent sees them through `get_app_state`
-//! and `find_space` keeps away from them. When the agent creates a frame with a reserved id, the frame is leased to
-//! it; when it reports the item done (`report_progress` with `items`), the item ticks off and its placeholder goes.
-//! Stopped, failed or finished, the turn's placeholders go with it, and nothing of an abandoned plan is in the file.
+//! Build places a placeholder for every new frame: an id reserved for the frame, held by the agent building it,
+//! with planned bounds from `find_space` that keep clear of the page's frames and of every other placeholder. They
+//! live in the daemon's documents (session state, never the file), so every agent sees them through
+//! `get_app_state` and `find_space` keeps away from them. When an agent creates a frame with a reserved id, the
+//! frame is leased to it; when it reports the item done (`report_progress` with `items`), the item ticks off and
+//! its placeholder goes. Stopped, failed or finished, the turn's placeholders go with it, and nothing of an
+//! abandoned plan is in the file.
 //!
-//! The orchestrator is single-threaded like the daemon: its futures borrow the documents. A person's Stop may come
-//! while a run is in progress (between polls); the run then ends and clears up.
+//! A turn may run several **lanes** at once (`lanes`): Split, Side by side, Explore's successive variants and
+//! helpers an agent spawns. Each lane is its own engine run by its own agent, with its own leases; all of them
+//! carry the turn, so Undo this turn takes all of them back (`control`).
+//!
+//! The orchestrator is single-threaded like the daemon: its futures borrow the documents. A person's Stop or Pause
+//! all may come while a run is in progress (between polls): the engines are interrupted at once, and what the
+//! Guard must refuse is applied before the next tool call of any lane reaches the documents.
+mod control;
+mod lanes;
+mod parallel;
+
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use schemars::JsonSchema;
 use serde::Deserialize;
-use serde_json::{Value, json};
-use vellum_core::guard::LeaseChange;
+use vellum_core::guard::AgentControl;
 use vellum_core::ops;
+use vellum_core::parallel::ParallelError;
 use vellum_core::plans::{
     Placeholder, Plan, PlanError, PlanEvent, PlanItem, PlanSettings, PlanState, PlanStatus,
     build_prompt, check, plan_state,
 };
 use vellum_core::ports::{
-    AgentEngine, BridgeTool, EngineError, EventBody, ModelTool, NewEvent, SessionEvent, StoreError,
-    Timestamp, ToolBridge, ToolReply, TurnEnd, TurnEvent, TurnRequest,
+    AgentEngine, EngineError, EventBody, NewEvent, SessionEvent, StoreError, Timestamp, TurnEnd,
+    TurnRequest,
 };
 use vellum_core::sessions::{TransitionError, history, record_transition, turn_state};
 use vellum_core::turns::{TurnInput, TurnRejection, TurnState, transition};
@@ -39,9 +50,10 @@ use vellum_types::{Actor, AgentId, Document, Node, NodeId, Origin, SessionId, Tu
 
 use crate::daemon::Documents;
 use crate::sessions::SessionLog;
-use crate::tools::{
-    ErrorKind, Registry, Session, ToolCtx, ToolError, free_space, parse_input, schema_of,
-};
+use crate::tools::{Registry, Session, ToolError, free_space};
+
+use lanes::{LaneOutcome, LaneRun};
+pub use parallel::{Area, LaneResult, LaneSpec, ParallelOutcome};
 
 /// The tool only engines run by Vellum get: proposing a plan.
 pub const PROPOSE_PLAN: &str = "propose_plan";
@@ -77,6 +89,15 @@ pub enum OrchestrationError {
     NoAgent,
     /// There is no plan waiting for Build.
     NoPlan,
+    /// Too many or too few lanes or variants.
+    Parallel(ParallelError),
+    /// Each lane runs on its own engine, and there are not enough ([`Orchestrator::with_helpers`]).
+    Engines {
+        needed: usize,
+        have: usize,
+    },
+    /// No lane of the turn is that agent's, or it has ended.
+    NoLane(AgentId),
 }
 impl fmt::Display for OrchestrationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -88,6 +109,14 @@ impl fmt::Display for OrchestrationError {
             Self::Engine(e) => e.fmt(f),
             Self::NoAgent => f.write_str("the engine's session has no agent"),
             Self::NoPlan => f.write_str("no plan is waiting for Build"),
+            Self::Parallel(e) => e.fmt(f),
+            Self::Engines { needed, have } => {
+                write!(
+                    f,
+                    "{needed} agents need {needed} engines; {have} are set up"
+                )
+            }
+            Self::NoLane(agent) => write!(f, "no working lane of this turn is {agent}'s"),
         }
     }
 }
@@ -112,6 +141,15 @@ impl From<PlanError> for OrchestrationError {
         Self::Plan(e)
     }
 }
+impl From<ParallelError> for OrchestrationError {
+    fn from(e: ParallelError) -> Self {
+        Self::Parallel(e)
+    }
+}
+
+fn not_now() -> OrchestrationError {
+    OrchestrationError::Turn(TransitionError::Rejected(TurnRejection::NotNow))
+}
 
 /// Where a run is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -123,14 +161,38 @@ enum Phase {
     Building,
 }
 
-/// Runs engine turns with plans, placeholders and leases.
+/// A lane at work, as Stop finds it.
+#[derive(Debug)]
+struct LiveLane {
+    agent: AgentId,
+    /// Which engine runs it (0 is the main one).
+    engine: usize,
+    /// A person pressed Stop this agent on it.
+    halted: bool,
+    ended: bool,
+}
+
+/// A turn with lanes at work.
+#[derive(Debug)]
+struct Run {
+    spec: TurnSpec,
+    lanes: Vec<LiveLane>,
+}
+
+/// Runs engine turns with plans, placeholders, leases and lanes.
 pub struct Orchestrator<'a> {
     engine: &'a dyn AgentEngine,
+    /// More engines for more lanes: lane `n` runs on engine `n` (the main engine is 0).
+    helpers: Vec<&'a dyn AgentEngine>,
+    /// What helper agents are called, in order (the host's agent hues).
+    names: Vec<String>,
     registry: &'a Registry,
     log: &'a SessionLog,
     settings: PlanSettings,
     /// Turns with a run in progress.
-    running: RefCell<BTreeSet<TurnId>>,
+    running: RefCell<BTreeMap<TurnId, Run>>,
+    /// What a person pressed while the documents were busy with a run: applied before the next tool call.
+    pending: RefCell<Vec<AgentControl>>,
     /// The latest time read from the documents, for a Stop that comes without them.
     now: Cell<Timestamp>,
 }
@@ -139,10 +201,13 @@ impl<'a> Orchestrator<'a> {
     pub fn new(engine: &'a dyn AgentEngine, registry: &'a Registry, log: &'a SessionLog) -> Self {
         Self {
             engine,
+            helpers: vec![],
+            names: vec![],
             registry,
             log,
             settings: PlanSettings::default(),
             running: RefCell::default(),
+            pending: RefCell::default(),
             now: Cell::new(Timestamp(0)),
         }
     }
@@ -152,6 +217,27 @@ impl<'a> Orchestrator<'a> {
     pub fn with_settings(mut self, settings: PlanSettings) -> Self {
         self.settings = settings;
         self
+    }
+
+    /// Engines for more lanes (one each: an engine runs one lane of a turn) and the names helper agents get, in
+    /// order. Built-in agents are named by hue, so `names` come from the design's agent hues.
+    #[must_use]
+    pub fn with_helpers(mut self, engines: Vec<&'a dyn AgentEngine>, names: Vec<String>) -> Self {
+        self.helpers = engines;
+        self.names = names;
+        self
+    }
+
+    fn engine_at(&self, n: usize) -> &'a dyn AgentEngine {
+        if n == 0 {
+            self.engine
+        } else {
+            self.helpers[n - 1]
+        }
+    }
+
+    fn engines(&self) -> usize {
+        1 + self.helpers.len()
     }
 
     fn clock(&self, docs: &Documents) -> Timestamp {
@@ -166,16 +252,20 @@ impl<'a> Orchestrator<'a> {
             .in_turn(spec.turn.clone())
     }
 
+    fn origin_of(agent: &AgentId, spec: &TurnSpec) -> Origin {
+        Origin::new(Actor::Agent {
+            agent: agent.clone(),
+        })
+        .in_session(spec.session.clone())
+        .in_turn(spec.turn.clone())
+    }
+
     fn agent(session: &Session, spec: &TurnSpec) -> Result<(AgentId, Origin), OrchestrationError> {
         let agent = session
             .agent()
             .cloned()
             .ok_or(OrchestrationError::NoAgent)?;
-        let origin = Origin::new(Actor::Agent {
-            agent: agent.clone(),
-        })
-        .in_session(spec.session.clone())
-        .in_turn(spec.turn.clone());
+        let origin = Self::origin_of(&agent, spec);
         Ok((agent, origin))
     }
 
@@ -259,15 +349,14 @@ impl<'a> Orchestrator<'a> {
         )
     }
 
-    /// Build: the person approves the waiting plan, or `edited`, their version of it. Every new frame gets a
-    /// placeholder, placed with `find_space` clear of the page's frames and every other placeholder. The turn
-    /// moves to `running`; [`Self::run_build`] then builds. Nothing is written to the document.
-    pub fn build(
+    /// What Build starts from: the plan waiting (or `edited`, checked against the document), the agent that
+    /// proposed it, and the document. Changes nothing.
+    fn approve(
         &self,
         docs: &mut Documents,
         spec: &TurnSpec,
         edited: Option<Plan>,
-    ) -> Result<Vec<Placeholder>, OrchestrationError> {
+    ) -> Result<(Plan, AgentId, Document), OrchestrationError> {
         let events = self.events(spec)?;
         let person = Self::person(spec);
         let state = turn_state(&events, &spec.turn).unwrap_or(TurnState::Queued);
@@ -304,6 +393,19 @@ impl<'a> Orchestrator<'a> {
             }
             None => waiting.plan,
         };
+        Ok((plan, agent, doc))
+    }
+
+    /// One placeholder per new frame of `plan`, held by `owner(item)`, each clear of the page's frames and of the
+    /// ones placed before it. Reserves nothing yet.
+    fn place(
+        &self,
+        docs: &mut Documents,
+        spec: &TurnSpec,
+        doc: &Document,
+        plan: &Plan,
+        owner: impl Fn(u32) -> AgentId,
+    ) -> Result<Vec<Placeholder>, OrchestrationError> {
         let mut placeholders = vec![];
         let mut taken = vec![];
         for item in plan.items.iter().filter(|item| item.is_new()) {
@@ -311,7 +413,7 @@ impl<'a> Orchestrator<'a> {
             let (bounds, _) = free_space(
                 docs,
                 &spec.document,
-                &doc,
+                doc,
                 item.page.as_str(),
                 size,
                 None,
@@ -324,21 +426,48 @@ impl<'a> Orchestrator<'a> {
                 name: item.name.clone(),
                 page: item.page.clone(),
                 bounds,
-                agent: agent.clone(),
+                agent: owner(item.id),
                 turn: spec.turn.clone(),
             });
         }
+        Ok(placeholders)
+    }
+
+    /// Logs Build with `plan` and its placeholders, and reserves them.
+    fn built(
+        &self,
+        docs: &mut Documents,
+        spec: &TurnSpec,
+        plan: Plan,
+        placeholders: &[Placeholder],
+    ) -> Result<(), OrchestrationError> {
         let at = self.clock(docs);
+        let person = Self::person(spec);
         record_transition(self.log.store(), &person, TurnInput::Build, at)?;
         self.append(
             &person,
             EventBody::Plan(PlanEvent::Built {
                 plan,
-                placeholders: placeholders.clone(),
+                placeholders: placeholders.to_vec(),
             }),
             at,
         )?;
-        docs.reserve(&spec.document, placeholders.clone());
+        docs.reserve(&spec.document, placeholders.to_vec());
+        Ok(())
+    }
+
+    /// Build: the person approves the waiting plan, or `edited`, their version of it. Every new frame gets a
+    /// placeholder, placed with `find_space` clear of the page's frames and every other placeholder. The turn
+    /// moves to `running`; [`Self::run_build`] then builds. Nothing is written to the document.
+    pub fn build(
+        &self,
+        docs: &mut Documents,
+        spec: &TurnSpec,
+        edited: Option<Plan>,
+    ) -> Result<Vec<Placeholder>, OrchestrationError> {
+        let (plan, agent, doc) = self.approve(docs, spec, edited)?;
+        let placeholders = self.place(docs, spec, &doc, &plan, |_| agent.clone())?;
+        self.built(docs, spec, plan, &placeholders)?;
         Ok(placeholders)
     }
 
@@ -355,32 +484,11 @@ impl<'a> Orchestrator<'a> {
         let state = turn_state(&events, &spec.turn).unwrap_or(TurnState::Queued);
         let plan = plan_state(&events, &spec.turn)
             .filter(|plan| plan.status == PlanStatus::Building && state == TurnState::Running)
-            .ok_or(OrchestrationError::Turn(TransitionError::Rejected(
-                TurnRejection::NotNow,
-            )))?;
+            .ok_or_else(not_now)?;
         request.prompt = build_prompt(&plan.plan, &plan.placeholders);
         request.history = history(self.log.store(), &events)?;
         self.run(docs, session, spec, request, Phase::Building, Some(plan))
             .await
-    }
-
-    /// Stop, pressed by the person. The turn is stopped and its engine interrupted. A plan is abandoned: when a
-    /// run is in progress it clears the placeholders as it ends; otherwise pass `docs` and they go now.
-    pub fn stop(
-        &self,
-        docs: Option<&mut Documents>,
-        spec: &TurnSpec,
-    ) -> Result<TurnState, OrchestrationError> {
-        let at = docs
-            .as_deref()
-            .map_or(self.now.get(), |docs| self.clock(docs));
-        let person = Self::person(spec);
-        let (state, _) = record_transition(self.log.store(), &person, TurnInput::Stop, at)?;
-        self.engine.interrupt(&spec.turn);
-        if !self.running.borrow().contains(&spec.turn) {
-            self.abandon(docs, spec, &person, at)?;
-        }
-        Ok(state)
     }
 
     /// Logs that the turn's plan is abandoned (if it has one still standing) and takes its placeholders away.
@@ -397,11 +505,12 @@ impl<'a> Orchestrator<'a> {
             self.append(origin, EventBody::Plan(PlanEvent::Abandoned), at)?;
         }
         if let Some(docs) = docs {
-            clear(docs, spec);
+            lanes::clear(docs, spec);
         }
         Ok(())
     }
 
+    /// One engine run of the turn on the main engine, with any helpers it spawns.
     async fn run(
         &self,
         docs: &mut Documents,
@@ -411,56 +520,35 @@ impl<'a> Orchestrator<'a> {
         phase: Phase,
         plan: Option<PlanState>,
     ) -> Result<TurnState, OrchestrationError> {
-        let (agent, origin) = Self::agent(session, spec)?;
-        session.set_turn(Some(spec.turn.clone()));
-        let model = request.model.clone();
-        let _running = Running::new(&self.running, spec.turn.clone());
-        let bridge = PlanBridge {
-            orchestrator: self,
-            spec,
-            agent: agent.clone(),
-            origin: origin.clone(),
-            inner: RefCell::new(Inner {
-                docs,
-                session,
-                phase,
-                plan,
-                error: None,
-            }),
-        };
-        let mut end = TurnEnd::Done;
-        {
-            let mut stream = self
-                .engine
-                .run_turn(request, &bridge)
-                .map_err(OrchestrationError::Engine)?;
-            while let Some(event) = stream.next().await {
-                let at = self.clock(bridge.inner.borrow().docs);
-                match &event {
-                    TurnEvent::Usage(_) | TurnEvent::Messages(_) => {
-                        self.log.record_turn_event(&origin, &model, &event, at)?;
-                    }
-                    TurnEvent::Ended(how) => end = *how,
-                    _ => {}
-                }
-            }
-        }
-        let Inner {
-            docs,
-            session,
+        Self::agent(session, spec)?;
+        let template = request.clone();
+        let main = LaneRun {
+            engine: 0,
+            session: std::mem::take(session),
+            request,
             phase,
-            plan,
-            error,
-        } = bridge.inner.into_inner();
-        session.set_turn(None);
-        self.log.record_steps(docs, session)?;
-        if let Some(error) = error {
+            listed: false,
+        };
+        let (mut outcomes, planned) = self.run_lanes(docs, spec, vec![main], plan, template).await;
+        let main = outcomes.remove(0);
+        *session = main.session;
+        if let Some(error) = main
+            .error
+            .into_iter()
+            .chain(outcomes.iter_mut().filter_map(|o| o.error.take()))
+            .next()
+        {
             return Err(error);
         }
-        self.finish(docs, spec, &origin, phase, plan.is_some(), end)
+        let end = lanes::combine(
+            std::iter::once((main.end, false)).chain(outcomes.iter().map(|o| (o.end, o.halted))),
+        );
+        let origin = Self::origin_of(&main.agent, spec);
+        self.end_lanes(docs, spec, &outcomes)?;
+        self.finish(docs, spec, &origin, main.phase, planned, end)
     }
 
-    /// Moves the turn to where the run left it and clears what an ended plan leaves standing.
+    /// Moves the turn to where its lanes left it and clears what an ended plan leaves standing.
     fn finish(
         &self,
         docs: &mut Documents,
@@ -490,7 +578,7 @@ impl<'a> Orchestrator<'a> {
                 if planned {
                     self.append(agent, EventBody::Plan(PlanEvent::Finished), at)?;
                 }
-                clear(docs, spec);
+                lanes::clear(docs, spec);
                 done
             }
             // A run that ended without finishing (and was not stopped by a person) failed.
@@ -502,37 +590,35 @@ impl<'a> Orchestrator<'a> {
         };
         Ok(state)
     }
-}
 
-/// Removes the turn's placeholders and lets go of the frames it was filling.
-fn clear(docs: &mut Documents, spec: &TurnSpec) {
-    let gone = docs.unreserve(&spec.document, |p| p.turn == spec.turn);
-    for planned in gone.iter().filter(|p| p.filling) {
-        if let Ok(target) = docs.target(&spec.document) {
-            // It may have let go already, or the lease lapsed.
-            let _ = target.lease(
-                &planned.placeholder.frame,
-                &planned.placeholder.agent,
-                LeaseChange::Release,
-            );
+    /// Logs how each listed lane ended, unless a person already did (Stop this agent).
+    fn end_lanes(
+        &self,
+        docs: &Documents,
+        spec: &TurnSpec,
+        outcomes: &[LaneOutcome],
+    ) -> Result<(), StoreError> {
+        let at = self.clock(docs);
+        let stopped = turn_state(&self.events(spec)?, &spec.turn) == Some(TurnState::Stopped);
+        for outcome in outcomes.iter().filter(|o| o.listed && !o.halted) {
+            let (end, origin) = if stopped {
+                (vellum_core::parallel::LaneEnd::Stopped, Self::person(spec))
+            } else {
+                (
+                    lanes::lane_end(outcome.end),
+                    Self::origin_of(&outcome.agent, spec),
+                )
+            };
+            self.append(
+                &origin,
+                EventBody::Parallel(vellum_core::parallel::ParallelEvent::LaneEnded {
+                    agent: outcome.agent.clone(),
+                    end,
+                }),
+                at,
+            )?;
         }
-    }
-}
-
-/// Marks a turn as running while a run is in progress, however the future ends.
-struct Running<'r> {
-    set: &'r RefCell<BTreeSet<TurnId>>,
-    turn: TurnId,
-}
-impl<'r> Running<'r> {
-    fn new(set: &'r RefCell<BTreeSet<TurnId>>, turn: TurnId) -> Self {
-        set.borrow_mut().insert(turn.clone());
-        Self { set, turn }
-    }
-}
-impl Drop for Running<'_> {
-    fn drop(&mut self) {
-        self.set.borrow_mut().remove(&self.turn);
+        Ok(())
     }
 }
 
@@ -648,303 +734,11 @@ fn resolve(doc: &Document, input: ProposeInput) -> Result<Plan, ToolError> {
     Ok(plan)
 }
 
-struct Inner<'d> {
-    docs: &'d mut Documents,
-    session: &'d mut Session,
-    phase: Phase,
-    plan: Option<PlanState>,
-    /// The first failure to log something; the run reports it when it ends.
-    error: Option<OrchestrationError>,
-}
-
-/// The registry as a planning engine sees it: `propose_plan` added, writes held back while a plan waits, ticks
-/// and placeholders kept up to date.
-struct PlanBridge<'o, 'd> {
-    orchestrator: &'o Orchestrator<'o>,
-    spec: &'d TurnSpec,
-    agent: AgentId,
-    origin: Origin,
-    inner: RefCell<Inner<'d>>,
-}
-
-fn failed(error: ToolError) -> ToolReply {
-    ToolReply {
-        value: error.to_json(),
-        failed: true,
-    }
-}
-
-impl PlanBridge<'_, '_> {
-    fn log(
-        &self,
-        inner: &mut Inner<'_>,
-        write: impl FnOnce(Timestamp) -> Result<(), OrchestrationError>,
-    ) -> bool {
-        let at = self.orchestrator.clock(inner.docs);
-        match write(at) {
-            Ok(()) => true,
-            Err(error) => {
-                inner.error.get_or_insert(error);
-                false
-            }
-        }
-    }
-
-    fn transition(&self, inner: &mut Inner<'_>, input: TurnInput) -> bool {
-        let store = self.orchestrator.log.store();
-        self.log(inner, |at| {
-            record_transition(store, &self.origin, input, at)
-                .map(|_| ())
-                .map_err(OrchestrationError::from)
-        })
-    }
-
-    fn propose(&self, inner: &mut Inner<'_>, input: Value) -> ToolReply {
-        match inner.phase {
-            Phase::Planning => {}
-            Phase::AwaitingPlan => {
-                return failed(ToolError::new(
-                    ErrorKind::Refused,
-                    "A plan is already waiting for the person. End your turn now.",
-                ));
-            }
-            Phase::Building => {
-                return failed(ToolError::new(
-                    ErrorKind::Refused,
-                    "The plan is settled; build it now.",
-                ));
-            }
-        }
-        let input: ProposeInput = match parse_input(input) {
-            Ok(input) => input,
-            Err(error) => return failed(error),
-        };
-        let doc = match inner
-            .docs
-            .target(&self.spec.document)
-            .and_then(|target| target.snapshot())
-        {
-            Ok(doc) => doc,
-            Err(error) => return failed(error.into()),
-        };
-        let plan = match resolve(&doc, input) {
-            Ok(plan) => plan,
-            Err(error) => return failed(error),
-        };
-        if !self.orchestrator.settings.needs_plan(&plan) {
-            if !self.transition(inner, TurnInput::NoPlanNeeded) {
-                return failed(ToolError::new(
-                    ErrorKind::Internal,
-                    "The turn could not move on.",
-                ));
-            }
-            inner.phase = Phase::Building;
-            return ToolReply {
-                value: json!({"plan": "not_needed", "message": "This is small enough to build without a plan. Build it now."}),
-                failed: false,
-            };
-        }
-        let items = plan.items.len();
-        let logged = self.transition(inner, TurnInput::PlanNeeded)
-            && self.log(inner, |at| {
-                self.orchestrator
-                    .append(
-                        &self.origin,
-                        EventBody::Plan(PlanEvent::Proposed(plan.clone())),
-                        at,
-                    )
-                    .map_err(OrchestrationError::from)
-            });
-        if !logged {
-            return failed(ToolError::new(
-                ErrorKind::Internal,
-                "The plan could not be recorded.",
-            ));
-        }
-        inner.phase = Phase::AwaitingPlan;
-        inner.plan = Some(PlanState::proposed(plan));
-        ToolReply {
-            value: json!({
-                "plan": "proposed",
-                "items": items,
-                "message": "The plan is with the person. End your turn now with one sentence on what you plan; \
-                            you will be told when to build.",
-            }),
-            failed: false,
-        }
-    }
-
-    /// Placeholders whose frame now exists are being filled: the frame is leased to the agent building it.
-    fn fill(&self, inner: &mut Inner<'_>) {
-        let path = &self.spec.document;
-        let waiting: Vec<NodeId> = inner
-            .docs
-            .placeholders(path)
-            .iter()
-            .filter(|p| !p.filling && p.placeholder.turn == self.spec.turn)
-            .map(|p| p.placeholder.frame.clone())
-            .collect();
-        if waiting.is_empty() {
-            return;
-        }
-        let Ok(doc) = inner.docs.target(path).and_then(|t| t.snapshot()) else {
-            return;
-        };
-        for frame in waiting {
-            if !matches!(ops::find(&doc, &frame), Some(Node::Frame(_))) {
-                continue;
-            }
-            let claimed = inner
-                .docs
-                .target(path)
-                .and_then(|t| t.lease(&frame, &self.agent, LeaseChange::Claim));
-            if claimed.is_ok() {
-                inner.docs.filling(path, &frame);
-            }
-        }
-    }
-
-    /// Checks a progress report's `items` against the plan before the tool runs.
-    fn ticks(&self, inner: &Inner<'_>, input: &Value) -> Result<Option<Vec<u32>>, ToolError> {
-        let Some(items) = input.get("items").and_then(Value::as_array) else {
-            return Ok(None);
-        };
-        let items: Vec<u32> = items
-            .iter()
-            .filter_map(|n| n.as_u64().and_then(|n| u32::try_from(n).ok()))
-            .collect();
-        let Some(plan) = &inner.plan else {
-            return Err(ToolError::invalid(
-                "items",
-                "This turn has no plan; leave out items.",
-            ));
-        };
-        if let Some(unknown) = items.iter().find(|id| plan.plan.item(**id).is_none()) {
-            return Err(ToolError::invalid(
-                "items",
-                PlanError::UnknownItem(*unknown).to_string(),
-            ));
-        }
-        Ok(Some(items))
-    }
-}
-
-impl ToolBridge for PlanBridge<'_, '_> {
-    fn tools(&self) -> Vec<BridgeTool> {
-        let mut tools: Vec<BridgeTool> = self
-            .orchestrator
-            .registry
-            .tools()
-            .map(|tool| BridgeTool {
-                tool: ModelTool {
-                    name: tool.name().to_owned(),
-                    description: tool.description().to_owned(),
-                    parameters: serde_json::to_value(tool.input_schema())
-                        .expect("a schema is JSON"),
-                },
-                read_only: tool.read_only(),
-            })
-            .collect();
-        tools.push(BridgeTool {
-            tool: ModelTool {
-                name: PROPOSE_PLAN.to_owned(),
-                description: PROPOSE_DESCRIPTION.to_owned(),
-                parameters: serde_json::to_value(schema_of::<ProposeInput>())
-                    .expect("a schema is JSON"),
-            },
-            read_only: false,
-        });
-        tools
-    }
-
-    fn call(&self, name: &str, input: Value) -> ToolReply {
-        let mut guard = self.inner.borrow_mut();
-        let inner = &mut *guard;
-        if name == PROPOSE_PLAN {
-            return self.propose(inner, input);
-        }
-        let writes = self
-            .orchestrator
-            .registry
-            .get(name)
-            .is_some_and(|tool| !tool.read_only());
-        match inner.phase {
-            Phase::AwaitingPlan if writes => {
-                return failed(ToolError::new(
-                    ErrorKind::Refused,
-                    "The plan is waiting for the person. End your turn now; nothing is built until they press \
-                     Build.",
-                ));
-            }
-            Phase::Planning if writes => {
-                // Writing without a plan: the engine judged the request small.
-                if !self.transition(inner, TurnInput::NoPlanNeeded) {
-                    return failed(ToolError::new(
-                        ErrorKind::Internal,
-                        "The turn could not move on.",
-                    ));
-                }
-                inner.phase = Phase::Building;
-            }
-            _ => {}
-        }
-        let ticks = if name == "report_progress" {
-            match self.ticks(inner, &input) {
-                Ok(ticks) => ticks,
-                Err(error) => return failed(error),
-            }
-        } else {
-            None
-        };
-        let result = {
-            let mut ctx = ToolCtx::new(inner.docs, inner.session);
-            self.orchestrator.registry.call(&mut ctx, name, input)
-        };
-        let mut reply = match result {
-            Ok(value) => ToolReply {
-                value,
-                failed: false,
-            },
-            Err(error) => failed(error),
-        };
-        if !reply.failed {
-            if let (Some(items), Some(plan)) = (ticks, inner.plan.as_mut()) {
-                let new = plan.tick(&items).unwrap_or_default();
-                let (done, total) = plan.progress();
-                if !new.is_empty() {
-                    inner.docs.unreserve(&self.spec.document, |p| {
-                        p.turn == self.spec.turn && new.contains(&p.item)
-                    });
-                    self.log(inner, |at| {
-                        self.orchestrator
-                            .append(
-                                &self.origin,
-                                EventBody::Plan(PlanEvent::Ticked(new.clone())),
-                                at,
-                            )
-                            .map_err(OrchestrationError::from)
-                    });
-                }
-                reply.value["plan"] = json!({"done": done, "total": total});
-            }
-            if writes {
-                self.fill(inner);
-            }
-        }
-        if let Err(error) = self
-            .orchestrator
-            .log
-            .record_steps(inner.docs, inner.session)
-        {
-            inner.error.get_or_insert(error.into());
-        }
-        reply
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tools::schema_of;
+    use serde_json::Value;
 
     #[test]
     fn propose_plan_is_offered_with_a_strict_schema() {

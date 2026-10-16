@@ -32,6 +32,8 @@ use vellum_types::{Actor, AgentId, Origin, SessionId, TurnId};
 use crate::daemon::Documents;
 
 pub use bridge::RegistryBridge;
+pub use coordinate::SPAWN_AGENTS;
+pub(crate) use coordinate::{SPAWN_DESCRIPTION, SpawnInput};
 pub(crate) use scene::free_space;
 pub use spec::{SpecError, formats as spec_formats, parse_spec};
 use step::StepNote;
@@ -210,6 +212,26 @@ impl From<TargetError> for ToolError {
     }
 }
 
+/// A target's refusal as an agent receives it: a Guard rejection names agents as the daemon knows them ("Frame
+/// leased by Teal"), not by id.
+pub(crate) fn refusal(
+    agents: &std::collections::BTreeMap<AgentId, String>,
+    error: TargetError,
+) -> ToolError {
+    match &error {
+        TargetError::Write(WriteError::Rejected(rejection)) => ToolError::new(
+            ErrorKind::Refused,
+            rejection.message(&|agent: &AgentId| {
+                agents
+                    .get(agent)
+                    .cloned()
+                    .unwrap_or_else(|| agent.to_string())
+            }),
+        ),
+        _ => error.into(),
+    }
+}
+
 /// Who is calling: what the MCP client said about itself. Writes (Prompt 30) are attributed to it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Client {
@@ -239,6 +261,8 @@ pub struct Session {
     turn: Option<TurnId>,
     /// The session-store session its steps go to, per document (see `crate::sessions`).
     pub(crate) logged: Vec<(DocKey, SessionId)>,
+    /// The same by daemon path, for an engine turn's own document: no repository lookup needed.
+    pub(crate) logged_paths: Vec<(String, SessionId)>,
     /// The document its last step named, for steps that name none.
     pub(crate) last_document: Option<String>,
 }
@@ -304,6 +328,14 @@ impl Session {
     pub fn log_as(&mut self, doc: DocKey, id: SessionId) {
         self.logged.retain(|(known, _)| known != &doc);
         self.logged.push((doc, id));
+    }
+
+    /// Records this connection's steps on the document at daemon path `path` into the session-store session
+    /// `id`: what an orchestrator does for an engine turn's document, whatever repository it is in.
+    pub fn log_path_as(&mut self, path: impl Into<String>, id: SessionId) {
+        let path = path.into();
+        self.logged_paths.retain(|(known, _)| known != &path);
+        self.logged_paths.push((path, id));
     }
 
     fn record(&mut self, step: Step) {
@@ -426,6 +458,14 @@ pub trait Tool {
     fn run(&self, ctx: &mut ToolCtx<'_>, input: Value) -> Result<Value, ToolError>;
 }
 
+/// Agent settings the registry depends on (ARCHITECTURE §11 `[agents]`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AgentSettings {
+    /// External clients may start helper agents with `spawn_agents`. Off by default; engines Vellum runs have the
+    /// tool either way.
+    pub spawn_agents_external: bool,
+}
+
 /// Every tool, by name.
 pub struct Registry {
     tools: Vec<Box<dyn Tool>>,
@@ -438,11 +478,17 @@ impl Registry {
         Self { tools }
     }
 
-    /// The tools Vellum ships, sorted by name.
+    /// The tools Vellum ships, sorted by name, with the default settings.
     pub fn standard() -> Self {
-        Self::with_sources(
+        Self::standard_with(&AgentSettings::default())
+    }
+
+    /// The tools Vellum ships, with `settings` deciding the optional ones.
+    pub fn standard_with(settings: &AgentSettings) -> Self {
+        Self::configured(
             std::rc::Rc::new(crate::content::BuiltinSkills),
             std::rc::Rc::new(crate::content::BuiltinStyles),
+            settings,
         )
     }
 
@@ -450,6 +496,14 @@ impl Registry {
     pub fn with_sources(
         skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
         styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
+    ) -> Self {
+        Self::configured(skills, styles, &AgentSettings::default())
+    }
+
+    fn configured(
+        skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
+        styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
+        settings: &AgentSettings,
     ) -> Self {
         let mut tools: Vec<Box<dyn Tool>> = Vec::new();
         content::register(&mut tools, skills, styles);
@@ -459,7 +513,7 @@ impl Registry {
         library::register(&mut tools);
         write::register(&mut tools);
         model::register(&mut tools);
-        coordinate::register(&mut tools);
+        coordinate::register(&mut tools, settings);
         execute::register(&mut tools);
         Self::new(tools)
     }

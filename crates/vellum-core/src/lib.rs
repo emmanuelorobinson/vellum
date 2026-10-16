@@ -21,6 +21,7 @@ pub mod layout_check;
 pub mod lease;
 pub mod merge;
 pub mod ops;
+pub mod parallel;
 pub mod permissions;
 pub mod plans;
 pub mod ports;

@@ -8,6 +8,7 @@
 use super::clock::Timestamp;
 use super::model::ChatRole;
 use super::permissions::PermissionRecord;
+use crate::parallel::ParallelEvent;
 use crate::plans::PlanEvent;
 use crate::turns::{TurnInput, TurnState};
 use serde_json::Value;
@@ -256,6 +257,14 @@ pub enum EventBody {
     Turn(TurnTransition),
     /// A decision about an action outside the canvas (guide Invariant 11), allowed or not.
     Permission(PermissionRecord),
+    /// The turn's lanes: started, ended, and the options they made (Split, Side by side, Explore, helpers).
+    Parallel(ParallelEvent),
+    /// The person pressed Undo this turn: `changed` layers, variables and pages took the turn's changes back;
+    /// `kept` things stayed because someone built on them since (then it was a new Revert transaction).
+    Undo {
+        changed: u32,
+        kept: u32,
+    },
 }
 impl EventBody {
     /// The pictures this event names.
@@ -271,7 +280,12 @@ impl EventBody {
                 })
                 .collect(),
             Self::Step(step) => step.thumbnail.iter().collect(),
-            Self::Plan(_) | Self::Usage(_) | Self::Turn(_) | Self::Permission(_) => vec![],
+            Self::Plan(_)
+            | Self::Usage(_)
+            | Self::Turn(_)
+            | Self::Permission(_)
+            | Self::Parallel(_)
+            | Self::Undo { .. } => vec![],
         }
     }
 }

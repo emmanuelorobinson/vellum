@@ -469,6 +469,22 @@ impl fmt::Display for LeaseRefused {
 
 impl std::error::Error for LeaseRefused {}
 
+/// What a person did to agents' right to write (ARCHITECTURE §7.5 "Pause and Stop"; guide Invariants 4, 12).
+/// Session state the Guard checks on every agent transaction, so the next write is refused at once even while
+/// the engine is still being interrupted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AgentControl {
+    /// Pause all agents: every lease is freed.
+    PauseAll,
+    /// Lift Pause all and every single pause (not a stop).
+    ResumeAll,
+    Pause(AgentId),
+    /// Stop this agent (and, one by one, Stop and Stop all): its leases are freed.
+    Stop(AgentId),
+    /// The agent's next turn: lifts its pause, stop and lease-tab blocks.
+    Resume(AgentId),
+}
+
 /// Everything the Guard checks against, for one open document. Session state, never file content.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GuardState {
@@ -492,6 +508,33 @@ impl GuardState {
     /// Resume after Pause all.
     pub fn resume_all(&mut self) {
         self.pause.resume_all();
+    }
+
+    /// Applies what a person pressed: Pause all, Stop, Stop this agent, Stop all (one `Stop` per agent), or the
+    /// matching resume.
+    pub fn control(&mut self, change: &AgentControl, now: Timestamp) {
+        match change {
+            AgentControl::PauseAll => self.pause_all(now),
+            AgentControl::ResumeAll => self.resume_all(),
+            AgentControl::Pause(agent) => self.pause.pause(agent.clone()),
+            AgentControl::Stop(agent) => {
+                self.pause.stop(agent.clone());
+                // A stopped agent's turn is over: it holds nothing.
+                let held: Vec<NodeId> = self
+                    .leases
+                    .live(now)
+                    .filter(|(_, holder)| *holder == agent)
+                    .map(|(frame, _)| frame.clone())
+                    .collect();
+                for frame in held {
+                    let _ = self.leases.release(&frame, agent, now);
+                }
+            }
+            AgentControl::Resume(agent) => {
+                self.pause.resume(agent);
+                self.blocked.resume_agent(agent);
+            }
+        }
     }
 
     /// Stop on `frame`'s lease tab: the lease is freed and its holder blocked there until resumed.

@@ -4,7 +4,8 @@ use serde_json::json;
 use vellum_types::{Actor, AgentId, Document, FileReason, Origin, Subsystem};
 
 use super::{
-    GuardState, Limits, PauseSet, Rejection, Verdict, WriteError, apply_guarded, guard, reasons,
+    AgentControl, GuardState, Limits, PauseSet, Rejection, Verdict, WriteError, apply_guarded,
+    guard, reasons,
 };
 use crate::lease::{BlockedPairs, Leases};
 use crate::ops::tests::common::{
@@ -939,4 +940,71 @@ fn guard_stop_on_lease_blocks_until_resumed() {
 fn guard_write_error_says_why() {
     let error = WriteError::Rejected(Rejection::AllPaused);
     assert_eq!(error.to_string(), "Agents paused");
+}
+
+// ---- AgentControl: what Stop, Stop this agent, Stop all and Pause all do to the Guard (Prompt 39) ----
+
+fn write_by(guard_state: &mut GuardState, who: &str) -> Result<(), WriteError> {
+    let mut store = Store::new(document());
+    apply_guarded(
+        &mut store,
+        &mut Ids::default(),
+        Transaction::new(Origin::new(by(who)), vec![touch_rect()]),
+        &Inputs::default(),
+        guard_state,
+        NOW,
+    )
+    .map(|_| ())
+}
+
+#[test]
+fn control_stop_rejects_only_that_agent_and_frees_its_leases() {
+    let mut guard_state = state();
+    guard_state
+        .leases
+        .claim(
+            &id("frame00001"),
+            agent(TEAL),
+            &BlockedPairs::default(),
+            NOW,
+        )
+        .unwrap();
+    guard_state.control(&AgentControl::Stop(agent(TEAL)), NOW);
+    assert_eq!(
+        write_by(&mut guard_state, TEAL),
+        Err(WriteError::Rejected(Rejection::Stopped {
+            agent: agent(TEAL)
+        }))
+    );
+    assert!(
+        guard_state.leases.live(NOW).next().is_none(),
+        "a stopped agent holds nothing"
+    );
+    write_by(&mut guard_state, ROSE).expect("the other agent goes on");
+
+    guard_state.control(&AgentControl::Resume(agent(TEAL)), NOW);
+    write_by(&mut guard_state, TEAL).expect("its next turn resumes it");
+}
+
+#[test]
+fn control_pause_all_and_resume_all() {
+    let mut guard_state = state();
+    guard_state.control(&AgentControl::PauseAll, NOW);
+    for who in [TEAL, ROSE] {
+        assert_eq!(
+            write_by(&mut guard_state, who),
+            Err(WriteError::Rejected(Rejection::AllPaused))
+        );
+    }
+    guard_state.control(&AgentControl::ResumeAll, NOW);
+    write_by(&mut guard_state, TEAL).expect("resumed");
+
+    guard_state.control(&AgentControl::Pause(agent(ROSE)), NOW);
+    assert_eq!(
+        write_by(&mut guard_state, ROSE),
+        Err(WriteError::Rejected(Rejection::Paused {
+            agent: agent(ROSE)
+        }))
+    );
+    write_by(&mut guard_state, TEAL).expect("only Rose is paused");
 }

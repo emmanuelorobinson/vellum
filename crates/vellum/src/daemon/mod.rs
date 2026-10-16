@@ -8,7 +8,7 @@ pub mod production;
 mod recovery;
 mod view;
 
-pub use documents::{Documents, Env, External, Opened, Planned, ToolIds};
+pub use documents::{Documents, Env, External, Opened, Planned, SpawnRequest, SpawnTask, ToolIds};
 pub use headless::{DocFile, Engine, HeadlessTarget};
 pub use live::{EditorId, EditorLink, LiveTarget, Role};
 pub use recovery::{

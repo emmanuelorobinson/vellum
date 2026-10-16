@@ -1,4 +1,5 @@
-//! Coordination: `claim_frame`, `release_frame`, `report_progress` (ARCHITECTURE §7.3, §7.5).
+//! Coordination: `claim_frame`, `release_frame`, `report_progress`, and `spawn_agents` for external clients when
+//! the setting allows it (ARCHITECTURE §7.3, §7.5).
 //!
 //! A lease lives where the Guard does (the editor holding the file, or the daemon's own engine), so a claim made
 //! here holds against every other agent's writes, whichever client they come from. A person is never blocked.
@@ -10,12 +11,140 @@ use vellum_core::guard::LeaseChange;
 
 use super::batch::node_id;
 use super::support::{parse_input, schema_of};
-use super::{Tool, ToolCtx, ToolError, Verb};
+use super::{AgentSettings, ErrorKind, Tool, ToolCtx, ToolError, Verb};
+use crate::daemon::{SpawnRequest, SpawnTask};
 
-pub(super) fn register(tools: &mut Vec<Box<dyn Tool>>) {
+pub(super) fn register(tools: &mut Vec<Box<dyn Tool>>, settings: &AgentSettings) {
     tools.push(Box::new(Lease(LeaseChange::Claim)));
     tools.push(Box::new(Lease(LeaseChange::Release)));
     tools.push(Box::new(ReportProgress));
+    if settings.spawn_agents_external {
+        tools.push(Box::new(SpawnAgents));
+    }
+}
+
+/// The tool that starts helper agents. Engines Vellum runs always have it; external clients only when
+/// [`AgentSettings::spawn_agents_external`] is on (ARCHITECTURE §7.4, §11 `[agents]`).
+pub const SPAWN_AGENTS: &str = "spawn_agents";
+
+pub(crate) const SPAWN_DESCRIPTION: &str = "Start helper agents for separate parts of the work, each with one     explicit task (an icon set, the empty states, a second page). They work at the same time as you, in this turn,     each claiming its own frames, and report through report_progress. Give each a task it can finish without you,     and leave their frames alone.";
+
+/// The longest task, in characters.
+const TASK_LIMIT: usize = 1_000;
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SpawnInput {
+    /// The document. Defaults to the one opened last (for an engine Vellum runs, its turn's document).
+    pub document: Option<String>,
+    /// One helper per task.
+    pub tasks: Vec<SpawnTaskInput>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SpawnTaskInput {
+    /// What the helper does, said so it can finish it alone.
+    pub task: String,
+    /// The model it runs on. Defaults to yours.
+    pub model: Option<String>,
+}
+
+impl SpawnInput {
+    /// At least one task, none empty or too long, and at most one helper per other lane; for an engine's turn,
+    /// only its own document (`turn_document`).
+    pub(crate) fn check(&self, turn_document: Option<&str>) -> Result<(), ToolError> {
+        let most = vellum_core::parallel::MAX_LANES - 1;
+        if self.tasks.is_empty() || self.tasks.len() > most {
+            return Err(ToolError::invalid(
+                "tasks",
+                format!("Give 1 to {most} tasks, one per helper."),
+            ));
+        }
+        for (n, task) in self.tasks.iter().enumerate() {
+            let length = task.task.trim().chars().count();
+            if length == 0 || length > TASK_LIMIT {
+                return Err(ToolError::invalid(
+                    format!("tasks[{n}].task"),
+                    format!("Say the task in 1 to {TASK_LIMIT} characters."),
+                ));
+            }
+            if task.model.as_deref().is_some_and(|m| m.trim().is_empty()) {
+                return Err(ToolError::invalid(
+                    format!("tasks[{n}].model"),
+                    "Name a model, or leave it out.",
+                ));
+            }
+        }
+        if let (Some(asked), Some(turn)) = (self.document.as_deref(), turn_document)
+            && asked != turn
+        {
+            return Err(ToolError::invalid(
+                "document",
+                format!("Helpers work on this turn's document, {turn}."),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// `spawn_agents` for external clients: the request is queued for the host that runs helper agents.
+struct SpawnAgents;
+
+impl Tool for SpawnAgents {
+    fn name(&self) -> &'static str {
+        SPAWN_AGENTS
+    }
+    fn version(&self) -> u32 {
+        1
+    }
+    fn description(&self) -> &'static str {
+        SPAWN_DESCRIPTION
+    }
+    fn input_schema(&self) -> schemars::Schema {
+        schema_of::<SpawnInput>()
+    }
+    fn read_only(&self) -> bool {
+        false
+    }
+    fn destructive(&self) -> bool {
+        false
+    }
+    fn verb(&self) -> Verb {
+        Verb::Progress
+    }
+    fn run(&self, ctx: &mut ToolCtx<'_>, input: Value) -> Result<Value, ToolError> {
+        let input: SpawnInput = parse_input(input)?;
+        input.check(None)?;
+        let (path, _) = ctx.document(input.document.as_deref())?;
+        let origin = ctx.origin();
+        let vellum_types::Actor::Agent { agent } = origin.actor else {
+            unreachable!("a tool's origin is its agent")
+        };
+        let request = SpawnRequest {
+            by: agent,
+            by_name: ctx.session().agent_name(),
+            document: path.clone(),
+            tasks: input
+                .tasks
+                .into_iter()
+                .map(|t| SpawnTask {
+                    task: t.task,
+                    model: t.model,
+                })
+                .collect(),
+        };
+        let count = request.tasks.len();
+        ctx.docs().request_spawn(request).map_err(|_| {
+            ToolError::new(
+                ErrorKind::Refused,
+                "Nothing here runs helper agents yet: open the document in the Vellum editor, or do the work \
+                 yourself.",
+            )
+        })?;
+        Ok(json!({"document": path, "queued": count,
+                  "message": "The helpers start shortly and report through report_progress. Leave their frames alone."}))
+    }
 }
 
 /// How long a claim lasts without activity, as the lease state machine sets it (guide §10.2).

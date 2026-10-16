@@ -304,7 +304,7 @@ impl Tool for Execute {
                                  Nothing was changed; run it again."
                             ),
                         ),
-                        other => other.into(),
+                        other => super::refusal(ctx.docs().agents(), other),
                     });
                 }
             }

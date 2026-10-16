@@ -16,7 +16,7 @@ jobs:
     # A trusted runner with an existing sign-in; never run subscription credentials on PR code.
     if: vars.VELLUM_ENGINES_ENABLED == 'true'
     runs-on: [self-hosted, vellum-engines]
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,6 +24,8 @@ jobs:
           node-version-file: .nvmrc
       - name: Real Claude Code MCP and Stop (engines lane)
         run: cargo test -p vellum --no-default-features --test installed_engine engines_lane -- --ignored --test-threads=1
+      - name: Real Claude Code parallel lanes, Side by side (engines lane, builds the scene)
+        run: cargo test -p vellum --test installed_parallel engines_lane -- --ignored --test-threads=1
       - name: Record a transcript for the installed version
         run: bash scripts/record-engine-fixtures.sh
       - name: Specification unchanged

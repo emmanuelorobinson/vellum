@@ -68,7 +68,7 @@ pub use sessions::{
 };
 pub use shader::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub use spatial::SpatialIndex;
-pub use target::{DocumentTarget, TargetError, TargetMode};
+pub use target::{DocumentTarget, TargetError, TargetMode, TurnUndone};
 pub use text::{
     Glyph, GlyphRun, RichText, StyledRun, TextBoxLayout, TextDecoration, TextEngine, TextLayout,
     TextLine, TextMetrics, TextProblem,

@@ -137,36 +137,18 @@ impl SessionLog {
             else {
                 continue;
             };
-            let file = match &session.cwd {
-                Some(cwd) => cwd.join(&document),
-                None => PathBuf::from(&document),
-            };
-            let Ok(doc) = doc_key(&file, &*self.is_repo) else {
-                continue;
-            };
-            let id = match session.logged.iter().find(|(known, _)| known == &doc) {
-                Some((_, id)) => id.clone(),
+            let by_path = session
+                .logged_paths
+                .iter()
+                .find(|(path, _)| path == &document)
+                .map(|(_, id)| id.clone());
+            let id = match by_path {
+                Some(id) => id,
                 None => {
-                    // The connection's own session id for its first document, so History's origins match the
-                    // log; a fresh one for each further document.
-                    let id = if session.logged.is_empty() {
-                        connection
-                    } else {
-                        SessionId::new(docs.ulid()).expect("a ULID")
-                    };
-                    let name = session.agent_name();
-                    self.store.create(NewSession {
-                        id: id.clone(),
-                        doc: doc.clone(),
-                        kind: SessionKind::External {
-                            client: name.clone(),
-                        },
-                        agent: agent.clone(),
-                        title: name,
-                        created_at: Timestamp(step.started_at),
-                    })?;
-                    session.logged.push((doc, id.clone()));
-                    id
+                    match self.session_for(docs, session, &document, &agent, connection, &step)? {
+                        Some(id) => id,
+                        None => continue,
+                    }
                 }
             };
             let thumbnail = match (&step.thumbnail, &step.document) {
@@ -190,6 +172,52 @@ impl SessionLog {
             recorded += 1;
         }
         Ok(recorded)
+    }
+
+    /// The session a step on `document` goes to, found by its repository key, made on first use. `None` when the
+    /// document has no key here.
+    fn session_for(
+        &self,
+        docs: &mut Documents,
+        session: &mut Session,
+        document: &str,
+        agent: &vellum_types::AgentId,
+        connection: SessionId,
+        step: &Step,
+    ) -> Result<Option<SessionId>, StoreError> {
+        let file = match &session.cwd {
+            Some(cwd) => cwd.join(document),
+            None => PathBuf::from(document),
+        };
+        let Ok(doc) = doc_key(&file, &*self.is_repo) else {
+            return Ok(None);
+        };
+        let id = match session.logged.iter().find(|(known, _)| known == &doc) {
+            Some((_, id)) => id.clone(),
+            None => {
+                // The connection's own session id for its first document, so History's origins match the
+                // log; a fresh one for each further document.
+                let id = if session.logged.is_empty() {
+                    connection
+                } else {
+                    SessionId::new(docs.ulid()).expect("a ULID")
+                };
+                let name = session.agent_name();
+                self.store.create(NewSession {
+                    id: id.clone(),
+                    doc: doc.clone(),
+                    kind: SessionKind::External {
+                        client: name.clone(),
+                    },
+                    agent: agent.clone(),
+                    title: name,
+                    created_at: Timestamp(step.started_at),
+                })?;
+                session.logged.push((doc, id.clone()));
+                id
+            }
+        };
+        Ok(Some(id))
     }
 
     /// Records what an engine turn reports that the log keeps: usage (with its estimate), the messages for the

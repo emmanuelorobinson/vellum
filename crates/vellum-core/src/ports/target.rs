@@ -7,10 +7,10 @@
 
 use std::fmt;
 
-use vellum_types::{AgentId, Document, NodeId};
+use vellum_types::{Actor, AgentId, Document, NodeId, TurnId};
 
-use super::FileError;
-use crate::guard::{LeaseChange, LeaseRefused, WriteError};
+use super::{ChangeSet, FileError, Kept};
+use crate::guard::{AgentControl, LeaseChange, LeaseRefused, WriteError};
 use crate::ops::{Applied, Transaction};
 use crate::ports::ScriptValue;
 
@@ -67,6 +67,18 @@ impl From<FileError> for TargetError {
     }
 }
 
+/// What "Undo this turn" did to a target's document (guide Invariant 3).
+#[derive(Debug, Clone, PartialEq)]
+pub enum TurnUndone {
+    /// The turn has no change left to undo.
+    Nothing,
+    /// Nothing later depended on the turn: its transactions are undone and leave the history.
+    Undone(ChangeSet),
+    /// Later work by others depends on the turn: what could be reverted was, as one new transaction by whoever
+    /// asked; `kept` is what stayed because someone built on it.
+    Reverted { applied: Applied, kept: Vec<Kept> },
+}
+
 /// One file's document, wherever it lives. One target per file; it is the file's only writer.
 pub trait DocumentTarget {
     /// Who owns the document right now.
@@ -85,6 +97,12 @@ pub trait DocumentTarget {
         agent: &AgentId,
         change: LeaseChange,
     ) -> Result<(), TargetError>;
+    /// Pause all, Stop and their resumes, applied to the Guard where it lives. Session state; the document does
+    /// not change.
+    fn control(&mut self, change: &AgentControl) -> Result<(), TargetError>;
+    /// "Undo this turn": takes back every transaction whose origin carries `turn`, asked for by `by`, and never
+    /// another actor's later change (a `Revert` transaction when one depends on it).
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> Result<TurnUndone, TargetError>;
     /// Writes the document to its file. The file is the truth (Invariant 5).
     fn save(&mut self) -> Result<(), TargetError>;
     /// Whether there are changes the file does not have yet.

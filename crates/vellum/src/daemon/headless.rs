@@ -8,13 +8,13 @@ use std::sync::Arc;
 use vellum_codec_json_dir::DirCodec;
 use vellum_core::doc_api::{Method, Services};
 use vellum_core::files::SingleFile;
-use vellum_core::guard::{GuardState, LeaseChange, apply_guarded};
-use vellum_core::ops::{Applied, Inputs, Transaction};
+use vellum_core::guard::{AgentControl, GuardState, LeaseChange, WriteError, apply_guarded};
+use vellum_core::ops::{self, Applied, Inputs, Transaction};
 use vellum_core::ports::{
     Clock, Codec, DocStore, DocumentFiles, DocumentTarget, FileError, FileSystem, IdGen, Loaded,
-    ScriptValue, TargetError, TargetMode,
+    ScriptValue, TargetError, TargetMode, TurnUndone,
 };
-use vellum_types::{AgentId, Document, NodeId};
+use vellum_types::{Actor, AgentId, Document, NodeId, TurnId};
 
 /// A document at a path of a file system: one file, or a folder in the directory format.
 #[derive(Clone)]
@@ -193,6 +193,22 @@ impl DocumentTarget for HeadlessTarget {
         self.guard
             .lease(&doc, frame, agent, change, now)
             .map_err(TargetError::Lease)
+    }
+
+    fn control(&mut self, change: &AgentControl) -> Result<(), TargetError> {
+        let now = self.engine.clock.now();
+        self.guard.control(change, now);
+        Ok(())
+    }
+
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> Result<TurnUndone, TargetError> {
+        let undone = ops::undo_turn(&mut *self.engine.store, turn, by)
+            .map_err(|e| TargetError::Write(WriteError::Invalid(e)))?;
+        if undone != TurnUndone::Nothing {
+            // As after a transaction: a failed save is retried, the undo stands.
+            let _ = self.save();
+        }
+        Ok(undone)
     }
 
     fn save(&mut self) -> Result<(), TargetError> {

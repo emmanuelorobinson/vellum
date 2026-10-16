@@ -4,10 +4,12 @@
 
 use std::fmt;
 
-use vellum_core::guard::LeaseChange;
+use vellum_core::guard::{AgentControl, LeaseChange};
 use vellum_core::ops::{Applied, Transaction};
-use vellum_core::ports::{ChangeSet, DocumentTarget, ScriptValue, TargetError, TargetMode};
-use vellum_types::{AgentId, Document, NodeId};
+use vellum_core::ports::{
+    ChangeSet, DocumentTarget, ScriptValue, TargetError, TargetMode, TurnUndone,
+};
+use vellum_types::{Actor, AgentId, Document, NodeId, TurnId};
 
 use super::view::EditorView;
 
@@ -37,6 +39,10 @@ pub trait EditorLink {
         agent: &AgentId,
         change: LeaseChange,
     ) -> Result<(), TargetError>;
+    /// Pause all, Stop or a resume, in the editor's Guard.
+    fn control(&mut self, change: &AgentControl) -> Result<(), TargetError>;
+    /// "Undo this turn" in the editor's engine, asked for by `by`.
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> Result<TurnUndone, TargetError>;
     /// Asks the editor to save; answers with the document it wrote.
     fn save(&mut self) -> Result<Document, TargetError>;
     /// Whether the editor has changes the file does not.
@@ -171,6 +177,27 @@ impl DocumentTarget for LiveTarget {
     ) -> Result<(), TargetError> {
         let result = self.writer.1.lease(frame, agent, change);
         self.check(result)
+    }
+
+    fn control(&mut self, change: &AgentControl) -> Result<(), TargetError> {
+        let result = self.writer.1.control(change);
+        self.check(result)
+    }
+
+    fn undo_turn(&mut self, turn: &TurnId, by: &Actor) -> Result<TurnUndone, TargetError> {
+        let result = self.writer.1.undo_turn(turn, by);
+        let undone = self.check(result)?;
+        let changes = match &undone {
+            TurnUndone::Nothing => None,
+            TurnUndone::Undone(changes) => Some(changes.clone()),
+            TurnUndone::Reverted { applied, .. } => Some(applied.changes.clone()),
+        };
+        if let Some(changes) = changes.filter(|_| !self.attached.is_empty()) {
+            let document = self.snapshot()?;
+            self.attached
+                .retain_mut(|(_, link)| link.follow(&changes, &document).is_ok());
+        }
+        Ok(undone)
     }
 
     fn save(&mut self) -> Result<(), TargetError> {
