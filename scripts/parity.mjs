@@ -20,7 +20,7 @@ try {
     for (const row of result.pending)
       console.log(`  Prompt ${row.prompt}: ${row.surface} — ${row.reason}`);
     console.log(
-      "Active mappings name behavior tests; scripted-agent E2E still needs the model/engine lanes.",
+      "Active mappings name behavior tests; full built-in-engine E2E remains in its tagged lane.",
     );
   }
 } catch (error) {

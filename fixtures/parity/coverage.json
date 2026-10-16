@@ -457,7 +457,7 @@
     ],
     "pending": {
       "prompt": 37,
-      "reason": "Needs provider adapters (32) and installed engines; later-only providers excluded."
+      "reason": "Provider adapters exist (32); installed engines remain; later-only providers excluded."
     }
   },
   {

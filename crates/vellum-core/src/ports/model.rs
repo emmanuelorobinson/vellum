@@ -411,7 +411,12 @@ impl ProviderConnection {
             Ok(ModelResponse { wire, secret })
         }
         .await;
-        if result.is_err() {
+        if result.as_ref().is_err_and(|error| {
+            !matches!(
+                error,
+                ModelError::Cancelled | ModelError::Unsupported | ModelError::InvalidRequest
+            )
+        }) {
             self.state.failed();
         }
         result
@@ -518,7 +523,9 @@ impl<D: ModelDecoder> ModelStream for DecodedStream<D> {
                     }
                     Err(error) => {
                         self.done = true;
-                        self.state.failed();
+                        if error != ModelError::Cancelled {
+                            self.state.failed();
+                        }
                         self.wire = None;
                         return Some(Err(error));
                     }

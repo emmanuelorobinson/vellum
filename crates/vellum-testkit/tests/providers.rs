@@ -540,6 +540,9 @@ fn native_tool_results_preserve_ids_and_continuation_metadata() {
                 json!({"type":"thinking","thinking":"summary","signature":"signed"}),
             ));
         }
+        if index == 1 {
+            assistant.push(ChatPart::Text("Planning".into()));
+        }
         assistant.push(ChatPart::ToolCall(call));
         request.messages.push(ChatMessage {
             role: ChatRole::Assistant,
@@ -564,8 +567,9 @@ fn native_tool_results_preserve_ids_and_continuation_metadata() {
             }
             1 => {
                 assert_eq!(body["input"][1]["encrypted_content"], "opaque");
-                assert_eq!(body["input"][2]["call_id"], "call_1");
-                assert_eq!(body["input"][3]["type"], "function_call_output");
+                assert_eq!(body["input"][2]["role"], "assistant");
+                assert_eq!(body["input"][3]["call_id"], "call_1");
+                assert_eq!(body["input"][4]["type"], "function_call_output");
             }
             2 => {
                 assert_eq!(body["messages"][1]["content"][0]["signature"], "signed");
@@ -620,4 +624,23 @@ fn http_transport_obeys_the_shared_wire_contract() {
         1,
         "cancelled call must never open a connection"
     );
+}
+
+#[test]
+fn cancelling_before_a_request_preserves_the_provider_status() {
+    use vellum_contracts::fakes::ReplayTransport;
+    let provider = vellum_llm_openai_compat::Provider::new(
+        config("https://example.invalid/provider"),
+        secrets(),
+        Arc::new(ReplayTransport::new(vec![])),
+    )
+    .unwrap();
+    assert_eq!(provider.status(), ProviderStatus::ApiKeySet);
+    let cancel = Cancellation::default();
+    cancel.cancel();
+    assert!(matches!(
+        block_on(provider.complete(ChatRequest::text("test", "hello"), cancel)),
+        Err(ModelError::Cancelled)
+    ));
+    assert_eq!(provider.status(), ProviderStatus::ApiKeySet);
 }

@@ -8,11 +8,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-023 and synchronize ARCHITECTURE** (Prompt 32). SecretStore now exposes missing vs failed reads
+  and deletion; ModelTransport is injected into four independent protocol adapters. Bedrock uses the native
+  Messages SSE route; hosts must supply/refresh cloud credentials. Review the exact root-certificate data licence
+  exception. Only macOS native Keychain/HTTP ran locally; remote native lanes and full engine canary coverage remain.
+
 - **Review ADR-022 and synchronize ARCHITECTURE** (Prompt 31). `SkillSource::list` returns a Result so configured
   missing/unreadable folders are explicit; `StyleLibrary` now has typed recipes and list/read methods. Folder
   sources require an explicitly authorized rooted filesystem. Wire these into PermissionBroker and Add skill
   settings in Prompts 35/50. The parity inventory distinguishes active behavior tests from later-prompt placeholders;
-  it does not yet establish scripted-agent E2E coverage.
+  Prompt 32 now covers a scripted provider-to-registry retry; full built-in-engine E2E remains Prompt 33.
 
 - **Review ADR-021 "Prompt 30" and synchronize ARCHITECTURE** (Prompt 30). Only a person edits ARCHITECTURE.md.
   (1) `DocumentTarget` gains `lease(frame, agent, Claim|Release)` and `TargetError::Lease`; `EditorLink` gains
@@ -2017,17 +2022,58 @@ frames were involved. ADR-022 needs human architecture synchronization; later ho
 folder roots before passing them to the source constructors.
 
 
-## Prompt 32 (in progress)
+## Prompt 32: model providers, secret stores and deterministic endpoint
 
-- Added provider/secret contracts and scripted fakes; the first contract run failed on the missing ports/fakes.
-- Initial loopback tests pass for Chat Completions, Responses, Messages deployments and Gemini, including
-  vision, tools, usage and redacted HTTP failures. The HTTP boundary is injected so adapters remain independent.
-- Keyring 4.2.0 requires its new platform-store API, rather than the keyring 3 features used by the reference.
-  Environment fallback is explicit and read-only; locked keychain errors do not silently fall back.
-- The cancellation regression failed on the blocking transport (socket stayed open), then passed after the
-  async transport replaced it. A second red test caught queued tool calls being emitted after cancellation;
-  cancellation now clears that queue. Native macOS Keychain round-trip passed.
-- The first dependency audit rejected the new root-certificate data licence and transitive crypto/runtime
-  wrapper paths, and reported rustls 0.23.45 advisories. Updating TLS to patched 0.23.46 and reviewing the
-  narrow policy entries; no advisory ignore is added. The first full canary scan used a slow debug build;
-  its replacement uses the same scanner optimized.
+Built (ADR-023, `docs/runbooks/model-providers.md`):
+- Pure ModelProvider/ModelStream, ModelTransport and SecretStore ports, typed conversation/tool/image/usage/
+  continuation/status events, cancellation, memory/replay fakes and shared contracts. No new pure-crate dependencies.
+- Four independent protocol adapters: Chat Completions (all ten requested presets and the guide's OpenRouter
+  model), Responses, Messages (API/custom/Bedrock/Vertex/Foundry), Gemini. Tools, inline vision, effort,
+  opaque reasoning signatures, native tool-result replay, refusal/length, usage and incomplete streams are explicit.
+- Injected `vellum-model-http`: async requests on one lazy runtime, bounded incremental SSE, HTTPS except
+  loopback, no redirects or credentials in URLs, typed payload-free errors, actual request cancellation/drop,
+  credential redaction across text deltas and tool JSON. Cancellation clears queued tools and preserves provider status.
+- Keyring 4.2 native stores, explicit read-only CI VELLUM_*_API_KEY lookup, missing-only fallback, Clear key.
+- Testkit ordered loopback endpoint, canary scanner and runner, three-platform HTTP CI, opt-in macOS/Windows
+  keychain CI. Prompt 30's pending test now drives provider calls through the actual registry, receives a bad
+  width error, retries and builds a frame through Guard/core. Parity notes retain later installed-engine work.
+
+Decisions/limits: SecretStore::get returns Result and adds delete; ModelTransport is an injected extra port.
+Bedrock uses the current native Messages SSE route, not legacy InvokeModel. Cloud token acquisition/refresh
+and SigV4 remain host responsibilities; no ambient cloud SDK/command discovery. The canary is a provider-level
+skeleton; full engine/session/permissions/export/share/frame coverage waits for those prompts. No source ported.
+Dependency policy lists immediate HTTP/Secret Service parents; only root-data package webpki-root-certs =1.0.9
+gets its reviewed CDLA-Permissive-2.0 exception, with the agreement included. TLS is patched to rustls 0.23.46;
+no advisory ignore added. The built-in engine and provider settings remain Prompts 33/50.
+
+Process: tests first failed on missing ports/fakes/stub. Later red tests caught an open socket after cancel,
+queued tools after cancel, split credential echoes, false failure status on cancel, Responses refusals and
+reordered continuation history; each was fixed without weakening assertions. Initial SSE/scanner scaffolding
+was written alongside its unit tests. Secret tests were added first, but their initial run stopped on missing
+platform dependencies before exercising implementation. Restricted workspace CLI tests failed on socket OS
+permissions; the permitted run passes. The debug full scan was stopped for speed; its optimized replacement
+completed. Initial dependency checks rejected TLS advisories, missing immediate wrappers and root-data licensing;
+the final policy checks pass. The exact-package exception syntax was corrected after cargo-deny rejected it.
+
+Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace` (1,069 passed, 55 ignored). Subsequent small status/
+  Responses-order fixes pass the final focused targets, clippy, lint and type-check below.
+- `cargo test --offline -p vellum-testkit --test providers --test canary` (8 provider tests + scanner, 8 tagged);
+  `cargo test --offline -p vellum-contracts --test model` (6, including rejection of a broken provider).
+- `node scripts/model-providers.mjs --offline` (12 tests at that point; full repo, ~/.vellum and captured-log
+  canary scan: no persisted credential bytes). Final added pure cases pass above; final HTTP cases pass with
+  `cargo test --offline -p vellum-testkit --test providers -- --ignored --skip provider_canary_artifacts_contain_no_credentials` (7).
+- `node scripts/skia-build.mjs test --offline -p vellum --test write_tools a_scripted_agent -- --ignored` (1).
+- `cargo test --offline -p vellum-secrets-keyring --test secrets` (3 + tagged native test);
+  `cargo test --offline -p vellum-secrets-keyring --test secrets native_os_keychain_contract -- --ignored` (1, real macOS Keychain).
+- `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`, `pnpm parity:check`, `pnpm clean-room`,
+  `pnpm checksum`; `node scripts/types-gen.mjs --check`, `node scripts/gen-format.mjs --check`,
+  `node scripts/doc-api-gen.mjs --check`; focused `cargo clippy --offline` on touched crates with
+  `--all-targets -- -D warnings`; `cargo fmt --all --check`; `git diff --check`.
+- Failed: `pnpm test:scripts` (169 pass, 4 skipped; only the existing `R3 taffy: main.rs` reference-index failure).
+- Failed: `cargo deny check` (only the existing bitmaps/im/sized-chunks Loro-chain advisories;
+  bans, licences and sources pass).
+
+Not verified: paid/live provider endpoints, cloud IAM/sign-in/refresh, native Windows/Linux keychains or HTTP,
+remote CI, real clients, or the full built-in engine. No UI/design frames involved. Review ADR-023 and synchronize
+ARCHITECTURE before the later hosts consume these ports.

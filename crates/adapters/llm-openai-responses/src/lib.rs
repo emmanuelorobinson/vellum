@@ -53,24 +53,27 @@ fn encode(req: &ChatRequest) -> Value {
     let mut input = vec![];
     for message in &req.messages {
         let mut content = vec![];
+        let flush = |input: &mut Vec<Value>, content: &mut Vec<Value>| {
+            if !content.is_empty() {
+                input.push(json!({"role":if message.role == ChatRole::User { "user" } else { "assistant" },"content":std::mem::take(content)}));
+            }
+        };
         for part in &message.content {
             match part {
                 ChatPart::Text(text) => content.push(json!({"type":if message.role == ChatRole::Assistant { "output_text" } else { "input_text" },"text":text})),
                 ChatPart::Image { mime, base64 } => content.push(json!({"type":"input_image","image_url":format!("data:{mime};base64,{base64}")})),
-                _ => {},
+                part => {
+                    flush(&mut input, &mut content);
+                    match part {
+                        ChatPart::ToolCall(call) => input.push(json!({"type":"function_call","call_id":call.id,"name":call.name,"arguments":call.arguments.to_string()})),
+                        ChatPart::ToolResult { id, result, .. } => input.push(json!({"type":"function_call_output","call_id":id,"output":result.to_string()})),
+                        ChatPart::Continuation(item) => input.push(item.clone()),
+                        _ => unreachable!("text and images are handled above"),
+                    }
+                }
             }
         }
-        if !content.is_empty() {
-            input.push(json!({"role":if message.role == ChatRole::User { "user" } else { "assistant" },"content":content}));
-        }
-        for part in &message.content {
-            match part {
-                ChatPart::ToolCall(call) => input.push(json!({"type":"function_call","call_id":call.id,"name":call.name,"arguments":call.arguments.to_string()})),
-                ChatPart::ToolResult { id, result, .. } => input.push(json!({"type":"function_call_output","call_id":id,"output":result.to_string()})),
-                ChatPart::Continuation(item) => input.push(item.clone()),
-                _ => {},
-            }
-        }
+        flush(&mut input, &mut content);
     }
     let mut body = json!({"model":req.model,"instructions":req.system,"input":input,"stream":true,"store":false,"max_output_tokens":req.max_output_tokens});
     if !req.tools.is_empty() {
