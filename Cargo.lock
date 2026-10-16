@@ -3961,6 +3961,7 @@ dependencies = [
 name = "vellum-contracts"
 version = "0.0.0"
 dependencies = [
+ "proptest",
  "serde",
  "serde_json",
  "vellum-core",

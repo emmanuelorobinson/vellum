@@ -1,8 +1,9 @@
 //! The JSON an event's origin and body are stored as. Every store uses it, so a log moved between stores reads
 //! the same. Field names are camelCase; reading refuses anything this version did not write.
 use crate::ports::{
-    ChatRole, EventBody, ImageRef, StepOutcome, StepRecord, StoreError, StoredMessage, StoredPart,
-    Timestamp, Tokens, TurnTransition, UsageRecord,
+    Action, Answer, ChatRole, DecisionSource, EventBody, EventSeq, ImageRef, PermissionKind,
+    PermissionRecord, StepOutcome, StepRecord, StoreError, StoredMessage, StoredPart, Timestamp,
+    Tokens, TurnTransition, UsageRecord,
 };
 use crate::turns::{TurnInput, TurnState};
 use serde_json::{Map, Value, json};
@@ -117,7 +118,142 @@ pub fn body_to_json(body: &EventBody) -> Value {
             "input": change.input.as_str(),
             "to": change.to.as_str(),
         }),
+        EventBody::Permission(record) => {
+            let mut out = json!({
+                "type": "permission",
+                "action": action_json(&record.action),
+                "kind": record.kind.as_str(),
+                "answer": record.answer.as_str(),
+                "source": source_json(&record.source),
+            });
+            if let Some(engine) = &record.engine {
+                out["engine"] = json!(engine);
+            }
+            out
+        }
     }
+}
+
+fn action_json(action: &Action) -> Value {
+    match action {
+        Action::ReadFile { path } => json!({ "readFile": { "path": path } }),
+        Action::WriteFile { path } => json!({ "writeFile": { "path": path } }),
+        Action::RunCommand { program, args, cwd } => {
+            json!({ "runCommand": { "program": program, "args": args, "cwd": cwd } })
+        }
+        Action::Network { url } => json!({ "network": { "url": url } }),
+    }
+}
+
+fn source_json(source: &DecisionSource) -> Value {
+    let mut out = json!({ "kind": source.kind() });
+    match source {
+        DecisionSource::SessionGrant { grant } => out["grant"] = json!(grant.0),
+        DecisionSource::Rule { rule } => out["rule"] = json!(rule),
+        DecisionSource::EngineAuto { engine } => out["engine"] = json!(engine),
+        DecisionSource::Failed { reason } => out["reason"] = json!(reason),
+        DecisionSource::Person
+        | DecisionSource::SkipAll
+        | DecisionSource::Unattended
+        | DecisionSource::TurnStopped => {}
+    }
+    out
+}
+
+fn action(value: &Value) -> Result<Action, StoreError> {
+    let only = Fields::new(
+        value,
+        "permission.action",
+        &["readFile", "writeFile", "runCommand", "network"],
+    )?;
+    if only.object.len() != 1 {
+        return Err(corrupt("an action has exactly one kind"));
+    }
+    let (kind, inner) = only.object.iter().next().expect("one entry");
+    Ok(match kind.as_str() {
+        "readFile" => Action::ReadFile {
+            path: Fields::new(inner, "readFile", &["path"])?
+                .str("path")?
+                .to_owned(),
+        },
+        "writeFile" => Action::WriteFile {
+            path: Fields::new(inner, "writeFile", &["path"])?
+                .str("path")?
+                .to_owned(),
+        },
+        "runCommand" => {
+            let f = Fields::new(inner, "runCommand", &["program", "args", "cwd"])?;
+            Action::RunCommand {
+                program: f.str("program")?.to_owned(),
+                args: f
+                    .array("args")?
+                    .iter()
+                    .map(|a| {
+                        a.as_str()
+                            .map(str::to_owned)
+                            .ok_or_else(|| corrupt("runCommand.args holds text"))
+                    })
+                    .collect::<Result<_, _>>()?,
+                cwd: f.str("cwd")?.to_owned(),
+            }
+        }
+        _ => Action::Network {
+            url: Fields::new(inner, "network", &["url"])?
+                .str("url")?
+                .to_owned(),
+        },
+    })
+}
+
+fn source(value: &Value) -> Result<DecisionSource, StoreError> {
+    let kind = value
+        .get("kind")
+        .and_then(Value::as_str)
+        .ok_or_else(|| corrupt("permission.source has no kind"))?;
+    let with = |extra: &'static str| -> Result<Fields<'_>, StoreError> {
+        let allowed: &[&str] = if extra.is_empty() {
+            &["kind"]
+        } else {
+            match extra {
+                "grant" => &["kind", "grant"],
+                "rule" => &["kind", "rule"],
+                "engine" => &["kind", "engine"],
+                _ => &["kind", "reason"],
+            }
+        };
+        Fields::new(value, "permission.source", allowed)
+    };
+    Ok(match kind {
+        "person" => {
+            with("")?;
+            DecisionSource::Person
+        }
+        "session_grant" => DecisionSource::SessionGrant {
+            grant: EventSeq(with("grant")?.u64("grant")?),
+        },
+        "rule" => DecisionSource::Rule {
+            rule: with("rule")?.str("rule")?.to_owned(),
+        },
+        "engine_auto" => DecisionSource::EngineAuto {
+            engine: with("engine")?.str("engine")?.to_owned(),
+        },
+        "skip_all" => {
+            with("")?;
+            DecisionSource::SkipAll
+        }
+        "unattended" => {
+            with("")?;
+            DecisionSource::Unattended
+        }
+        "turn_stopped" => {
+            with("")?;
+            DecisionSource::TurnStopped
+        }
+        "failed" => DecisionSource::Failed {
+            reason: with("reason")?.str("reason")?.to_owned(),
+        },
+        other => return Err(corrupt(format!("unknown decision source `{other}`"))),
+    })
 }
 
 /// Reads the fields of one JSON object, refusing any it was not asked about.
@@ -353,6 +489,27 @@ pub fn body_from_json(value: &Value) -> Result<EventBody, StoreError> {
                 input: TurnInput::parse(input)
                     .ok_or_else(|| corrupt(format!("unknown turn input `{input}`")))?,
                 to: state("to")?,
+            })
+        }
+        "permission" => {
+            let f = Fields::new(
+                value,
+                "permission",
+                &["type", "action", "kind", "engine", "answer", "source"],
+            )?;
+            let kind = f.str("kind")?;
+            let answer = f.str("answer")?;
+            EventBody::Permission(PermissionRecord {
+                action: action(f.value("action")?)?,
+                kind: PermissionKind::parse(kind)
+                    .ok_or_else(|| corrupt(format!("unknown permission kind `{kind}`")))?,
+                engine: match f.object.get("engine") {
+                    None => None,
+                    Some(_) => Some(f.str("engine")?.to_owned()),
+                },
+                answer: Answer::parse(answer)
+                    .ok_or_else(|| corrupt(format!("unknown permission answer `{answer}`")))?,
+                source: source(f.value("source")?)?,
             })
         }
         other => return Err(corrupt(format!("unknown event type `{other}`"))),

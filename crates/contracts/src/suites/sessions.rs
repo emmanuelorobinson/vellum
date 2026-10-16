@@ -165,6 +165,28 @@ fn round_trips_every_event(store: &dyn SessionStore) {
             input: TurnInput::Start,
             to: TurnState::Planning,
         }),
+        EventBody::Permission(PermissionRecord {
+            action: Action::RunCommand {
+                program: "pnpm".into(),
+                args: vec!["build".into(), "--filter".into(), "app".into()],
+                cwd: "/TEST DATA/juniper".into(),
+            },
+            kind: PermissionKind::RunCommand,
+            engine: Some("claude-code".into()),
+            answer: Answer::AllowForSession,
+            source: DecisionSource::Person,
+        }),
+        EventBody::Permission(PermissionRecord {
+            action: Action::ReadFile {
+                path: "/TEST DATA/juniper/.env".into(),
+            },
+            kind: PermissionKind::ReadRepo,
+            engine: None,
+            answer: Answer::Deny,
+            source: DecisionSource::Rule {
+                rule: "deny read .env*".into(),
+            },
+        }),
     ];
     for (n, body) in bodies.iter().enumerate() {
         let origin = if n == 0 { by_person(&s) } else { by_agent(&s) };
@@ -298,7 +320,21 @@ fn refuses_bad_appends(store: &dyn SessionStore) {
             event(by_agent(&x), 0, EventBody::Plan { text: "no".into() })
         ),
         Err(StoreError::NotRecorded),
-        "SessionStore: external sessions keep tool calls only"
+        "SessionStore: external sessions keep tool calls and permission decisions only"
+    );
+    let decision = EventBody::Permission(PermissionRecord {
+        action: Action::Network {
+            url: "https://example.com".into(),
+        },
+        kind: PermissionKind::Network,
+        engine: None,
+        answer: Answer::Deny,
+        source: DecisionSource::Unattended,
+    });
+    assert_eq!(
+        store.append(&x, event(by_agent(&x), 0, decision.clone())),
+        Ok(EventSeq(1)),
+        "SessionStore: external sessions keep permission decisions (Invariant 11)"
     );
     let ghost = ImageRef::new("0".repeat(64)).unwrap();
     assert_eq!(
@@ -313,7 +349,7 @@ fn refuses_bad_appends(store: &dyn SessionStore) {
     );
     assert_eq!(
         store.append(&x, event(by_agent(&x), 1, step(None))),
-        Ok(EventSeq(1))
+        Ok(EventSeq(2))
     );
 }
 

@@ -8,6 +8,22 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the permission broker's choices** (Prompt 35). Mine, not from a source: deny rules win over skip-all and
+  engine auto mode; "Allow for this session" covers every repo read, but only the same file for a write and the same
+  command line and folder for a command; it is never offered outside the repository or for the network (§7.7 "ask
+  every time"); allow rules and settings never cover those either; every use of a grant is recorded as its own
+  decision; a stopped turn is denied everything, skip-all included. The rule syntax (`read|write|run <glob>`, for
+  `--allow`/`--deny` and settings) and the terminal wording (`{agent} wants to read \`path\``, the skip-all line
+  in `vellum::permissions::SKIP_ALL_WARNING`) are mine; DESIGN.md gives the card sentence's shape but no skip-all
+  text. The port differs from ARCHITECTURE §3.4: `request` returns `Result<Permit, Refusal>` and asking a person is
+  a second port, `PermissionPrompt`; ARCHITECTURE needs your edit (or an instruction to make it).
+- **Nothing calls the permission broker yet** (Prompt 35). No tool reads or writes repo files, runs commands or
+  reaches the network today; those arrive with `fill_image(path)`, `import`, `export_tokens` and the installed
+  engines. The daemon still refuses documents outside the client's directory instead of asking (it has nobody to ask
+  until the editor's Permission card, Prompt 50). No network executor, no settings-file loader for `[permissions]`,
+  and no CLI command takes `--allow`/`--deny` yet (`settings_from_flags` exists for `vellum prompt`). A file swapped
+  for a link between the check and the open is not prevented (the path is resolved again just before acting).
+
 - **ARCHITECTURE is synchronized with every ADR so far** (2026-10-16, on the owner's instruction "synchronize all":
   ADR-001–006, 010–024, and the port, document-model and op choices from Prompts 7–16 that earlier entries asked a
   person to carry over). Changed: §1, §2.5–2.6, §3.1 (every port as implemented), §3.2 (Skia in WASM, binary display
@@ -16,7 +32,7 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   §7.6, §10, §12, §13, §15 (questions 1, 2, 3, 5, 8, 10 marked resolved). Each ADR's status and ADR-000 (D1, D2, D3, D5,
   D6) say so; D4 waits for Prompts 36–37. If you disagree with a choice now stated in ARCHITECTURE, the ADR beside it
   says what would change. Still yours to decide: the hand-written MCP front end vs `rmcp`; the "only inside the
-  client's directory" rule until the PermissionBroker (Prompt 35); the CDLA-Permissive-2.0 exception for
+  client's directory" rule (the broker exists since Prompt 35, but the daemon has nobody to ask yet); the CDLA-Permissive-2.0 exception for
   `webpki-root-certs`; who resolves merge conflicts that only the merge report holds. ARCHITECTURE §6 cited "ADR-0006"
   for Electron over Tauri; that number is now sessions, so the text says "no ADR yet".
 
@@ -2030,3 +2046,48 @@ over long use. No UI or design frames involved.
 After Prompt 34, on the owner's instruction ("synchronize all"), ARCHITECTURE.md was synchronized with every ADR so far
 (ADR-001–006, 010–024) and the Prompt 7–16 port and model choices; the separate "synchronize ARCHITECTURE" items in
 Needs a person are folded into one. Docs only: no code changed, `pnpm checksum` still covers the read-only spec.
+
+## Prompt 35: PermissionBroker
+
+Built (ARCHITECTURE §7.7, guide Invariant 11; no ADR asked for):
+- `vellum-core` port types (`ports/permissions.rs`): `Action` (read file, write file, run command, network),
+  `PermissionKind` (repo read, outside read, repo write, outside write, command, network), `PermissionRequest`,
+  `Answer` (Allow once, Allow for this session, Deny), `DecisionSource`, `PermissionRecord`, `Question`, `Refusal`;
+  traits `PermissionBroker` (returns `Result<Permit, Refusal>`) and `PermissionPrompt` (the Permission card or the
+  terminal).
+- `vellum_core::permissions`: pure policy (settings Ask/Allow per §7.7 row, skip-all off by default with
+  `shows_skip_all_warning`, engine auto mode per engine, allow/deny rules with globs, lexical path normalisation,
+  session-grant scopes) and `Broker`, the one implementation. Order: deny rule, skip-all, engine auto mode, allow
+  setting or rule, an earlier "Allow for this session", the person, else denied as unattended. Every decision is
+  appended to the session as the new `EventBody::Permission` (codec both ways; external sessions accept it too).
+  Asking the person moves the turn `running → awaiting_permission → running` (agent, then person); a turn stopped
+  while waiting, or already over, is denied. Only a recorded allow yields a `Permit`, which nothing outside the
+  module can build or clone (two trybuild cases in `crates/vellum-core/tests/permit/`).
+- `vellum-contracts`: `ScriptedPrompt` fake, `suites::permissions` (seven rules; four broken brokers fail it), the
+  sessions suite now round-trips permission records and checks external sessions keep them, and the Invariant 11
+  property test (256 cases of generated settings, rules and agent action sequences: every performed action has its
+  own `Allowed` record for exactly that action and agent; one record per request; deny rules always deny; the
+  person is asked only when nothing else decided; outside the repo only the person, skip-all or engine auto allow).
+- `crates/vellum/src/permissions.rs`: `read_file`, `write_file`, `run_command` take a `Permit` and re-resolve the
+  path before acting (links followed, so a link out of the repo is asked about as an outside file); no shell for
+  commands; `TerminalPrompt` (o/s/d, end of input denies, refuses answers it did not offer); `settings_from_flags`
+  for `--allow`/`--deny`/`--skip-permissions`.
+- "Canvas edits never prompt": an MCP client's insert, update, set-variables and delete record only steps, no
+  permission event; and a source scan fails if anything in `crates/vellum/src/tools/` uses `std::fs`,
+  `std::process`, `std::net` or similar, so tools can reach the outside only through a permit.
+
+Process: the policy and broker were written before their tests, not test-first. To show the tests bite I ran three
+mutations (skip-all beating deny rules; a permit for any recorded decision; a repo-read grant covering outside
+reads); each failed the suite or the core tests, and the first one slipped past the property test until I added an
+independent deny-rule check to it. The canvas test failed first on wrong tool inputs (fixed in the test).
+
+Verified on macOS arm64 (exit 0):
+- `cargo test --workspace -- permissions::` (39: 27 core, 1 trybuild, 3 contracts, 3 unit and 5 integration in
+  `crates/vellum`); `cargo test -p vellum-core -p vellum-contracts -p vellum-sessions-sqlite -p vellum`.
+- `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`; `pnpm checksum`, `pnpm deps:check`,
+  `pnpm types:check`, `pnpm format-spec:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm format:check`.
+
+Not done or not verified: see the two new "Needs a person" items (nothing calls the broker yet; the daemon still
+refuses outside documents; no network executor, settings loader or CLI command). Windows paths are covered by unit
+tests of the normaliser only; the symlink test is Unix-only. No UI or design frames involved (the Permission card
+is Prompt 50).

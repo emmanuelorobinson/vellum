@@ -7,6 +7,7 @@
 //! cache holds the bytes.
 use super::clock::Timestamp;
 use super::model::ChatRole;
+use super::permissions::PermissionRecord;
 use crate::turns::{TurnInput, TurnState};
 use serde_json::Value;
 use std::fmt;
@@ -72,15 +73,16 @@ impl DocKey {
 pub enum SessionKind {
     /// A turn-taking conversation with an engine Vellum runs ("builtin", "claude-code", "codex").
     Engine { engine: String },
-    /// An agent connected over MCP. Only its tool calls are recorded: its conversation lives in its own window.
+    /// An agent connected over MCP. Only its tool calls and permission decisions are recorded: its conversation
+    /// lives in its own window.
     External { client: String },
 }
 impl SessionKind {
-    /// Whether a session of this kind keeps this event. External sessions keep steps only.
+    /// Whether a session of this kind keeps this event. External sessions keep steps and permission decisions.
     pub fn accepts(&self, body: &EventBody) -> bool {
         match self {
             Self::Engine { .. } => true,
-            Self::External { .. } => matches!(body, EventBody::Step(_)),
+            Self::External { .. } => matches!(body, EventBody::Step(_) | EventBody::Permission(_)),
         }
     }
 }
@@ -252,6 +254,8 @@ pub enum EventBody {
     Step(StepRecord),
     Usage(UsageRecord),
     Turn(TurnTransition),
+    /// A decision about an action outside the canvas (guide Invariant 11), allowed or not.
+    Permission(PermissionRecord),
 }
 impl EventBody {
     /// The pictures this event names.
@@ -267,7 +271,7 @@ impl EventBody {
                 })
                 .collect(),
             Self::Step(step) => step.thumbnail.iter().collect(),
-            Self::Plan { .. } | Self::Usage(_) | Self::Turn(_) => vec![],
+            Self::Plan { .. } | Self::Usage(_) | Self::Turn(_) | Self::Permission(_) => vec![],
         }
     }
 }
@@ -297,7 +301,7 @@ pub enum StoreError {
     Exists,
     /// The event's origin names another session.
     WrongSession,
-    /// External sessions record tool calls only.
+    /// External sessions record tool calls and permission decisions only.
     NotRecorded,
     /// A picture the event names is not in the cache.
     MissingImage(ImageRef),
@@ -312,7 +316,9 @@ impl fmt::Display for StoreError {
             Self::UnknownSession => f.write_str("no such session"),
             Self::Exists => f.write_str("the session already exists"),
             Self::WrongSession => f.write_str("the event belongs to another session"),
-            Self::NotRecorded => f.write_str("external sessions record tool calls only"),
+            Self::NotRecorded => {
+                f.write_str("external sessions record tool calls and permission decisions only")
+            }
             Self::MissingImage(image) => write!(f, "picture {image} is not in the cache"),
             Self::Io(message) => write!(f, "session store: {message}"),
             Self::Corrupt(message) => write!(f, "session store is damaged: {message}"),

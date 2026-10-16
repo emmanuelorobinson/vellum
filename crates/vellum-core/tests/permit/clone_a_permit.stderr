@@ -1,0 +1,23 @@
+error[E0308]: mismatched types
+ --> tests/permit/clone_a_permit.rs:5:6
+  |
+5 |     (permit.clone(), permit.clone())
+  |      ^^^^^^^^^^^^^^ expected `Permit`, found `&Permit`
+  |
+note: `Permit` does not implement `Clone`, so `&Permit` was cloned instead
+ --> tests/permit/clone_a_permit.rs:5:6
+  |
+5 |     (permit.clone(), permit.clone())
+  |      ^^^^^^
+
+error[E0308]: mismatched types
+ --> tests/permit/clone_a_permit.rs:5:22
+  |
+5 |     (permit.clone(), permit.clone())
+  |                      ^^^^^^^^^^^^^^ expected `Permit`, found `&Permit`
+  |
+note: `Permit` does not implement `Clone`, so `&Permit` was cloned instead
+ --> tests/permit/clone_a_permit.rs:5:22
+  |
+5 |     (permit.clone(), permit.clone())
+  |                      ^^^^^^

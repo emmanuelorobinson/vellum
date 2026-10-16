@@ -13,6 +13,7 @@ pub mod fonts;
 pub mod layout;
 pub mod model;
 pub mod path;
+pub mod permissions;
 pub mod script;
 pub mod sessions;
 pub mod shader;

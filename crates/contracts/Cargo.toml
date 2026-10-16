@@ -12,5 +12,8 @@ vellum-core = { path = "../vellum-core" }
 serde.workspace = true
 serde_json.workspace = true
 
+[dev-dependencies]
+proptest.workspace = true
+
 [lints]
 workspace = true

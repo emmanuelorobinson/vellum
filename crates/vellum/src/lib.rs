@@ -3,5 +3,6 @@ pub mod cli;
 pub mod content;
 pub mod daemon;
 pub mod mcp;
+pub mod permissions;
 pub mod sessions;
 pub mod tools;

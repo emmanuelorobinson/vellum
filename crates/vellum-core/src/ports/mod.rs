@@ -20,6 +20,7 @@ mod geometry;
 mod layout;
 mod model;
 mod path;
+mod permissions;
 mod script;
 mod sessions;
 mod shader;
@@ -52,6 +53,10 @@ pub use layout::{
 };
 pub use model::*;
 pub use path::{Path, PathOps, PathSegment, StrokeStyle};
+pub use permissions::{
+    Action, Answer, DecisionSource, PermissionBroker, PermissionKind, PermissionPrompt,
+    PermissionRecord, PermissionRequest, Question, Refusal,
+};
 pub use script::{
     ScriptApi, ScriptDiagnostic, ScriptError, ScriptLimits, ScriptOutput, ScriptRuntime,
     ScriptValue,

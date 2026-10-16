@@ -1,0 +1,13 @@
+error[E0451]: fields `action`, `kind`, `origin` and `record` of struct `Permit` are private
+  --> tests/permit/forge_a_permit.rs:8:9
+   |
+ 7 |     Permit {
+   |     ------ in this type
+ 8 |         action,
+   |         ^^^^^^ private field
+ 9 |         kind: PermissionKind::ReadRepo,
+   |         ^^^^ private field
+10 |         origin,
+   |         ^^^^^^ private field
+11 |         record: EventSeq(1),
+   |         ^^^^^^ private field

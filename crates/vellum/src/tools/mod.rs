@@ -223,7 +223,8 @@ pub struct Session {
     /// The client on the other end, once it has said.
     pub client: Option<Client>,
     /// The directory the client was started in. When known, a relative document path means a path in it and a
-    /// document outside it is refused (until the PermissionBroker decides outside reads, Prompt 35).
+    /// document outside it is refused. Opening one is not yet a `PermissionBroker` request: the daemon has nobody
+    /// to ask until the editor's Permission card exists (Prompt 50), so the broker would deny it anyway.
     pub cwd: Option<PathBuf>,
     /// The agent this connection is: every change it makes is attributed to it. Given at its first call.
     agent: Option<AgentId>,
