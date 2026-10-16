@@ -8,9 +8,8 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Review ADR-024 and synchronize ARCHITECTURE** (Prompt 33). §3.4's `AgentEngine` signature changes:
-  `run_turn` is synchronous and returns a non-`Send` stream borrowing a `ToolBridge` (two sync calls);
-  failures are a final `Ended` event; `interrupt` takes `&TurnId`. Review the defaults (40 rounds, 8 failed
+- **Review ADR-024** (Prompt 33). ARCHITECTURE §3.4 was synchronized with it on the owner's instruction
+  (`AgentEngine`/`ToolBridge` signatures, `PromptPack` format, `builtin` behaviour). Review the defaults (40 rounds, 8 failed
   calls, 24,000-character results, 128k assumed window, compaction at 80%, two rounds kept) and the prompt
   pack text in `packages/prompt-packs/packs/builtin.md`. Nothing runs the engine from the daemon or CLI yet,
   and the TypeScript fake engine for UI work is not built (Rust `FakeEngine` only).

@@ -322,17 +322,26 @@ pub trait SecretStore {                   // API keys
 |---|---|
 | `ModelProvider` | `openai-compat` (Chat Completions: **OpenRouter**, default `deepseek/deepseek-v4.1-flash`; DeepSeek, xAI, Moonshot/Kimi, Together, Fireworks, Z.AI, OpenCode, Ollama, LM Studio, any custom endpoint), `openai-responses` (OpenAI and compatible Responses endpoints), `anthropic` (Anthropic API, AWS Bedrock, Google Vertex, Microsoft Foundry, custom Messages endpoints), `google` (Gemini via AI Studio key), `fake` (scripted responses for tests). Reasoning effort is a request field, passed through where the model supports it. Each provider reports a status for the UI: Connected, API key set, Signed in, Configured externally (not tested by us), Failed. |
 | `SecretStore` | `keyring` (OS keychain), `env`, `memory` |
-| `PromptPack` | Versioned system prompts loaded from files, not hard-coded, so they can be tuned without a release |
+| `PromptPack` | Versioned system prompts loaded from files, not hard-coded, so they can be tuned without a release. A pack (`packages/prompt-packs/packs/`) has an `id`/`version` header and `system` (with a `{{skills}}` slot), `self-check` and `summarize` sections (ADR-024) |
 
 The agent-first editor (DESIGN.md) needs four more ports. Each is a swap point for the same reasons as the rest.
 
 ```rust
-/// Who actually runs a turn. The editor and CLI only talk to this.
-pub trait AgentEngine {
+/// Who actually runs a turn. The editor and CLI only talk to this (ADR-024).
+pub trait AgentEngine: Send + Sync {
     fn id(&self) -> &str;                                  // "builtin", "claude-code", "codex"
-    fn availability(&self) -> EngineStatus;                // installed, signed in, usage limit, missing
-    async fn run_turn(&self, turn: TurnRequest, tools: &ToolBridge) -> Result<TurnStream, EngineError>;
-    fn interrupt(&self, turn: TurnId);
+    fn availability(&self) -> EngineStatus;                // ready, missing, signed out, usage limit, failed
+    // Returns at once; the stream borrows the bridge and is not Send (the daemon's documents live on one thread).
+    // Failures are the final event, `Ended(Failed(EngineError))`; every turn ends with exactly one `Ended`.
+    fn run_turn<'a>(&'a self, turn: TurnRequest, tools: &'a dyn ToolBridge)
+        -> Result<Box<dyn TurnStream + 'a>, EngineError>;
+    fn interrupt(&self, turn: &TurnId);                    // from any thread; unknown turns are ignored
+}
+
+/// The engine's only way to the canvas: the tool registry, called as the turn's agent (steps, Guard, origin).
+pub trait ToolBridge {
+    fn tools(&self) -> Vec<BridgeTool>;                    // name, description, schema, read_only
+    fn call(&self, name: &str, input: Value) -> ToolReply; // JSON, or the error as JSON with `failed`
 }
 
 /// Conversations live on the user's computer, never in the design file.
@@ -357,7 +366,7 @@ pub trait SkillSource {
 
 | Port | Implementations |
 |---|---|
-| `AgentEngine` | `builtin` (our loop over any `ModelProvider`), `claude-code` (the user's installed Claude Code, run headlessly with our MCP server attached; uses whatever sign-in it already has: Claude subscription, API key, Bedrock, Vertex), `codex` (same for Codex CLI, including ChatGPT sign-in), `fake`. Later adapters: `gemini-cli`, `copilot` (GitHub sign-in), `cursor-agent`, `opencode`. A new engine is one adapter. |
+| `AgentEngine` | `builtin` (our loop over any `ModelProvider`: one self-check after writes; long tool results cut with a marker; old results pruned to markers, then older rounds summarized, near the context limit; Stop races every provider wait), `claude-code` (the user's installed Claude Code, run headlessly with our MCP server attached; uses whatever sign-in it already has: Claude subscription, API key, Bedrock, Vertex), `codex` (same for Codex CLI, including ChatGPT sign-in), `fake`. Later adapters: `gemini-cli`, `copilot` (GitHub sign-in), `cursor-agent`, `opencode`. A new engine is one adapter. |
 | `SessionStore` | `sqlite` at `~/.vellum/sessions.db` (keyed by the file's repo-relative path + repo root), `memory` |
 | `PermissionBroker` | `editor` (shows a Permission card in the Agent panel), `cli` (prompts in the terminal, or `--allow`/`--deny` flags), `policy` (pre-approved rules from settings, e.g. "read anything in this repo") |
 | `SkillSource` | `builtin` (format schema, `execute` API, workflows), `design-system` (each system's `guidelines.md`), `folder` (user-added `SKILL.md` folders), stacked in that order |

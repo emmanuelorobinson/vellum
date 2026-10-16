@@ -1,6 +1,6 @@
 # ADR-024: Built-in engine loop and context management
 
-Status: proposed; implemented in Prompt 33. Only a person synchronizes ARCHITECTURE.md.
+Status: proposed; implemented in Prompt 33. ARCHITECTURE §3.4 synchronized on the owner's instruction.
 
 ## Decision
 
