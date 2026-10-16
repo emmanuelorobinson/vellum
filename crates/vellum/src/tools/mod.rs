@@ -32,9 +32,11 @@ use vellum_types::{Actor, AgentId, Origin, SessionId, TurnId};
 use crate::daemon::Documents;
 
 pub use bridge::RegistryBridge;
+pub(crate) use scene::free_space;
 pub use spec::{SpecError, formats as spec_formats, parse_spec};
 use step::StepNote;
 pub use step::{Counts, Outcome, STEP_LIMIT, Step, StepTarget, THUMBNAIL_SCALE, Thumbnail, Verb};
+pub(crate) use support::schema_of;
 pub use support::{Index, parse_input};
 
 /// Why a tool did not do what was asked. The message is for the agent that called it: it says what was wrong
@@ -249,6 +251,20 @@ impl Session {
     pub fn in_dir(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: Some(cwd.into()),
+            ..Self::default()
+        }
+    }
+
+    /// The connection an engine's turns run through: its changes are attributed to `agent`, named `name` (a
+    /// built-in hue such as "Teal"), in the session-store session `id` its host made.
+    pub fn for_agent(name: impl Into<String>, agent: AgentId, id: SessionId) -> Self {
+        Self {
+            client: Some(Client {
+                name: name.into(),
+                version: String::new(),
+            }),
+            agent: Some(agent),
+            id: Some(id),
             ..Self::default()
         }
     }

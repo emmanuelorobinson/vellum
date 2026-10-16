@@ -8,6 +8,18 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the plan and placeholder choices** (Prompt 38). Mine, not from a source: a plan is needed at 2 or more
+  frames or an estimate above 20 changes (`PlanSettings`, a setting); the engine decides by calling `propose_plan`
+  (offered only to engines Vellum runs, not to MCP clients), and its first write without a proposal counts as "no
+  plan needed", so an engine that ignores the instruction can still build multi-frame work unplanned. Plans place
+  frames on existing pages only (no tool creates pages). Placeholders are held by the daemon's documents, not the
+  Guard's lease table: nothing exists to lease until the frame is made, so another agent's write on a planned area is
+  not refused; `find_space` and `get_app_state` steer agents away. When the building agent creates a frame with a
+  reserved id it gets an ordinary lease (60 s idle expiry). Not done: live editors are not sent placeholders (no
+  editor wire; drawing is Prompt 51), `execute`'s `doc.findSpace` does not avoid them, and nothing in the daemon,
+  CLI or editor runs the orchestrator yet (`vellum prompt`, Agent panel). Stop during a run must come on the same
+  thread between polls; the orchestrator is single-threaded like the daemon.
+
 - **Script test expects old ADR statuses** (found in Prompt 36, pre-existing).
   `architecture-records.test.mjs` still requires D1–D6 to be Proposed; the owner-authorized synchronization
   recorded Accepted for D1, D2, D3, D5 and D6. The test and ADR-000 are unchanged by Prompt 36.
@@ -2220,3 +2232,48 @@ to reuse cached Skia rather than attempt registry-source synchronization.
 Not verified: native Windows/Linux lifecycle, remote nightly/IPC CI, a real signed-out/quota-rejection/reset
 transcript or API-key auth. Those states have synthetic coverage. Local Stop tests pass, not a multi-run p95
 study. ADR-007/version policy and architecture carryover remain in Needs a person.
+
+
+## Prompt 38: plans, placeholders, leases in orchestration
+
+Built:
+- `vellum_core::plans` (pure): `Plan`/`PlanItem` (numbered items, page, one-line intent, size for new frames, or
+  an existing frame to change), `PlanSettings::needs_plan`, `check` with limits, `Placeholder` (reserved frame id,
+  name, page, planned bounds, agent, turn), `PlanEvent` (proposed, built, ticked, finished, abandoned),
+  `PlanState`/`plan_state` replayed from the session log, and `build_prompt`.
+- Session store: `EventBody::Plan` is now `Plan(PlanEvent)`, with a strict camelCase codec. The old text-only
+  shape was never written by a release and is refused like any unknown shape. Contract suite cases updated.
+- `vellum::orchestrate::Orchestrator`: `start` (prompt, Start, planning run), `edit_request` (Edit request, new
+  planning run with the session's history), `build` (Build with the plan or the person's edited plan; one
+  placeholder per new frame placed with `find_space`, clear of the page's frames and every other placeholder;
+  nothing written to the document), `run_build` (build prompt lists items and placeholders), `stop` (Stop,
+  interrupt, abandon). A wrapping bridge adds `propose_plan`, refuses writes while a plan waits, logs every
+  transition and plan event, ticks items from `report_progress`, leases a planned frame to its agent once created,
+  and clears placeholders and their leases when the turn finishes, fails or is stopped.
+- Tools (additive, versions bumped to 2): `get_app_state` lists `placeholders` (item, name, frame, page, bounds,
+  agent, agent name, filling); `find_space` keeps clear of them (the scene takes `reserved` rectangles as
+  non-selectable occupants); `report_progress` takes `items`, recorded on the step. MCP schema snapshot regenerated
+  and reviewed. `FakeEngine::queue` and `Session::for_agent` added for hosts and tests.
+
+Differs from the guide/ARCHITECTURE: ARCHITECTURE §7.5 calls placeholders "lease records"; here they are
+reservations beside the leases, and become leases when the frame exists (see Needs a person). No ADR was asked
+for and none was written; ARCHITECTURE is unchanged.
+
+Process: the plan unit tests and the orchestration tests were written first and failed to compile on the missing
+module, fake queue and session constructor. One test was wrong (it tried a second Build after a successful one,
+which the turn state refuses) and was reordered, not weakened. Mutation check: dropping the reservations from
+`findSpace` fails the placement test. No UI or design frames involved.
+
+Verified on macOS arm64 (exit 0; Node 24, pnpm 12.11.2, both telemetry opt-outs):
+- `cargo test --offline -p vellum --test orchestration` (13 passed); `cargo test --offline -p vellum-core --lib --
+  plans:: sessions::` (26 passed).
+- `cargo test --offline --workspace --no-fail-fast`: 1,223 passed, 0 failed, 69 ignored.
+- `cargo clippy --offline --workspace --all-targets -- -D warnings`; `cargo clippy --offline -p vellum --lib --bins
+  --examples --tests --no-default-features -- -D warnings`; `cargo fmt --all -- --check`.
+- `pnpm type-check`, `pnpm lint`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`, `pnpm copy-lint`,
+  `pnpm clean-room`, `pnpm checksum`, `pnpm parity:check`.
+- Failed, pre-existing and unchanged: `node --test scripts/__tests__/*.test.mjs` (173 pass, 4 skipped, 2 failures:
+  the old Proposed ADR assertions and the R3 taffy main.rs reference path).
+
+Not run: `pnpm format-spec:check` and `pnpm cargo:deny` (no types or dependencies changed), the engines lane (no
+installed engine runs the orchestrator yet), Windows/Linux.

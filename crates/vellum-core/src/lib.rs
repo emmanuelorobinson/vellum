@@ -22,6 +22,7 @@ pub mod lease;
 pub mod merge;
 pub mod ops;
 pub mod permissions;
+pub mod plans;
 pub mod ports;
 pub mod resolver;
 pub mod scene;

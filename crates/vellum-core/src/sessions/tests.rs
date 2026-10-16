@@ -258,9 +258,7 @@ fn bodies() -> Vec<EventBody> {
                 ],
             },
         ]),
-        EventBody::Plan {
-            text: "1. Hero\n2. Pricing".into(),
-        },
+        EventBody::Plan(crate::plans::PlanEvent::Ticked(vec![1, 2])),
         EventBody::Step(step()),
         EventBody::Step(StepRecord {
             thumbnail: None,

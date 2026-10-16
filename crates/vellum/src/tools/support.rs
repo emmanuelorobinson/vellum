@@ -26,7 +26,7 @@ pub fn parse_input<T: DeserializeOwned>(input: Value) -> Result<T, ToolError> {
 
 /// The input schema of a tool whose input is `T`. An optional field is simply not required (no `null`
 /// alternative), and shared types are written out where they are used, so no client has to chase a `$ref`.
-pub(super) fn schema_of<T: JsonSchema>() -> Schema {
+pub(crate) fn schema_of<T: JsonSchema>() -> Schema {
     let settings = SchemaSettings::draft2020_12().with(|s| {
         s.inline_subschemas = true;
         s.transforms.push(Box::new(NoNull));

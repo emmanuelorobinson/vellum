@@ -1,5 +1,7 @@
 //! The JSON an event's origin and body are stored as. Every store uses it, so a log moved between stores reads
 //! the same. Field names are camelCase; reading refuses anything this version did not write.
+use crate::plans::{Placeholder, Plan, PlanEvent, PlanItem};
+use crate::ports::Rect;
 use crate::ports::{
     Action, Answer, ChatRole, DecisionSource, EventBody, EventSeq, ImageRef, PermissionKind,
     PermissionRecord, StepOutcome, StepRecord, StoreError, StoredMessage, StoredPart, Timestamp,
@@ -7,7 +9,7 @@ use crate::ports::{
 };
 use crate::turns::{TurnInput, TurnState};
 use serde_json::{Map, Value, json};
-use vellum_types::{Origin, TurnId};
+use vellum_types::{AgentId, NodeId, Origin, PageId, TurnId};
 
 pub fn origin_to_json(origin: &Origin) -> Value {
     serde_json::to_value(origin).expect("an origin is plain data")
@@ -74,7 +76,7 @@ pub fn body_to_json(body: &EventBody) -> Value {
             "type": "messages",
             "messages": messages.iter().map(message_json).collect::<Vec<_>>(),
         }),
-        EventBody::Plan { text } => json!({ "type": "plan", "text": text }),
+        EventBody::Plan(event) => plan_json(event),
         EventBody::Step(step) => {
             let mut out = json!({
                 "type": "step",
@@ -416,12 +418,7 @@ pub fn body_from_json(value: &Value) -> Result<EventBody, StoreError> {
                     .collect::<Result<_, _>>()?,
             )
         }
-        "plan" => {
-            let f = Fields::new(value, "plan", &["type", "text"])?;
-            EventBody::Plan {
-                text: f.str("text")?.to_owned(),
-            }
-        }
+        "plan" => EventBody::Plan(plan_event(value)?),
         "step" => {
             let f = Fields::new(
                 value,
@@ -513,5 +510,199 @@ pub fn body_from_json(value: &Value) -> Result<EventBody, StoreError> {
             })
         }
         other => return Err(corrupt(format!("unknown event type `{other}`"))),
+    })
+}
+
+fn plan_item_json(item: &PlanItem) -> Value {
+    let mut out = json!({
+        "id": item.id,
+        "name": item.name,
+        "page": item.page.as_str(),
+        "intent": item.intent,
+    });
+    if let Some(width) = item.width {
+        out["width"] = json!(width);
+    }
+    if let Some(height) = item.height {
+        out["height"] = json!(height);
+    }
+    if let Some(frame) = &item.frame {
+        out["frame"] = json!(frame.as_str());
+    }
+    out
+}
+
+fn plan_body_json(plan: &Plan) -> Value {
+    let mut out = json!({
+        "title": plan.title,
+        "items": plan.items.iter().map(plan_item_json).collect::<Vec<_>>(),
+    });
+    if let Some(changes) = plan.changes {
+        out["changes"] = json!(changes);
+    }
+    out
+}
+
+fn placeholder_json(p: &Placeholder) -> Value {
+    json!({
+        "item": p.item,
+        "frame": p.frame.as_str(),
+        "name": p.name,
+        "page": p.page.as_str(),
+        "bounds": {"x": p.bounds.x, "y": p.bounds.y, "width": p.bounds.width, "height": p.bounds.height},
+        "agent": p.agent.as_str(),
+        "turn": p.turn.as_str(),
+    })
+}
+
+fn plan_json(event: &PlanEvent) -> Value {
+    match event {
+        PlanEvent::Proposed(plan) => {
+            json!({"type": "plan", "event": "proposed", "plan": plan_body_json(plan)})
+        }
+        PlanEvent::Built { plan, placeholders } => json!({
+            "type": "plan",
+            "event": "built",
+            "plan": plan_body_json(plan),
+            "placeholders": placeholders.iter().map(placeholder_json).collect::<Vec<_>>(),
+        }),
+        PlanEvent::Ticked(items) => json!({"type": "plan", "event": "ticked", "items": items}),
+        PlanEvent::Finished => json!({"type": "plan", "event": "finished"}),
+        PlanEvent::Abandoned => json!({"type": "plan", "event": "abandoned"}),
+    }
+}
+
+impl Fields<'_> {
+    fn f64(&self, key: &str) -> Result<f64, StoreError> {
+        self.value(key)?
+            .as_f64()
+            .ok_or_else(|| corrupt(format!("{}.{key} is not a number", self.at)))
+    }
+    fn u32(&self, key: &str) -> Result<u32, StoreError> {
+        u32::try_from(self.u64(key)?)
+            .map_err(|_| corrupt(format!("{}.{key} is too large", self.at)))
+    }
+    fn optional<T>(
+        &self,
+        key: &str,
+        read: impl Fn(&Self, &str) -> Result<T, StoreError>,
+    ) -> Result<Option<T>, StoreError> {
+        match self.object.get(key) {
+            None => Ok(None),
+            Some(_) => read(self, key).map(Some),
+        }
+    }
+}
+
+fn id<T>(
+    text: &str,
+    what: &str,
+    make: fn(String) -> Result<T, vellum_types::IdError>,
+) -> Result<T, StoreError> {
+    make(text.to_owned()).map_err(|_| corrupt(format!("{what} is not an id")))
+}
+
+fn plan_item(value: &Value) -> Result<PlanItem, StoreError> {
+    let f = Fields::new(
+        value,
+        "plan.items",
+        &["id", "name", "page", "intent", "width", "height", "frame"],
+    )?;
+    Ok(PlanItem {
+        id: f.u32("id")?,
+        name: f.str("name")?.to_owned(),
+        page: id(f.str("page")?, "plan item page", PageId::new)?,
+        intent: f.str("intent")?.to_owned(),
+        width: f.optional("width", Fields::f64)?,
+        height: f.optional("height", Fields::f64)?,
+        frame: f
+            .optional("frame", Fields::str)?
+            .map(|frame| id(frame, "plan item frame", NodeId::new))
+            .transpose()?,
+    })
+}
+
+fn plan_body(value: &Value) -> Result<Plan, StoreError> {
+    let f = Fields::new(value, "plan", &["title", "items", "changes"])?;
+    Ok(Plan {
+        title: f.str("title")?.to_owned(),
+        items: f
+            .array("items")?
+            .iter()
+            .map(plan_item)
+            .collect::<Result<_, _>>()?,
+        changes: f.optional("changes", Fields::u32)?,
+    })
+}
+
+fn placeholder(value: &Value) -> Result<Placeholder, StoreError> {
+    let f = Fields::new(
+        value,
+        "placeholder",
+        &["item", "frame", "name", "page", "bounds", "agent", "turn"],
+    )?;
+    let b = Fields::new(
+        f.value("bounds")?,
+        "placeholder.bounds",
+        &["x", "y", "width", "height"],
+    )?;
+    Ok(Placeholder {
+        item: f.u32("item")?,
+        frame: id(f.str("frame")?, "placeholder frame", NodeId::new)?,
+        name: f.str("name")?.to_owned(),
+        page: id(f.str("page")?, "placeholder page", PageId::new)?,
+        bounds: Rect::new(b.f64("x")?, b.f64("y")?, b.f64("width")?, b.f64("height")?),
+        agent: id(f.str("agent")?, "placeholder agent", AgentId::new)?,
+        turn: id(f.str("turn")?, "placeholder turn", TurnId::new)?,
+    })
+}
+
+fn plan_event(value: &Value) -> Result<PlanEvent, StoreError> {
+    let event = value
+        .get("event")
+        .and_then(Value::as_str)
+        .ok_or_else(|| corrupt("a plan event has no kind"))?;
+    Ok(match event {
+        "proposed" => {
+            let f = Fields::new(value, "plan event", &["type", "event", "plan"])?;
+            PlanEvent::Proposed(plan_body(f.value("plan")?)?)
+        }
+        "built" => {
+            let f = Fields::new(
+                value,
+                "plan event",
+                &["type", "event", "plan", "placeholders"],
+            )?;
+            PlanEvent::Built {
+                plan: plan_body(f.value("plan")?)?,
+                placeholders: f
+                    .array("placeholders")?
+                    .iter()
+                    .map(placeholder)
+                    .collect::<Result<_, _>>()?,
+            }
+        }
+        "ticked" => {
+            let f = Fields::new(value, "plan event", &["type", "event", "items"])?;
+            PlanEvent::Ticked(
+                f.array("items")?
+                    .iter()
+                    .map(|item| {
+                        item.as_u64()
+                            .and_then(|n| u32::try_from(n).ok())
+                            .ok_or_else(|| corrupt("plan ticks are item numbers"))
+                    })
+                    .collect::<Result<_, _>>()?,
+            )
+        }
+        "finished" | "abandoned" => {
+            Fields::new(value, "plan event", &["type", "event"])?;
+            if event == "finished" {
+                PlanEvent::Finished
+            } else {
+                PlanEvent::Abandoned
+            }
+        }
+        other => return Err(corrupt(format!("unknown plan event `{other}`"))),
     })
 }

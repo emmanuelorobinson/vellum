@@ -319,14 +319,14 @@
     },
     {
       "_meta": {
-        "vellum/version": 1
+        "vellum/version": 2
       },
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Find an empty area of the canvas of a given size, clear of every frame already on the page. Use it to place a new top-level frame instead of guessing coordinates. Returns the rectangle.",
+      "description": "Find an empty area of the canvas of a given size, clear of every frame already on the page and of every planned frame an agent has reserved. Use it to place a new top-level frame instead of guessing coordinates. Returns the rectangle.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -381,14 +381,14 @@
     },
     {
       "_meta": {
-        "vellum/version": 1
+        "vellum/version": 2
       },
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Report what is open and what the person sees: open documents, the active one, its selection and viewport, which frames are leased (and by which agent; `you` is this client's), which agents are paused, and the notes for agents and context nodes that apply to the selection (or the page, with no selection). Call it first, and again before starting on a new request.",
+      "description": "Report what is open and what the person sees: open documents, the active one, its selection and viewport, which frames are leased (and by which agent; `you` is this client's), the planned frames other agents have reserved (placeholders: leave their areas free), which agents are paused, and the notes for agents and context nodes that apply to the selection (or the page, with no selection). Call it first, and again before starting on a new request.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -1025,14 +1025,14 @@
     },
     {
       "_meta": {
-        "vellum/version": 1
+        "vellum/version": 2
       },
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": false
       },
-      "description": "Tell the person how the work is going: what is done and what comes next, and how many plan items are done. It changes nothing in the document. Call it between parts of a long piece of work.",
+      "description": "Tell the person how the work is going: what is done and what comes next, and how many plan items are done. When building an approved plan, name the items you just finished in `items` so they tick off. It changes nothing in the document. Call it between parts of a long piece of work.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -1042,6 +1042,15 @@
             "format": "uint32",
             "minimum": 0,
             "type": "integer"
+          },
+          "items": {
+            "description": "The numbers of the plan items finished since the last report. Their placeholders give way to the frames.",
+            "items": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
           },
           "message": {
             "description": "One or two plain sentences on what is done and what is next. Shown to the person as it is.",

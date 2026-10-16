@@ -1,6 +1,7 @@
 //! The `SessionStore` contract (ARCHITECTURE §7.6, ADR-006). `run` takes a factory and gives every rule a fresh,
 //! empty store. TEST DATA throughout.
 use serde_json::json;
+use vellum_core::plans::{Placeholder, Plan, PlanEvent, PlanItem};
 use vellum_core::ports::*;
 use vellum_core::turns::{TurnInput, TurnState};
 use vellum_types::{Actor, AgentId, DeviceId, Origin, SessionId, TurnId};
@@ -129,9 +130,20 @@ fn round_trips_every_event(store: &dyn SessionStore) {
             context: vec!["@DESIGN.md".into(), "node:Hero".into()],
             images: vec![picture.clone()],
         },
-        EventBody::Plan {
-            text: "1. Hero".into(),
-        },
+        EventBody::Plan(PlanEvent::Proposed(sample_plan())),
+        EventBody::Plan(PlanEvent::Built {
+            plan: sample_plan(),
+            placeholders: vec![Placeholder {
+                item: 1,
+                frame: vellum_types::NodeId::new("plannedHero1").unwrap(),
+                name: "Hero".into(),
+                page: vellum_types::PageId::new("pageHome1").unwrap(),
+                bounds: Rect::new(0.0, 0.0, 1440.0, 900.0),
+                agent: AgentId::new("01J00000000000000000000002").unwrap(),
+                turn: TurnId::new("01J00000000000000000000003").unwrap(),
+            }],
+        }),
+        EventBody::Plan(PlanEvent::Ticked(vec![1])),
         step(Some(picture.clone())),
         EventBody::Usage(UsageRecord {
             model: "m".into(),
@@ -317,7 +329,7 @@ fn refuses_bad_appends(store: &dyn SessionStore) {
     assert_eq!(
         store.append(
             &x,
-            event(by_agent(&x), 0, EventBody::Plan { text: "no".into() })
+            event(by_agent(&x), 0, EventBody::Plan(PlanEvent::Abandoned))
         ),
         Err(StoreError::NotRecorded),
         "SessionStore: external sessions keep tool calls and permission decisions only"
@@ -441,4 +453,25 @@ fn delete_cascades(store: &dyn SessionStore) {
     );
     store.delete(&t).unwrap();
     assert_eq!(store.image(&shared).unwrap(), None);
+}
+
+/// TEST DATA. A two-item plan.
+fn sample_plan() -> Plan {
+    Plan {
+        title: "TEST DATA: Pricing".into(),
+        items: ["Hero", "Pricing"]
+            .iter()
+            .enumerate()
+            .map(|(n, name)| PlanItem {
+                id: n as u32 + 1,
+                name: (*name).into(),
+                page: vellum_types::PageId::new("pageHome1").unwrap(),
+                intent: format!("TEST DATA: {name}"),
+                width: Some(1440.0),
+                height: Some(900.0),
+                frame: None,
+            })
+            .collect(),
+        changes: Some(40),
+    }
 }

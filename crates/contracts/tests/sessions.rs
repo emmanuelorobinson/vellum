@@ -36,7 +36,7 @@ mod sessions {
         fn append(&self, session: &SessionId, mut event: NewEvent) -> Result<EventSeq, StoreError> {
             // Accepts a plan in an external session without storing it.
             if self.rule == "records everything"
-                && matches!(event.body, EventBody::Plan { .. })
+                && matches!(event.body, EventBody::Plan(_))
                 && let Some(meta) = self.inner.session(session)?
                 && matches!(meta.kind, SessionKind::External { .. })
             {

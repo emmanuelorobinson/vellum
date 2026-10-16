@@ -115,10 +115,13 @@ impl<S: SpatialIndex> Services for SceneServices<S> {
     ) -> Result<ScriptValue, ScriptError> {
         let target = text(args, 0)?;
         let (roots, boxes) = self.inspect(doc, target, Some(method))?;
+        let mut nodes =
+            scene::from_resolved(&roots, &boxes).map_err(|e| error(format!("{e:?}")))?;
+        if method == Method::FindSpace {
+            nodes.extend(reservations(&to_json(arg(args, 1)?)?)?);
+        }
         let mut scene = Scene::new((self.make_index)());
-        scene
-            .sync(&scene::from_resolved(&roots, &boxes).map_err(|e| error(format!("{e:?}")))?)
-            .map_err(|e| error(format!("{e:?}")))?;
+        scene.sync(&nodes).map_err(|e| error(format!("{e:?}")))?;
         match method {
             Method::FindSpace => {
                 let size = to_json(arg(args, 1)?)?;
@@ -295,4 +298,30 @@ pub fn problem(p: &layout_check::Problem) -> Json {
 }
 fn base64(bytes: &[u8]) -> String {
     crate::base64::encode(bytes)
+}
+
+/// Areas `findSpace` must treat as taken besides the page's frames: planned-frame placeholders (session state,
+/// never in the document), given as `reserved: [{x, y, width, height}]`. They block space but are never selectable.
+fn reservations(size: &Json) -> Result<Vec<scene::SceneNode>, ScriptError> {
+    let Some(list) = size.get("reserved") else {
+        return Ok(vec![]);
+    };
+    let list = list
+        .as_array()
+        .ok_or_else(|| error("Expected reserved to be a list of rectangles"))?;
+    list.iter()
+        .enumerate()
+        .map(|(n, rect)| {
+            let side = |key: &str| {
+                rect.get(key)
+                    .and_then(Json::as_f64)
+                    .ok_or_else(|| error(format!("Expected reserved[{n}].{key}")))
+            };
+            let address = NodeId::new(format!("--reserved-{n}")).map_err(error)?;
+            let mut node = scene::SceneNode::default_for(address.into());
+            node.bounds = Rect::new(side("x")?, side("y")?, side("width")?, side("height")?);
+            node.selectable = false;
+            Ok(node)
+        })
+        .collect()
 }

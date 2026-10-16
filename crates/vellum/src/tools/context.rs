@@ -123,13 +123,14 @@ impl Tool for GetAppState {
         "get_app_state"
     }
     fn version(&self) -> u32 {
-        1
+        2
     }
     fn description(&self) -> &'static str {
         "Report what is open and what the person sees: open documents, the active one, its selection and \
-         viewport, which frames are leased (and by which agent; `you` is this client's), which agents are \
-         paused, and the notes for agents and context nodes that apply to the selection (or the page, with no \
-         selection). Call it first, and again before starting on a new request."
+         viewport, which frames are leased (and by which agent; `you` is this client's), the planned frames \
+         other agents have reserved (placeholders: leave their areas free), which agents are paused, and the \
+         notes for agents and context nodes that apply to the selection (or the page, with no selection). Call \
+         it first, and again before starting on a new request."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<StateInput>()
@@ -184,6 +185,7 @@ impl Tool for GetAppState {
             "selection": [],
             "viewport": null,
             "leases": [],
+            "placeholders": [],
             "paused": {"all": false, "agents": [], "stopped": []},
             "scope": null,
             "notes": [],
@@ -200,6 +202,25 @@ impl Tool for GetAppState {
         out["selection"] = json!(state.selection);
         out["viewport"] = json!(state.viewport);
         out["leases"] = json!(state.leases);
+        let names = ctx.docs().agents().clone();
+        out["placeholders"] = ctx
+            .docs()
+            .placeholders(&path)
+            .iter()
+            .map(|planned| {
+                let p = &planned.placeholder;
+                json!({
+                    "item": p.item,
+                    "name": p.name,
+                    "frame": p.frame.as_str(),
+                    "page": p.page.as_str(),
+                    "bounds": {"x": p.bounds.x, "y": p.bounds.y, "width": p.bounds.width, "height": p.bounds.height},
+                    "agent": p.agent.as_str(),
+                    "agentName": names.get(&p.agent),
+                    "filling": planned.filling,
+                })
+            })
+            .collect();
         out["paused"] = json!(state.paused);
 
         let index = Index::build(&doc);

@@ -11,8 +11,10 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use vellum_core::doc_api::{Method, from_json, problem_json, to_json};
 use vellum_core::layout_check::Problem;
-use vellum_core::ports::ScriptValue;
-use vellum_types::NodeIdPath;
+use vellum_core::ports::{Rect, ScriptValue};
+use vellum_types::{Document, NodeIdPath};
+
+use crate::daemon::Documents;
 
 use super::support::{Index, parse_input, schema_of};
 use super::{ErrorKind, Tool, ToolCtx, ToolError};
@@ -212,11 +214,12 @@ impl Tool for FindSpace {
         "find_space"
     }
     fn version(&self) -> u32 {
-        1
+        2
     }
     fn description(&self) -> &'static str {
-        "Find an empty area of the canvas of a given size, clear of every frame already on the page. Use it to \
-         place a new top-level frame instead of guessing coordinates. Returns the rectangle."
+        "Find an empty area of the canvas of a given size, clear of every frame already on the page and of every \
+         planned frame an agent has reserved. Use it to place a new top-level frame instead of guessing \
+         coordinates. Returns the rectangle."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<SpaceInput>()
@@ -259,23 +262,16 @@ impl Tool for FindSpace {
                     .join(", ")
             )));
         }
-        let mut size = json!({"width": width, "height": height});
-        if let Some(near) = near {
-            size["near"] = json!({"x": near.x, "y": near.y});
-        }
-        let rect = ctx
-            .docs()
-            .services()
-            .read(
-                Method::FindSpace,
-                &doc,
-                &[
-                    ScriptValue::Text(page.clone()),
-                    from_json(size).map_err(scene_error)?,
-                ],
-            )
-            .map_err(scene_error)?;
-        Ok(json!({"document": path, "page": page, "rect": to_json(&rect).map_err(scene_error)?}))
+        let (_, rect) = free_space(
+            ctx.docs(),
+            &path,
+            &doc,
+            &page,
+            (width, height),
+            near.map(|p| (p.x, p.y)),
+            &[],
+        )?;
+        Ok(json!({"document": path, "page": page, "rect": rect}))
     }
 }
 
@@ -333,4 +329,55 @@ impl Tool for Screenshot {
         let image = to_json(&image).map_err(scene_error)?;
         Ok(json!({"document": path, "node": node, "scale": scale, "image": image}))
     }
+}
+
+/// A free area of `size` on `page` of the document at `path`, clear of its frames, of every placeholder standing
+/// there, and of `also` (placeholders about to be placed). What `find_space` answers and what Build places with;
+/// also returned as the JSON `find_space` has always answered with.
+pub(crate) fn free_space(
+    docs: &mut Documents,
+    path: &str,
+    doc: &Document,
+    page: &str,
+    (width, height): (f64, f64),
+    near: Option<(f64, f64)>,
+    also: &[Rect],
+) -> Result<(Rect, Value), ToolError> {
+    let reserved: Vec<Value> = docs
+        .placeholders(path)
+        .iter()
+        .map(|planned| &planned.placeholder)
+        .filter(|p| p.page.as_str() == page)
+        .map(|p| p.bounds)
+        .chain(also.iter().copied())
+        .map(|b| json!({"x": b.x, "y": b.y, "width": b.width, "height": b.height}))
+        .collect();
+    let mut size = json!({"width": width, "height": height});
+    if let Some((x, y)) = near {
+        size["near"] = json!({"x": x, "y": y});
+    }
+    if !reserved.is_empty() {
+        size["reserved"] = json!(reserved);
+    }
+    let rect = docs
+        .services()
+        .read(
+            Method::FindSpace,
+            doc,
+            &[
+                ScriptValue::Text(page.to_owned()),
+                from_json(size).map_err(scene_error)?,
+            ],
+        )
+        .map_err(scene_error)?;
+    let rect = to_json(&rect).map_err(scene_error)?;
+    let side = |key: &str| {
+        rect[key]
+            .as_f64()
+            .ok_or_else(|| ToolError::new(ErrorKind::Internal, "find_space returned no rectangle"))
+    };
+    Ok((
+        Rect::new(side("x")?, side("y")?, side("width")?, side("height")?),
+        rect,
+    ))
 }

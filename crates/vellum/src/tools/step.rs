@@ -149,6 +149,9 @@ pub struct Step {
     /// Done and total of a progress report.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress: Option<(u32, u32)>,
+    /// The plan items a progress report ticked off.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<u32>,
     /// Why it failed, in the words the agent was given.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
@@ -177,6 +180,7 @@ pub struct StepNote {
     pub(super) script: Option<String>,
     pub(super) message: Option<String>,
     pub(super) progress: Option<(u32, u32)>,
+    pub(super) items: Vec<u32>,
 }
 
 impl StepNote {
@@ -261,6 +265,7 @@ impl Step {
             script: note.script,
             message: note.message,
             progress: note.progress,
+            items: note.items,
             error: failed.map(ToString::to_string),
             started_at,
             duration_ms: (ended_at - started_at).max(0),

@@ -8,6 +8,7 @@
 use super::clock::Timestamp;
 use super::model::ChatRole;
 use super::permissions::PermissionRecord;
+use crate::plans::PlanEvent;
 use crate::turns::{TurnInput, TurnState};
 use serde_json::Value;
 use std::fmt;
@@ -248,9 +249,8 @@ pub enum EventBody {
     },
     /// The messages a turn added, for the next turn's history.
     Messages(Vec<StoredMessage>),
-    Plan {
-        text: String,
-    },
+    /// The turn's plan: proposed, built (with its placeholders), ticked, finished or abandoned.
+    Plan(PlanEvent),
     Step(StepRecord),
     Usage(UsageRecord),
     Turn(TurnTransition),
@@ -271,7 +271,7 @@ impl EventBody {
                 })
                 .collect(),
             Self::Step(step) => step.thumbnail.iter().collect(),
-            Self::Plan { .. } | Self::Usage(_) | Self::Turn(_) | Self::Permission(_) => vec![],
+            Self::Plan(_) | Self::Usage(_) | Self::Turn(_) | Self::Permission(_) => vec![],
         }
     }
 }

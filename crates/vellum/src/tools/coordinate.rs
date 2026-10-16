@@ -99,6 +99,8 @@ struct ProgressInput {
     done: Option<u32>,
     /// How many items the plan has.
     total: Option<u32>,
+    /// The numbers of the plan items finished since the last report. Their placeholders give way to the frames.
+    items: Option<Vec<u32>>,
 }
 
 /// The longest progress message kept.
@@ -109,11 +111,12 @@ impl Tool for ReportProgress {
         "report_progress"
     }
     fn version(&self) -> u32 {
-        1
+        2
     }
     fn description(&self) -> &'static str {
         "Tell the person how the work is going: what is done and what comes next, and how many plan items are \
-         done. It changes nothing in the document. Call it between parts of a long piece of work."
+         done. When building an approved plan, name the items you just finished in `items` so they tick off. It \
+         changes nothing in the document. Call it between parts of a long piece of work."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<ProgressInput>()
@@ -132,7 +135,14 @@ impl Tool for ReportProgress {
             message,
             done,
             total,
+            items,
         } = parse_input(input)?;
+        if items.as_ref().is_some_and(Vec::is_empty) {
+            return Err(ToolError::invalid(
+                "items",
+                "Name at least one item, or leave items out.",
+            ));
+        }
         let message = message.trim();
         if message.is_empty() {
             return Err(ToolError::invalid(
@@ -155,7 +165,7 @@ impl Tool for ReportProgress {
             (Some(_), None) => return Err(ToolError::invalid("total", "Give total with done.")),
             (None, Some(_)) => return Err(ToolError::invalid("done", "Give done with total.")),
         };
-        ctx.note_progress(message, progress);
+        ctx.note_progress(message, progress, items.unwrap_or_default());
         Ok(json!({"recorded": true}))
     }
 }

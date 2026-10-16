@@ -14,6 +14,7 @@ use vellum_core::doc_api::Services;
 use vellum_core::guard::GuardState;
 use vellum_core::merge::merge;
 use vellum_core::ops::{Applied, Transaction};
+use vellum_core::plans::Placeholder;
 use vellum_core::ports::{
     Clock, Codec, DocStore, DocumentTarget, FileError, FileSystem, FileWatcher, FsError, IdGen,
     ScriptRuntime, TargetError, TargetMode, Timestamp,
@@ -126,6 +127,16 @@ pub struct Documents {
     tool_ids: ToolIds,
     /// Every agent that has called a tool, by the name it goes by ("Claude Code").
     agents: BTreeMap<AgentId, String>,
+    /// Planned frames by document path: session state every agent sees, never written to a file.
+    placeholders: BTreeMap<String, Vec<Planned>>,
+}
+
+/// A placeholder as the daemon holds it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Planned {
+    pub placeholder: Placeholder,
+    /// The agent has created the frame and holds its lease; the placeholder stays until the item is done.
+    pub filling: bool,
 }
 
 fn file_actor(reason: FileReason) -> Origin {
@@ -144,6 +155,7 @@ impl Documents {
             active: None,
             tool_ids,
             agents: BTreeMap::new(),
+            placeholders: BTreeMap::new(),
         }
     }
 
@@ -165,6 +177,46 @@ impl Documents {
     /// Every agent that has called a tool, with its name.
     pub fn agents(&self) -> &BTreeMap<AgentId, String> {
         &self.agents
+    }
+
+    /// The placeholders standing in `path`, in the order they were placed.
+    pub fn placeholders(&self, path: &str) -> &[Planned] {
+        self.placeholders.get(path).map_or(&[], Vec::as_slice)
+    }
+
+    /// Places `placeholders` in `path` (Build). The file does not change.
+    pub fn reserve(&mut self, path: &str, placeholders: Vec<Placeholder>) {
+        self.placeholders
+            .entry(path.to_owned())
+            .or_default()
+            .extend(placeholders.into_iter().map(|placeholder| Planned {
+                placeholder,
+                filling: false,
+            }));
+    }
+
+    /// Marks the placeholder for `frame` in `path` as being filled: its frame exists now.
+    pub fn filling(&mut self, path: &str, frame: &NodeId) {
+        if let Some(planned) = self.placeholders.get_mut(path) {
+            for p in planned.iter_mut().filter(|p| &p.placeholder.frame == frame) {
+                p.filling = true;
+            }
+        }
+    }
+
+    /// Removes the placeholders in `path` that `gone` picks, and returns them.
+    pub fn unreserve(&mut self, path: &str, gone: impl Fn(&Placeholder) -> bool) -> Vec<Planned> {
+        let Some(planned) = self.placeholders.get_mut(path) else {
+            return vec![];
+        };
+        let (removed, kept) = std::mem::take(planned)
+            .into_iter()
+            .partition(|p| gone(&p.placeholder));
+        *planned = kept;
+        if planned.is_empty() {
+            self.placeholders.remove(path);
+        }
+        removed
     }
 
     /// Ids for things a tool makes before its transaction names them. Every handle draws from one generator.

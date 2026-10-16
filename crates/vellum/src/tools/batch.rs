@@ -171,9 +171,15 @@ impl ToolCtx<'_> {
     }
 
     /// Notes what a progress report said.
-    pub(super) fn note_progress(&mut self, message: &str, progress: Option<(u32, u32)>) {
+    pub(super) fn note_progress(
+        &mut self,
+        message: &str,
+        progress: Option<(u32, u32)>,
+        items: Vec<u32>,
+    ) {
         self.note.message = Some(message.to_owned());
         self.note.progress = progress;
+        self.note.items = items;
     }
 }
 

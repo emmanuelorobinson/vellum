@@ -106,6 +106,10 @@ impl FakeEngine {
         self.status = status;
         self
     }
+    /// Adds a script for a later turn, for scripts that need what an earlier turn produced (a placeholder's id).
+    pub fn queue(&self, script: Vec<FakeStep>) {
+        self.scripts.lock().unwrap().push_back(script);
+    }
     pub fn requests(&self) -> Vec<TurnRequest> {
         self.requests.lock().unwrap().clone()
     }
