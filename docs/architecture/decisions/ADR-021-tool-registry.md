@@ -2,6 +2,7 @@
 
 Status: implemented for Prompt 29 in the `vellum` composition root; the write tools, `execute`, batch errors
 and step descriptors for Prompt 30 (section "Prompt 30" below). Skills and styles in Prompt 31.
+ARCHITECTURE §3.4, §7 and §7.3 synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 

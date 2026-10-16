@@ -1,6 +1,6 @@
 # ADR-022: Skills, styles and parity inventory (Prompt 31)
 
-Status: Accepted for implementation; architecture synchronization needs a person.
+Status: Accepted for implementation; implemented. ARCHITECTURE synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 

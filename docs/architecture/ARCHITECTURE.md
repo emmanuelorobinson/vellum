@@ -285,43 +285,64 @@ Tools, commands and panels are registered through **registries** (`registerTool`
 
 ### 3.4 Agent and AI ports (daemon)
 
-**The tool registry is the product's real API.** MCP is one adapter over it.
+**The tool registry is the product's real API.** MCP is one adapter over it. It lives in `crates/vellum/src/tools/` (ADR-021).
 
 ```rust
 pub trait Tool {
-    fn name(&self) -> &'static str;              // "insert_nodes"
+    fn name(&self) -> &'static str;              // "insert_nodes"; stable, a breaking change is a new name
     fn version(&self) -> u32;
-    fn input_schema(&self) -> schemars::Schema;
-    fn run(&self, ctx: &ToolCtx, input: Value) -> Result<Value, ToolError>;
+    fn description(&self) -> &'static str;       // shown to the agent
+    fn input_schema(&self) -> schemars::Schema;  // an object that refuses unknown fields
+    fn read_only(&self) -> bool;
+    fn destructive(&self) -> bool;               // defaults to !read_only
+    fn run(&self, ctx: &mut ToolCtx<'_>, input: Value) -> Result<Value, ToolError>;
 }
 ```
+
+`run` takes and returns JSON; a picture goes under an `image` key (`{ mime, base64, width, height }`), which the
+MCP front end sends as an image block. `ToolError` is `{ kind, message, path, op, line }`: kinds `invalid_input`,
+`not_found`, `document`, `refused`, `render`, `internal`; `op` is the batch item at fault, `line` the script or
+spec line. A failed tool is a result the agent can read and fix, not a protocol error.
 
 | Front end (adapter) | Uses the registry via |
 |---|---|
-| MCP server | `rmcp`, stdio + streamable HTTP |
+| MCP server | Hand-written dispatcher (`mcp.rs`: `initialize`, `ping`, `tools/list`, `tools/call`, `server/discover`) over the daemon's stdio bridge and opt-in HTTP; `rmcp` if MCP features beyond tools are needed (ADR-021) |
 | CLI | `clap` subcommands generated from tool schemas |
-| Built-in agent (`AgentEngine`) | Agent loop calling tools directly |
+| Built-in agent (`AgentEngine`) | Agent loop calling tools through a `ToolBridge` over the registry |
 | Future protocols | New adapter only; tools unchanged |
 
-`ToolCtx` routes to a **`DocumentTarget`** port with two implementations: `LiveTarget` (forward ops to the editor that has the file open) and `HeadlessTarget` (native engine + file). Tools don't know which they're talking to.
+`ToolCtx` routes to a **`DocumentTarget`** port with two implementations: `LiveTarget` (forward ops to the editor that has the file open) and `HeadlessTarget` (native engine + file). Tools don't know which they're talking to. Leases are a target capability (`DocumentTarget::lease(frame, agent, Claim | Release)`), so the editor wire protocol carries claims too. `execute` runs its script on a scratch copy of the document and sends the resulting diff to the target as one transaction; the target's Guard still decides (ADR-021).
 
 ```rust
-pub trait ModelProvider {                 // built-in agent and `vellum prompt`
+pub trait ModelProvider: Send + Sync {    // built-in agent and `vellum prompt`
     fn id(&self) -> &str;
-    fn capabilities(&self) -> ModelCaps;  // tools, vision, context size
-    async fn complete(&self, req: ChatRequest) -> Result<ChatStream, ModelError>;
+    fn capabilities(&self) -> ModelCaps;  // tools, vision, reasoning, context size (None = unknown, never unlimited)
+    fn status(&self) -> ProviderStatus;
+    fn complete(&self, req: ChatRequest, cancel: Cancellation) -> ModelFuture<'_, Result<ChatStream, ModelError>>;
 }
 
-pub trait SecretStore {                   // API keys
-    fn get(&self, key: &str) -> Option<SecretString>;
+/// HTTP, injected by the composition root so protocol adapters never import another adapter.
+pub trait ModelTransport: Send + Sync {
+    fn start(&self, req: ModelHttpRequest, cancel: Cancellation) -> ModelFuture<'_, Result<WireStream, ModelError>>;
+}
+
+pub trait SecretStore: Send + Sync {      // API keys
+    fn get(&self, key: &str) -> Result<Option<SecretString>, SecretError>;  // missing vs. locked/unavailable
     fn set(&self, key: &str, value: SecretString) -> Result<(), SecretError>;
+    fn delete(&self, key: &str) -> Result<(), SecretError>;                 // Clear key
 }
 ```
 
+Futures are plain `std` futures; core takes no runtime. Conversations carry native tool calls and results,
+inline images and opaque provider continuation blocks, which hosts must send back unchanged. Errors are
+payload-free enums. `SecretString` never serializes and formats as redacted; credentials echoed by a server are
+redacted from the stream. There are no automatic retries: the engine decides whether a replay is safe (ADR-023).
+
 | Port | Implementations |
 |---|---|
-| `ModelProvider` | `openai-compat` (Chat Completions: **OpenRouter**, default `deepseek/deepseek-v4.1-flash`; DeepSeek, xAI, Moonshot/Kimi, Together, Fireworks, Z.AI, OpenCode, Ollama, LM Studio, any custom endpoint), `openai-responses` (OpenAI and compatible Responses endpoints), `anthropic` (Anthropic API, AWS Bedrock, Google Vertex, Microsoft Foundry, custom Messages endpoints), `google` (Gemini via AI Studio key), `fake` (scripted responses for tests). Reasoning effort is a request field, passed through where the model supports it. Each provider reports a status for the UI: Connected, API key set, Signed in, Configured externally (not tested by us), Failed. |
-| `SecretStore` | `keyring` (OS keychain), `env`, `memory` |
+| `ModelProvider` | `openai-compat` (Chat Completions: **OpenRouter**, default `deepseek/deepseek-v4.1-flash`; DeepSeek, xAI, Moonshot/Kimi, Together, Fireworks, Z.AI, OpenCode, Ollama, LM Studio, any custom endpoint), `openai-responses` (OpenAI and compatible Responses endpoints), `anthropic` (Anthropic API, AWS Bedrock via its native Messages SSE route, Google Vertex, Microsoft Foundry, custom Messages endpoints; hosts supply and refresh cloud credentials), `google` (Gemini via AI Studio key), `fake` (scripted responses for tests). Reasoning effort is a request field, passed through where the model supports it. Each provider reports a status for the UI: Connected, API key set, Signed in, Configured externally (not tested by us), Failed. |
+| `ModelTransport` | `model-http` (HTTPS except loopback, no redirects, bounded SSE, cancellation drops the request) |
+| `SecretStore` | `keyring` (OS keychain), `env` (read-only `VELLUM_<PROVIDER>_API_KEY`, for CI; used only when the keychain has no entry, never when it fails), `memory` |
 | `PromptPack` | Versioned system prompts loaded from files, not hard-coded, so they can be tuned without a release. A pack (`packages/prompt-packs/packs/`) has an `id`/`version` header and `system` (with a `{{skills}}` slot), `self-check` and `summarize` sections (ADR-024) |
 
 The agent-first editor (DESIGN.md) needs four more ports. Each is a swap point for the same reasons as the rest.
@@ -359,8 +380,14 @@ pub trait PermissionBroker {
 
 /// Skills: instructions agents read before working. Built-in, per design system, and user-added SKILL.md folders.
 pub trait SkillSource {
-    fn list(&self) -> Vec<SkillMeta>;
-    fn read(&self, path: &str) -> Result<String, SkillError>;
+    fn list(&self) -> Result<Vec<SkillMeta>, ContentError>;   // a missing or malformed configured folder is an error
+    fn read(&self, path: &str) -> Result<String, ContentError>;
+}
+
+/// Visual styles agents can apply when no design system is set.
+pub trait StyleLibrary {
+    fn list(&self) -> Result<Vec<StyleMeta>, ContentError>;
+    fn read(&self, name: &str) -> Result<VisualStyle, ContentError>;
 }
 ```
 
@@ -369,8 +396,8 @@ pub trait SkillSource {
 | `AgentEngine` | `builtin` (our loop over any `ModelProvider`: one self-check after writes; long tool results cut with a marker; old results pruned to markers, then older rounds summarized, near the context limit; Stop races every provider wait), `claude-code` (the user's installed Claude Code, run headlessly with our MCP server attached; uses whatever sign-in it already has: Claude subscription, API key, Bedrock, Vertex), `codex` (same for Codex CLI, including ChatGPT sign-in), `fake`. Later adapters: `gemini-cli`, `copilot` (GitHub sign-in), `cursor-agent`, `opencode`. A new engine is one adapter. |
 | `SessionStore` | `sqlite` at `~/.vellum/sessions.db` (keyed by the file's repo-relative path + repo root), `memory` |
 | `PermissionBroker` | `editor` (shows a Permission card in the Agent panel), `cli` (prompts in the terminal, or `--allow`/`--deny` flags), `policy` (pre-approved rules from settings, e.g. "read anything in this repo") |
-| `SkillSource` | `builtin` (format schema, `execute` API, workflows), `design-system` (each system's `guidelines.md`), `folder` (user-added `SKILL.md` folders), stacked in that order |
-| `StyleLibrary` | Visual styles (palette, type, radius, density and a short description) that agents can apply when no design system is set. `builtin` + `folder`. |
+| `SkillSource` | `builtin` (format schema, `execute` API, workflows), `design-system` (each system's `guidelines.md`), `folder` (user-added `SKILL.md` folders), stacked in that order; a later source owns a duplicate path. Folder sources read only explicitly configured files through an authorized rooted `FileSystem` (no recursive scan, no home-directory discovery) (ADR-022) |
+| `StyleLibrary` | Visual styles (palette, type, radius, density and a short description) that agents can apply when no design system is set. `builtin` (six recipes) + `folder` (registered JSON files). Recipes are starting points for canvas work; existing variables, guidelines and the person's decisions win, and fonts are preferences, not claims they are installed. |
 
 ### 3.5 Export ports
 
@@ -570,7 +597,7 @@ One static Rust binary: MCP server, CLI, agent runner, headless renderer and fil
 
 | Need | Crate |
 |---|---|
-| MCP adapter | `rmcp` |
+| MCP adapter | Hand-written over the IPC transport (ADR-021); `rmcp` not used |
 | Local IPC to editors and CLI | `tokio` + `interprocess` (Unix domain socket on macOS/Linux, named pipe on Windows) |
 | Script runtime (`execute`, script nodes) | `rquickjs` behind `ScriptRuntime` |
 | File watching | `notify` |
@@ -628,7 +655,15 @@ return doc.screenshot(step, { scale: 1 });   // image returned to the agent
 | **Coordination** | `claim_frame` / `release_frame`, `spawn_agents(tasks[], mode)` (§7.5), `report_progress` (updates the plan card and turn) |
 | **Browser** (v1.1) | `browser(url, action: screenshot \| import \| import_element, selector?)`, including `localhost` dev servers |
 
-Mutating tools take a batch, run as one transaction and one undo step, and return created IDs. A bad op rejects the batch with a precise error the agent can act on.
+Mutating tools take a batch, run as one transaction and one undo step, and return created IDs. A bad op rejects the batch with a precise error the agent can act on: the batch item (`op`), the field in the input's own spelling (`nodes[1].opacity`) and a plain reason.
+
+**How the daemon runs tools** (ADR-021):
+
+- **One thread owns the documents.** Requests run one at a time; a tool that panics is answered as an error and the thread carries on.
+- **Each MCP connection is one agent**, named after its client's `initialize` name, with its own `AgentId` and `SessionId`; its transactions carry them. External calls carry no turn; the built-in engine's do.
+- **Every call is a step** (verb, target frame, counts, thumbnail request, error, timing) kept in the session for the Agent panel and the session store.
+- **Where a document may be.** The connection's hello carries the client's working directory. A relative path means a path in it, and anything outside it is refused until the `PermissionBroker` can ask (§7.7).
+- **The `vellum tool <name>` CLI** has a subcommand per tool and a flag per schema property, and goes to the daemon like any client.
 
 ### 7.4 pen.dev parity check
 
@@ -914,7 +949,7 @@ vellum/
       doc-loro/  layout-taffy/  text-parley/  index-rstar/  pathops-kurbo/
       codec-json/  codec-json-dir/  assets-fs/  assets-s3/
       render-skia/  render-vello/ (later)
-      llm-openai-compat/  llm-anthropic/  llm-google/  secrets-keyring/
+      llm-openai-compat/  llm-openai-responses/  llm-anthropic/  llm-google/  model-http/  secrets-keyring/
       script-quickjs/  sessions-sqlite/  browser-cdp/ (v1.1)
       engine-builtin/  engine-claude-code/  engine-codex/
       import-svg/  import-image/  import-figma/  import-html/ (v1.1)

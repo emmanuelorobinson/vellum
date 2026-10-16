@@ -8,40 +8,19 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **ADR-021, 022 and 023 are synchronized into ARCHITECTURE** (2026-10-16, on the owner's instruction: §3.4 `Tool`,
+  `ToolError`, MCP front end, `DocumentTarget::lease`, scratch-store `execute`, `ModelProvider`/`ModelTransport`/
+  `SecretStore`, `SkillSource`/`StyleLibrary`; §7 MCP row; §7.3 "How the daemon runs tools"; §13 adapters).
+  Still yours to decide: keep the hand-written MCP front end or move to `rmcp` before MCP features beyond tools are
+  needed; the "only inside the client's directory" rule until the PermissionBroker (Prompt 35); the
+  CDLA-Permissive-2.0 exception for `webpki-root-certs`. Not run: native Windows/Linux keychains and HTTP, remote CI.
+
 - **Review ADR-024** (Prompt 33). ARCHITECTURE §3.4 was synchronized with it on the owner's instruction
   (`AgentEngine`/`ToolBridge` signatures, `PromptPack` format, `builtin` behaviour). Review the defaults (40 rounds, 8 failed
   calls, 24,000-character results, 128k assumed window, compaction at 80%, two rounds kept) and the prompt
   pack text in `packages/prompt-packs/packs/builtin.md`. Nothing runs the engine from the daemon or CLI yet,
   and the TypeScript fake engine for UI work is not built (Rust `FakeEngine` only).
 
-- **Review ADR-023 and synchronize ARCHITECTURE** (Prompt 32). SecretStore now exposes missing vs failed reads
-  and deletion; ModelTransport is injected into four independent protocol adapters. Bedrock uses the native
-  Messages SSE route; hosts must supply/refresh cloud credentials. Review the exact root-certificate data licence
-  exception. Only macOS native Keychain/HTTP ran locally; remote native lanes and full engine canary coverage remain.
-
-- **Review ADR-022 and synchronize ARCHITECTURE** (Prompt 31). `SkillSource::list` returns a Result so configured
-  missing/unreadable folders are explicit; `StyleLibrary` now has typed recipes and list/read methods. Folder
-  sources require an explicitly authorized rooted filesystem. Wire these into PermissionBroker and Add skill
-  settings in Prompts 35/50. The parity inventory distinguishes active behavior tests from later-prompt placeholders;
-  Prompt 32 covers a scripted provider-to-registry retry; Prompt 33 adds the built-in engine E2E (tagged lane).
-
-- **Review ADR-021 "Prompt 30" and synchronize ARCHITECTURE** (Prompt 30). Only a person edits ARCHITECTURE.md.
-  (1) `DocumentTarget` gains `lease(frame, agent, Claim|Release)` and `TargetError::Lease`; `EditorLink` gains
-  `lease` too, so the editor wire protocol (ADR-020, still open) must carry claims. (2) `execute` runs the script
-  on a scratch store and sends the resulting diff to the target as one transaction, instead of running against the
-  target's own store. (3) Each MCP connection is one agent named after its client, with a fresh `AgentId` and
-  `SessionId`; external calls carry no turn. (4) `crates/vellum` now depends on `vellum-script-quickjs` behind a
-  default `scripts` feature. (5) Tool descriptions point agents at `read_skill` (implemented in Prompt 31).
-
-- **Review ADR-021 and synchronize ARCHITECTURE** (Prompt 29). Only a person edits ARCHITECTURE.md. (1) §3.4 `Tool`
-  gains `description`, `read_only` and `destructive`, and `run` returns JSON with a picture under an `image` key.
-  (2) §7 and §10 say `rmcp`; the MCP front end is hand-written (`crates/vellum/src/mcp.rs`, about 150 lines of
-  dispatch) because the daemon already owns the transport and the documents are not `Send`. Decide whether that
-  stands or `rmcp` should replace it before MCP features beyond tools (resources, progress, elicitation) are needed.
-  (3) The daemon hello gains an optional `cwd`, and **a client can reach only `.vellum` documents inside the
-  directory it was started in**; that is stricter than "the repo" and stays until the PermissionBroker (Prompt 35).
-  (4) The shipped `vellum` binary now builds Skia (default `scene` feature); the IPC lane builds without it.
-  (5) The daemon runs tools one at a time on one thread.
 - **Decide how the canvas draws note, context and prompt nodes** (Prompt 29). The display list has no drawing for
   them, so `screenshot` (and `doc.screenshot`) of any frame that holds one fails, naming the node. A design with a
   context node on its Hero frame, which is what `get_app_state` tells agents to read, cannot be screenshotted.
@@ -1181,7 +1160,6 @@ Verified (each exited 0 unless said):
 Test order: the test files were written first and failed to compile (no `Theme`, `Resolver`, `ResolvedValue`,
 `OpErrorKind::BindingType`); all 51 passed on the first run of the finished code, which is why the mutation checks above were run.
 
-
 ## Prompt 17: resolver II, components, instances, overrides, slots and libraries
 
 Built:
@@ -1232,7 +1210,6 @@ Verified (each exited 0 unless stated):
 - Failed: `pnpm test:scripts` (148 pass, one skip, the recorded `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (three existing Loro-chain unmaintained advisories listed above; bans, licenses and sources pass).
 
-
 ## Prompt 18: production layout on Taffy and browser oracle
 
 Built:
@@ -1279,7 +1256,6 @@ Verified (each exited 0 unless stated):
 - `VELLUM_LANES=chrome pnpm test:scripts`: Chrome lane passes; 151 passed, one failed on the existing
   `missing: R3 taffy: main.rs` reference-index issue.
 - `pnpm cargo:deny`: existing three Loro-chain unmaintained advisories fail; bans, licenses and sources pass.
-
 
 ## Prompt 19: text on Parley and explicit font sources
 
@@ -1334,7 +1310,6 @@ Verified (each exited 0 unless stated):
 - Failed: `pnpm test:scripts`: 150 pass, one skip, one existing `missing: R3 taffy: main.rs` failure.
 - Failed: `pnpm cargo:deny`: the three existing Loro-chain unmaintained advisories above; bans, licenses and sources pass.
 
-
 ## Prompt 20: scene, spatial index, hit-testing and snapping
 
 Built:
@@ -1386,7 +1361,6 @@ Verified (each exited 0 unless stated):
 - Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories above;
   bans, licenses and sources pass).
 
-
 ## Prompt 21: layout check and display list
 
 Built:
@@ -1436,7 +1410,6 @@ Verified (each exited 0 unless stated; pnpm commands used TURBO_TELEMETRY_DISABL
 - Failed: `pnpm test:scripts` (150 pass, one skip, the existing `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories above;
   bans, licenses and sources pass).
-
 
 ## Prompt 22: shared native/editor Skia renderer
 
@@ -1641,7 +1614,6 @@ Verified (exited 0 unless listed as failed):
 - Failed: `pnpm test:scripts` (163 pass, 3 skipped, the recorded `missing: R3 taffy: main.rs` failure).
 - Failed: `pnpm cargo:deny` (the three existing Loro-chain unmaintained advisories; `sha2` and `wuff` add none, and bans,
   licences and sources pass).
-
 
 ## Prompt 25: QuickJS sandbox, limits and escape corpus
 
@@ -1871,7 +1843,6 @@ Verified on macOS arm64 (exit 0 unless noted; pnpm with both telemetry opt-outs)
 Not verified: Linux/Windows watchers and git on Windows, the IPC/CI lanes remotely, real editors or hosts.
 No design frames were involved (A06 is UI for Prompt 58; only its data is here).
 
-
 ## Prompt 29: tool registry, MCP adapter, read tools
 
 Built (ADR-021, `docs/runbooks/tools.md`):
@@ -2026,7 +1997,6 @@ Verified on macOS arm64 (exit 0; Node 24, pinned pnpm 12.11.2, telemetry opt-out
 Not verified: real MCP clients, Linux/Windows, installed engines or model-driven parity E2E. No UI or design
 frames were involved. ADR-022 needs human architecture synchronization; later host settings must authorize
 folder roots before passing them to the source constructors.
-
 
 ## Prompt 32: model providers, secret stores and deterministic endpoint
 

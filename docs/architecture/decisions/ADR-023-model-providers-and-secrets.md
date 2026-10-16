@@ -1,6 +1,6 @@
 # ADR-023: Model providers and secrets
 
-Status: proposed; implemented in Prompt 32. Only a person synchronizes ARCHITECTURE.md.
+Status: proposed; implemented in Prompt 32. ARCHITECTURE §3.4 and §13 synchronized on the owner's instruction (2026-10-16).
 
 ## Decision
 
