@@ -7,6 +7,7 @@
 mod assets;
 mod clock;
 mod codec;
+mod content;
 mod doc_store;
 mod files;
 mod fonts;
@@ -22,6 +23,7 @@ mod watch;
 pub use assets::InMemoryAssets;
 pub use clock::{ManualClock, SequentialIds};
 pub use codec::FakeJsonCodec;
+pub use content::{MemorySkills, MemoryStyles};
 pub use doc_store::InMemoryDocStore;
 pub use files::MemFs;
 pub use fonts::StaticFonts;

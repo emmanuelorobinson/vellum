@@ -4,6 +4,7 @@
 pub mod assets;
 pub mod clock;
 pub mod codec;
+pub mod content;
 pub mod doc_store;
 pub mod document_files;
 pub mod files;

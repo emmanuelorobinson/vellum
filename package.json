@@ -43,7 +43,8 @@
     "lint:rust": "node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings",
     "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\"",
     "doc-api:gen": "node scripts/doc-api-gen.mjs",
-    "doc-api:check": "node scripts/doc-api-gen.mjs --check"
+    "doc-api:check": "node scripts/doc-api-gen.mjs --check",
+    "parity:check": "node scripts/parity.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -458,6 +458,30 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
+      "description": "List visual styles, or load one by name: palette, typography, radius and density. Use a recipe when no design system is set; existing document variables and system guidelines take precedence. Loading a style does not edit the document or install fonts.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "A name returned by get_style. Omit to list the available recipes.",
+            "type": "string"
+          }
+        },
+        "title": "StyleInput",
+        "type": "object"
+      },
+      "name": "get_style"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
       "description": "List the document's variables (colours, numbers, strings, booleans) and its theme axes. Each shows its id, name and type, the value it has under the theme, and every value it can take. Bind a property to a variable with {\"$var\": id}; prefer a variable over a literal that matches one.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -588,6 +612,25 @@
         "type": "object"
       },
       "name": "list_fonts"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "List available skills with paths, descriptions and source groups: built-in, design system, yours. Read only the instructions relevant to the task with read_skill; no document needs to be open.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {},
+        "title": "ListInput",
+        "type": "object"
+      },
+      "name": "list_skills"
     },
     {
       "_meta": {
@@ -806,6 +849,30 @@
         "type": "object"
       },
       "name": "query_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Read instructions by a path from list_skills: format.md, execute.md, vellum-doc.d.ts, workflows, design-system guidelines or added SKILL.md folders. Omit path to list available skills. Read execute.md before scripting; read relevant guidelines and notes before designing.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "An exact path returned by list_skills. Omit to list. Built-ins also accept the .md path without its extension.",
+            "type": "string"
+          }
+        },
+        "title": "ReadInput",
+        "type": "object"
+      },
+      "name": "read_skill"
     },
     {
       "_meta": {

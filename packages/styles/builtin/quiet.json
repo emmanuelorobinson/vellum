@@ -1,0 +1,25 @@
+{
+  "name": "quiet",
+  "description": "Neutral surfaces, restrained color and a regular spacing rhythm.",
+  "palette": {
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "text": "#172033",
+    "muted": "#526078",
+    "accent": "#2455C6",
+    "border": "#CBD5E1"
+  },
+  "typography": {
+    "body": "Inter",
+    "heading": "Inter",
+    "mono": "JetBrains Mono",
+    "baseSize": 16,
+    "scale": 1.25
+  },
+  "radius": 8,
+  "density": {
+    "gap": 16,
+    "padding": 24,
+    "controlHeight": 44
+  }
+}

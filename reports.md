@@ -8,14 +8,19 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review ADR-022 and synchronize ARCHITECTURE** (Prompt 31). `SkillSource::list` returns a Result so configured
+  missing/unreadable folders are explicit; `StyleLibrary` now has typed recipes and list/read methods. Folder
+  sources require an explicitly authorized rooted filesystem. Wire these into PermissionBroker and Add skill
+  settings in Prompts 35/50. The parity inventory distinguishes active behavior tests from later-prompt placeholders;
+  it does not yet establish scripted-agent E2E coverage.
+
 - **Review ADR-021 "Prompt 30" and synchronize ARCHITECTURE** (Prompt 30). Only a person edits ARCHITECTURE.md.
   (1) `DocumentTarget` gains `lease(frame, agent, Claim|Release)` and `TargetError::Lease`; `EditorLink` gains
   `lease` too, so the editor wire protocol (ADR-020, still open) must carry claims. (2) `execute` runs the script
   on a scratch store and sends the resulting diff to the target as one transaction, instead of running against the
   target's own store. (3) Each MCP connection is one agent named after its client, with a fresh `AgentId` and
   `SessionId`; external calls carry no turn. (4) `crates/vellum` now depends on `vellum-script-quickjs` behind a
-  default `scripts` feature. (5) Tool descriptions point agents at `read_skill`, which arrives in Prompt 31; until
-  then that call fails as an unknown tool.
+  default `scripts` feature. (5) Tool descriptions point agents at `read_skill` (implemented in Prompt 31).
 
 - **Review ADR-021 and synchronize ARCHITECTURE** (Prompt 29). Only a person edits ARCHITECTURE.md. (1) §3.4 `Tool`
   gains `description`, `read_only` and `destructive`, and `run` returns JSON with a picture under an `image` key.
@@ -1962,4 +1967,52 @@ Verified on macOS arm64 (exit 0; both telemetry opt-outs set):
 Not verified: a real editor (live writes and leases are tested with the fake editor only); any real MCP client;
 Linux and Windows; `execute` with `doc.screenshot` through the daemon (scene and scripts were not combined in one
 test); large batches near the Guard's op limit. No design frames were involved.
+
+## Prompt 31: skills, styles and parity inventory
+
+Built (ADR-022, `docs/runbooks/skills-and-parity.md`):
+- Pure `SkillSource` / `StyleLibrary` ports, typed metadata and recipes, shared contract suites and memory fakes.
+  Native sources embed builtin files, stack builtin → system guidelines → user folders, and read explicitly
+  registered SKILL.md/guidelines.md or style JSON through an injected rooted FileSystem. Later sources own
+  duplicate paths/names; missing, invalid, stale and oversized content never silently falls back.
+- Original format and execute instructions, generated `vellum-doc.d.ts`, and four workflows under
+  `packages/skills/builtin/`. Five construction examples execute through real QuickJS/core; the persistent chart
+  example evaluates twice with declared inputs and identical output. Six optional canvas recipes under
+  `packages/styles/builtin/`: quiet, editorial, technical, rounded, earth, high-contrast.
+- `list_skills`, `read_skill(path?)`, `get_style(name?)` in the shared registry, MCP schema snapshot and shipped CLI.
+  They work without an open document. Registry::with_sources accepts authorized host configuration; standard
+  serves builtins. Prompt 30's missing read_skill is resolved, including format/execute extensionless aliases.
+- `pnpm parity:check`: architecture §7.4 supplies all 52 v1 rows (mixed releases included). The manifest maps 22
+  to active behavior tests and 30 to named ignored placeholders that fail if explicitly run. Missing/empty/stale
+  mappings, helper functions and incorrect pending states fail. Scripted-agent E2E is still later work.
+
+Differs from the guide / decisions: list returns Result to expose folder errors; host folder selection and
+PermissionBroker wiring stay in Prompts 35/50, with no ambient folder discovery. SKILL.md has a documented bounded
+frontmatter subset, not a general YAML parser. Recipes are optional canvas content, not chrome tokens or starter
+systems. No dependencies were added; no reference code was ported. Reference study is in ADR-022.
+
+Process: content and parity tests first failed on missing modules/APIs. Contract tests also failed before their
+fakes/suites existed. The workspace run caught the new no-field schema's missing properties object; the schema
+now emits it without changing the existing test. A frontmatter regression test failed on comments/blank lines
+before the parser fix. MCP schemas changed only by adding the three tools. CLI socket tests first failed in the
+sandbox, then all passed outside it. A direct subset clippy attempted a Skia source sync blocked by the sandbox;
+the repository's Skia wrapper and the no-default-features clippy lane pass.
+
+Verified on macOS arm64 (exit 0; Node 24, pinned pnpm 12.11.2, telemetry opt-outs set):
+- `cargo test --offline --workspace` (1,050 passed, 0 failed, 46 ignored, including 30 new parity placeholders);
+  after the final comment/blank-line parser fix, the focused lib/content tests below and `pnpm lint` pass again.
+- `cargo test --offline -p vellum --lib --test skills_styles` (12 + 11), `cargo test --offline -p vellum --test mcp`
+  (20), `cargo test --offline -p vellum --test cli` (12); `cargo test --offline -p vellum-contracts --test content` (3).
+- `node --test scripts/__tests__/parity.test.mjs` (4); `pnpm parity:check` (52 mapped, 22 active, 30 pending).
+- `cargo clippy --offline --workspace --all-targets -- -D warnings`; `cargo clippy --offline -p vellum --lib --bins
+  --no-default-features -- -D warnings`; `pnpm lint`, `pnpm type-check`, `pnpm deps:check`, `pnpm format:check`;
+  `pnpm --filter @vellum/skills --filter @vellum/styles test` (one package smoke test each).
+- `pnpm types:check`, `pnpm format-spec:check`, `pnpm doc-api:check`, `pnpm clean-room`, `pnpm copy-lint`,
+  `pnpm checksum`, `git diff --check`.
+- Failed: `pnpm test:scripts` (169 pass, 4 skipped, only the existing `R3 taffy: main.rs` reference-index failure).
+- Failed: `cargo deny check` (the same bitmaps/im/sized-chunks Loro-chain advisories; bans/licences/sources pass).
+
+Not verified: real MCP clients, Linux/Windows, installed engines or model-driven parity E2E. No UI or design
+frames were involved. ADR-022 needs human architecture synchronization; later host settings must authorize
+folder roots before passing them to the source constructors.
 

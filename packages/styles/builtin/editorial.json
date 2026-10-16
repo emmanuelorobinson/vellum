@@ -1,0 +1,25 @@
+{
+  "name": "editorial",
+  "description": "Warm paper surfaces, serif headings and generous reading space.",
+  "palette": {
+    "background": "#FAF7F0",
+    "surface": "#FFFFFF",
+    "text": "#29231E",
+    "muted": "#6B5D51",
+    "accent": "#8E3828",
+    "border": "#D8CEC0"
+  },
+  "typography": {
+    "body": "Inter",
+    "heading": "Source Serif 4",
+    "mono": "JetBrains Mono",
+    "baseSize": 18,
+    "scale": 1.333
+  },
+  "radius": 2,
+  "density": {
+    "gap": 24,
+    "padding": 32,
+    "controlHeight": 48
+  }
+}

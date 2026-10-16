@@ -1,0 +1,25 @@
+{
+  "name": "high-contrast",
+  "description": "Strong light and dark separation, visible borders and large text; verify every final contrast pair.",
+  "palette": {
+    "background": "#FFFFFF",
+    "surface": "#FFFFFF",
+    "text": "#000000",
+    "muted": "#393939",
+    "accent": "#003BB3",
+    "border": "#000000"
+  },
+  "typography": {
+    "body": "Inter",
+    "heading": "Inter",
+    "mono": "JetBrains Mono",
+    "baseSize": 18,
+    "scale": 1.25
+  },
+  "radius": 4,
+  "density": {
+    "gap": 20,
+    "padding": 28,
+    "controlHeight": 48
+  }
+}

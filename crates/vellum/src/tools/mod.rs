@@ -6,6 +6,7 @@
 //! Names are stable and schema changes are additive; a breaking change is a new tool name (§2.5).
 
 mod batch;
+mod content;
 mod context;
 mod coordinate;
 mod execute;
@@ -351,7 +352,19 @@ impl Registry {
 
     /// The tools Vellum ships, sorted by name.
     pub fn standard() -> Self {
+        Self::with_sources(
+            std::rc::Rc::new(crate::content::BuiltinSkills),
+            std::rc::Rc::new(crate::content::BuiltinStyles),
+        )
+    }
+
+    /// Hosts supply explicitly authorized guideline/skill folders here; MCP and CLI keep the same registry.
+    pub fn with_sources(
+        skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
+        styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
+    ) -> Self {
         let mut tools: Vec<Box<dyn Tool>> = Vec::new();
+        content::register(&mut tools, skills, styles);
         context::register(&mut tools);
         nodes::register(&mut tools);
         scene::register(&mut tools);

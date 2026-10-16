@@ -305,3 +305,31 @@ fn writes_and_scripts_reach_the_file_through_the_real_daemon() {
     );
     assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
 }
+
+#[test]
+fn skills_and_styles_reach_the_shipped_cli_without_opening_a_document() {
+    let space = Workspace::new();
+    for (args, key, count) in [
+        (vec!["list_skills"], "skills", 7),
+        (vec!["read_skill"], "skills", 7),
+        (vec!["get_style"], "styles", 6),
+    ] {
+        let result = tool(&space, &args);
+        assert!(result.status.success(), "{}", text(&result.stderr));
+        assert_eq!(json_of(&result)[key].as_array().unwrap().len(), count);
+    }
+    let result = tool(&space, &["read_skill", "--path", "execute.md"]);
+    assert!(result.status.success(), "{}", text(&result.stderr));
+    assert!(
+        json_of(&result)["content"]
+            .as_str()
+            .unwrap()
+            .contains("doc.apiVersion")
+    );
+    let result = tool(&space, &["get_style", "--name", "quiet"]);
+    assert!(result.status.success(), "{}", text(&result.stderr));
+    assert_eq!(json_of(&result)["style"]["name"], "quiet");
+    let result = tool(&space, &["read_skill", "--path", "missing.md"]);
+    assert_eq!(result.status.code(), Some(1));
+    assert!(text(&result.stderr).contains("path"));
+}

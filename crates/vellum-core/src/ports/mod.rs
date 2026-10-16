@@ -10,6 +10,7 @@
 mod assets;
 mod clock;
 mod codec;
+mod content;
 mod doc_store;
 mod document_files;
 mod files;
@@ -27,6 +28,10 @@ mod watch;
 pub use assets::{AssetCollect, AssetError, AssetHash, AssetHashError, AssetStore, check_mime};
 pub use clock::{Clock, IdGen, Timestamp};
 pub use codec::{Codec, CodecError, Position};
+pub use content::{
+    ContentError, SkillGroup, SkillMeta, SkillSource, StyleDensity, StyleLibrary, StyleMeta,
+    StyleType, VisualStyle,
+};
 pub use doc_store::{
     ChangeSet, Commit, DocStore, Kept, Revert, SyncCursor, SyncError, SyncPayload, UndoTurn,
 };

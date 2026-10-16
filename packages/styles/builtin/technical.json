@@ -1,0 +1,25 @@
+{
+  "name": "technical",
+  "description": "Compact structure, crisp corners and monospaced labels for detailed tools.",
+  "palette": {
+    "background": "#F3F5F7",
+    "surface": "#FFFFFF",
+    "text": "#182328",
+    "muted": "#4E6068",
+    "accent": "#006A70",
+    "border": "#B9C8CD"
+  },
+  "typography": {
+    "body": "Inter",
+    "heading": "JetBrains Mono",
+    "mono": "JetBrains Mono",
+    "baseSize": 14,
+    "scale": 1.2
+  },
+  "radius": 2,
+  "density": {
+    "gap": 8,
+    "padding": 16,
+    "controlHeight": 36
+  }
+}

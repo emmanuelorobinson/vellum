@@ -65,6 +65,9 @@ a failed script with its `line`. Fix that item and call again. Each call also le
 
 ## Adding a tool
 
+Prompt 31 adds `list_skills`, `read_skill(path?)` and `get_style(name?)`; all work without an open document.
+See [Skills, styles and parity](skills-and-parity.md) for source configuration and the coverage inventory.
+
 1. Write a struct implementing `Tool` in `tools/`, with an input struct that derives `Deserialize` and
    `JsonSchema` and has `#[serde(deny_unknown_fields)]`. Doc comments on its fields are what the agent reads.
 2. Parse with `parse_input`, reach documents through `ctx`, return JSON. Say what was cut (`truncated`).

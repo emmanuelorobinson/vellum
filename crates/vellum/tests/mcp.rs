@@ -205,6 +205,34 @@ fn mcp_tool_schema_snapshot() {
 }
 
 #[test]
+fn content_tools_are_available_over_mcp_before_a_document_is_opened() {
+    let mut server = server();
+    let reply = call(&mut server, "list_skills", json!({}));
+    assert_eq!(
+        reply["result"]["structuredContent"]["skills"]
+            .as_array()
+            .unwrap()
+            .len(),
+        7
+    );
+    let reply = call(&mut server, "read_skill", json!({"path":"format.md"}));
+    assert!(
+        reply["result"]["structuredContent"]["content"]
+            .as_str()
+            .unwrap()
+            .contains("Node specs")
+    );
+    let reply = call(&mut server, "get_style", json!({"name":"quiet"}));
+    assert!(reply["result"]["structuredContent"]["style"]["palette"].is_object());
+    let reply = call(&mut server, "read_skill", json!({"path":"../private"}));
+    assert_eq!(reply["result"]["isError"], true);
+    assert_eq!(
+        reply["result"]["structuredContent"]["error"]["path"],
+        "path"
+    );
+}
+
+#[test]
 fn a_tool_call_returns_its_result_as_text_and_as_structured_content() {
     let mut server = server();
     call(&mut server, "open_document", json!({"path": PATH}));

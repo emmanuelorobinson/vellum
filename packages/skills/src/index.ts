@@ -1,2 +1,2 @@
-/** Built-in skills served by read_skill. Shell only: no behaviour yet. */
+/** Instructions in ../builtin/ and generated doc declarations are served by the Rust SkillSource. */
 export const PACKAGE_NAME = "@vellum/skills";

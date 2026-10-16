@@ -1,0 +1,25 @@
+{
+  "name": "rounded",
+  "description": "Soft corners, a violet accent and spacious touch controls.",
+  "palette": {
+    "background": "#F7F5FC",
+    "surface": "#FFFFFF",
+    "text": "#2C2442",
+    "muted": "#645A79",
+    "accent": "#673BB7",
+    "border": "#D8CFE7"
+  },
+  "typography": {
+    "body": "Inter",
+    "heading": "Inter",
+    "mono": "JetBrains Mono",
+    "baseSize": 16,
+    "scale": 1.25
+  },
+  "radius": 20,
+  "density": {
+    "gap": 16,
+    "padding": 24,
+    "controlHeight": 48
+  }
+}

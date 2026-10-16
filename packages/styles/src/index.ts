@@ -1,2 +1,2 @@
-/** Built-in visual styles served by get_style. Shell only: no behaviour yet. */
+/** Canvas recipes in ../builtin/ are served by the Rust StyleLibrary. */
 export const PACKAGE_NAME = "@vellum/styles";

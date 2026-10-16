@@ -1,0 +1,25 @@
+{
+  "name": "earth",
+  "description": "Muted green and clay, serif headings and a relaxed spacing rhythm.",
+  "palette": {
+    "background": "#F5F4EB",
+    "surface": "#FFFEF8",
+    "text": "#253C32",
+    "muted": "#586A5C",
+    "accent": "#3C684A",
+    "border": "#C4CDBB"
+  },
+  "typography": {
+    "body": "Inter",
+    "heading": "Source Serif 4",
+    "mono": "JetBrains Mono",
+    "baseSize": 16,
+    "scale": 1.25
+  },
+  "radius": 6,
+  "density": {
+    "gap": 20,
+    "padding": 28,
+    "controlHeight": 44
+  }
+}

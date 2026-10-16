@@ -1,0 +1,666 @@
+[
+  {
+    "capability": "`execute` (read, modify, render, export via a script)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "execute_runs_a_script_as_one_transaction"
+      },
+      {
+        "file": "crates/vellum/tests/script_doc_api.rs",
+        "name": "doc_api_screenshot_and_exports_use_production_scene_and_renderer"
+      }
+    ]
+  },
+  {
+    "capability": "`get_app_state` (document metadata, selection)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "get_app_state_reports_open_documents_the_active_one_and_notes_in_scope"
+      }
+    ]
+  },
+  {
+    "capability": "`read_skill` (schema, `execute` docs, workflows)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/skills_styles.rs",
+        "name": "builtin_skills_include_format_execute_declarations_and_four_workflows"
+      },
+      {
+        "file": "crates/vellum/tests/skills_styles.rs",
+        "name": "configured_sources_are_visible_through_the_same_registry"
+      }
+    ]
+  },
+  {
+    "capability": "`get_style` (list or load a visual style)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/skills_styles.rs",
+        "name": "styles_are_six_complete_distinct_recipes_and_a_folder_can_supply_another"
+      }
+    ]
+  },
+  {
+    "capability": "`spawn_agents` (behind a start-up flag)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_spawn_agents"
+      }
+    ],
+    "pending": {
+      "prompt": 39,
+      "reason": "Needs orchestration."
+    }
+  },
+  {
+    "capability": "Earlier `batch_design` (insert, copy, update, replace, move, delete, image ops)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_batch_design_images"
+      }
+    ],
+    "pending": {
+      "prompt": 42,
+      "reason": "Typed batches exist; fill_image and asset tooling remain."
+    }
+  },
+  {
+    "capability": "Earlier `batch_get`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "get_nodes_returns_subtrees_down_to_the_depth_and_counts_what_it_left_out"
+      },
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "query_nodes_filters_by_name_type_text_component_and_variable"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `snapshot_layout` (incl. problems only)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "snapshot_layout_gives_computed_bounds_for_a_subtree"
+      },
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "snapshot_layout_problems_only_returns_just_the_nodes_that_have_one"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `get_screenshot`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "screenshot_returns_a_png_the_agent_can_see"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `find_empty_space_on_canvas`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "find_space_returns_free_canvas_clear_of_the_existing_frames"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `get_variables` / `set_variables`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "get_variables_resolves_each_under_the_theme_and_follows_aliases"
+      },
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "set_variables_adds_by_name_updates_and_refuses_to_remove_one_in_use"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `search_all_unique_properties` / `replace_all_matching_properties`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "find_properties_lists_every_distinct_value_with_how_often_and_where"
+      },
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "replace_properties_changes_every_matching_value_in_a_scope"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `get_guidelines`, `get_style_guide`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/skills_styles.rs",
+        "name": "stacking_keeps_builtin_then_guidelines_then_user_folders_and_reads_fresh_content"
+      },
+      {
+        "file": "crates/vellum/tests/skills_styles.rs",
+        "name": "skills_and_styles_tools_work_without_an_open_document_and_validate_inputs"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `get_editor_state`, `open_document`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "get_app_state_for_a_live_document_reports_what_the_editor_shows"
+      },
+      {
+        "file": "crates/vellum/tests/tools.rs",
+        "name": "open_document_opens_headless_and_lists_the_pages"
+      }
+    ]
+  },
+  {
+    "capability": "Earlier `export_nodes`",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_export_tool"
+      }
+    ],
+    "pending": {
+      "prompt": 41,
+      "reason": "Script exports exist; the typed export tool remains."
+    }
+  },
+  {
+    "capability": "Integrated agent with sessions, model picker, reasoning effort, Stop",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_integrated_agent"
+      }
+    ],
+    "pending": {
+      "prompt": 50,
+      "reason": "Needs engine, sessions and composer UI."
+    }
+  },
+  {
+    "capability": "Claude Code, Codex and other providers as the agent (including sign-in with a ChatGPT account for Codex)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_installed_agents"
+      }
+    ],
+    "pending": {
+      "prompt": 37,
+      "reason": "Needs installed-engine adapters and tagged transcripts."
+    }
+  },
+  {
+    "capability": "Selection and attached files/images as context",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_composer_context"
+      }
+    ],
+    "pending": {
+      "prompt": 50,
+      "reason": "Needs context chips and attachment permissions."
+    }
+  },
+  {
+    "capability": "Skills via `/` menu, custom `SKILL.md` folders",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_skills_menu"
+      }
+    ],
+    "pending": {
+      "prompt": 50,
+      "reason": "Folder source exists; the composer menu and Add skill remain."
+    }
+  },
+  {
+    "capability": "Permission requests for file and command actions; auto mode; skip-all",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_permission_modes"
+      }
+    ],
+    "pending": {
+      "prompt": 50,
+      "reason": "Needs broker (35) and permission UI."
+    }
+  },
+  {
+    "capability": "Context usage and estimated cost",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_usage_meter"
+      }
+    ],
+    "pending": {
+      "prompt": 50,
+      "reason": "Needs session usage (34) and footer UI."
+    }
+  },
+  {
+    "capability": "Notification when an agent finishes in the background",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_background_notification"
+      }
+    ],
+    "pending": {
+      "prompt": 58,
+      "reason": "Needs host notifications."
+    }
+  },
+  {
+    "capability": "Parallel agents 1–6: Split work, Side by side, per-agent model",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_parallel_agents"
+      }
+    ],
+    "pending": {
+      "prompt": 39,
+      "reason": "Needs parallel orchestration."
+    }
+  },
+  {
+    "capability": "\"Let it cook\": successive variants exploring Layout or Style, 2–6",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_explore_variants"
+      }
+    ],
+    "pending": {
+      "prompt": 39,
+      "reason": "Needs Explore orchestration."
+    }
+  },
+  {
+    "capability": "Stop current agent / Stop all",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_stop_all_agents"
+      }
+    ],
+    "pending": {
+      "prompt": 39,
+      "reason": "Guard exists; engine interruption and coordination remain."
+    }
+  },
+  {
+    "capability": "Script nodes (code on canvas: `.js` file, header inputs, sandbox, convert to layers)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_script_canvas_ui"
+      }
+    ],
+    "pending": {
+      "prompt": 52,
+      "reason": "Script runtime exists; canvas editing UI remains."
+    }
+  },
+  {
+    "capability": "Slots with suggested components",
+    "tests": [
+      {
+        "file": "crates/vellum-core/src/resolver/components/tests.rs",
+        "name": "slots_are_per_instance_suggestions_are_advisory"
+      }
+    ]
+  },
+  {
+    "capability": "Components, variables, design libraries",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_design_libraries"
+      }
+    ],
+    "pending": {
+      "prompt": 48,
+      "reason": "Core resolves libraries; library UI and integration remain."
+    }
+  },
+  {
+    "capability": "Built-in icon sets (Material Symbols, Lucide, Feather, Phosphor)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_icon_sets"
+      }
+    ],
+    "pending": {
+      "prompt": 42,
+      "reason": "Needs icon adapters and tools."
+    }
+  },
+  {
+    "capability": "Image import, PNG/JPEG/SVG; remove background; image to vectors",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_image_import"
+      }
+    ],
+    "pending": {
+      "prompt": 42,
+      "reason": "v1 import only; ImageOps are v1.1."
+    }
+  },
+  {
+    "capability": "Figma file import and layer paste",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_figma_paste"
+      }
+    ],
+    "pending": {
+      "prompt": 42,
+      "reason": "v1 clipboard only; file import is v1.1."
+    }
+  },
+  {
+    "capability": "HTML + Tailwind / HTML + CSS export, scaffold option",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_code_exports"
+      }
+    ],
+    "pending": {
+      "prompt": 41,
+      "reason": "Needs HTML/CSS and Tailwind exporters."
+    }
+  },
+  {
+    "capability": "Export PNG, JPEG, WEBP, PDF at 1×–3×",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_raster_exports"
+      }
+    ],
+    "pending": {
+      "prompt": 41,
+      "reason": "Needs full typed export formats and scales."
+    }
+  },
+  {
+    "capability": "Share a design: snapshot link, Update snapshot, revoke, recipients download a ZIP, missing-dependency warning",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_share_snapshots"
+      }
+    ],
+    "pending": {
+      "prompt": 62,
+      "reason": "Needs Pro snapshot sharing."
+    }
+  },
+  {
+    "capability": "CLI: agent mode, interactive shell, app and headless modes, exports, models list, verbose mode, CI keys",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_complete_cli"
+      }
+    ],
+    "pending": {
+      "prompt": 59,
+      "reason": "Tool CLI exists; full commands and shell remain."
+    }
+  },
+  {
+    "capability": "One-click MCP setup for Claude Code, Codex (also ChatGPT desktop and the Codex IDE extension), Gemini CLI, Antigravity, OpenCode, Kiro, Claude Desktop; disabling removes the entry",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_connect_agents"
+      }
+    ],
+    "pending": {
+      "prompt": 56,
+      "reason": "Needs client config writers and dialog."
+    }
+  },
+  {
+    "capability": "Many providers: Claude subscription / API / Bedrock / Vertex / Foundry, ChatGPT sign-in / OpenAI key, Gemini, Copilot, Cursor, OpenRouter, DeepSeek, xAI, Moonshot/Kimi, Together, Fireworks, Z.AI, OpenCode, custom endpoints",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_model_providers"
+      }
+    ],
+    "pending": {
+      "prompt": 37,
+      "reason": "Needs provider adapters (32) and installed engines; later-only providers excluded."
+    }
+  },
+  {
+    "capability": "Theme axes (e.g. Light/Dark × Device) with frame-level theme",
+    "tests": [
+      {
+        "file": "crates/vellum-core/src/resolver/variables/tests/theme.rs",
+        "name": "a_node_theme_overrides_the_inherited_one_for_its_subtree"
+      }
+    ]
+  },
+  {
+    "capability": "Boolean variables for visibility, aliases",
+    "tests": [
+      {
+        "file": "crates/vellum-core/src/resolver/variables/tests/bind.rs",
+        "name": "a_boolean_variable_drives_visibility"
+      },
+      {
+        "file": "crates/vellum-core/src/resolver/variables/tests/values.rs",
+        "name": "an_alias_chain_resolves_to_the_end_of_the_chain"
+      }
+    ]
+  },
+  {
+    "capability": "Fills: colour, linear / radial / angular / **mesh** gradients, image (fill, fit, stretch, crop), **shader**; 18 blend modes",
+    "tests": [
+      {
+        "file": "crates/adapters/render-skia/tests/appearance.rs",
+        "name": "gradients_map_unit_coordinates_and_preserve_transparency"
+      },
+      {
+        "file": "crates/adapters/render-skia/tests/appearance.rs",
+        "name": "mesh_interpolates_four_corners_and_honors_handles"
+      },
+      {
+        "file": "crates/adapters/render-skia/tests/appearance.rs",
+        "name": "all_blends_work_and_multiply_is_analytic"
+      },
+      {
+        "file": "crates/adapters/render-skia/tests/renderer.rs",
+        "name": "images_fit_fill_stretch_crop_and_missing_data"
+      }
+    ]
+  },
+  {
+    "capability": "Effects: drop and inner shadow, layer and background blur, shader effect",
+    "tests": [
+      {
+        "file": "crates/adapters/render-skia/tests/appearance.rs",
+        "name": "shadows_blur_and_negative_spread_have_pixel_semantics"
+      },
+      {
+        "file": "crates/adapters/render-skia/tests/appearance.rs",
+        "name": "background_blur_is_masked_to_layer_geometry"
+      }
+    ]
+  },
+  {
+    "capability": "Strokes with per-side width, alignment, caps, joins",
+    "tests": [
+      {
+        "file": "crates/adapters/render-skia/tests/renderer.rs",
+        "name": "per_side_widths_and_all_alignments"
+      },
+      {
+        "file": "crates/adapters/render-skia/tests/renderer.rs",
+        "name": "line_caps_dashes_and_zero_width"
+      }
+    ]
+  },
+  {
+    "capability": "Ellipse arcs and rings, polygons, paths with fill rule",
+    "tests": [
+      {
+        "file": "crates/adapters/render-skia/tests/renderer.rs",
+        "name": "vector_arcs_boolean_and_fill_rules_have_coverage"
+      }
+    ]
+  },
+  {
+    "capability": "Text: underline, strikethrough, links, vertical alignment, justify, auto-width / auto-height / fixed",
+    "tests": [
+      {
+        "file": "crates/adapters/text-parley/tests/text.rs",
+        "name": "rich_runs_preserve_style_link_decorations_and_render_inputs"
+      },
+      {
+        "file": "crates/adapters/text-parley/tests/text.rs",
+        "name": "spacing_line_height_alignment_and_justification"
+      },
+      {
+        "file": "crates/adapters/text-parley/tests/text.rs",
+        "name": "resize_and_vertical_alignment_report_overflow_without_dropping_text"
+      }
+    ]
+  },
+  {
+    "capability": "Sticky notes, prompt nodes, context nodes on the canvas",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_collaboration_nodes"
+      }
+    ],
+    "pending": {
+      "prompt": 51,
+      "reason": "Data exists; drawing and interaction remain."
+    }
+  },
+  {
+    "capability": "Custom fonts stored with the document",
+    "tests": [
+      {
+        "file": "crates/vellum-core/tests/files_assets.rs",
+        "name": "custom_fonts_count_even_when_no_text_uses_them"
+      },
+      {
+        "file": "crates/vellum/tests/renderer_text.rs",
+        "name": "shaped_text_and_colour_emoji_use_only_supplied_bytes"
+      }
+    ]
+  },
+  {
+    "capability": "Scale tool (K) that scales content proportionally",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_scale_tool"
+      }
+    ],
+    "pending": {
+      "prompt": 48,
+      "reason": "Scale op exists; K tool and properties UI remain."
+    }
+  },
+  {
+    "capability": "Component toggle back to element, Replace inside instance, detach keeps nested links",
+    "tests": [
+      {
+        "file": "crates/vellum-core/src/ops/tests/advanced.rs",
+        "name": "toggle_to_component_and_back_is_one_reversible_transaction"
+      },
+      {
+        "file": "crates/vellum-core/src/ops/tests/advanced.rs",
+        "name": "detach_keeps_nested_instances_variables_variant_override_and_slot_content"
+      },
+      {
+        "file": "crates/vellum-core/src/ops/tests/advanced.rs",
+        "name": "replacement_inside_instance_does_not_change_the_definition"
+      }
+    ]
+  },
+  {
+    "capability": "Libraries (`.lib.pen`), default libraries, paste with link or copies, variable conflict dialog, Locate missing library",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_library_workflows"
+      }
+    ],
+    "pending": {
+      "prompt": 48,
+      "reason": "Core library paths exist; default libraries and dialogs remain."
+    }
+  },
+  {
+    "capability": "Desktop dashboard: Recents, Drafts, Design Systems, list/grid, sort, multi-select",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_desktop_dashboard"
+      }
+    ],
+    "pending": {
+      "prompt": 58,
+      "reason": "Needs desktop home."
+    }
+  },
+  {
+    "capability": "Crash recovery backups (desktop); Reload/Ignore on external change (IDE)",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_recovery_ui"
+      }
+    ],
+    "pending": {
+      "prompt": 58,
+      "reason": "Recovery core exists; host Reload/Ignore and recovery UI remain."
+    }
+  },
+  {
+    "capability": "Settings: pixel grid, snap to pixel grid / objects, scroll-wheel zoom, invert zoom, nudge amounts, animations off",
+    "tests": [
+      {
+        "file": "crates/vellum/tests/parity_pending.rs",
+        "name": "parity_pending_settings"
+      }
+    ],
+    "pending": {
+      "prompt": 54,
+      "reason": "Needs local preferences and settings UI."
+    }
+  }
+]
