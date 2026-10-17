@@ -358,3 +358,68 @@ fn typed_glyphs_cannot_bypass_wire_number_validation() {
         Err(Error::Buffer(_))
     ));
 }
+
+#[test]
+fn export_port_has_real_jpeg_webp_and_an_opaque_white_jpeg_matte() {
+    use vellum_core::{export::ExportFrame, ports::ExportRenderer};
+    let r = Renderer::new().unwrap();
+    let mut f = ExportFrame::empty("frame00001", "TEST DATA", 40., 40.);
+    f.output.list = fixture();
+    let jpeg = ExportRenderer::render(&r, &[f.clone()], "jpeg").unwrap();
+    assert!(jpeg.starts_with(&[0xff, 0xd8, 0xff]));
+    let webp = ExportRenderer::render(&r, &[f.clone()], "webp").unwrap();
+    assert_eq!(&webp[..4], b"RIFF");
+    assert_eq!(&webp[8..12], b"WEBP");
+    assert!(ExportRenderer::render(&r, &[f.clone(), f], "png").is_err());
+}
+
+#[test]
+fn jpeg_matte_and_webp_alpha_survive_decode_and_exports_are_repeatable() {
+    use vellum_core::{export::ExportFrame, ports::ExportRenderer};
+    let renderer = Renderer::new().unwrap();
+    let mut frame = ExportFrame::empty("frame00001", "TEST DATA", 40., 40.);
+    frame.output.list = fixture();
+    for format in ["png", "jpeg", "webp", "svg", "pdf"] {
+        let first =
+            ExportRenderer::render(&renderer, std::slice::from_ref(&frame), format).unwrap();
+        assert_eq!(
+            first,
+            ExportRenderer::render(&renderer, std::slice::from_ref(&frame), format).unwrap(),
+            "{format} is deterministic"
+        );
+        if !matches!(format, "jpeg" | "webp") {
+            continue;
+        }
+        let asset = AssetId::new("encoded-image").unwrap();
+        let resources = Resources {
+            images: std::collections::BTreeMap::from([(asset.clone(), first.into())]),
+            ..Default::default()
+        };
+        let list = DisplayList {
+            resources: vec![Resource::Image(RenderImage {
+                asset,
+                fit: ImageFit::Stretch,
+                crop: None,
+                opacity: 1.,
+            })],
+            commands: vec![DrawCmd::Image {
+                image: 0,
+                dst: [0., 0., 40., 40.],
+            }],
+        };
+        let scene = renderer.prepare(&list, &resources).unwrap();
+        let pixels = renderer
+            .rgba(&Page {
+                width: 40,
+                height: 40,
+                scene: &scene,
+            })
+            .unwrap();
+        if format == "jpeg" {
+            assert!(pixels[..3].iter().all(|c| *c >= 250));
+            assert_eq!(pixels[3], 255);
+        } else {
+            assert_eq!(pixels[3], 0);
+        }
+    }
+}

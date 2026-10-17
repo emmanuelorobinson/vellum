@@ -3904,6 +3904,8 @@ dependencies = [
  "vellum-engine-builtin",
  "vellum-engine-claude-code",
  "vellum-engine-codex",
+ "vellum-export-html",
+ "vellum-export-raster",
  "vellum-export-tokens",
  "vellum-index-rstar",
  "vellum-ipc-local",
@@ -3917,6 +3919,7 @@ dependencies = [
  "vellum-text-parley",
  "vellum-types",
  "vellum-watch-notify",
+ "zip",
 ]
 
 [[package]]
@@ -4032,10 +4035,22 @@ dependencies = [
 [[package]]
 name = "vellum-export-html"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+ "vellum-types",
+]
 
 [[package]]
 name = "vellum-export-raster"
 version = "0.0.0"
+dependencies = [
+ "vellum-contracts",
+ "vellum-core",
+ "vellum-types",
+ "zip",
+]
 
 [[package]]
 name = "vellum-export-tokens"
@@ -4826,6 +4841,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.8",
+]
+
+[[package]]
+name = "zip"
+version = "4.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caa8cd6af31c3b31c6631b8f483848b91589021b28fffe50adada48d4f4d2ed1"
+dependencies = [
+ "arbitrary",
+ "crc32fast",
+ "indexmap",
+ "memchr",
 ]
 
 [[package]]

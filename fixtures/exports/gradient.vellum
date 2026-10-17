@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: gradient",
+    "createdWith": "Vellum 0.0.0"
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Page",
+      "children": [
+        {
+          "type": "frame",
+          "id": "frame00001",
+          "name": "Export fixture",
+          "width": 160,
+          "height": 100,
+          "fills": [
+            {
+              "type": "gradient",
+              "kind": "linear",
+              "stops": [
+                {
+                  "color": "#FF3322",
+                  "position": 0
+                },
+                {
+                  "color": "#2244FF",
+                  "position": 1
+                }
+              ]
+            }
+          ],
+          "children": [
+            {
+              "type": "rect",
+              "id": "rect000001",
+              "name": "rect000001",
+              "opacity": 0.5,
+              "position": {
+                "type": "absolute",
+                "x": 30,
+                "y": 30
+              },
+              "width": 60,
+              "height": 40,
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#FFFFFF"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

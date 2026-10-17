@@ -25,7 +25,7 @@ export interface VellumDoc {
   findSpace(page: PageId, size: {width: number; height: number; near?: {x: number; y: number}}): Rect;
   layoutProblems(id: NodeId | PageId): JsonValue;
   screenshot(id: NodeId | PageId, options?: {scale?: number}): JsonValue;
-  export(id: NodeId | PageId, options: {format: 'png' | 'svg' | 'pdf'}): JsonValue;
+  export(id: NodeId | PageId, options: {format: 'png' | 'jpeg' | 'webp' | 'svg' | 'pdf'; scale?: number}): JsonValue;
   fillImage(id: NodeId, asset: AssetId): NodeId;
   icon(parent: NodeId | PageId, icon: string, options: IconOptions): NodeId;
   claim(id: NodeId): null;

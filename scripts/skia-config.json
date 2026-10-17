@@ -1,6 +1,6 @@
 {
   "version": "0.153.3",
-  "features": ["embed-freetype", "gl", "jpeg", "pdf"],
+  "features": ["embed-freetype", "gl", "jpeg", "pdf", "webp"],
   "gn": "skia_use_freetype=true skia_use_system_freetype2=false skia_enable_fontmgr_custom_empty=true skia_use_fontconfig=false skia_use_fonthost_mac=false skia_enable_fontmgr_win=false extra_cflags_cc=[\"-DSK_DISABLE_LOWP_RASTER_PIPELINE\"]",
   "emsdk": "4.0.6",
   "emscriptenCflags": "-fwasm-exceptions -sSUPPORT_LONGJMP=wasm -sMAX_WEBGL_VERSION=2 -sMIN_WEBGL_VERSION=2 -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createVellum -sALLOW_MEMORY_GROWTH=1 -sFILESYSTEM=0 -sENVIRONMENT=web -sEXPORTED_RUNTIME_METHODS=GL,HEAPU8 -sINVOKE_RUN=0"

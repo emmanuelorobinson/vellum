@@ -8,12 +8,6 @@ fn parity_pending_batch_design_images() {
 }
 
 #[test]
-#[ignore = "pending: needs Prompt 41"]
-fn parity_pending_export_tool() {
-    panic!("not implemented yet: needs Prompt 41");
-}
-
-#[test]
 #[ignore = "pending: needs Prompt 50"]
 fn parity_pending_integrated_agent() {
     panic!("not implemented yet: needs Prompt 50");
@@ -83,18 +77,6 @@ fn parity_pending_image_import() {
 #[ignore = "pending: needs Prompt 42"]
 fn parity_pending_figma_paste() {
     panic!("not implemented yet: needs Prompt 42");
-}
-
-#[test]
-#[ignore = "pending: needs Prompt 41"]
-fn parity_pending_code_exports() {
-    panic!("not implemented yet: needs Prompt 41");
-}
-
-#[test]
-#[ignore = "pending: needs Prompt 41"]
-fn parity_pending_raster_exports() {
-    panic!("not implemented yet: needs Prompt 41");
 }
 
 #[test]

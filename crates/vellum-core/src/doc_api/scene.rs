@@ -17,6 +17,13 @@ pub struct Rendered {
 }
 /// The composition root binds this to the editor's renderer. No file writes or resource fetching.
 pub trait RenderRead {
+    fn render_export(
+        &self,
+        _frames: &[crate::export::ExportFrame],
+        _format: &str,
+    ) -> Result<Vec<u8>, ExportError> {
+        Err(ExportError::new("Export requires the full renderer"))
+    }
     fn render(
         &self,
         output: &display_list::Output,
@@ -99,6 +106,218 @@ impl<S: SpatialIndex> SceneServices<S> {
     }
 }
 impl<S: SpatialIndex> Services for SceneServices<S> {
+    fn render_export(
+        &self,
+        frames: &[crate::export::ExportFrame],
+        format: &str,
+    ) -> Result<Vec<u8>, ExportError> {
+        self.config.renderer.render_export(frames, format)
+    }
+    fn prepare_export(
+        &self,
+        doc: &Document,
+        targets: &[String],
+    ) -> Result<crate::export::ExportScene, ScriptError> {
+        use crate::export::{ExportFrame, ExportScene};
+        fn find(
+            roots: &[Arc<crate::resolver::ResolvedNode>],
+            target: &vellum_types::NodeIdPath,
+        ) -> Option<Arc<crate::resolver::ResolvedNode>> {
+            for root in roots {
+                if &root.address == target {
+                    return Some(root.clone());
+                }
+                if let Some(found) = find(&root.children, target) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        if targets.is_empty() || targets.len() > 100 {
+            return Err(error("Select between 1 and 100 layers"));
+        }
+        let mut frames = vec![];
+        for target in targets {
+            let (roots, mut boxes) = self.inspect(doc, target, None)?;
+            let (roots, name) = if let Some(page) =
+                doc.pages.iter().find(|p| p.id.as_str() == target)
+            {
+                (roots, page.name.clone())
+            } else {
+                // Resolve the document's own ancestor chain: library-local ids can equal document ids.
+                let mut cursor = NodeId::new(target).map_err(error)?;
+                let mut chain = vec![cursor.clone()];
+                while let Some(parent) = ops::locate(doc, &cursor).and_then(|p| p.parent) {
+                    cursor = parent;
+                    chain.push(cursor.clone());
+                }
+                let mut chain = chain.into_iter().rev();
+                let mut address = vellum_types::NodeIdPath::from(chain.next().expect("the target"));
+                for segment in chain {
+                    address = address.join(segment);
+                }
+                let root =
+                    find(&roots, &address).ok_or_else(|| error("No visible export target"))?;
+                let b = boxes
+                    .boxes
+                    .get_mut(&root.address)
+                    .ok_or_else(|| error("No visible export target"))?;
+                b.x = 0.;
+                b.y = 0.;
+                let name = root.value.node.name().to_owned();
+                (vec![root], name)
+            };
+            let mut scene = Scene::new((self.make_index)());
+            let report =
+                layout_check::check(&roots, &boxes, &*self.config.text, (self.make_index)())
+                    .map_err(|e| error(format!("{e:?}")))?;
+            let bounds = report
+                .nodes
+                .iter()
+                .filter(|n| n.parent.is_none())
+                .map(|n| n.bounds)
+                .reduce(|a, b| a.union(&b))
+                .ok_or_else(|| error("No visible export bounds"))?;
+            let output = display_list::build(
+                &roots,
+                &boxes,
+                &*self.config.text,
+                &*self.config.fonts,
+                &mut scene,
+                Viewport { bounds, scale: 1. },
+            )
+            .map_err(|e| error(format!("{e:?}")))?;
+            let mut frame = ExportFrame::empty(target, &name, bounds.width, bounds.height);
+            frame.bounds = bounds;
+            frame.roots = roots;
+            frame.layout = boxes;
+            frame.output = output;
+            fn fonts(
+                r: &crate::resolver::ResolvedNode,
+                source: &dyn FontSource,
+                faces: &mut Vec<crate::export::ExportFont>,
+                doc: &Document,
+                path: &str,
+            ) {
+                if !r.value.visible {
+                    return;
+                }
+                if let Node::Text(t) = &r.value.node {
+                    for run in &t.content {
+                        if faces.iter().any(|f| {
+                            f.family == run.font && f.weight == run.weight && f.style == run.style
+                        }) {
+                            continue;
+                        }
+                        if let Some(handle) = source.resolve(&run.font, run.weight, run.style)
+                            && let Some(data) = source.data(handle)
+                        {
+                            faces.push(crate::export::ExportFont {
+                                family: run.font.clone(),
+                                weight: run.weight,
+                                style: run.style,
+                                data,
+                                embed: r.source != path
+                                    || doc.fonts.values().any(|f| f.family == run.font),
+                            });
+                        }
+                    }
+                }
+                for child in &r.children {
+                    fonts(child, source, faces, doc, path);
+                }
+            }
+            for root in &frame.roots {
+                fonts(
+                    root,
+                    &*self.config.fonts,
+                    &mut frame.faces,
+                    doc,
+                    &self.config.path,
+                );
+            }
+            fn render_text<S: SpatialIndex>(
+                r: &Arc<crate::resolver::ResolvedNode>,
+                frame: &mut ExportFrame,
+                services: &SceneServices<S>,
+            ) -> Result<(), ScriptError> {
+                if !r.value.visible {
+                    return Ok(());
+                }
+                if matches!(r.value.node, Node::Text(_))
+                    && r.value.node.stroke().is_none()
+                    && r.value.node.effects().is_empty()
+                    && r.value
+                        .node
+                        .fills()
+                        .iter()
+                        .all(|p| matches!(p, vellum_types::Paint::Solid(_)))
+                {
+                    let b = frame.layout.boxes[&r.address];
+                    if b.width > 0. && b.height > 0. {
+                        let mut own = (**r).clone();
+                        let mut value = (*own.value).clone();
+                        if let Node::Text(t) = &mut value.node {
+                            t.rotation = vellum_types::Value::Literal(0.);
+                            t.flip_x = false;
+                            t.flip_y = false;
+                            t.opacity = vellum_types::Value::Literal(1.);
+                        }
+                        own.value = Arc::new(value);
+                        let mut boxes = frame.layout.clone();
+                        let mut extent = Extent::new(b.width, b.height);
+                        let tree = layout::from_resolved(r).map_err(error)?;
+                        let mut pad = 0.;
+                        if let LayoutContent::Text(rich) = &tree.root.content {
+                            let measured = services.config.text.layout_box(rich, extent);
+                            extent.width = extent.width.max(measured.layout.width);
+                            extent.height = extent.height.max(measured.layout.height);
+                            pad = rich
+                                .runs
+                                .iter()
+                                .map(|r| r.size * 2.)
+                                .fold(0., f64::max)
+                                .ceil();
+                        }
+                        let bounds = Rect::new(0., 0., extent.width, extent.height).expand(pad);
+                        boxes
+                            .boxes
+                            .insert(r.address.clone(), Rect::new(0., 0., b.width, b.height));
+                        let mut scene = Scene::new((services.make_index)());
+                        let out = display_list::build(
+                            &[Arc::new(own)],
+                            &boxes,
+                            &*services.config.text,
+                            &*services.config.fonts,
+                            &mut scene,
+                            Viewport { bounds, scale: 1. },
+                        )
+                        .map_err(|e| error(format!("{e:?}")))?;
+                        let image = services.config.renderer.render(&out, bounds, 1., "png")?;
+                        frame.text_visuals.insert(
+                            r.address.clone(),
+                            crate::export::TextVisual {
+                                bytes: image.bytes,
+                                bounds,
+                            },
+                        );
+                    }
+                }
+                for child in &r.children {
+                    render_text(child, frame, services)?;
+                }
+                Ok(())
+            }
+            for root in frame.roots.clone() {
+                render_text(&root, &mut frame, self)?;
+            }
+            frames.push(frame);
+        }
+        let scene = ExportScene { frames };
+        scene.check(1.).map_err(error)?;
+        Ok(scene)
+    }
+
     fn font_families(&self) -> Vec<String> {
         self.config.fonts.families()
     }
@@ -184,7 +403,7 @@ impl<S: SpatialIndex> Services for SceneServices<S> {
                         .and_then(Json::as_str)
                         .ok_or_else(|| error("Expected export format"))?
                 };
-                if !matches!(format, "png" | "svg" | "pdf") {
+                if !matches!(format, "png" | "jpeg" | "webp" | "svg" | "pdf") {
                     return Err(error("Unsupported export format"));
                 }
                 // Recompute world bounds for nested transforms using the shared inspection path.

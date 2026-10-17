@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: text",
+    "createdWith": "Vellum 0.0.0"
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Page",
+      "children": [
+        {
+          "type": "frame",
+          "id": "frame00001",
+          "name": "Export fixture",
+          "width": 160,
+          "height": 100,
+          "fills": [
+            {
+              "type": "solid",
+              "color": "#FFFFFF"
+            }
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "text000001",
+              "name": "Label",
+              "position": {
+                "type": "absolute",
+                "x": 12,
+                "y": 12
+              },
+              "width": 136,
+              "height": 70,
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#112233"
+                }
+              ],
+              "content": [
+                {
+                  "text": "Design & code",
+                  "font": "Inter",
+                  "size": 16,
+                  "lineHeight": 24
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

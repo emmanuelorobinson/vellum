@@ -260,6 +260,67 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
+      "description": "Export selected layers to PNG, JPEG, WEBP, SVG, PDF, HTML + CSS or HTML + Tailwind. Returns named files as MIME/base64 data, warnings and, for one PNG or inline HTML output, clipboard MIME data. PDF pages follow selection order; multiple raster images become a ZIP. HTML includes its styles and works offline. No file is written. The caller saves the bundle; agent file writes require permission.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "assets": {
+            "description": "Inline HTML assets (default) or return them as additional files in the bundle.",
+            "enum": [
+              "inline",
+              "files"
+            ],
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "format": {
+            "description": "png, jpeg, webp, svg, pdf, html-css or html-tailwind.",
+            "type": "string"
+          },
+          "nodes": {
+            "description": "Layer or page ids, in selection order. PDF uses this as page order; multiple rasters return a ZIP.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "scaffold": {
+            "description": "Include a complete HTML page (default true).",
+            "type": "boolean"
+          },
+          "scale": {
+            "description": "Raster scale: 1, 2 or 3. Vector and code exports retain canvas units.",
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "suffix": {
+            "description": "A filename suffix. Unsafe characters become hyphens; never interpreted as a path.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nodes",
+          "format"
+        ],
+        "title": "Input",
+        "type": "object"
+      },
+      "name": "export"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
       "description": "Write the document's variables as a token file: CSS variables, a Tailwind v4 `@theme` block, or Design Tokens (DTCG) JSON. Returns the file's text and a file name to suggest; write it into the project yourself. Each theme value (such as dark) is written under the selector in `mapping`, which you can change. `warnings` names every token or value that could not be written.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",

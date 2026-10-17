@@ -1,0 +1,72 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "TEST DATA: layout",
+    "createdWith": "Vellum 0.0.0"
+  },
+  "pages": [
+    {
+      "id": "page000001",
+      "name": "Page",
+      "children": [
+        {
+          "type": "frame",
+          "id": "frame00001",
+          "name": "Export fixture",
+          "width": 160,
+          "height": 100,
+          "fills": [
+            {
+              "type": "solid",
+              "color": "#FFFFFF"
+            }
+          ],
+          "layout": "row",
+          "gap": 8,
+          "padding": 12,
+          "children": [
+            {
+              "type": "rect",
+              "id": "rect000001",
+              "name": "rect000001",
+              "width": 36,
+              "height": 60,
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#8866AA"
+                }
+              ]
+            },
+            {
+              "type": "rect",
+              "id": "rect000002",
+              "name": "rect000002",
+              "width": 36,
+              "height": 60,
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#DDAA33"
+                }
+              ]
+            },
+            {
+              "type": "rect",
+              "id": "rect000003",
+              "name": "rect000003",
+              "width": 36,
+              "height": 60,
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#226688"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

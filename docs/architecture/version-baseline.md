@@ -254,3 +254,12 @@ app-server stdio/dynamic tools and exec JSONL/MCP were exercised with `gpt-6-lun
 catalog. This is older than C7's resolved 0.162.1; no install/update was performed. ADR-007 and the adapter's
 `SUPPORTED_VERSIONS` pin the tested binary to 0.158.0 until another version passes replay and native lanes.
 The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused; no new vendor version.
+
+## Prompt 41 export dependencies
+
+- `zip` =4.6.1 (already cached locally; MIT) is confined to `vellum-export-raster`, plus composition-root
+  dev tests that read its output. Defaults are disabled: stored archives, no clock or compression dependency.
+  Every entry has an explicit 1980-01-01 timestamp. `deny.toml` wrapper-bans it and the pure-crate allowlist
+  excludes it. No dependency version already in use was changed.
+- Skia remains 0.153.3, source-only. `webp` (encode and decode) joins gl/pdf/jpeg/embed-freetype so WEBP uses the same full
+  drawing path and packaged source build; `scripts/skia-config.json` changes the native/WASM cache key.

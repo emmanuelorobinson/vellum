@@ -14,6 +14,7 @@ mod content;
 mod doc_store;
 mod document_files;
 mod engine;
+mod export;
 mod files;
 mod fonts;
 mod geometry;
@@ -46,6 +47,7 @@ pub use engine::{
     AgentEngine, BridgeTool, EngineError, EngineFuture, EngineStatus, McpCall, McpChannel, McpHost,
     ToolBridge, ToolReply, Truncation, TurnEnd, TurnEvent, TurnLimits, TurnRequest, TurnStream,
 };
+pub use export::{CodeExporter, ExportError, ExportRenderer, ImageExporter};
 pub use files::{FileSystem, FsError, check_path};
 pub use fonts::{FontData, FontHandle, FontSource};
 pub use geometry::{Extent, Rect};

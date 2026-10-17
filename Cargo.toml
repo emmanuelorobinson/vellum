@@ -52,4 +52,4 @@ parley = { version = "=0.12.0", default-features = false, features = ["std", "co
 rstar = "=0.13.0"
 
 # ADR-016: source-built, data-only FreeType Skia; never platform font lookup or SkParagraph.
-skia-safe = { version = "=0.153.3", default-features = false, features = ["gl", "pdf", "jpeg", "embed-freetype"] }
+skia-safe = { version = "=0.153.3", default-features = false, features = ["gl", "pdf", "jpeg", "webp", "embed-freetype"] }

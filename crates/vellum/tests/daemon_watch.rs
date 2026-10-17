@@ -121,6 +121,7 @@ fn real_env(services: Rc<dyn Services>) -> Env {
         }),
         ids: Box::new(|| Box::new(SequentialIds::new())),
         services,
+        export_services: None,
         scripts: None,
         entropy: Box::new(|| 7),
     }

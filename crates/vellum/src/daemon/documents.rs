@@ -29,6 +29,12 @@ use super::view::{DocumentView, EditorView, LeaseInfo, Paused};
 /// Finds where a document path lives: the file system and the path inside it.
 pub type Locate = Box<dyn Fn(&str) -> Result<(Arc<dyn FileSystem>, String), FsError>>;
 /// Opens a document store on a document.
+pub type ExportServices = fn(
+    &Document,
+    Arc<dyn FileSystem>,
+    &str,
+) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError>;
+
 pub type MakeStore = Box<dyn Fn(&Document) -> Box<dyn DocStore>>;
 
 /// Everything the daemon plugs in. Tests use fakes; the binary uses the real adapters.
@@ -47,6 +53,8 @@ pub struct Env {
     pub ids: Box<dyn Fn() -> Box<dyn IdGen>>,
     /// Scene and drawing for headless renders.
     pub services: Rc<dyn Services>,
+    /// Fresh document-scoped fonts and library resources for export. None uses the supplied scene.
+    pub export_services: Option<ExportServices>,
     /// The sandbox `execute` scripts run in; none in a build without one.
     pub scripts: Option<Rc<dyn ScriptRuntime>>,
     /// Random bits for the ids of agents and sessions (ULIDs).
@@ -409,6 +417,76 @@ impl Documents {
     /// The scene and drawing services headless reads use: layout, free space, problems.
     pub fn services(&self) -> Rc<dyn Services> {
         self.env.services.clone()
+    }
+
+    /// Prepare an export from the current snapshot, resolving only canvas-owned asset references. No
+    /// arbitrary paths or URLs are accepted and nothing is written. Assets are hash-verified by FsAssets.
+    pub fn export_scene(
+        &self,
+        path: &str,
+        doc: &Document,
+        targets: &[String],
+    ) -> Result<vellum_core::export::ExportScene, vellum_core::ports::ExportError> {
+        use vellum_core::ports::{AssetHash, AssetStore, ExportError};
+        use vellum_types::display::{RenderPaint, Resource};
+        let (fs, inner) = (self.env.locate)(path).map_err(ExportError::new)?;
+        let services = match self.env.export_services {
+            Some(make) => make(doc, fs.clone(), &inner)?,
+            None => self.services(),
+        };
+        let mut scene = services
+            .prepare_export(doc, targets)
+            .map_err(ExportError::new)?;
+        fn sources(
+            r: &vellum_core::resolver::ResolvedNode,
+            out: &mut BTreeMap<vellum_types::AssetId, String>,
+        ) {
+            if let vellum_types::Node::Image(n) = &r.value.node {
+                out.insert(n.asset.clone(), r.source.clone());
+            }
+            for p in r.value.node.fills().iter().chain(
+                r.value
+                    .node
+                    .stroke()
+                    .into_iter()
+                    .flat_map(|s| s.paints.iter()),
+            ) {
+                if let vellum_types::Paint::Image(p) = p {
+                    out.insert(p.asset.clone(), r.source.clone());
+                }
+            }
+            for c in &r.children {
+                sources(c, out);
+            }
+        }
+        for frame in &mut scene.frames {
+            let mut origins = BTreeMap::new();
+            for root in &frame.roots {
+                sources(root, &mut origins);
+            }
+            for resource in &frame.output.list.resources {
+                let image = match resource {
+                    Resource::Image(i) | Resource::Paint(RenderPaint::Image(i)) => i,
+                    _ => continue,
+                };
+                if frame.images.contains_key(&image.asset) {
+                    continue;
+                }
+                let source = origins
+                    .get(&image.asset)
+                    .filter(|p| !p.is_empty())
+                    .map_or(inner.as_str(), String::as_str);
+                let store = vellum_assets_fs::FsAssets::new(
+                    fs.clone(),
+                    vellum_assets_fs::assets_dir_for(source),
+                )
+                .map_err(ExportError::new)?;
+                let hash = AssetHash::new(image.asset.as_str()).map_err(ExportError::new)?;
+                let bytes = store.get(&hash).map_err(ExportError::new)?;
+                frame.images.insert(image.asset.clone(), bytes.into());
+            }
+        }
+        Ok(scene)
     }
 
     /// The font families the daemon can draw with, sorted.

@@ -1,0 +1,43 @@
+name: Export goldens
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+jobs:
+  exports:
+    name: HTML exports (chrome lane)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: export-${{ hashFiles('scripts/skia-config.json', 'patches/skia-bindings/**') }}
+          cache-all-crates: true
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          chrome-version: 155.0.8059.39
+          install-dependencies: true
+      - run: node scripts/skia-build.mjs test --locked -p vellum --test exports -p vellum-export-html -p vellum-export-raster
+      - run: node scripts/skia-build.mjs run --locked -p vellum --example export-goldens -- --check
+      - name: Compare HTML exports to native goldens
+        env:
+          VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: node scripts/export-goldens.mjs
+      - name: Specification intact
+        if: always()
+        run: node scripts/spec-checksums.mjs check
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: export-goldens
+          path: target/export-goldens

@@ -169,14 +169,10 @@
     "capability": "Earlier `export_nodes`",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_export_tool"
+        "file": "crates/vellum/tests/exports.rs",
+        "name": "export_tool_returns_copyable_html_and_real_image_formats_without_writing"
       }
-    ],
-    "pending": {
-      "prompt": 41,
-      "reason": "Script exports exist; the typed export tool remains."
-    }
+    ]
   },
   {
     "capability": "Integrated agent with sessions, model picker, reasoning effort, Stop",
@@ -270,7 +266,7 @@
     }
   },
   {
-    "capability": "Parallel agents 1–6: Split work, Side by side, per-agent model",
+    "capability": "Parallel agents 1\u20136: Split work, Side by side, per-agent model",
     "tests": [
       {
         "file": "crates/vellum/tests/parallel.rs",
@@ -287,7 +283,7 @@
     ]
   },
   {
-    "capability": "\"Let it cook\": successive variants exploring Layout or Style, 2–6",
+    "capability": "\"Let it cook\": successive variants exploring Layout or Style, 2\u20136",
     "tests": [
       {
         "file": "crates/vellum/tests/parallel.rs",
@@ -398,27 +394,19 @@
     "capability": "HTML + Tailwind / HTML + CSS export, scaffold option",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_code_exports"
+        "file": "crates/vellum/tests/exports.rs",
+        "name": "custom_text_exports_embed_the_actual_font_and_clipboard_html_is_self_contained"
       }
-    ],
-    "pending": {
-      "prompt": 41,
-      "reason": "Needs HTML/CSS and Tailwind exporters."
-    }
+    ]
   },
   {
-    "capability": "Export PNG, JPEG, WEBP, PDF at 1×–3×",
+    "capability": "Export PNG, JPEG, WEBP, PDF at 1\u00d7\u20133\u00d7",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_raster_exports"
+        "file": "crates/vellum/tests/exports.rs",
+        "name": "archive_entries_have_unique_safe_names_and_correct_dimensions"
       }
-    ],
-    "pending": {
-      "prompt": 41,
-      "reason": "Needs full typed export formats and scales."
-    }
+    ]
   },
   {
     "capability": "Share a design: snapshot link, Update snapshot, revoke, recipients download a ZIP, missing-dependency warning",
@@ -473,7 +461,7 @@
     }
   },
   {
-    "capability": "Theme axes (e.g. Light/Dark × Device) with frame-level theme",
+    "capability": "Theme axes (e.g. Light/Dark \u00d7 Device) with frame-level theme",
     "tests": [
       {
         "file": "crates/vellum-core/src/resolver/variables/tests/theme.rs",

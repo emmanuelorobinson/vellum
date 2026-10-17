@@ -8,6 +8,11 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review the HTML export choices** (Prompt 41). Computed fixed layout; editable text beneath a renderer PNG
+  layer; complex appearance as SVG/PNG. These preserve canvas pixels; get_spec supplies the input for application code.
+  Scaffold defaults on, assets default inline, JPEG uses a white matte. Limits and choices are recorded in
+  `docs/runbooks/exports.md`. The new Chrome CI lane still needs a remote run.
+
 - **Review the parallel, Stop and Undo choices** (Prompt 39). Mine, not from a source: all lanes of a parallel
   turn share the one turn id, so Undo this turn takes every lane back; each lane therefore needs its own engine
   instance (`Orchestrator::with_helpers`), since `interrupt` is per turn. A turn is done when every lane a person did
@@ -2387,3 +2392,57 @@ Verified on macOS arm64 (exit 0; both telemetry opt-outs):
 
 Not run: `pnpm cargo:deny` advisories (no network use), `pnpm format-spec:check`, `node --test scripts/__tests__`.
 Not done: CLI `tokens` commands and the C19/C20 editor UI (later prompts). Nothing is committed.
+
+
+## Prompt 41: HTML, raster, PDF and SVG exports
+
+Built (docs/runbooks/exports.md):
+- Pure CodeExporter/ImageExporter/ExportRenderer ports, export scenes and bundles, clipboard MIME payloads.
+  Selection subtrees are isolated and rebased; library-local ids cannot shadow real document layers.
+- html-css and html-tailwind: scaffold on/off, inline/file assets, compiled utility rules, escaped content,
+  fixed computed layout. Text remains editable HTML beneath a reported renderer PNG layer, including overflow
+  padding; custom fonts travel with it. Complex appearance uses SVG, or PNG when text is involved.
+- PNG/JPEG/WEBP at 1–3×, SVG, selection-ordered multi-page PDF, deterministic multi-raster ZIPs, safe unique
+  filenames and suffixes. JPEG has a white matte (quality 95); WEBP uses quality 100. Skia webp encode/decode
+  enabled; zip 4.6.1 is wrapper-banned outside its adapter and composition-root dev tests.
+- The read-only export tool returns files and optional clipboard data, with raw/encoded result limits. It
+  writes no files. A document-scoped resource factory loads fonts, JSON libraries and hash-verified images.
+  Contract suites catch broken exporters; MCP schema and doc API declarations regenerated. Parity: 29 active,
+  23 pending. Four canonical fixtures, PNG goldens, 32 Chrome cases and the exports.yml chrome lane added.
+
+Choices/limits: computed fixed layout, no inferred app semantics or responsive rules; native clipboard and
+folder-writing UI remain in later UI, host and CLI prompts. Missing assets/fonts/libraries and unevaluated scripts fail explicitly.
+Directory-format library loading is still absent. The tool is bounded to 700 KiB raw / 950 KiB encoded; direct
+bundles allow 32 MiB. Other limits and format choices are in the runbook. No UI or design frames were built.
+
+Process: adapter/tool tests first failed on missing APIs; further red tests caught font embedding, WEBP decode
+and an id collision (9 px library child exported instead of a 64 px document frame). An invalid library fixture
+initially lacked pages; corrected without changing its assertions. Chrome text and SVG glyph rendering failed
+pixel comparison; the native text layer fixed it without raising tolerances. Contract and overflow/result-budget
+checks did not have a confirmed red run before implementation. No guide §3.2 row names Prompt 41; sibling export
+paths were searched, none supplied this Rust design-to-code path. No third-party code was ported.
+
+Verified on macOS arm64 (exit 0; Node 24, cached pnpm 12.11.2 on PATH, both telemetry opt-outs; native access for
+Chrome, compiler temp files and IPC; source-build wrapper/environment):
+- `node scripts/skia-build.mjs test --offline --workspace --no-fail-fast`: 1,352 passed, 0 failed, 63 ignored.
+- `node scripts/skia-build.mjs test --offline -p vellum --test exports`: 10 passed; renderer suite: 11 passed,
+  including encode/decode, JPEG matte, WEBP alpha and repeatability; both exporter contracts pass in workspace.
+- `node scripts/skia-build.mjs run --offline -p vellum --example export-goldens -- --check`;
+  `node scripts/export-goldens.mjs`: 32/32, every pixel identical; native/browser geometry images reviewed.
+- `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `node scripts/skia-build.mjs clippy --offline -p vellum --lib --bins --no-default-features -- -D warnings`.
+- `pnpm type-check`, `pnpm lint`, `pnpm deps:check`, `pnpm format:check`, `pnpm types:check`,
+  `pnpm format-spec:check`, `pnpm doc-api:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`,
+  `pnpm parity:check`; `git diff --check`. Export fixtures canonicalized with the codec example.
+
+Failed, pre-existing: `cargo deny --offline check` (bitmaps/im/sized-chunks Loro-chain advisories; also an inout
+0.2.3 yank warning; bans/licences/sources pass). `node --test 'scripts/__tests__/*.test.mjs'` with the source-build
+environment: 173 pass, 4 skipped, 2 failures (old Proposed ADR assertions, R3 taffy main.rs reference path).
+
+Verification interruptions: `node scripts/clean.mjs --help` unexpectedly began deleting target/ (no help parser);
+stopped it, rebuilt outputs and reran checks. Source/specs/fixtures were intact. Superseded/interrupted runs are
+not counted as verification. Sandboxed Skia cache sync, Clang temp creation, Chrome and IPC failed; native/source-
+wrapper reruns passed. Global pnpm bootstrap stalled; the existing pinned binary worked.
+
+Not verified: remote CI, native Windows/Linux, or the updated WASM graphics build. No installed engines or paid
+providers were run. No architecture source changed except the permitted version-baseline addition.

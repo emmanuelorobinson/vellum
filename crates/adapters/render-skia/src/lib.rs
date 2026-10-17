@@ -667,3 +667,77 @@ pub(crate) fn outline(path: &Path, paint: &Paint) -> Result<Path, Error> {
     }
     Ok(b.detach())
 }
+
+impl Renderer {
+    /// JPEG has no alpha. Transparent canvas areas are composited onto white before encoding.
+    pub fn jpeg(&self, page: &Page<'_>) -> Result<Vec<u8>, Error> {
+        let mut surface = raster(page.width, page.height)?;
+        surface.canvas().clear(Color::WHITE);
+        page.scene.draw(surface.canvas());
+        surface
+            .image_snapshot()
+            .encode(None, sk::EncodedImageFormat::JPEG, 95)
+            .map(|d| d.as_bytes().to_vec())
+            .ok_or(Error::Encode)
+    }
+    pub fn webp(&self, page: &Page<'_>) -> Result<Vec<u8>, Error> {
+        let mut surface = raster(page.width, page.height)?;
+        page.scene.draw(surface.canvas());
+        surface
+            .image_snapshot()
+            .encode(None, sk::EncodedImageFormat::WEBP, 100)
+            .map(|d| d.as_bytes().to_vec())
+            .ok_or(Error::Encode)
+    }
+}
+impl vellum_core::ports::ExportRenderer for Renderer {
+    fn render(
+        &self,
+        frames: &[vellum_core::export::ExportFrame],
+        format: &str,
+    ) -> Result<Vec<u8>, vellum_core::ports::ExportError> {
+        use vellum_core::{export::ExportScene, ports::ExportError};
+        ExportScene {
+            frames: frames.to_vec(),
+        }
+        .check(1.)?;
+        if format != "pdf" && frames.len() != 1 {
+            return Err(ExportError::new("This encoding takes one frame"));
+        }
+        let scenes = frames
+            .iter()
+            .map(|f| {
+                self.prepare(
+                    &f.output.list,
+                    &Resources {
+                        fonts: f.output.fonts.clone(),
+                        images: f.images.clone(),
+                    },
+                )
+                .map_err(ExportError::new)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let pages: Vec<_> = frames
+            .iter()
+            .zip(&scenes)
+            .map(|(f, scene)| {
+                let (width, height) = f.size();
+                Page {
+                    width,
+                    height,
+                    scene,
+                }
+            })
+            .collect();
+        let bytes = match format {
+            "png" => self.png(&pages[0]),
+            "jpeg" => self.jpeg(&pages[0]),
+            "webp" => self.webp(&pages[0]),
+            "svg" => self.svg(&pages[0]).map(String::into_bytes),
+            "pdf" => self.pdf(&pages),
+            _ => return Err(ExportError::new("Unsupported export encoding")),
+        }
+        .map_err(ExportError::new)?;
+        Ok(bytes)
+    }
+}

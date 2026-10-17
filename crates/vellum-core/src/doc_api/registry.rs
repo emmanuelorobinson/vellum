@@ -51,7 +51,7 @@ registry! {
     FindSpace, "findSpace", "(page: PageId, size: {width: number; height: number; near?: {x: number; y: number}}): Rect", false;
     LayoutProblems, "layoutProblems", "(id: NodeId | PageId): JsonValue", false;
     Screenshot, "screenshot", "(id: NodeId | PageId, options?: {scale?: number}): JsonValue", false;
-    Export, "export", "(id: NodeId | PageId, options: {format: 'png' | 'svg' | 'pdf'}): JsonValue", false;
+    Export, "export", "(id: NodeId | PageId, options: {format: 'png' | 'jpeg' | 'webp' | 'svg' | 'pdf'; scale?: number}): JsonValue", false;
     FillImage, "fillImage", "(id: NodeId, asset: AssetId): NodeId", true;
     Icon, "icon", "(parent: NodeId | PageId, icon: string, options: IconOptions): NodeId", true;
     Claim, "claim", "(id: NodeId): null", false;

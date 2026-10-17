@@ -11,6 +11,7 @@ mod content;
 mod context;
 mod coordinate;
 mod execute;
+mod export;
 mod library;
 mod model;
 mod nodes;
@@ -529,6 +530,7 @@ impl Registry {
         context::register(&mut tools);
         nodes::register(&mut tools);
         scene::register(&mut tools);
+        export::register(&mut tools);
         library::register(&mut tools);
         write::register(&mut tools);
         model::register(&mut tools);

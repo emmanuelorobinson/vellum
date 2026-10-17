@@ -224,6 +224,7 @@ pub fn env(fs: Arc<MemFs>, clock: Arc<ManualClock>) -> Env {
         store: Box::new(|doc| Box::new(InMemoryDocStore::new(doc, 1)) as Box<dyn DocStore>),
         ids: Box::new(move || Box::new(SharedIds(ids.clone()))),
         services: Rc::new(NoServices),
+        export_services: None,
         scripts: None,
         entropy: Box::new(move || {
             entropy.set(entropy.get() + 1);
@@ -371,6 +372,7 @@ impl Daemon {
         let clock = daemon.clock.clone();
         let mut env = env(fs, clock);
         env.services = scene();
+        env.export_services = Some(vellum::daemon::production::export_services);
         daemon.docs = Documents::new(
             env,
             Box::new(daemon.watcher.clone()),

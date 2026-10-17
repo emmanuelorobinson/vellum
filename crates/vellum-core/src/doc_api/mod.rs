@@ -26,6 +26,22 @@ pub const EXECUTE_LIMITS: ScriptLimits = ScriptLimits {
 /// Only bounded in-memory operations. Implementations use the same scene/renderer as the editor.
 /// `export` returns data; writing files, fetching images and network access are not capabilities here.
 pub trait Services {
+    fn prepare_export(
+        &self,
+        _document: &Document,
+        _targets: &[String],
+    ) -> Result<crate::export::ExportScene, ScriptError> {
+        Err(error("Export requires a host scene service"))
+    }
+    fn render_export(
+        &self,
+        _frames: &[crate::export::ExportFrame],
+        _format: &str,
+    ) -> Result<Vec<u8>, crate::ports::ExportError> {
+        Err(crate::ports::ExportError::new(
+            "Export requires the full renderer",
+        ))
+    }
     fn read(
         &self,
         method: Method,

@@ -46,5 +46,5 @@ line and column; correct the failing input, refresh the scope if needed, and ret
 After editing, call snapshot_layout with problems_only and screenshot on the frame. Inspect overflow,
 clipping, overlaps, missing fonts and visual hierarchy. Layout problems and screenshots can also be read
 inside a script; they see earlier changes in that script. Report unsupported or incomplete render results.
-doc.export currently supports png, svg and pdf; it is not the later HTML export tool. doc.fillImage binds an
+doc.export supports png, jpeg, webp, svg and pdf with an optional scale. Use the export tool for HTML, multi-selection ZIPs and multi-page PDFs. doc.fillImage binds an
 existing asset id, and doc.icon needs explicit icon options; neither fetches stock images or installs assets.

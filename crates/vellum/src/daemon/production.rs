@@ -131,6 +131,13 @@ mod scene {
     struct Skia(vellum_render_skia::Renderer);
 
     impl RenderRead for Skia {
+        fn render_export(
+            &self,
+            frames: &[vellum_core::export::ExportFrame],
+            format: &str,
+        ) -> Result<Vec<u8>, vellum_core::ports::ExportError> {
+            vellum_core::ports::ExportRenderer::render(&self.0, frames, format)
+        }
         fn render(
             &self,
             output: &display_list::Output,
@@ -150,6 +157,8 @@ mod scene {
             };
             let (mime, bytes) = match format {
                 "png" => ("image/png", self.0.png(&page).map_err(error)?),
+                "jpeg" => ("image/jpeg", self.0.jpeg(&page).map_err(error)?),
+                "webp" => ("image/webp", self.0.webp(&page).map_err(error)?),
                 "svg" => (
                     "image/svg+xml",
                     self.0.svg(&page).map_err(error)?.into_bytes(),
@@ -162,6 +171,73 @@ mod scene {
                 bytes,
             })
         }
+    }
+
+    struct ExportLibraries {
+        fs: std::sync::Arc<dyn vellum_core::ports::FileSystem>,
+        fonts: vellum_text_parley::ParleyFonts,
+    }
+    impl LibrarySource for ExportLibraries {
+        fn load(&self, path: &str) -> Result<Option<Document>, String> {
+            use vellum_core::ports::FsError;
+            match self.fs.read(path.trim_start_matches('/')) {
+                Ok(bytes) => {
+                    let doc = vellum_codec_json::JsonCodec::new()
+                        .decode(&bytes)
+                        .map_err(|e| e.to_string())?;
+                    let assets = vellum_assets_fs::FsAssets::new(
+                        self.fs.clone(),
+                        vellum_assets_fs::assets_dir_for(path),
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let report = self.fonts.load_document_fonts(&doc, &assets);
+                    if !report.problems.is_empty() {
+                        return Err(format!(
+                            "Library fonts could not be loaded: {:?}",
+                            report.problems
+                        ));
+                    }
+                    Ok(Some(doc))
+                }
+                Err(FsError::NotFound(_)) => Ok(None),
+                Err(e) => Err(e.to_string()),
+            }
+        }
+    }
+    pub(super) fn export_services(
+        doc: &Document,
+        fs: std::sync::Arc<dyn vellum_core::ports::FileSystem>,
+        path: &str,
+    ) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError> {
+        use vellum_core::ports::ExportError;
+        let fonts = vellum_text_parley::ParleyFonts::new();
+        let assets =
+            vellum_assets_fs::FsAssets::new(fs.clone(), vellum_assets_fs::assets_dir_for(path))
+                .map_err(ExportError::new)?;
+        let report = fonts.load_document_fonts(doc, &assets);
+        if !report.problems.is_empty() {
+            return Err(ExportError::new(format!(
+                "Document fonts could not be loaded: {:?}",
+                report.problems
+            )));
+        }
+        let text = vellum_text_parley::ParleyText::new(fonts.clone());
+        let renderer = vellum_render_skia::Renderer::new().map_err(ExportError::new)?;
+        Ok(Rc::new(SceneServices::new(
+            SceneConfig {
+                script_outputs: Default::default(),
+                path: path.into(),
+                libraries: Rc::new(ExportLibraries {
+                    fs,
+                    fonts: fonts.clone(),
+                }),
+                layout: RefCell::new(Box::new(vellum_layout_taffy::TaffyLayout::new())),
+                text: Rc::new(text),
+                fonts: Rc::new(fonts),
+                renderer: Rc::new(Skia(renderer)),
+            },
+            vellum_index_rstar::RstarIndex::new,
+        )))
     }
 
     pub(super) fn services() -> Option<Rc<dyn Services>> {
@@ -180,6 +256,26 @@ mod scene {
             },
             vellum_index_rstar::RstarIndex::new,
         )))
+    }
+}
+
+/// Export gets a fresh font collection per document, so document fonts never spill into another file.
+/// This only loads dependencies already named by the canvas, through its rooted filesystem.
+pub fn export_services(
+    doc: &vellum_types::Document,
+    fs: Arc<dyn FileSystem>,
+    path: &str,
+) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError> {
+    #[cfg(feature = "scene")]
+    {
+        scene::export_services(doc, fs, path)
+    }
+    #[cfg(not(feature = "scene"))]
+    {
+        let _ = (doc, fs, path);
+        Err(vellum_core::ports::ExportError::new(
+            "Export requires the scene feature",
+        ))
     }
 }
 
@@ -254,6 +350,7 @@ pub fn documents(state: &Path) -> std::io::Result<Documents> {
         store: Box::new(|doc| Box::new(LoroDocStore::new(doc, peer())) as Box<dyn DocStore>),
         ids: Box::new(|| Box::new(RandomIds)),
         services: scene_services(),
+        export_services: Some(export_services),
         scripts: script_runtime(),
         entropy: Box::new(entropy),
     };
