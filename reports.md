@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Supply the missing component appearance references and CI snapshot artifact** (Prompt 45). The React
+  harness covers all 252 reusable component variants in four appearances (1,008 stories), but the design
+  provides only 705 matching references; 303 are explicitly missing (see DESIGN-GAPS.md and
+  `packages/editor-react/fixtures/components.json`). All components are initially pending. Before a component
+  becomes ready, provide its missing design appearances and export its board PNGs into the CI chrome lane;
+  the PNGs are gitignored like the existing snapshots. A built case with no reference fails its golden.
+
 - **Review additional dependency advisories found by Prompt 44's required `cargo deny check`.** The unchanged
   lockfile also fails on `zip` 4.6.1 (RUSTSEC-2026-0367, -0368, -0369: extraction vulnerabilities), and
   `zbus_names` 4.3.4 / `zvariant` 5.15.0 / `zvariant_derive` 5.15.0 (RUSTSEC-2026-0371, -0370, -0372:
@@ -24,12 +31,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   tokens exist (`token-missing:type/<role>`); the design adds `chrome/toolbar-height` 44, `chrome/status-height`
   24, `chrome/ledger-height` 32, `motion/toast` 160, and one elevation level (`chrome/elevation-color`,
   `chrome/elevation-blur` 16) where DESIGN.md describes two (`token-extra:<name>`). Code follows the design file.
-
-- **Storybook lives in `packages/ui-tokens` for now** (Prompt 43). It uses the html renderer, which suits the token
-  page. Prompt 45's harness (one story per component, variant and theme, over React) needs a React Storybook, most
-  likely in `packages/editor-react`; decide then whether the token story moves there. `pnpm test:storybook` is not
-  in CI (it needs Playwright's Chromium on the runner). pnpm skipped esbuild's install script; run
-  `pnpm approve-builds` if you want it allowed.
 
 - **Confirm the golden tolerance I chose for you, and look at how pen.dev draws weights 450 and 650** (Prompt 43).
   You said "decide for me", so DESIGN-DECISIONS.md now says 1 % (By: "Owner (delegated to agent, Prompt 43)"),
@@ -2651,3 +2652,67 @@ Passed (Node 24, pnpm 12.11.2; both telemetry opt-outs):
 - `pnpm format:check`; `pnpm design:check`; `pnpm tokens:lint`; `pnpm copy-lint`; `pnpm clean-room`; `pnpm checksum`;
   `git diff --check`.
 - `node --test scripts/__tests__/reports.test.mjs scripts/__tests__/repo-layout.test.mjs scripts/__tests__/deps.test.mjs scripts/__tests__/clean-room.test.mjs` (25).
+
+
+## Prompt 45
+
+Built the command controller and editor-scoped tool/command/panel registries, the complete Keyboard table
+(including pointer/gesture rows), physical-key normalization, focus/host rules, search, conflict detection
+and transactional rebinding. Temporary tools release by physical key after focus/modifier changes and on
+blur; browser defaults are cancelled before asynchronous handlers yield. Missing feature handlers stay
+disabled. Actual arrange/export/presentation/UI actions remain with their feature prompts.
+
+- Typed Host ports and injected VS Code/Electron/browser adapters; in-memory Host. Clipboard/file reads
+  return copies; atomic replacement, watches, theme and disposal have shared contracts. Browser capabilities
+  are unavailable unless supplied. Daemon controls use a host relay, with offline/disposed states and stale
+  connect protection; scripted fake, offline no-op sync (send refuses), disabled no-op telemetry.
+- EngineClient, WASM binding facade and scripted fake; tool/Scene request types moved here and re-exported
+  from editor-core. Person transactions, actor undo/redo, read-only rejection, snapshot/Scene copies and
+  subscriptions are covered. No TS DocStore. The native host transports and the Rust document-operation
+  WASM/Scene facade are not implemented by these ports; contracts use injected fakes. The current Rust WASM
+  module still exports rendering only. These must be connected when building the canvas/hosts.
+- React Storybook in editor-react (port 6007); the HTML token Storybook stays in ui-tokens (6006), resolving
+  that handoff item. Read all 50 Library/Components boards through Pencil on the read-only copy; exported
+  their PNGs locally. The TEST DATA catalog covers all 252 reusable variants × four appearances. Explicit CSF
+  exports are generated and checked against the inventory hash/IDs/boards. Each story gets isolated fakes.
+  Goldens count unbuilt specimens as pending and fail built cases with missing references, wrong dimensions
+  or differing pixels (existing 1% / channel 48 decision). A chrome CI lane and pixel-gate regression tests
+  were added. No product component or unresolved visual option was implemented; no component pixel match
+  is claimed. The 303 missing references are recorded in DESIGN-GAPS.md and Needs a person.
+- Owner approved the exact transitive `gensync@1.0.0-beta.2` exception on 2026-10-18 (Babel through React
+  Storybook docgen). C25 and the version-policy test record that name/version only. Attempting to remove
+  docgen even with the feature disabled broke the React preset and all browser stories; restored the
+  standard dependencies. No direct prerelease pin or existing catalog version changed.
+- Reference read: Graphite orders input mappings by active action/context and maps typed frontend commands
+  into its dispatcher; its WASM value wrapper bridges structured values. Penpot shares drawing primitives
+  behind bulk/resource boundaries. Vellum keeps context-aware dispatch and narrow typed facades, but keeps
+  Person ops and document semantics in its own Rust write path. No reference code was ported. Sibling project
+  searches found no reusable command/engine harness.
+
+Process/interruptions: command and harness tests confirmed missing exports, focus bugs, temporary release
+and incomplete component coverage before the corresponding fixes. Port tests were written before adapters,
+but their first execution was blocked by broken dependency links rather than an expected API failure; later
+broken-implementation checks prove all five port suites reject violations. Some extra lifecycle/pixel tests
+were added alongside implementation. Sandboxed pnpm install/automatic dependency refresh could not reach
+registry DNS and temporarily removed links; stopped those runs and restored the pinned lockfile with the
+existing store and native access. Interrupted/failed runs are not counted below.
+
+Passed (Node 24, pnpm 12.11.2, both telemetry opt-outs; native access for build cache/Chrome):
+- `pnpm type-check` (33 tasks); `pnpm exec turbo run test` (32 tasks, including 1,734 editor-core,
+  14 contracts and 4 engine-client tests); `pnpm format:check`.
+- `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `pnpm deps:check` (191 modules, no violations; bans/licences/sources pass).
+- `pnpm --filter @vellum/editor-react build-storybook`, `pnpm --filter @vellum/editor-react test:storybook`
+  (1,008 passed), `pnpm --filter @vellum/editor-react test:goldens` (0 passed, 1,008 pending, 0 failed),
+  `pnpm --filter @vellum/editor-react harness:check`.
+- `node --test scripts/__tests__/component-goldens.test.mjs scripts/__tests__/reports.test.mjs scripts/__tests__/repo-layout.test.mjs scripts/__tests__/deps.test.mjs scripts/__tests__/clean-room.test.mjs scripts/__tests__/version-baseline.test.mjs scripts/__tests__/design-spec-rules.test.mjs` (43).
+- Biome check of all touched packages and scripts (no errors or warnings; style infos only);
+  `pnpm tokens:lint`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm design:check`, `pnpm checksum`;
+  `git diff --check`.
+
+Remaining check failures are pre-existing: `pnpm lint` (import order in the Prompt 42 icon and Figma fixture
+scripts); `pnpm tokens:check` (17 unaccepted design-token differences); `pnpm cargo:deny` (the existing nine
+Rust advisories); `pnpm test:scripts` (198 passed, 2 failed, 5 skipped: old ADR-000 statuses and the R3 taffy
+main.rs reference path). None of those source/policy files were changed to bypass the failures.
+Remote CI, native VS Code/Electron/browser file services and compiled WASM document operations are not
+verified. Nothing is committed.

@@ -1,0 +1,13 @@
+.component-harness {
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font-family: var(--font-ui);
+  padding: var(--space-4);
+}
+.component-harness p {
+  margin: 0;
+}
+.component-harness p + p {
+  color: var(--chrome-secondary);
+  margin-top: var(--space-2);
+}

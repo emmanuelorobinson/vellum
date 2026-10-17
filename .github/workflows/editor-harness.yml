@@ -1,0 +1,40 @@
+name: Editor harness
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+  STORYBOOK_DISABLE_TELEMETRY: "1"
+jobs:
+  components:
+    name: React component stories (chrome lane, fake engine)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vellum/editor-react harness:check
+      - run: pnpm --filter @vellum/editor-react exec playwright install chromium --with-deps
+      - run: pnpm --filter @vellum/editor-react test:storybook
+      - run: pnpm --filter @vellum/editor-react build-storybook
+      # Initially all specimens are pending. Once implemented, missing design PNGs fail explicitly;
+      # the design exporter must provide those snapshots to this lane before those components land.
+      - name: Component goldens against design snapshots (pending until implemented)
+        run: |
+          export VELLUM_CHROME="$(pnpm --filter @vellum/editor-react exec node -e 'console.log(require("playwright").chromium.executablePath())')"
+          pnpm --filter @vellum/editor-react test:goldens
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: component-goldens
+          path: target/component-goldens/
+      - name: Specification unchanged
+        run: pnpm checksum

@@ -247,6 +247,16 @@ edited.
   `@polka/url@1.0.0-next.29` (via sirv ← `@vitest/browser` ← `@storybook/addon-vitest`), because that package has
   never published a stable version; the lockfile test fails on any other. pnpm skips esbuild's install script
   (not approved); Storybook builds and runs without it.
+- **C25: React component harness** (Prompt 45). `@storybook/react-vite` 10.6.2 matches C24's existing
+  Storybook release; React/React DOM stay 19.3.0, Vite 8.3.4 and Playwright 1.64.1. No existing version
+  changed. The HTML token Storybook remains in ui-tokens; editor-react owns the React harness. Both
+  disable telemetry. The new CI chrome lane exercises the scripted engine/host boundaries only.
+  The owner approved one exact transitive prerelease exception on 2026-10-18:
+  `gensync@1.0.0-beta.2`, through Babel ← react-docgen ← React Storybook. The React preset imports
+  docgen even when automatic prop documentation is disabled, so removing the dependency broke the
+  browser story tests. The standard dependencies are retained; the version test allows only that
+  exact name/version in addition to C24's prior exception. No direct prerelease dependency is added.
+
 
 ## Installed engines (Prompt 36)
 

@@ -16,6 +16,7 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@vellum/types-ts": "workspace:*"
+    "@vellum/types-ts": "workspace:*",
+    "@vellum/engine-client": "workspace:*"
   }
 }

@@ -33,9 +33,30 @@ need `EditablePath.viewBox` from resolved geometry; absent data returns `missing
 `Scale` operation (which handles overrides); scaling a descendant occurrence returns `read-only`, because
 core has no path-addressed Scale operation. No component definition is changed as a fallback.
 
-The Op subset in `tool-types.ts` mirrors core operations as in-process TypeScript requests. It is not a
+The Op subset re-exported by `tool-types.ts` mirrors core operations as in-process TypeScript requests. It is not a
 new serialized protocol. The actual WASM EngineClient/Scene adapter and rendered canvas are still the
 later prompts' work, so these tests exercise the controller with synthetic Scene queries, not a live
 Rust document or a visual UI.
 
 Run `pnpm --filter @vellum/editor-core test` and `pnpm --filter @vellum/editor-core type-check`.
+
+# Commands and extension registries (Prompt 45)
+
+`createRegistries()` scopes tools, commands and panels to one editor. Registrations are ordered,
+searchable, observable and disposable; duplicate IDs fail. `createCommandController(handlers)`
+registers the built-ins through those same APIs. A missing feature handler is disabled, and a
+throwing handler propagates failure. Handlers supplied by later feature/host compositions perform
+the actual engine operations; the registry itself writes no document.
+
+`Keybindings` holds the DESIGN.md Keyboard table, physical `KeyboardEvent.code` normalization,
+macOS/Windows/Linux modifiers and desktop/IDE variants. Canvas, path editing, composer (empty or
+nonempty), panel, text and presentation focus are distinct. Text entry keeps native Tab and undo.
+Reserved host chords stay delegated; Save always goes through the host. Pointer and gesture rows
+are named inputs too (Click, DragPoint, Scroll, Pinch, ZoomClick, etc.); the view supplies the target
+and held-tool context. Nudge commands leave configured amounts and auto-layout reordering to their
+engine handlers. `rebind` validates input and rejects overlapping scopes or reserved host keys
+without changing the previous binding. `keyUp` releases rebound temporary tools by their physical
+key even after modifiers or focus change; `blur` releases every held tool. Supply paired hold/release
+handlers for temporary tools. Pass a `preventDefault` callback to `keyDown` for synchronous
+cancellation. Overrides are scoped to host and platform; Settings will persist them in Prompt 54. Registry/keybinding commands describe features; they do not implement
+slides, clipboard export, panel UI, file dialogs or the later component editors.
