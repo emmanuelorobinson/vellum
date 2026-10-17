@@ -1,0 +1,59 @@
+{
+  "comment": "How DESIGN.md \"Visual system\" names map to vellum.pen variables. Read by scripts/design-tokens --check: every DESIGN.md role must map to a variable with the same light and dark values, and every variable must be named here or by a DESIGN.md table, or the difference must be recorded in docs/design/DESIGN-GAPS.md (check=token-...). Agent hues and radii map by name (Teal -> agent/teal, radius-xs -> radius/xs). A prose entry quotes DESIGN.md word for word, so the check fails if DESIGN.md stops saying it.",
+  "colors": {
+    "Canvas backdrop": ["canvas/backdrop"],
+    "Panel": ["chrome/panel"],
+    "Raised": ["chrome/raised"],
+    "Sunken": ["chrome/sunken"],
+    "Primary text / action": ["chrome/text"],
+    "Secondary text": ["chrome/secondary"],
+    "Tertiary text": ["chrome/tertiary"],
+    "Inverse text": ["chrome/inverse"],
+    "Your message": ["chrome/text"],
+    "Hover row": ["chrome/hover"],
+    "Selected row": ["chrome/selected"],
+    "Separator": ["chrome/separator"],
+    "Border": ["chrome/border"],
+    "Focus ring": ["chrome/focus"],
+    "Selection": ["canvas/selection"],
+    "Selection tint": ["chrome/selected"],
+    "Component": ["canvas/component"],
+    "Variable chip": ["chrome/variable-bg", "chrome/variable-text"],
+    "Needs you": ["chrome/attention", "chrome/attention-bg"],
+    "Error": ["chrome/error", "chrome/error-bg"],
+    "Success": ["chrome/success"]
+  },
+  "type": {},
+  "prose": [
+    { "token": "font/ui", "quote": "Use **Inter** for UI", "value": "Inter" },
+    {
+      "token": "font/mono",
+      "quote": "**JetBrains Mono** for anything to copy",
+      "value": "JetBrains Mono"
+    },
+    {
+      "token": "font/arabic",
+      "quote": "fall back to **IBM Plex Sans Arabic**",
+      "value": "IBM Plex Sans Arabic"
+    },
+    { "token": "space/1", "quote": "Use a **4-point grid**", "value": 4 },
+    { "token": "space/2", "quote": "with an 8px inset from the window edges", "value": 8 },
+    { "token": "space/3", "quote": "properties padding 12px", "value": 12 },
+    { "token": "space/4", "quote": "Agent panel padding is 16px", "value": 16 },
+    { "token": "space/6", "quote": "Use a **4-point grid**", "multipleOf": 4 },
+    { "token": "chrome/property-height", "quote": "property rows 28px", "value": 28 },
+    { "token": "chrome/layer-height", "quote": "layer rows 28px", "value": 28 },
+    { "token": "chrome/step-height", "quote": "step rows 36px", "value": 36 },
+    {
+      "token": "motion/placeholder",
+      "quote": "slow shimmer in the agent's hue (2s cycle)",
+      "value": 2000
+    },
+    { "token": "motion/insert-fade", "quote": "fade in over 120ms", "value": 120 },
+    { "token": "motion/insert-tint", "quote": "one-time 600ms tint", "value": 600 },
+    { "token": "motion/cursor", "quote": "glide over 100ms", "value": 100 },
+    { "token": "motion/step-ring", "quote": "slow rotating ring (2.4s per turn)", "value": 2400 },
+    { "token": "motion/panel", "quote": "Panels and popovers fade in over 120ms", "value": 120 },
+    { "token": "motion/dialog", "quote": "dialogs 160ms fade", "value": 160 }
+  ]
+}

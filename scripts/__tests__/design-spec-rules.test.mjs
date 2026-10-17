@@ -76,22 +76,44 @@ test("snapshots are PNG files", () => {
   }
 });
 
-test("DESIGN-DECISIONS.md is Appendix G with every choice UNDECIDED", () => {
+test("DESIGN-DECISIONS.md is Appendix G, each choice UNDECIDED or one of its options with a date and who decided", () => {
   const text = read("docs", "design", "DESIGN-DECISIONS.md");
   const guide = read("docs", "implementation", "vellum-implementation-guide.md");
   const appendix = guide.slice(guide.indexOf("# Appendix G"));
   const open = appendix.indexOf("```markdown") + "```markdown\n".length;
   const template = appendix.slice(open, appendix.indexOf("\n```", open));
+  // Only the Choice, Date and By cells may differ from the template, and only a person fills them in.
+  const isRow = (l) => l.startsWith("| ") && !l.startsWith("| Decision") && !l.startsWith("|---");
+  const cells = (l) =>
+    l
+      .slice(1, -1)
+      .split("|")
+      .map((c) => c.trim());
+  const withoutChoices = (t) =>
+    t
+      .trim()
+      .split("\n")
+      .map((l) => (isRow(l) ? cells(l).slice(0, 2).join(" | ") : l))
+      .join("\n");
   assert.equal(
-    text.trim(),
-    template.trim(),
+    withoutChoices(text),
+    withoutChoices(template),
     "DESIGN-DECISIONS.md differs from the Appendix G template",
   );
-  const rows = text
-    .split("\n")
-    .filter((l) => l.startsWith("| ") && !l.startsWith("| Decision") && !l.startsWith("|---"));
+  const rows = text.split("\n").filter(isRow).map(cells);
   assert.equal(rows.length, 10);
-  for (const row of rows) assert.match(row, /\| UNDECIDED \| \| \|$/, row);
+  for (const [decision, options, choice, date, by] of rows) {
+    if (choice === "UNDECIDED") {
+      assert.deepEqual([date, by], ["", ""], decision);
+      continue;
+    }
+    assert.ok(
+      options.split(" · ").includes(choice),
+      `${decision}: "${choice}" is not one of ${options}`,
+    );
+    assert.match(date, /^\d{4}-\d{2}-\d{2}$/, decision);
+    assert.notEqual(by, "", decision);
+  }
 });
 
 test("DESIGN-GAPS.md has a header, a line format and one dated line per gap", () => {

@@ -126,6 +126,10 @@ jobs:
       - run: pnpm copy-lint
       - name: Design snapshots are current and complete (no pen.dev needed)
         run: pnpm design:check
+      - name: Design tokens match vellum.pen, generated files are current, DESIGN.md gaps are resolved
+        run: pnpm tokens:check
+      - name: Token contrast and usage lints
+        run: pnpm tokens:lint
       - name: Generated TypeScript bindings match vellum-types
         run: pnpm types:check
       - name: docs/format (JSON Schema and reference page) matches vellum-types

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Exports the design's variables to packages/ui-tokens/source/tokens.json and generates the CSS and TS
+# tokens from it (guide Prompt 43). Logic: scripts/design-tokens.mjs. Reading the design needs `pen login`
+# or PEN_CLI_KEY, or a Pencil MCP session (--print-query, then --raw); --check needs neither and runs in CI.
+set -euo pipefail
+exec node "$(dirname "$0")/design-tokens.mjs" "$@"

@@ -9,6 +9,8 @@
       "!refs",
       "!packages/types-ts/src/generated",
       "!packages/skills/src/generated",
+      "!packages/ui-tokens/src/generated",
+      "!packages/ui-tokens/source/tokens.json",
       "!packages/types-ts/src/index.ts",
       "!pnpm-lock.yaml",
       "!spikes/*/results",

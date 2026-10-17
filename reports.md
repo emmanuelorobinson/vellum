@@ -8,6 +8,26 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Resolve 17 DESIGN.md vs vellum.pen token differences; CI's `pnpm tokens:check` is red until you do**
+  (Prompt 43). The prompt asks for a failing check until a person decides each one, so I recorded them in
+  DESIGN-GAPS.md without `check=` keys. For each: change `vellum.pen` or DESIGN.md, or accept the design file's
+  side by adding a DESIGN-GAPS line with the key `pnpm tokens:check` prints. The differences: Tertiary text
+  (DESIGN.md #7B8089 / #7E838B, design #686D75 / #A3A7AE, the dark one equal to secondary;
+  `token-value:chrome/tertiary`); the ten DESIGN.md type roles have no variables in the design, so no type-scale
+  tokens exist (`token-missing:type/<role>`); the design adds `chrome/toolbar-height` 44, `chrome/status-height`
+  24, `chrome/ledger-height` 32, `motion/toast` 160, and one elevation level (`chrome/elevation-color`,
+  `chrome/elevation-blur` 16) where DESIGN.md describes two (`token-extra:<name>`). Code follows the design file.
+
+- **Confirm the golden tolerance I chose for you, and look at how pen.dev draws weights 450 and 650** (Prompt 43).
+  You said "decide for me", so DESIGN-DECISIONS.md now says 1 % (By: "Owner (delegated to agent, Prompt 43)"),
+  because pen.dev and Chrome rasterise text differently. The per-pixel threshold is mine: a pixel counts as
+  different when a channel is more than 48 apart. The token page passes at 0.942 %, a thin margin; at a threshold
+  of 32 it would be 1.26 % and fail. Most of it is text: pen.dev appears to draw the non-hundred weights 450 and
+  650 as 400 (the Tokens sheet's 650 title renders regular). DESIGN.md's panel body, values and mono text are 450,
+  so every later golden against the snapshots will carry this. Options: use 400/600 in the design, accept it, or
+  move to per-screen tolerances. Also: `chrome/tertiary` on `chrome/selected` is 4.49:1 in light; the design never
+  puts it there and the lint does not declare that pair, so UI code must not either (or nudge the hex).
+
 - **Review Prompt 42: stock provider, permissions and what is not wired** (Prompt 42). Mine, not from a source:
   ADR-009 picks Pixabay (Unsplash forbids sharing credentials and requires hotlinking; Pexels is not issuing keys).
   Its docs do not say in so many words that a person's own key may be used in installed software, so confirm with
@@ -2515,3 +2535,50 @@ Verified on macOS arm64 (Node 24, pnpm 12.11.2, both telemetry opt-outs):
   `node scripts/skia-build.mjs clippy --offline -p vellum --lib --bins --no-default-features -- -D warnings`.
 - `pnpm format:check`, `pnpm deps:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm doc-api:check`,
   `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`, `pnpm parity:check`, `pnpm type-check` (33 tasks); `pnpm exec biome lint .` (infos only).
+
+## Prompt 43
+
+Built design tokens generated from the design file, the contrast and usage lints, and the token page compared
+with the design's Tokens sheet. Design read through the Pencil MCP on `.design-cache/vellum.readonly.pen`
+(read-only queries and exports only); the pen CLI is not installed here, so the CLI path ran only against a fake.
+
+- Decision: "UI golden tolerance vs design snapshots" was UNDECIDED; asked; the owner said "decide for me", so
+  DESIGN-DECISIONS.md records 1 % (see Needs a person). The test that required every row to stay UNDECIDED now
+  checks each row is UNDECIDED or one of its listed options with a date and who decided.
+- `scripts/design-tokens` (+ `.mjs`, `lib/design-tokens.mjs`; query in `lib/pen-queries.mjs`; the pen CLI driver
+  moved from `design-snapshot.mjs` to `lib/pen-cli.mjs`, unchanged): exports all 64 variables per appearance and the
+  73 text/icon colour pairs the design uses (nodes under hidden frames skipped) to
+  `packages/ui-tokens/source/tokens.json` with the design's sha256, in the design file's own order; generates
+  `src/generated/tokens.css` (scalars on `:root`; chrome colours on `data-appearance`, canvas and agent colours on
+  `data-canvas-appearance`, four appearances each) and `tokens.ts`. Exports the Tokens sheet to
+  `docs/design/snapshots/foundations/Tokens{,@2x}.png` (gitignored). `--check` (CI, `pnpm tokens:check`): hash
+  equals `inventory.source_sha256` and `vellum.pen`, same variable list as the inventory, generated files current,
+  DESIGN.md gaps accepted. The DESIGN.md comparison goes through `source/design-md.json` (role → token, and
+  word-for-word quotes for prose values, so it fails if DESIGN.md changes the words).
+- Differs from the guide: the guide's `Mode` axis with Light/Dark/High contrast is the design's `appearance`
+  with four values (already in DESIGN-GAPS). The five ungrouped `vellum-*` variables are kept in tokens.json and
+  not generated. CSS names have no brand prefix (`--chrome-panel`), since the brand lives only in `@vellum/config`.
+- Lints (`pnpm tokens:lint`, part of `pnpm lint` and CI): contrast checks the design's own pairs plus
+  `source/contrast-pairs.json` in all four appearances (392 checks pass; 13 pairs on unbound literal backgrounds
+  are skipped and counted). Usage (`lib/token-usage.mjs`): colour literals in UI packages, selection/component
+  colours on buttons, agent hues outside markers/cursors/leases/placeholders/session dots. The usage checks are
+  textual (CSS selector, enclosing JSX element, file name); no UI code exists yet, so they are proven only by
+  fixtures in `scripts/__tests__/token-lint.test.mjs`.
+- `@vellum/ui-tokens`: `cssVar`, `colorValue`, `theme`, `scalarCss`, `agentHues`, `APPEARANCE_ATTRIBUTE`;
+  `token-page.ts` rebuilds the Tokens sheet from its node tree with every colour and number from the tokens;
+  `tokens.stories.ts` is a CSF 3 story. Storybook is not installed (version-baseline puts it at Prompt 45/46), so
+  the FINAL comparison runs the same function in headless Chrome: `scripts/token-page-compare.mjs`, tagged
+  `VELLUM_LANES=chrome,design` (needs the local PNG; CI has none). Result: 0.942 % of pixels differ, limit 1 %.
+  Checked it is not vacuous: the page drawn in the dark appearance fails at 97.7 %. JetBrains Mono v2.304 is
+  fetched into `.design-cache/fonts/` with a pinned SHA-256 (OFL; not committed, not shipped).
+- Not verified: the real pen CLI path of `design-tokens` (no CLI here; tested with a fake); the comparison in CI.
+- Pre-existing, not from this prompt: `pnpm exec biome check .` fails on `scripts/icons-gen.mjs` and
+  `crates/adapters/import-figma-clipboard/tests/fixtures/generate.mjs` (Prompt 42; import order, template
+  literals), so `pnpm lint` fails until they are formatted. The ADR-000 and REFERENCE-INDEX script tests still
+  fail (already listed).
+
+Commands that passed: `node --test scripts/__tests__/design-tokens.test.mjs` (15) and `token-lint.test.mjs` (8, with
+`VELLUM_LANES=chrome,design`); `pnpm test:scripts` (195 pass, 2 pre-existing failures, 5 skipped);
+`pnpm exec turbo run type-check test` (64 tasks); `pnpm tokens:lint`; `pnpm design:check`; `pnpm copy-lint`;
+`pnpm clean-room`; `pnpm deps:check`; `pnpm checksum`; `node scripts/token-page-compare.mjs`. Failing on purpose:
+`pnpm tokens:check` (17 unaccepted gaps, Needs a person).

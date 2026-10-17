@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 // Regenerates docs/design/snapshots/ (PNG at 1x and 2x for every screen frame, plus inventory.json) from
 // the read-only copy of the design, using the pen.dev CLI in headless interactive mode.
 //
@@ -24,6 +23,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { penInteractive } from "./lib/pen-cli.mjs";
 import {
   buildInventory,
   executeLine,
@@ -33,7 +33,6 @@ import {
   verifyExecuteApi,
 } from "./lib/pen-queries.mjs";
 
-const PINNED_CLI = "npx --yes @pen.dev/cli@0.3.11"; // docs/architecture/version-baseline.md C9
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const option = (name) => (flag(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -44,7 +43,6 @@ const die = (message) => {
   process.exit(1);
 };
 const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
-const quote = (s) => `'${s.replaceAll("'", `'\\''`)}'`;
 
 if (flag("--print-query")) {
   console.log(INVENTORY_QUERY);
@@ -63,30 +61,13 @@ if (!existsSync(copy) || sha256(copy) !== sha256(source))
   );
 const sourceSha256 = sha256(source);
 
-function penCommand() {
-  // biome-ignore lint/suspicious/noUndeclaredEnvVars: a developer override read at run time, not a Turborepo task input
-  const override = process.env.VELLUM_PEN_CLI;
-  if (override) return override;
-  const onPath = spawnSync("sh", ["-c", "command -v pen"], { encoding: "utf8" });
-  return onPath.status === 0 ? "pen" : PINNED_CLI;
-}
-
-// One headless `pen interactive` session. The output file is a scratch path that is never saved to.
+// One headless `pen interactive` session (scripts/lib/pen-cli.mjs).
 function interactive(lines) {
-  const cmd = `${penCommand()} interactive -i ${quote(copy)} -o ${quote(join(cache, "headless-out.pen"))}`;
-  const result = spawnSync(cmd, {
-    shell: true,
-    input: `${[...lines, "exit()"].join("\n")}\n`,
-    encoding: "utf8",
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-  if (/Authentication required/i.test(output)) {
-    die('The pen CLI is not signed in. Run "pen login" (or set PEN_CLI_KEY), then run this again.');
+  try {
+    return penInteractive({ copy, cache, lines });
+  } catch (error) {
+    die(error.message);
   }
-  if (result.status !== 0)
-    die(`pen interactive failed (exit ${result.status}):\n${output.slice(-2000)}`);
-  return output;
 }
 
 function finalize(rawText, staging, exporter) {

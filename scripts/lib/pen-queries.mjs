@@ -84,3 +84,47 @@ export function buildInventory({ raw, sourceSha256, exporter }) {
     variables: raw.variables,
   };
 }
+
+// --- Design tokens (scripts/design-tokens, Prompt 43) ---
+// Prints the theme axes (@T), one line per variable with its definition (@V), and one line per
+// foreground/background pair the design uses (@P: kind, foreground variable, nearest ancestor fill, count).
+// A pair is a text or icon whose fill is a variable, matched with the closest enclosing node whose fill
+// is a single colour; nodes under a hidden ancestor are skipped, and instances are expanded so component
+// internals count. Read-only: Get, GetVariables
+// and Print only.
+export const TOKENS_BEGIN = "@@vellum-tokens-begin";
+export const TOKENS_END = "@@vellum-tokens-end";
+
+export const TOKENS_QUERY = [
+  `Print(${JSON.stringify(TOKENS_BEGIN)})`,
+  `v=GetVariables()`,
+  `Print("@T",JSON.stringify(v.themes||{}))`,
+  `Object.keys(v.variables).sort().forEach(k=>Print("@V",JSON.stringify([k,v.variables[k]])))`,
+  `pairs={}`,
+  `Get((n,c)=>{if((n.type!=="text"&&n.type!=="icon")||typeof n.fill!=="string"||!n.fill.startsWith("$")||n.enabled===false)return;let bg=null;for(let p=c.parentCtx;p;p=p.parentCtx){if(p.node.enabled===false)return;if(bg===null&&typeof p.node.fill==="string")bg=p.node.fill}const k=JSON.stringify([n.type,n.fill.slice(1),bg]);pairs[k]=(pairs[k]||0)+1},{resolveInstances:true})`,
+  `Object.keys(pairs).sort().forEach(k=>Print("@P",JSON.stringify([...JSON.parse(k),pairs[k]])))`,
+  `Print(${JSON.stringify(TOKENS_END)})`,
+].join(";\n");
+
+/** The Tokens sheet ("Foundations · Tokens · …") in an inventory, or null. */
+export const tokensFrame = (inventory) =>
+  inventory.frames.find((f) => f.kind === "foundations" && /^Tokens\b/.test(f.title)) ?? null;
+
+export function parseTokensRaw(text) {
+  const start = text.indexOf(TOKENS_BEGIN);
+  const end = text.indexOf(TOKENS_END);
+  if (start === -1 || end === -1 || end < start)
+    throw new Error(`the query output has no ${TOKENS_BEGIN} … ${TOKENS_END} block`);
+  let themes = null;
+  const variables = [];
+  const pairs = [];
+  for (const line of text.slice(start + TOKENS_BEGIN.length, end).split("\n")) {
+    const l = line.trim();
+    if (l.startsWith("@T ")) themes = JSON.parse(l.slice(3));
+    else if (l.startsWith("@V ")) variables.push(JSON.parse(l.slice(3)));
+    else if (l.startsWith("@P ")) pairs.push(JSON.parse(l.slice(3)));
+  }
+  if (themes === null) throw new Error("the query output has no themes line");
+  if (variables.length === 0) throw new Error("the query output lists no variables");
+  return { themes, variables, pairs };
+}

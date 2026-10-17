@@ -14,4 +14,4 @@ and design agree; if it shows both, pick one.
 | Inline prompt anchor | A Beside the selection · B Below the selection toolbar | UNDECIDED | | |
 | Slot marker | A Dotted inner outline · B Hatched fill | UNDECIDED | | |
 | Selection toolbar contents | A Ask only · B Ask + quick actions | UNDECIDED | | |
-| UI golden tolerance vs design snapshots | 0.5 % · 1 % · per-screen | UNDECIDED | | |
+| UI golden tolerance vs design snapshots | 0.5 % · 1 % · per-screen | 1 % | 2026-10-17 | Owner (delegated to agent, Prompt 43) |

@@ -31,3 +31,4 @@ Thumbs.db
 
 # Design snapshot PNGs: regenerated locally by pnpm design:snapshot. Only inventory.json is committed.
 docs/design/snapshots/*.png
+docs/design/snapshots/foundations/*.png

@@ -2,17 +2,23 @@
   "name": "@vellum/ui-tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Design tokens: light, dark, high contrast; chrome and canvas groups.",
+  "description": "Design tokens generated from vellum.pen: light, dark, high contrast; chrome and canvas groups.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/generated/tokens.css",
+    "./token-page": "./src/token-page.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@vellum/config": "workspace:*"
   }
 }

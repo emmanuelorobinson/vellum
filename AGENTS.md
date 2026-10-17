@@ -159,6 +159,9 @@ Keep it factual and short. Do not record secrets, and do not paste design conten
 | `pnpm design:open` | copy `docs/design/vellum.pen` to `.design-cache/vellum.readonly.pen` (no write bit) and open that copy in pen.dev; `--no-open` only copies |
 | `pnpm design:snapshot` | regenerate `docs/design/snapshots/` (PNG at 1x and 2x, `inventory.json`) with the pen CLI on the read-only copy. Needs `pen login` or `PEN_CLI_KEY`; run locally, not in CI. Only `inventory.json` is committed; the PNGs are gitignored |
 | `pnpm design:check` | no pen.dev needed: `inventory.json` matches `vellum.pen`'s checksum, every PNG it names exists when any are present locally, every screen, theme and width DESIGN.md asks for exists, names follow the file's convention. Runs in CI |
+| `pnpm design:tokens` | export the design's variables to `packages/ui-tokens/source/tokens.json` and generate the CSS and TS tokens; needs `pen login` or an MCP session (`--print-query`, `--raw`). See `docs/runbooks/design-tokens.md` |
+| `pnpm tokens:check` | `tokens.json` matches `vellum.pen` and the inventory, generated token files are current, every DESIGN.md difference is accepted in DESIGN-GAPS.md. Runs in CI |
+| `pnpm tokens:lint` | contrast (text 4.5:1, icons and focus 3:1, every appearance) and token usage (no colour literals in UI code, selection and component colours never on buttons, agent hues only on agent marks). Part of `pnpm lint` |
 | `pnpm layout-oracle` | lay out `fixtures/layout-oracle/*.html` in headless Chrome and write the expected boxes (ADR-002); `--check` compares with the committed ones (CI's chrome lane). Needs Chrome (`VELLUM_CHROME`); see `docs/runbooks/layout-oracle.md` |
 | `cargo run -p vellum-codec-json --example canonicalize -- [--check] <files>` | rewrite `.vellum` files in canonical form (how `fixtures/documents/` is made); `--check` writes nothing and fails if a file is not canonical |
 | `fixtures:record` | later prompts; exits non-zero until then |
