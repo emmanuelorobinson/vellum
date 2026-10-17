@@ -9,7 +9,6 @@
 // Tolerance: DESIGN-DECISIONS.md "UI golden tolerance vs design snapshots" = 1 % of pixels may differ. A
 // pixel differs when any premultiplied channel is more than CHANNEL apart, so anti-aliasing that both
 // renderers place on the same edge does not count.
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, resolve, sep } from "node:path";
@@ -20,15 +19,11 @@ import { launchChrome } from "./lib/chrome.mjs";
 export const TOLERANCE = { fraction: 0.01, channel: 48, p95: 255 };
 const WIDTH = 1600;
 
-// Inter is the repo's bundled face (Google Fonts build, the one pen.dev renders with). JetBrains Mono is
-// fetched once into .design-cache/fonts/ and checked against its SHA-256. Both are SIL OFL 1.1.
+// The committed UI faces (SIL OFL 1.1): Inter is the repo's bundled copy (the Google Fonts build pen.dev renders
+// with); JetBrains Mono lives in packages/ui-tokens/fonts/ (README there has the source and SHA-256).
 const FONTS = {
-  inter: { path: "crates/adapters/text-parley/fonts/InterVariable.ttf" },
-  mono: {
-    path: ".design-cache/fonts/JetBrainsMono-wght.ttf",
-    url: "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/cd5227bd1f61dff3bbd6c814ceaf7ffd95e947d9/fonts/variable/JetBrainsMono%5Bwght%5D.ttf",
-    sha256: "662a196d58f1183bf2d77428b6d5283fe3f45161ab021bea4036bc98e5cac016",
-  },
+  inter: "crates/adapters/text-parley/fonts/InterVariable.ttf",
+  mono: "packages/ui-tokens/fonts/JetBrainsMono-wght.ttf",
 };
 
 const args = process.argv.slice(2);
@@ -49,20 +44,12 @@ if (!existsSync(expectedPath))
     "docs/design/snapshots/foundations/Tokens.png is missing (gitignored). Run pnpm design:tokens to export it.",
   );
 
-async function ensureFont({ path, url, sha256 }) {
-  const file = at(path);
-  if (!existsSync(file)) {
-    if (!url) die(`${path} is missing.`);
-    const response = await fetch(url);
-    if (!response.ok) die(`could not fetch ${url}: ${response.status}`);
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, Buffer.from(await response.arrayBuffer()));
-  }
-  if (sha256 && createHash("sha256").update(readFileSync(file)).digest("hex") !== sha256)
-    die(`${path} does not match its pinned SHA-256; delete it and run again.`);
-  return file;
-}
-const fonts = { inter: await ensureFont(FONTS.inter), mono: await ensureFont(FONTS.mono) };
+const fonts = Object.fromEntries(
+  Object.entries(FONTS).map(([name, path]) => {
+    if (!existsSync(at(path))) die(`${path} is missing.`);
+    return [name, at(path)];
+  }),
+);
 
 const page = `<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="/packages/ui-tokens/src/generated/tokens.css">

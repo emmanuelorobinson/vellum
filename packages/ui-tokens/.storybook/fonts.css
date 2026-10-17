@@ -1,0 +1,11 @@
+/* Inter and JetBrains Mono, served by staticDirs in main.ts. */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter/InterVariable.ttf") format("truetype");
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-wght.ttf") format("truetype");
+  font-weight: 100 800;
+}

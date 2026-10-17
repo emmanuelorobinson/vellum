@@ -28,6 +28,11 @@ googlefonts/noto-emoji commit `e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D`, `fo
 SIL Open Font License 1.1; copyright/license in the adjacent `NotoColorEmoji.OFL.txt`.
 This is a licensed font asset, not ported code.
 
+`packages/ui-tokens/fonts/JetBrainsMono-wght.ttf` is unmodified JetBrains Mono from JetBrains/JetBrainsMono
+tag v2.304 (commit `cd5227bd1f61dff3bbd6c814ceaf7ffd95e947d9`), `fonts/variable/JetBrainsMono[wght].ttf`, renamed only.
+SIL Open Font License 1.1; copyright and license are reproduced in the adjacent `OFL.txt`. The adjacent README
+records the source URL and SHA-256. This is a licensed font asset, not ported code.
+
 ## Native graphics libraries (Prompt 22)
 
 Skia (BSD-3-Clause) and its embedded FreeType (FTL or GPL-2.0; distributed under FTL) are built from

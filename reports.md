@@ -18,6 +18,12 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   24, `chrome/ledger-height` 32, `motion/toast` 160, and one elevation level (`chrome/elevation-color`,
   `chrome/elevation-blur` 16) where DESIGN.md describes two (`token-extra:<name>`). Code follows the design file.
 
+- **Storybook lives in `packages/ui-tokens` for now** (Prompt 43). It uses the html renderer, which suits the token
+  page. Prompt 45's harness (one story per component, variant and theme, over React) needs a React Storybook, most
+  likely in `packages/editor-react`; decide then whether the token story moves there. `pnpm test:storybook` is not
+  in CI (it needs Playwright's Chromium on the runner). pnpm skipped esbuild's install script; run
+  `pnpm approve-builds` if you want it allowed.
+
 - **Confirm the golden tolerance I chose for you, and look at how pen.dev draws weights 450 and 650** (Prompt 43).
   You said "decide for me", so DESIGN-DECISIONS.md now says 1 % (By: "Owner (delegated to agent, Prompt 43)"),
   because pen.dev and Chrome rasterise text differently. The per-pixel threshold is mine: a pixel counts as
@@ -2566,11 +2572,23 @@ with the design's Tokens sheet. Design read through the Pencil MCP on `.design-c
   fixtures in `scripts/__tests__/token-lint.test.mjs`.
 - `@vellum/ui-tokens`: `cssVar`, `colorValue`, `theme`, `scalarCss`, `agentHues`, `APPEARANCE_ATTRIBUTE`;
   `token-page.ts` rebuilds the Tokens sheet from its node tree with every colour and number from the tokens;
-  `tokens.stories.ts` is a CSF 3 story. Storybook is not installed (version-baseline puts it at Prompt 45/46), so
-  the FINAL comparison runs the same function in headless Chrome: `scripts/token-page-compare.mjs`, tagged
-  `VELLUM_LANES=chrome,design` (needs the local PNG; CI has none). Result: 0.942 % of pixels differ, limit 1 %.
-  Checked it is not vacuous: the page drawn in the dark appearance fails at 97.7 %. JetBrains Mono v2.304 is
-  fetched into `.design-cache/fonts/` with a pinned SHA-256 (OFL; not committed, not shipped).
+  `tokens.stories.ts` is a CSF 3 story. The FINAL comparison renders the same function in headless Chrome:
+  `scripts/token-page-compare.mjs`, tagged `VELLUM_LANES=chrome,design` (needs the local PNG; CI has none).
+  Result: 0.942 % of pixels differ, limit 1 %. Checked it is not vacuous: the page drawn in the dark appearance
+  fails at 97.7 %.
+- Storybook, at the owner's request: `npm create storybook@latest` in `packages/ui-tokens` (it chose pnpm; needed
+  `--type html --builder vite` because the package has no framework; telemetry disabled). Afterwards, with the
+  owner's approval: removed its example stories (they broke `tsc` and the colour-literal lint); split
+  `vitest.config.ts` into `unit` and `storybook` projects, because the generated config had silently stopped the
+  unit tests (`pnpm test` runs `unit`, `pnpm test:storybook` runs the browser project); pinned every new package
+  exactly in the catalog (it had written `^` ranges and `latest`); loaded Inter and JetBrains Mono in the preview;
+  type-check now covers `.storybook/` and `vitest.config.ts`; the token lint skips `storybook-static/`.
+  JetBrains Mono v2.304 is now committed in `packages/ui-tokens/fonts/` (OFL, README with SHA-256,
+  THIRD_PARTY_NOTICES entry), so neither Storybook nor the comparison fetches it. version-baseline C24 records the
+  versions (Storybook 10.6.2, Playwright 1.64.1, Vite 8.3.4). The owner allowed one transitive prerelease,
+  `@polka/url@1.0.0-next.29` (no stable release exists; via `@storybook/addon-vitest`), named in the lockfile test.
+  Verified: `pnpm build-storybook`, `pnpm test:storybook` (1 story), the dev server serves `Foundations/Tokens` with
+  both fonts (screenshot checked).
 - Not verified: the real pen CLI path of `design-tokens` (no CLI here; tested with a fake); the comparison in CI.
 - Pre-existing, not from this prompt: `pnpm exec biome check .` fails on `scripts/icons-gen.mjs` and
   `crates/adapters/import-figma-clipboard/tests/fixtures/generate.mjs` (Prompt 42; import order, template
@@ -2580,5 +2598,6 @@ with the design's Tokens sheet. Design read through the Pencil MCP on `.design-c
 Commands that passed: `node --test scripts/__tests__/design-tokens.test.mjs` (15) and `token-lint.test.mjs` (8, with
 `VELLUM_LANES=chrome,design`); `pnpm test:scripts` (195 pass, 2 pre-existing failures, 5 skipped);
 `pnpm exec turbo run type-check test` (64 tasks); `pnpm tokens:lint`; `pnpm design:check`; `pnpm copy-lint`;
-`pnpm clean-room`; `pnpm deps:check`; `pnpm checksum`; `node scripts/token-page-compare.mjs`. Failing on purpose:
+`pnpm clean-room`; `pnpm deps:check`; `pnpm checksum`; `node scripts/token-page-compare.mjs`;
+`version-baseline.test.mjs`; in `packages/ui-tokens`: `pnpm build-storybook`, `pnpm test:storybook`. Failing on purpose:
 `pnpm tokens:check` (17 unaccepted gaps, Needs a person).

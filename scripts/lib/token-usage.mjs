@@ -19,7 +19,16 @@ export const UI_ROOTS = [
   "apps/docs",
 ];
 export const UI_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".css", ".html"];
-const SKIP_DIRS = ["node_modules", "dist", ".next", ".turbo", "generated", "__tests__", "fixtures"];
+const SKIP_DIRS = [
+  "node_modules",
+  "dist",
+  "storybook-static",
+  ".next",
+  ".turbo",
+  "generated",
+  "__tests__",
+  "fixtures",
+];
 
 export function isLinted(path) {
   if (!UI_ROOTS.some((root) => path.startsWith(`${root}/`))) return false;

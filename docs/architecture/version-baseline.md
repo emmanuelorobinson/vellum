@@ -66,7 +66,7 @@
 | Turborepo | 2.11.7 | 2.11.x | root devDependencies (`turbo`) | latest stable patch |
 | TypeScript | 5.9.3 | 7.0.x native line, newest 5.x if a tool conflicts | `pnpm-workspace.yaml` catalog | C3 |
 | @types/node | 24.19.2 | Node runtime line (not in §5) | `pnpm-workspace.yaml` catalog | C2 |
-| Vite | 8.3.4 | 8.3.x | not yet used | first UI bundle (Prompt 45) |
+| Vite | 8.3.4 | 8.3.x | `pnpm-workspace.yaml` catalog | Storybook builder in `@vellum/ui-tokens` (Prompt 43, C24) |
 | React | 19.3.0 | 19.3.x | `pnpm-workspace.yaml` catalog | latest stable patch |
 | @types/react | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
 | @types/react-dom | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
@@ -79,8 +79,8 @@
 | Biome | 2.5.15 | 2.5.x | root devDependencies (`@biomejs/biome`) | latest stable patch |
 | dependency-cruiser | 18.5.0 | 18.5.x | root devDependencies | C10 and C3 |
 | Vitest | 5.0.3 | 5.0.x | `pnpm-workspace.yaml` catalog | latest stable patch |
-| Playwright | 1.64.0 | 1.64.x | not yet used | `@playwright/test` and `playwright` (Prompt 46 onward) |
-| Storybook | 10.6.1 | 10.6.x | not yet used | UI stories (Prompt 46 onward) |
+| Playwright | 1.64.1 | 1.64.x | `pnpm-workspace.yaml` catalog (`playwright`) | Storybook story tests (Prompt 43, C24); `@playwright/test` from Prompt 46 |
+| Storybook | 10.6.2 | 10.6.x | `pnpm-workspace.yaml` catalog | `@vellum/ui-tokens` stories (Prompt 43, C24) |
 
 ## Frontend apps, desktop, extension and cloud
 
@@ -164,7 +164,7 @@ No repository has a release at or after its pin, so every pin stays at the guide
   Nothing is generated yet.
 - **C12: canvaskit-wasm 0.42.0** is installed only in the renderer spike (`spikes/renderer/web`), as Renderer A. ADR-001
   (Prompt 4) chose skia-safe in WASM, so no product package depends on it.
-- **C13: Lines not yet installed** (Vite, Tailwind, Zustand, Zod, i18next, Electron builder, vsce, Playwright, Storybook,
+- **C13: Lines not yet installed** (Tailwind, Zustand, Zod, i18next, Electron builder, vsce,
   better-auth, drizzle-orm, Hono, the MCP SDK and the unused Rust crates) are recorded at their resolved versions. The
   prompt that adds one installs the recorded version and updates this file in the same change.
 - **C14: Unchanged from Prompt 1:** pnpm 12.11.2, Turborepo 2.11.7, Biome 2.5.15, React 19.3.0, Vitest 5.0.3, Next.js
@@ -238,6 +238,15 @@ edited.
   Tokio =1.53.2, async-channel =2.5.0 and url =2.5.8 live in `vellum-model-http`. TLS resolves to patched
   rustls 0.23.46. The four protocol adapters use only core ports and serde_json. `keyring` =4.2.0
   uses macOS Keychain, Windows Credential Manager and Linux Secret Service through its `v1` interface.
+- **C24: Storybook in `@vellum/ui-tokens`** (Prompt 43, owner's request). Set up with `npm create storybook@latest
+  -- --type html --builder vite --disable-telemetry`, then pinned exactly through the catalog: storybook,
+  `@storybook/html-vite`, `@storybook/addon-vitest`, `@storybook/addon-a11y`, `@storybook/addon-docs` 10.6.2 (newest
+  patch of the 10.6 line; the baseline had resolved 10.6.1), `@chromatic-com/storybook` 5.5.1, playwright 1.64.1
+  (newest 1.64 patch), Vite 8.3.4, `@vitest/browser-playwright` and `@vitest/coverage-v8` 5.0.3 (match Vitest).
+  Telemetry is off in `.storybook/main.ts`. One transitive prerelease is allowed by name:
+  `@polka/url@1.0.0-next.29` (via sirv ← `@vitest/browser` ← `@storybook/addon-vitest`), because that package has
+  never published a stable version; the lockfile test fails on any other. pnpm skips esbuild's install script
+  (not approved); Storybook builds and runs without it.
 
 ## Installed engines (Prompt 36)
 

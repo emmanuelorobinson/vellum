@@ -57,7 +57,7 @@ the key the check prints, for example `check=token-value:chrome/tertiary`. The g
 
 The page (`packages/ui-tokens/src/token-page.ts`, story `Foundations/Tokens`) is rebuilt from the Tokens sheet's
 node tree: same geometry, every colour and number from the tokens. The comparison renders it in headless Chrome
-with Inter (bundled) and JetBrains Mono (fetched once into `.design-cache/fonts/`, SHA-256 pinned), and compares
+with Inter (`crates/adapters/text-parley/fonts/`) and JetBrains Mono (`packages/ui-tokens/fonts/`), and compares
 with `comparePixels`: a pixel differs when a premultiplied channel is more than 48 apart, and at most 1 % may
 differ (DESIGN-DECISIONS.md). Output: `target/token-page/{actual,diff}.png`. `--boxes` prints element boxes, for
 comparing with the sheet's node bounds.
@@ -67,5 +67,20 @@ What is known to differ: pen.dev draws text with its own rasteriser, and appears
 difference from 0.94 % to 0.73 %). The page keeps the specified weights. Strokes in the design are centred on the edge, so the page draws them as half-pixel inset and outset
 shadows.
 
-The PNG is gitignored like every snapshot, so CI cannot run the comparison until Storybook and the visual
-harness arrive (Prompt 45).
+The PNG is gitignored like every snapshot, so CI cannot run the comparison.
+
+## Storybook
+
+`packages/ui-tokens` has Storybook 10.6 (html renderer, Vite), set up with `npm create storybook@latest` and then
+pinned in the catalog (version-baseline C24). The token page is the story `Foundations/Tokens`.
+
+| Command (in `packages/ui-tokens`) | Does |
+|---|---|
+| `pnpm storybook` | dev server on port 6006 |
+| `pnpm build-storybook` | static build in `storybook-static/` (gitignored) |
+| `pnpm test` | unit tests only (Vitest project `unit`); what `pnpm test` at the root runs |
+| `pnpm test:storybook` | renders every story in headless Chromium (Vitest project `storybook`); needs Playwright's Chromium (`pnpm exec playwright install chromium`) |
+
+`.storybook/preview.ts` loads the generated `tokens.css` and the two UI faces (`.storybook/fonts.css`, served by
+`staticDirs`). Telemetry is off in `.storybook/main.ts`; also set `STORYBOOK_DISABLE_TELEMETRY=1` when running the
+CLI. Prompt 45's visual harness (a story per component, variant and theme) is a separate, React setup.

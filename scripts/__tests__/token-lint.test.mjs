@@ -46,6 +46,7 @@ test("only UI packages are linted, and not their tests or generated files", () =
   assert.equal(isLinted("packages/editor-react/src/a.test.tsx"), false);
   assert.equal(isLinted("packages/ui-tokens/src/generated/tokens.css"), false);
   assert.equal(isLinted("packages/editor-react/node_modules/x/a.css"), false);
+  assert.equal(isLinted("packages/ui-tokens/storybook-static/sb-manager/runtime.js"), false);
   assert.deepEqual(rules("packages/renderer-canvas2d/src/a.ts", 'const c = "#fff";'), []);
 });
 

@@ -160,13 +160,28 @@ test("the baseline records every reference repository at the SHA scripts/refs.ts
   }
 });
 
+// Transitive packages that have never had a stable release, each allowed by name and exact version with a
+// decision in docs/architecture/version-baseline.md. Nothing the repo pins itself may be a prerelease.
+const PRERELEASE_EXCEPTIONS = [
+  "@polka/url@1.0.0-next.29", // C24: via sirv ← @vitest/browser ← @storybook/addon-vitest
+];
+
 test("no lockfile pins a prerelease version", () => {
   const cargoPrereleases = [
     ...read("Cargo.lock").matchAll(/^version = "(\d+\.\d+\.\d+-[^"]+)"/gm),
   ].map((m) => m[1]);
   const pnpmPrereleases = [
-    ...read("pnpm-lock.yaml").matchAll(/@(\d+\.\d+\.\d+-[0-9A-Za-z.-]+)/g),
-  ].map((m) => m[1]);
+    ...read("pnpm-lock.yaml").matchAll(
+      /^ {2}'?((?:@[^@\s/]+\/)?[^@\s']+)@(\d+\.\d+\.\d+-[0-9A-Za-z.-]+)/gm,
+    ),
+  ].map((m) => `${m[1]}@${m[2]}`);
   assert.deepEqual(cargoPrereleases, [], "Cargo.lock");
-  assert.deepEqual([...new Set(pnpmPrereleases)], [], "pnpm-lock.yaml");
+  assert.deepEqual(
+    [...new Set(pnpmPrereleases)].filter((p) => !PRERELEASE_EXCEPTIONS.includes(p)),
+    [],
+    "pnpm-lock.yaml",
+  );
+  const baseline = read("docs", "architecture", "version-baseline.md");
+  for (const exception of PRERELEASE_EXCEPTIONS)
+    assert.ok(baseline.includes(exception), `${exception} has no decision in version-baseline.md`);
 });

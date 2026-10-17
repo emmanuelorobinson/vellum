@@ -162,6 +162,7 @@ Keep it factual and short. Do not record secrets, and do not paste design conten
 | `pnpm design:tokens` | export the design's variables to `packages/ui-tokens/source/tokens.json` and generate the CSS and TS tokens; needs `pen login` or an MCP session (`--print-query`, `--raw`). See `docs/runbooks/design-tokens.md` |
 | `pnpm tokens:check` | `tokens.json` matches `vellum.pen` and the inventory, generated token files are current, every DESIGN.md difference is accepted in DESIGN-GAPS.md. Runs in CI |
 | `pnpm tokens:lint` | contrast (text 4.5:1, icons and focus 3:1, every appearance) and token usage (no colour literals in UI code, selection and component colours never on buttons, agent hues only on agent marks). Part of `pnpm lint` |
+| `pnpm --filter @vellum/ui-tokens storybook` | Storybook for the token page (port 6006); `test:storybook` renders every story in headless Chromium. See `docs/runbooks/design-tokens.md` |
 | `pnpm layout-oracle` | lay out `fixtures/layout-oracle/*.html` in headless Chrome and write the expected boxes (ADR-002); `--check` compares with the committed ones (CI's chrome lane). Needs Chrome (`VELLUM_CHROME`); see `docs/runbooks/layout-oracle.md` |
 | `cargo run -p vellum-codec-json --example canonicalize -- [--check] <files>` | rewrite `.vellum` files in canonical form (how `fixtures/documents/` is made); `--check` writes nothing and fails if a file is not canonical |
 | `fixtures:record` | later prompts; exits non-zero until then |
