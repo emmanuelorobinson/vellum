@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review additional dependency advisories found by Prompt 44's required `cargo deny check`.** The unchanged
+  lockfile also fails on `zip` 4.6.1 (RUSTSEC-2026-0367, -0368, -0369: extraction vulnerabilities), and
+  `zbus_names` 4.3.4 / `zvariant` 5.15.0 / `zvariant_derive` 5.15.0 (RUSTSEC-2026-0371, -0370, -0372:
+  unmaintained, through the Linux keyring chain). `inout` 0.2.3 is yanked (warning). This prompt changes no
+  Rust dependencies or advisory policy and does not assess exploitability. The older three Loro advisories
+  below still fail too.
+
 - **Resolve 17 DESIGN.md vs vellum.pen token differences; CI's `pnpm tokens:check` is red until you do**
   (Prompt 43). The prompt asks for a failing check until a person decides each one, so I recorded them in
   DESIGN-GAPS.md without `check=` keys. For each: change `vellum.pen` or DESIGN.md, or accept the design file's
@@ -2601,3 +2608,46 @@ Commands that passed: `node --test scripts/__tests__/design-tokens.test.mjs` (15
 `pnpm clean-room`; `pnpm deps:check`; `pnpm checksum`; `node scripts/token-page-compare.mjs`;
 `version-baseline.test.mjs`; in `packages/ui-tokens`: `pnpm build-storybook`, `pnpm test:storybook`. Failing on purpose:
 `pnpm tokens:check` (17 unaccepted gaps, Needs a person).
+
+## Prompt 44
+
+Built the headless tool controller in `packages/editor-core` (no UI, React, renderer or vendor dependency).
+`initialToolState` / `transitionTool` return local previews, handles/guides/measurements and at most one
+Person-origin transaction per event. Move/select, deepest click and inside-frame marquee, additive selection,
+Enter/Shift-Enter/Escape, scale anchor/factor/corner drag, frame and all five shape tools, pen, path editing,
+rich-text/note drafts, hand/Space and held-Z zoom are covered. Cubic splitting preserves the curve; cuts,
+connections, smooth/corner, symmetric/broken handles, bend/straighten, point and segment deletion use SVG paths.
+
+- Scene hit-testing/snapping and inverse transforms are injected read-only; no second spatial index. Tool defaults
+  (including fonts/paints) and IDs are injected. Instance descendants use `ReplaceInInstance` for move/content/path
+  edits. Root instances use core Scale. No clock or randomness. Added only a workspace type dependency.
+- Reference read: Graphite's named tool FSMs separate ready, drag and edit states and dispatch document messages.
+  Its snapping manager supplies transient indicators; transform cages work through inverse coordinate transforms;
+  shape_editor tracks anchors/handles/segments separately. Vellum keeps these boundaries, but uses immutable TS
+  transitions, the existing Scene and a single core transaction on commit. No code was ported.
+- Scope/limitations: the Op subset is in-process requests, not a new wire protocol. No host applies it yet;
+  WASM EngineClient/Scene/PathOps wiring remains Prompt 45/46. Bound/hug/fill primitive-to-path conversion retains
+  bindings and needs a resolved viewBox from the engine; absent data returns `missing-data`. Scaling an instance
+  descendant returns `read-only` (core has no path-addressed Scale), avoiding a component-definition write. No Zustand store yet; the reducer can be subscribed
+  to by Prompt 45's controller. See the package README for coordinates, defaults and commit/rejection handling.
+- Design read: DESIGN.md Keyboard Tools/Select/Path editing, plus product and architecture sections. Prompt 44 names
+  no visual frames; no UI components, tokens, screenshots, goldens or Pencil write operations were made.
+- Red first: missing controller exports, then focused regression failures for curve topology/handle rules, pen
+  bounds, modifiers and temporary-tool restoration. 309 tests pass, including a 15-state × 16-event matrix.
+- Failed checks: root `pnpm lint` still fails on Prompt 42's `scripts/icons-gen.mjs` (template lint/import order) and
+  the Figma clipboard fixture generator (import order). `pnpm tokens:check` retains Prompt 43's 17 unaccepted gaps.
+  `cargo deny check` fails on the existing Rust lockfile's nine advisories; additional ones are in Needs a person.
+  None of those files or policies changed. No live Rust Scene/Op application or visual acceptance test ran.
+- Setup: offline pnpm install lacked tarballs and temporarily removed dependency links; restored the exact lockfile
+  with pnpm 12.11.2 using the existing global store (`--ignore-scripts`, no new registry packages downloaded).
+  An initial unfiltered root Vitest invocation collected reference suites and was interrupted; it is not counted
+  as verification. All subsequent Vitest runs were scoped to editor-core; tracked reference files are unchanged.
+
+Passed (Node 24, pnpm 12.11.2; both telemetry opt-outs):
+- `pnpm --filter @vellum/editor-core test` (309); `pnpm --filter @vellum/editor-core type-check`;
+  `pnpm exec biome check packages/editor-core` (no diagnostics); `pnpm exec turbo run test --filter=@vellum/editor-core`.
+- `pnpm type-check` (33 tasks); `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `pnpm deps:check` (146 modules; no dependency violations, including no React/renderer import in editor-core).
+- `pnpm format:check`; `pnpm design:check`; `pnpm tokens:lint`; `pnpm copy-lint`; `pnpm clean-room`; `pnpm checksum`;
+  `git diff --check`.
+- `node --test scripts/__tests__/reports.test.mjs scripts/__tests__/repo-layout.test.mjs scripts/__tests__/deps.test.mjs scripts/__tests__/clean-room.test.mjs` (25).

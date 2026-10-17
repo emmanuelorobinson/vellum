@@ -1,2 +1,4 @@
-/** Framework-agnostic editor controller: tools, commands, registries. No React. Shell only: no behaviour yet. */
+/** Framework-agnostic editor controller. No renderer, DOM, React or document mutation. */
 export const PACKAGE_NAME = "@vellum/editor-core";
+export * from "./tool-types";
+export { initialToolState, transitionTool } from "./tools";
