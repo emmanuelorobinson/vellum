@@ -149,6 +149,11 @@ pub struct Documents {
     /// Helper agents external clients asked for with `spawn_agents`, waiting for the host to start them. `None`
     /// while no host here runs helpers, so asking is refused.
     spawns: Option<Vec<SpawnRequest>>,
+    /// What an agent's tool call may ask the world for: files and the network, through the permission broker.
+    /// `None` while nothing here can ask the person, so those calls are refused with an explanation.
+    outside: Option<Rc<dyn crate::permissions::Outside>>,
+    /// Where `fill_image` finds stock pictures, when a key is set up.
+    stock: Option<Rc<dyn vellum_core::ports::ImageSource>>,
 }
 
 /// An external client's `spawn_agents` call, for the host that runs helper agents.
@@ -208,6 +213,8 @@ impl Documents {
             placeholders: BTreeMap::new(),
             held: PauseSet::default(),
             spawns: None,
+            outside: None,
+            stock: None,
         }
     }
 
@@ -310,6 +317,43 @@ impl Documents {
             self.placeholders.remove(path);
         }
         removed
+    }
+
+    /// Lets tool calls read files and reach the network for an agent, each asking the permission broker first.
+    pub fn set_outside(&mut self, outside: Rc<dyn crate::permissions::Outside>) {
+        self.outside = Some(outside);
+    }
+
+    /// What tool calls may ask the world for, when something here can ask.
+    pub fn outside(&self) -> Option<Rc<dyn crate::permissions::Outside>> {
+        self.outside.clone()
+    }
+
+    /// Sets where `fill_image` finds stock pictures.
+    pub fn set_stock(&mut self, stock: Rc<dyn vellum_core::ports::ImageSource>) {
+        self.stock = Some(stock);
+    }
+
+    pub fn stock(&self) -> Option<Rc<dyn vellum_core::ports::ImageSource>> {
+        self.stock.clone()
+    }
+
+    /// Stores `bytes` as an asset of the document at `path` (in its `.assets` folder, by content hash) and returns
+    /// the hash, which is the asset's id. Putting the same bytes again changes nothing.
+    pub fn put_asset(
+        &self,
+        path: &str,
+        bytes: &[u8],
+        mime: &str,
+    ) -> Result<vellum_core::ports::AssetHash, TargetError> {
+        use vellum_core::ports::AssetStore;
+        let unavailable = |why: String| TargetError::File(FileError::Fs(FsError::Unavailable(why)));
+        let (fs, inner) = (self.env.locate)(path).map_err(FileError::Fs)?;
+        let store = vellum_assets_fs::FsAssets::new(fs, vellum_assets_fs::assets_dir_for(&inner))
+            .map_err(|e| unavailable(e.to_string()))?;
+        store
+            .put(bytes, mime)
+            .map_err(|e| unavailable(e.to_string()))
     }
 
     /// Ids for things a tool makes before its transaction names them. Every handle draws from one generator.

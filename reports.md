@@ -8,6 +8,24 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review Prompt 42: stock provider, permissions and what is not wired** (Prompt 42). Mine, not from a source:
+  ADR-009 picks Pixabay (Unsplash forbids sharing credentials and requires hotlinking; Pexels is not issuing keys).
+  Its docs do not say in so many words that a person's own key may be used in installed software, so confirm with
+  Pixabay before the stock tab ships. Not wired anywhere: `PixabaySource`, `HttpFetcher` and `Brokered` exist and are
+  tested, but no host builds them. The daemon has no prompt to ask with (Prompt 50) and no key entry (Settings,
+  Assets, Prompt 54; keychain entry `stock.pixabay`), so `fill_image` with `path` or `query`, and `import` with
+  `path`, answer "needs the person's permission" there; `data` and `text` work today. `Brokered` also needs the
+  agent's session to exist in the session store before it asks. `icon` nodes (library, name) are still not drawn
+  by anything, so `insert_icon` makes `vector` layers. A project's SVG icon folder has `Library::from_records` but
+  no loader or setting. `import(url)` is not done (it comes with the browser, Prompt 65). ARCHITECTURE §3.1 and
+  §3.6 need your edit: `HttpFetch`, `ImageSource::origin`, and `Importer` as implemented (`recognizes` + `import`,
+  node specs and `import:N` asset references).
+
+- **Read a real Figma paste through the importer** (Prompt 42). The Kiwi decoder is checked against the reference
+  implementation's output, but the schema in the fixtures is from memory, so no live Figma paste has been read.
+  Copy a frame with text, a rotated rectangle, a vector and an image in Figma, paste the clipboard HTML into
+  `vellum tool import --text`, and look at the notes. A zstd-compressed paste is refused with a message.
+
 - **Review the HTML export choices** (Prompt 41). Computed fixed layout; editable text beneath a renderer PNG
   layer; complex appearance as SVG/PNG. These preserve canvas pixels; get_spec supplies the input for application code.
   Scaffold defaults on, assets default inline, JPEG uses a white matte. Limits and choices are recorded in
@@ -2446,3 +2464,54 @@ wrapper reruns passed. Global pnpm bootstrap stalled; the existing pinned binary
 
 Not verified: remote CI, native Windows/Linux, or the updated WASM graphics build. No installed engines or paid
 providers were run. No architecture source changed except the permitted version-baseline addition.
+
+## Prompt 42: importers, icons, stock images (ADR-009)
+
+Built (docs/runbooks/imports.md):
+- Ports in `vellum-core` (`Importer`, `IconLibrary`, `ImageSource`, `HttpFetch`), fakes and contract suites. The
+  importer suite also feeds 400 deterministic byte-mutations of valid input and requires no panic.
+- `import-image` (PNG, JPEG, WEBP headers; original bytes stored; laid out at most 1600 px). `import-svg` (own bounded
+  XML, path, transform, CSS and colour readers; rect/ellipse/vector/text/image layers; arcs and transforms baked
+  to cubics; `use`; entities never expanded; 4 MB and 5,000 shape limits). `import-figma-clipboard` (own Kiwi
+  decoder, deflate; frames, groups, shapes, lines, vectors from outline blobs, text, fills, strokes, corners,
+  shadows, blurs; rotation about the centre; always notes that images are not in a paste).
+- `icons`: Lucide (1,891), Feather (287), Phosphor (1,512, four weights and fill) and Material Symbols (outlined,
+  rounded, sharp; 700 each, weight 400, fill) as generated data compiled in (5.4 MB; `scripts/icons-gen.mjs`;
+  licences in `THIRD_PARTY_NOTICES.md` and the crate's `notices/`). Token search index. Stroke sets map weight to line width.
+- `images-stock`: Pixabay, 24 hour result keep, download-only from pixabay.com. `model-http` gains `HttpFetcher`
+  (https only, no IP literals, resolved addresses must be public and are pinned, no redirects, size and time bounds).
+- Tools `search_icons`, `insert_icon`, `fill_image`, `import`; `Verb::AddedAsset`; `Outside`/`Brokered` in
+  `vellum::permissions` (the first code to call the broker); `Documents::{set_outside,set_stock,put_asset}`.
+  Stock attribution goes to `metadata.attribution`. MCP snapshot rewritten (additions only). Four parity rows moved
+  from pending to active (batch_design images, icon sets, image import, Figma paste); 33 active, 19 pending.
+
+Differs from the guide or ARCHITECTURE:
+- `insert_icon` inserts `vector` layers, not `icon` nodes (nothing draws those). Material Symbols ships the 700 most
+  used (Google's ranking), at weight 400 only, to keep the binary reasonable; Lucide and Feather accept any weight.
+- The SVG importer flattens groups and replaces gradients with their first stop (our gradient transform has no spec
+  I could map from). `fill_image` has no `prompt` (generation is v1.1); `import` has no `url`. The row for removing
+  backgrounds and tracing images stays with Prompt 66 (v1.1), as its pending note already said.
+- One permission question covers a stock search and its download (`Action::Network` for the provider's origin).
+
+Failed, skipped or not verified:
+- No live Figma paste, no live Pixabay request, no run against a real keychain. The fetcher is tested against a
+  loopback server only; the public-address rules are unit tested, not exercised against real DNS.
+- Icon rendering was not compared with the libraries' own pictures; paths were checked for a leading absolute move
+  after a bug (Lucide `m` after another element) was found and fixed in the generator.
+- No UI or design frames were built (C30, C31 and the Icon picker are Phase 6). Storybook and design comparison do not apply.
+- Not rerun: the advisories half of `cargo deny` (needs the network). The pre-existing ADR-000 "Proposed" script test still fails (listed in Needs a person); the other script tests I ran pass (reports, repo layout, parity, deps, clean-room, ADR records).
+
+Process: the contract suites and unit tests were written beside each adapter; the Kiwi decoder was written from the
+reference source and then run against output of the reference encoder. Red-first was not followed strictly for the
+SVG and Figma importers (code and tests came together, then the tests were run); the suites do catch broken
+implementations (`suites_catch_broken_implementations`). A suite change made after its fake was written failed the
+full run once (the fake did not block link-local addresses); fixed and rerun.
+
+Verified on macOS arm64 (Node 24, pnpm 12.11.2, both telemetry opt-outs):
+- `node scripts/skia-build.mjs test --offline --workspace --no-fail-fast`: 1,450 passed, 1 failed (the fake above),
+  59 ignored; after the fix `cargo test -p vellum-contracts` passes and the touched crates were rerun
+  (`vellum --test mcp --test asset_tools`).
+- `node scripts/skia-build.mjs clippy --offline --workspace --all-targets -- -D warnings`;
+  `node scripts/skia-build.mjs clippy --offline -p vellum --lib --bins --no-default-features -- -D warnings`.
+- `pnpm format:check`, `pnpm deps:check`, `pnpm types:check`, `pnpm format-spec:check`, `pnpm doc-api:check`,
+  `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`, `pnpm parity:check`, `pnpm type-check` (33 tasks); `pnpm exec biome lint .` (infos only).

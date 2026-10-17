@@ -18,6 +18,7 @@ mod export;
 mod files;
 mod fonts;
 mod geometry;
+mod import;
 mod layout;
 mod model;
 mod path;
@@ -51,6 +52,12 @@ pub use export::{CodeExporter, ExportError, ExportRenderer, ImageExporter};
 pub use files::{FileSystem, FsError, check_path};
 pub use fonts::{FontData, FontHandle, FontSource};
 pub use geometry::{Extent, Rect};
+pub use import::{
+    ASSET_REF_PREFIX, Attribution, FetchError, FetchRequest, FetchResponse, FetchedImage,
+    HttpFetch, IconGlyph, IconInfo, IconLibrary, IconStroke, IconStyle, ImageError, ImageHit,
+    ImagePage, ImageQuery, ImageSource, ImportError, ImportInput, Imported, ImportedAsset,
+    Importer, Orientation, asset_ref, asset_ref_index,
+};
 pub use layout::{
     Dimension, DirtySet, Insets, LayoutContent, LayoutEngine, LayoutNode, LayoutResult,
     LayoutStyle, LayoutTree,

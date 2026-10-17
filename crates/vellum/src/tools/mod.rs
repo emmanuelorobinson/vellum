@@ -5,6 +5,7 @@
 //! [`ToolCtx`], which routes to the daemon's targets, so a tool cannot tell a live editor from a headless file.
 //! Names are stable and schema changes are additive; a breaking change is a new tool name (§2.5).
 
+mod assets;
 mod batch;
 mod bridge;
 mod content;
@@ -519,11 +520,38 @@ impl Registry {
         )
     }
 
+    /// The tools Vellum ships, with `catalog` as the icon libraries (the shipped sets plus the project's own).
+    pub fn with_icons(catalog: vellum_icons::Catalog) -> Self {
+        Self::configured_with(
+            std::rc::Rc::new(crate::content::BuiltinSkills),
+            std::rc::Rc::new(crate::content::BuiltinStyles),
+            &AgentSettings::default(),
+            StackProfiles::builtin(),
+            catalog,
+        )
+    }
+
     fn configured(
         skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
         styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
         settings: &AgentSettings,
         stacks: StackProfiles,
+    ) -> Self {
+        Self::configured_with(
+            skills,
+            styles,
+            settings,
+            stacks,
+            vellum_icons::Catalog::builtin(),
+        )
+    }
+
+    fn configured_with(
+        skills: std::rc::Rc<dyn vellum_core::ports::SkillSource>,
+        styles: std::rc::Rc<dyn vellum_core::ports::StyleLibrary>,
+        settings: &AgentSettings,
+        stacks: StackProfiles,
+        icons: vellum_icons::Catalog,
     ) -> Self {
         let mut tools: Vec<Box<dyn Tool>> = Vec::new();
         content::register(&mut tools, skills, styles);
@@ -537,6 +565,7 @@ impl Registry {
         coordinate::register(&mut tools, settings);
         execute::register(&mut tools);
         tokens::register(&mut tools, stacks);
+        assets::register(&mut tools, std::rc::Rc::new(icons));
         Self::new(tools)
     }
 

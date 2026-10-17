@@ -860,3 +860,90 @@ fn watcher_that_reports_everything() {
         &mut suites::watch::ToldDisk(watcher),
     );
 }
+
+mod import_ports {
+    use serde_json::json;
+    use vellum_contracts::fakes::{MemoryIcons, MemoryImporter};
+    use vellum_contracts::suites::import;
+    use vellum_core::ports::*;
+
+    /// Imports anything, names an asset it never returns, and never says no.
+    struct Gullible;
+    impl Importer for Gullible {
+        fn id(&self) -> &'static str {
+            "gullible"
+        }
+        fn recognizes(&self, _: &ImportInput<'_>) -> bool {
+            true
+        }
+        fn import(&self, _: &ImportInput<'_>) -> Result<Imported, ImportError> {
+            Ok(Imported {
+                nodes: vec![json!({"type":"image","asset":asset_ref(3)})],
+                ..Imported::default()
+            })
+        }
+    }
+
+    /// Ignores the limit and the weight.
+    struct Sloppy(MemoryIcons);
+    impl IconLibrary for Sloppy {
+        fn id(&self) -> &str {
+            self.0.id()
+        }
+        fn label(&self) -> &str {
+            self.0.label()
+        }
+        fn style(&self) -> IconStyle {
+            self.0.style()
+        }
+        fn weights(&self) -> Vec<u16> {
+            self.0.weights()
+        }
+        fn supports_fill(&self) -> bool {
+            self.0.supports_fill()
+        }
+        fn len(&self) -> usize {
+            self.0.len()
+        }
+        fn search(&self, query: &str, _: usize) -> Vec<IconInfo> {
+            self.0.search(query, 100)
+        }
+        fn glyph(&self, name: &str, weight: u16, fill: bool) -> Option<IconGlyph> {
+            self.0.glyph(name, weight, fill)
+        }
+    }
+
+    /// Lets anything through.
+    struct Open;
+    impl HttpFetch for Open {
+        fn get(&self, _: &FetchRequest) -> Result<FetchResponse, FetchError> {
+            Ok(FetchResponse {
+                status: 200,
+                content_type: "image/png".into(),
+                body: vec![1],
+            })
+        }
+    }
+
+    #[test]
+    fn contracts_catch_importers_libraries_and_fetches_that_break_the_rules() {
+        assert!(std::panic::catch_unwind(|| import::importer(&Gullible, b"anything")).is_err());
+        assert!(
+            std::panic::catch_unwind(|| import::importer(&MemoryImporter, b"memory:Mark")).is_ok()
+        );
+        assert!(
+            std::panic::catch_unwind(|| {
+                import::icon_library(
+                    &Sloppy(MemoryIcons::new("m", IconStyle::Stroke, false)),
+                    "house",
+                    "home",
+                )
+            })
+            .is_err()
+        );
+        assert!(
+            std::panic::catch_unwind(|| import::http_fetch(&Open, "https://example.com/a.png"))
+                .is_err()
+        );
+    }
+}

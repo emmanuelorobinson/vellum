@@ -16,3 +16,6 @@ url = "=2.5.8"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }

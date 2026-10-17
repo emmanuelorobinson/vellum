@@ -25,6 +25,11 @@ vellum-codec-json = { path = "../adapters/codec-json" }
 vellum-export-html = { path = "../adapters/export-html" }
 vellum-export-raster = { path = "../adapters/export-raster" }
 vellum-export-tokens = { path = "../adapters/export-tokens" }
+vellum-icons = { path = "../adapters/icons" }
+vellum-import-image = { path = "../adapters/import-image" }
+vellum-import-svg = { path = "../adapters/import-svg" }
+vellum-import-figma-clipboard = { path = "../adapters/import-figma-clipboard" }
+vellum-images-stock = { path = "../adapters/images-stock" }
 vellum-doc-loro = { path = "../adapters/doc-loro" }
 vellum-assets-fs = { path = "../adapters/assets-fs" }
 vellum-watch-notify = { path = "../adapters/watch-notify" }

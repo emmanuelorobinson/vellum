@@ -10,6 +10,7 @@ pub mod document_files;
 pub mod engine;
 pub mod files;
 pub mod fonts;
+pub mod import;
 pub mod layout;
 pub mod model;
 pub mod path;

@@ -407,6 +407,63 @@
         "vellum/version": 1
       },
       "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Fill a layer with a real picture: a file from the repository (`path`), a picture you hold (`data`, base64) or a stock photo found by words (`query`). The picture is stored in the repository next to the document. An image layer gets the new picture; any other shape gets an image fill. A stock photo's author, page and licence are written to the layer's metadata. Reading a file or reaching the stock library asks the person first.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "A picture as base64 (a `data:` URL also works). Needs no permission.",
+            "type": "string"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "fit": {
+            "description": "How the picture fills the layer: \"fill\" (cover, the default), \"fit\" (contain) or \"stretch\".",
+            "type": "string"
+          },
+          "node": {
+            "description": "The layer to fill: an image layer, or a frame, rectangle, ellipse or other shape.",
+            "type": "string"
+          },
+          "orientation": {
+            "description": "With `query`: \"landscape\" or \"portrait\" pictures only.",
+            "type": "string"
+          },
+          "path": {
+            "description": "A picture file (PNG, JPEG or WEBP) in the repository. Needs the person's permission.",
+            "type": "string"
+          },
+          "query": {
+            "description": "Words to find a stock picture with. The picture is downloaded into the repository, so the design never\ndepends on the stock site. Needs the person's permission to reach it, and a key in Settings, Assets.",
+            "type": "string"
+          },
+          "result": {
+            "description": "With `query`: which result to use, counting from 0. Defaults to 0, the best match.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node"
+        ],
+        "title": "FillInput",
+        "type": "object"
+      },
+      "name": "fill_image"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
@@ -699,6 +756,73 @@
         "vellum/version": 1
       },
       "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. Returns the new layer ids and notes on what could not be imported.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The file as base64 (a `data:` URL also works). Needs no permission.",
+            "type": "string"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "format": {
+            "description": "\"svg\", \"image\" or \"figma\". Worked out from the content when left out.",
+            "type": "string"
+          },
+          "index": {
+            "description": "Where among the parent's children, back to front. Defaults to the top.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "description": "The file's name, which names the layer. Taken from `path` when there is one.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The page or layer to import into, by id.",
+            "type": "string"
+          },
+          "path": {
+            "description": "A file in the repository: an SVG, or a PNG, JPEG or WEBP picture. Needs the person's permission.",
+            "type": "string"
+          },
+          "text": {
+            "description": "Text content to import: SVG markup, or the HTML a Figma copy puts on the clipboard. Needs no permission.",
+            "type": "string"
+          },
+          "x": {
+            "description": "Left edge of the imported content inside the parent, for a parent without auto layout.",
+            "format": "double",
+            "type": "number"
+          },
+          "y": {
+            "description": "Top edge.",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "title": "ImportInputs",
+        "type": "object"
+      },
+      "name": "import"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
         "destructiveHint": true,
         "openWorldHint": false,
         "readOnlyHint": false
@@ -798,6 +922,91 @@
         "type": "object"
       },
       "name": "import_tokens"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Put an icon from an icon library on the canvas as an editable vector layer. Find the library and name with search_icons. Choose size, weight, fill and a colour (or a colour variable). Returns the new layer's id and what was drawn, including when the library could not give the exact weight or fill asked for.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "description": "The colour as #RRGGBB or #RRGGBBAA. Defaults to black. Prefer color_variable when the design has colours.",
+            "type": "string"
+          },
+          "color_variable": {
+            "description": "A colour variable's id to colour the icon by, so it follows themes.",
+            "type": "string"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "fill": {
+            "description": "The filled variant, in libraries that have one.",
+            "type": "boolean"
+          },
+          "index": {
+            "description": "Where among the parent's children, back to front: 0 is the bottom. Defaults to the top.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "layer_name": {
+            "description": "The layer's name. Defaults to library and icon name.",
+            "type": "string"
+          },
+          "library": {
+            "description": "The library, as search_icons lists them: lucide, feather, phosphor, material-symbols-outlined, ...",
+            "type": "string"
+          },
+          "name": {
+            "description": "The icon's name in that library, exactly as search_icons gives it.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The page or layer to add the icon to, by id.",
+            "type": "string"
+          },
+          "size": {
+            "description": "The width of the icon in pixels, 4 to 1024. Defaults to 24.",
+            "format": "double",
+            "type": "number"
+          },
+          "weight": {
+            "description": "100 to 700, where 400 is regular. Outline sets draw it as line width; Phosphor has 100, 300, 400 and 700;\nMaterial Symbols has 400. The nearest weight the library has is used.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "x": {
+            "description": "Left edge inside the parent, for a parent without auto layout.",
+            "format": "double",
+            "type": "number"
+          },
+          "y": {
+            "description": "Top edge inside the parent.",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "parent",
+          "library",
+          "name"
+        ],
+        "title": "InsertIconInput",
+        "type": "object"
+      },
+      "name": "insert_icon"
     },
     {
       "_meta": {
@@ -1397,6 +1606,40 @@
         "type": "object"
       },
       "name": "screenshot"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Find icons by name or meaning in Lucide, Feather, Phosphor and Material Symbols (and the project's own icons when it has some). Returns library and name for each match, best first, with the libraries and the weights each one draws. Pass the library and name to insert_icon.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "library": {
+            "description": "Search one library only (see the list the call returns). Searches all of them when left out.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "The most icons to return, 1 to 100. Defaults to 20.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Words to find, such as \"arrow right\" or \"settings\". Every word has to match a part of an icon's name or one of\nits tags. Leave it out to list the libraries.",
+            "type": "string"
+          }
+        },
+        "title": "SearchInput",
+        "type": "object"
+      },
+      "name": "search_icons"
     },
     {
       "_meta": {

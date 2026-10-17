@@ -1,4 +1,7 @@
 //! Cancellable HTTP/SSE only; composition roots inject this into protocol adapters.
+mod fetch;
+pub use fetch::HttpFetcher;
+
 use async_channel::{Receiver, Sender};
 use std::{
     future::{Future, poll_fn},

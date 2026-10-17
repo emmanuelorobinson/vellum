@@ -3907,6 +3907,11 @@ dependencies = [
  "vellum-export-html",
  "vellum-export-raster",
  "vellum-export-tokens",
+ "vellum-icons",
+ "vellum-images-stock",
+ "vellum-import-figma-clipboard",
+ "vellum-import-image",
+ "vellum-import-svg",
  "vellum-index-rstar",
  "vellum-ipc-local",
  "vellum-layout-taffy",
@@ -4065,6 +4070,11 @@ dependencies = [
 [[package]]
 name = "vellum-icons"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+]
 
 [[package]]
 name = "vellum-image-ops"
@@ -4073,6 +4083,11 @@ version = "0.0.0"
 [[package]]
 name = "vellum-images-stock"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+]
 
 [[package]]
 name = "vellum-import-figma-api"
@@ -4081,6 +4096,12 @@ version = "0.0.0"
 [[package]]
 name = "vellum-import-figma-clipboard"
 version = "0.0.0"
+dependencies = [
+ "flate2",
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+]
 
 [[package]]
 name = "vellum-import-html"
@@ -4089,10 +4110,20 @@ version = "0.0.0"
 [[package]]
 name = "vellum-import-image"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+]
 
 [[package]]
 name = "vellum-import-svg"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+]
 
 [[package]]
 name = "vellum-index-rstar"
@@ -4173,6 +4204,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "url",
+ "vellum-contracts",
  "vellum-core",
 ]
 

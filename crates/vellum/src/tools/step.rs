@@ -34,6 +34,8 @@ pub enum Verb {
     CheckedScreenshot,
     /// Added layers.
     Designed,
+    /// Put an icon, a picture or imported content on the canvas.
+    AddedAsset,
     /// Changed layers' properties.
     Updated,
     /// Copied layers.
@@ -240,7 +242,7 @@ impl Step {
     ) -> Self {
         let failed = result.as_ref().err();
         let thumbnail = match (&note.target, verb, failed) {
-            (Some(target), Verb::Designed | Verb::RanScript, None)
+            (Some(target), Verb::Designed | Verb::AddedAsset | Verb::RanScript, None)
                 if note.counts.created + note.counts.changed > 0 =>
             {
                 Some(Thumbnail {

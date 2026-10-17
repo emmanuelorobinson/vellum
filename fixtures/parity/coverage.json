@@ -60,14 +60,34 @@
     "capability": "Earlier `batch_design` (insert, copy, update, replace, move, delete, image ops)",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_batch_design_images"
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "insert_nodes_adds_a_batch_in_one_transaction_and_returns_the_new_ids"
+      },
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "update_nodes_sets_and_resets_properties"
+      },
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "copy_nodes_returns_the_copies"
+      },
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "replace_nodes_puts_a_new_node_in_place"
+      },
+      {
+        "file": "crates/vellum/tests/write_tools.rs",
+        "name": "move_nodes_moves_and_delete_nodes_deletes"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "a_shape_gets_an_image_fill_and_the_picture_is_stored_beside_the_document_once"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "stock_pictures_ask_once_download_into_the_repository_and_write_attribution_to_the_layer"
       }
-    ],
-    "pending": {
-      "prompt": 42,
-      "reason": "Typed batches exist; fill_image and asset tooling remain."
-    }
+    ]
   },
   {
     "capability": "Earlier `batch_get`",
@@ -355,40 +375,52 @@
     "capability": "Built-in icon sets (Material Symbols, Lucide, Feather, Phosphor)",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_icon_sets"
+        "file": "crates/adapters/icons/tests/icons.rs",
+        "name": "every_shipped_set_passes_the_library_contract"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "an_outline_icon_becomes_a_stroked_vector_scaled_to_its_size_with_its_origin_recorded"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "a_filled_icon_is_a_filled_vector_and_the_notes_say_when_the_exact_ask_was_not_possible"
       }
-    ],
-    "pending": {
-      "prompt": 42,
-      "reason": "Needs icon adapters and tools."
-    }
+    ]
   },
   {
     "capability": "Image import, PNG/JPEG/SVG; remove background; image to vectors",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_image_import"
+        "file": "crates/adapters/import-image/tests/import.rs",
+        "name": "every_format_gives_an_image_node_of_its_own_size_and_one_asset"
+      },
+      {
+        "file": "crates/adapters/import-svg/tests/import.rs",
+        "name": "an_icon_becomes_a_frame_of_a_vector_and_an_ellipse_with_the_strokes_kept"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "a_picture_is_stored_and_laid_out_with_its_note_when_large"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "an_svg_comes_in_as_a_frame_of_editable_layers_at_the_asked_place"
       }
-    ],
-    "pending": {
-      "prompt": 42,
-      "reason": "v1 import only; ImageOps are v1.1."
-    }
+    ]
   },
   {
     "capability": "Figma file import and layer paste",
     "tests": [
       {
-        "file": "crates/vellum/tests/parity_pending.rs",
-        "name": "parity_pending_figma_paste"
+        "file": "crates/adapters/import-figma-clipboard/tests/import.rs",
+        "name": "the_notes_say_what_was_left_out_and_always_say_images_are_not_in_a_paste"
+      },
+      {
+        "file": "crates/vellum/tests/asset_tools.rs",
+        "name": "a_figma_copy_comes_in_as_layers_with_the_standing_note_about_pictures"
       }
-    ],
-    "pending": {
-      "prompt": 42,
-      "reason": "v1 clipboard only; file import is v1.1."
-    }
+    ]
   },
   {
     "capability": "HTML + Tailwind / HTML + CSS export, scaffold option",

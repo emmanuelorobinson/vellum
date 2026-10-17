@@ -63,6 +63,11 @@ A refused batch fails with `op` (which item, from 0), `path` (the field, as the 
 a failed script with its `line`. Fix that item and call again. Each call also leaves a step for the Agent panel
 (`Session::steps`).
 
+## Icons, pictures and imports (Prompt 42)
+
+`search_icons`, `insert_icon`, `fill_image`, `import`. See [Icons, pictures and imports](imports.md): the libraries,
+the importers, what asks for permission and what each leaves out.
+
 ## Adding a tool
 
 Prompt 31 adds `list_skills`, `read_skill(path?)` and `get_style(name?)`; all work without an open document.

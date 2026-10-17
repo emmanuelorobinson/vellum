@@ -6,6 +6,9 @@
    changes, present the frame list and approach for review first. Use get_style only when no system exists.
 3. Read execute.md. Find free space with find_space. Claim an existing frame before changing it. Build a
    small layout with existing variables and component instances; keep names meaningful for later edits.
+   For icons use search_icons and insert_icon, not hand-drawn paths, and colour them with a colour variable. For
+   real pictures use fill_image (a repository file, or a stock search the person has allowed) rather than grey
+   boxes; stock photos keep their author and licence in the layer's metadata. import brings in an SVG or a Figma copy.
 4. Read snapshot_layout(problems_only) and screenshot at the requested dimensions and theme. Fix the named
    problems, inspect the picture, release the frame, and report changed ids and any remaining limitations.
 

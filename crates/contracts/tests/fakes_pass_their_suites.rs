@@ -128,3 +128,27 @@ fn tokens_and_spec() {
         &samples::node_id("frame00001"),
     );
 }
+
+#[test]
+fn import_and_asset_ports() {
+    use vellum_contracts::fakes::{MemoryFetch, MemoryIcons, MemoryImages, MemoryImporter};
+    use vellum_core::ports::IconStyle;
+    suites::import::importer(&MemoryImporter, b"memory:Mark");
+    suites::import::importer(&MemoryImporter, b"memory:Photo:image");
+    for (style, fill) in [
+        (IconStyle::Stroke, false),
+        (IconStyle::Fill, true),
+        (IconStyle::Fill, false),
+    ] {
+        suites::import::icon_library(
+            &MemoryIcons::new("memory-icons", style, fill),
+            "house",
+            "home",
+        );
+    }
+    suites::import::image_source(&MemoryImages, "TEST DATA kitchen");
+    suites::import::http_fetch(
+        &MemoryFetch::default().with("https://example.com/a.png", "image/png", &[1, 2, 3]),
+        "https://example.com/a.png",
+    );
+}

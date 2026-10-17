@@ -28,7 +28,8 @@ what is open, what the person has selected, which frames other agents hold, and 
 agents. Use open_document for another file. Read before changing anything: get_nodes, query_nodes, \
 snapshot_layout and find_properties show the design, and screenshot draws it. Nodes are named by id. To \
 change it, claim_frame the frame you work in, then use execute for anything that takes more than a few changes \
-(one script, one undo step) or the typed tools (insert_nodes, update_nodes and the rest). Every call is all or \
+(one script, one undo step) or the typed tools (insert_nodes, update_nodes and the rest). For icons use search_icons then insert_icon, for real pictures \
+fill_image, and import for an SVG or layers copied from Figma. Every call is all or \
 nothing. When a call fails, the message says what to fix: the batch item (`op`), the field (`path`) or the script \
 line (`line`).";
 

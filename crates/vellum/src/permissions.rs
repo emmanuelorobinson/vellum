@@ -14,8 +14,12 @@ use std::sync::Mutex;
 
 use vellum_core::permissions::{Effect, PermissionSettings, Permit, Rule, RuleError};
 use vellum_core::ports::{
-    Action, Answer, EngineFuture, PermissionKind, PermissionPrompt, Question,
+    Action, Answer, EngineFuture, PermissionBroker, PermissionKind, PermissionPrompt,
+    PermissionRequest, Question,
 };
+use vellum_types::Origin;
+
+use crate::tools::{ErrorKind, ToolError};
 
 /// Why an outside action did not happen.
 #[derive(Debug)]
@@ -122,6 +126,115 @@ pub fn run_command(
         .current_dir(cwd)
         .output()
         .map_err(OutsideError::Io)
+}
+
+/// What a tool call may ask of the world for the agent that made it. Each method asks the permission broker
+/// first and acts only on a recorded allow; a refusal comes back as a [`ToolError`] of kind `Refused` that says
+/// what was not allowed and why.
+pub trait Outside {
+    /// The bytes of the file at `path`, at most `max_bytes` of them.
+    fn read_file(&self, origin: &Origin, path: &Path, max_bytes: u64)
+    -> Result<Vec<u8>, ToolError>;
+    /// Whether the agent may reach `url` (an origin such as `https://pixabay.com`). `Ok` means allowed and
+    /// recorded; whoever then makes the request is the caller.
+    fn network(&self, origin: &Origin, url: &str) -> Result<(), ToolError>;
+}
+
+/// [`Outside`] decided by a [`PermissionBroker`]. `engine` is the installed engine the turn runs on, or `None`
+/// for an external client that called the tool itself.
+pub struct Brokered {
+    broker: std::rc::Rc<dyn PermissionBroker>,
+    engine: Option<String>,
+}
+
+impl Brokered {
+    pub fn new(broker: std::rc::Rc<dyn PermissionBroker>, engine: Option<String>) -> Self {
+        Self { broker, engine }
+    }
+
+    fn permit(&self, origin: &Origin, action: Action) -> Result<Permit, ToolError> {
+        let request = PermissionRequest {
+            origin: origin.clone(),
+            action,
+            engine: self.engine.clone(),
+            engine_verdict: None,
+        };
+        block_on(self.broker.request(request))
+            .map_err(|refusal| ToolError::new(ErrorKind::Refused, refusal.to_string()))
+    }
+}
+
+/// Waits for a future that is answered by the person at this computer (a terminal line, a card in the panel).
+fn block_on<F: std::future::Future>(future: F) -> F::Output {
+    let mut future = std::pin::pin!(future);
+    let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+    loop {
+        if let std::task::Poll::Ready(value) = future.as_mut().poll(&mut cx) {
+            return value;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+}
+
+impl Outside for Brokered {
+    fn read_file(
+        &self,
+        origin: &Origin,
+        path: &Path,
+        max_bytes: u64,
+    ) -> Result<Vec<u8>, ToolError> {
+        let action = read_action(path).map_err(|e| match e.kind() {
+            io::ErrorKind::NotFound => {
+                ToolError::not_found(format!("There is no file at {}.", path.display()))
+            }
+            _ => ToolError::new(
+                ErrorKind::Document,
+                format!("{} cannot be read: {e}.", path.display()),
+            ),
+        })?;
+        // Asked first, so a missing file outside the repository is not told apart from one the person denied.
+        let permit = self.permit(origin, action)?;
+        let unreadable = |e: io::Error| match e.kind() {
+            io::ErrorKind::NotFound => {
+                ToolError::not_found(format!("There is no file at {}.", path.display()))
+            }
+            _ => ToolError::new(
+                ErrorKind::Document,
+                format!("{} cannot be read: {e}.", path.display()),
+            ),
+        };
+        let size = std::fs::metadata(path)
+            .map(|m| m.len())
+            .map_err(unreadable)?;
+        if size > max_bytes {
+            return Err(ToolError::invalid(
+                "path",
+                format!(
+                    "{} is {} KB; at most {} KB can be used.",
+                    path.display(),
+                    size / 1024,
+                    max_bytes / 1024
+                ),
+            ));
+        }
+        read_file(permit, path).map_err(|e| match e {
+            OutsideError::Io(e) => unreadable(e),
+            other => ToolError::new(
+                ErrorKind::Document,
+                format!("{} cannot be read: {other}.", path.display()),
+            ),
+        })
+    }
+
+    fn network(&self, origin: &Origin, url: &str) -> Result<(), ToolError> {
+        self.permit(
+            origin,
+            Action::Network {
+                url: url.to_owned(),
+            },
+        )
+        .map(drop)
+    }
 }
 
 /// Settings from the command line: `--allow <rule>` and `--deny <rule>` (each `read|write|run <pattern>`), and
