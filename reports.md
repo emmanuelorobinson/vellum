@@ -2356,7 +2356,7 @@ Not run: the engines lane (`installed_parallel`, needs signed-in Claude Code and
 the installed-agents and model-providers rows as pending on Prompt 37, which is committed.
 
 
-## Prompt 40: tokens, spec, stack profiles (UNFINISHED: see "Not run")
+## Prompt 40: tokens, spec, stack profiles
 
 Built:
 - `vellum_core::tokens` (pure): `TokenSet`/`Token` (default value plus the value under each single non-default theme
@@ -2377,12 +2377,13 @@ colours are hex strings. Values depending on several axes at once are written pe
 profiles cover shadcn, React Native and SwiftUI only (DESIGN C19 also names CSS and Tailwind; those are Prompt 41).
 
 Process: the core `tokens` implementation was written before its tests (they passed first time); the adapter, spec,
-contract and tool tests were written first. No mutation checks were run.
+contract and tool tests were written first. One mutation check (the diff ignoring value changes) fails two tests.
 
-Passed: `cargo test --offline -p vellum-core --lib tokens:: spec::`, `-p vellum-export-tokens`, `-p vellum-contracts`,
-`-p vellum --test tokens_tools --test mcp`.
+Verified on macOS arm64 (exit 0; both telemetry opt-outs):
+- `cargo test --offline --workspace --no-fail-fast`: 1,333 passed, 0 failed, 66 ignored.
+- `cargo clippy --offline --workspace --all-targets -- -D warnings`; `cargo fmt --all -- --check`.
+- `pnpm deps:check`, `pnpm lint`, `pnpm types:check`, `pnpm copy-lint`, `pnpm clean-room`, `pnpm checksum`,
+  `pnpm parity:check`.
 
-Not run (do these next): `cargo clippy --workspace --all-targets -D warnings`, full `cargo test --workspace`,
-`pnpm deps:check` (vellum-core allowlist unchanged, adapter is new; `export-tokens` may need a line),
-`pnpm lint`, `pnpm types:check`, `pnpm checksum`, `pnpm parity:check`. Not done: CLI `tokens` commands and the C20/C19
-editor UI (later prompts), `cargo deny`.
+Not run: `pnpm cargo:deny` advisories (no network use), `pnpm format-spec:check`, `node --test scripts/__tests__`.
+Not done: CLI `tokens` commands and the C19/C20 editor UI (later prompts). Nothing is committed.
