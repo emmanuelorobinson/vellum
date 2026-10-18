@@ -52,6 +52,7 @@ export function createEditorSession(deps: SessionDeps) {
   let state: ToolState = initialToolState();
   let notice: SessionNotice | null = null;
   let hovered: NodeIdPath | null = null;
+  let snapOptions: Omit<SnapOptions, "zoom"> = deps.snap ?? DEFAULT_SNAP;
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of [...listeners]) listener();
@@ -72,7 +73,7 @@ export function createEditorSession(deps: SessionDeps) {
       createNode: deps.createNode,
       viewportSize: deps.viewportSize(),
       dragThreshold: deps.dragThreshold ?? 3,
-      snap: deps.snap ?? DEFAULT_SNAP,
+      snap: snapOptions,
     };
   };
   const prune = () => {
@@ -175,6 +176,16 @@ export function createEditorSession(deps: SessionDeps) {
       state = { ...state, selection: ids.filter((id) => engine.scene.get(id)) };
       lastOverlay = transitionTool(state, { type: "cancel" }, context()).overlay;
       notify();
+    },
+    /** Settings → Canvas: snap to objects and to the pixel grid. Takes effect on the next drag. */
+    setSnap(options: { objects: boolean; grid: number | null }) {
+      snapOptions = {
+        ...snapOptions,
+        edges: options.objects,
+        centres: options.objects,
+        equalSpacing: options.objects,
+        grid: options.grid,
+      };
     },
     setViewport(viewport: Viewport) {
       if (!Number.isFinite(viewport.zoom) || viewport.zoom <= 0)

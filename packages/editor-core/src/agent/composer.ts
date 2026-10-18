@@ -463,6 +463,11 @@ export function createComposerController(deps: ComposerDeps) {
       const next = `${text}${sep}@`;
       setText(next, next.length, extensions);
     },
+    /** Puts words in the open session's field, for the person to edit and send (palette Ask, Redesign this…). */
+    prefill(text: string) {
+      setText(text, text.length);
+      change({ focus: state.focus + 1 });
+    },
     removeChip(k: string) {
       const d = draft();
       const auto = autoChip();
@@ -636,6 +641,14 @@ export function createComposerController(deps: ComposerDeps) {
         return true;
       });
       if (!ok) change({ answering: state.answering.filter((a) => a !== id) });
+    },
+    /** "Skip all permission prompts" (Settings → Permissions): off by default, and the Permission card says so while on. */
+    async setSkipAll(on: boolean) {
+      const ok = await attempt(async () => {
+        await feed.setSkipAll(on);
+        return true;
+      });
+      if (ok) change({ skipAll: on });
     },
     async turnPromptsOn() {
       const ok = await attempt(async () => {

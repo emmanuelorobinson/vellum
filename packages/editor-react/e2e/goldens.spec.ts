@@ -136,7 +136,10 @@ for (const screen of screens.screens)
       else await page.mouse.move(0, 0);
       // Resource dialogs are compared in the pointer state shown in the design. Their keyboard focus is
       // verified separately by the behaviour tests.
-      if (screen.query.includes("resource=") && (await page.locator(".vc-resource-header").count()))
+      if (
+        (screen.query.includes("resource=") || screen.query.includes("edge=")) &&
+        (await page.locator(".vc-resource-header").count())
+      )
         await page.locator(".vc-resource-header").click({ position: { x: 10, y: 9 } });
       if (
         screen.query.includes("authoring=") &&

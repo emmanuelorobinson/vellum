@@ -4,6 +4,7 @@ import type { DesignController } from "./design/controller";
 import { union } from "./geometry";
 import type { ExportController } from "./ledger";
 import type { EditorSession } from "./session";
+import type { PaletteController } from "./shell";
 import type { Box, ToolId } from "./tool-types";
 import { fitViewport, nextZoomStep, zoomAbout } from "./viewport";
 import { PANEL_TABS, type Workspace } from "./workspace";
@@ -25,12 +26,20 @@ export function createEditorHandlers(deps: {
   composer?: ComposerController;
   /** Copy as PNG / HTML (⇧⌘C, ⌥⌘C) put the selection on the clipboard through the host. */
   exporter?: ExportController;
+  /** ⌘/ opens the command palette. */
+  palette?: PaletteController;
+  /** Pause all agents (⇧⌘.): the presence controller's `action({ type: "pauseAll" })`. */
+  pauseAll?: () => void;
 }): Record<string, Handler> {
-  const { workspace, session, design, agent, composer, exporter } = deps;
+  const { workspace, session, design, agent, composer, exporter, palette, pauseAll } = deps;
   const handlers: Record<string, Handler> = {};
+  if (palette) handlers["palette.open"] = () => palette.open();
+  if (pauseAll) handlers["agent.pauseAll"] = () => pauseAll();
   if (exporter) {
     handlers["edit.copyPng"] = () => void exporter.copyPng(session.state.selection);
     handlers["edit.copyHtml"] = () => void exporter.copyHtml(session.state.selection);
+    // C21: the Export dialog, for the selection, from the keyboard (⇧⌘E).
+    handlers["edit.export"] = () => void exporter.open(session.state.selection);
   }
   if (composer) {
     handlers["agent.focus"] = () => {

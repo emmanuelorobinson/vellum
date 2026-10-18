@@ -53,6 +53,50 @@ function fixture() {
 const ctx = { host: "desktop", platform: "mac", focus: "canvas" } as const;
 const editor = { host: "desktop", platform: "mac", focus: "panel" } as const;
 
+describe("palette and pause-all handlers", () => {
+  it("⌘/ opens the palette and ⇧⌘. pauses every agent, only when something can do it", async () => {
+    const { workspace, session } = fixture();
+    const calls: string[] = [];
+    const none = createEditorHandlers({ workspace, session });
+    expect(none["palette.open"]).toBeUndefined();
+    expect(none["agent.pauseAll"]).toBeUndefined();
+    const handlers = createEditorHandlers({
+      workspace,
+      session,
+      palette: { open: () => calls.push("palette") } as never,
+      pauseAll: () => calls.push("pause"),
+    });
+    const controller = createCommandController(handlers);
+    await controller.execute("palette.open");
+    await controller.execute("agent.pauseAll");
+    expect(calls).toEqual(["palette", "pause"]);
+  });
+});
+
+describe("export from the keyboard", () => {
+  it("⇧⌘E opens the Export dialog for the selection", async () => {
+    const { workspace, session } = fixture();
+    session.select(["a", "b"]);
+    const opened: (readonly string[])[] = [];
+    const exporter = {
+      open: async (ids: readonly string[]) => void opened.push(ids),
+      copyPng: async () => {},
+      copyHtml: async () => {},
+    };
+    const controller = createCommandController(
+      createEditorHandlers({ workspace, session, exporter: exporter as never }),
+    );
+    const result = await controller.keyDown(
+      { code: "KeyE", metaKey: true, shiftKey: true },
+      { host: "desktop", platform: "mac", focus: "canvas" },
+    );
+    expect(result.status).toBe("executed");
+    expect(opened).toEqual([["a", "b"]]);
+    const none = createCommandController(createEditorHandlers({ workspace, session }));
+    expect(none.commands.get("edit.export")?.enabled?.()).toBe(false);
+  });
+});
+
 describe("editor handlers", () => {
   it("handles every panel, tool, history and view command the chrome shows", () => {
     const { handlers } = fixture();

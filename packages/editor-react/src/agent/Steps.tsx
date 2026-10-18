@@ -99,7 +99,30 @@ export function StepRow({
         <span className="va-step__time vc-mono">{step.duration}</span>
       </button>
       {thumbnail ? <Thumbnail step={step} agent={agent} /> : null}
-      {step.stuck ? <p className="va-note">{copy.agentStuck}</p> : null}
+      {step.stuck ? (
+        <section className="va-stuck" aria-label={copy.agentStuck}>
+          <h4 role="status">{copy.agentStuck}</h4>
+          <p>You can stop this step or retry it. The screens already built are kept.</p>
+          <div className="va-actions">
+            <button
+              type="button"
+              className="va-button"
+              data-primary=""
+              onClick={() => void agent.stop()}
+            >
+              Stop
+            </button>
+            <button
+              type="button"
+              className="va-button"
+              disabled={!turn}
+              onClick={() => turn && void agent.retry(turn)}
+            >
+              Retry step
+            </button>
+          </div>
+        </section>
+      ) : null}
       {step.verdict && (open || step.kind === "screenshot") ? (
         <p className="va-note va-note--text">{step.verdict}</p>
       ) : null}

@@ -1,24 +1,43 @@
 import {
+  type Act,
   type AgentController,
   type AuthoringController,
+  agentNotice,
   type BindingContext,
   type ComposerController,
   type ConflictController,
+  composerLine,
   type createCommandController,
+  createEdgeUi,
+  createShellActions,
   type DesignController,
+  documentNodes,
+  type EdgeEnvironment,
+  type EdgeHost,
+  type EdgeUi,
   type EditorHost,
   type EditorSession,
   type ExportController,
+  edgeBanner,
   type HistoryController,
   type InspectController,
   instanceTransaction,
+  LARGE_FILE_LAYERS,
+  type MissingFont,
+  missingFonts,
+  PANEL_LOADING,
   type PaintEditor,
+  type PaletteController,
   type Platform,
   type PresenceController,
   type ResourceController,
+  type SessionProblem,
+  type SettingsController,
   selectionLabel,
+  sessionProblem,
   type TokenSyncController,
   type ToolTransaction,
+  type Unreadable,
   type Workspace,
   world,
 } from "@vellum/editor-core";
@@ -46,6 +65,7 @@ import { ZoomPill } from "./chrome/ZoomPill";
 import type { DesignHost } from "./design/context";
 import { DesignTab } from "./design/DesignTab";
 import { useEngineSnapshot, useStore, useWorkspace } from "./hooks";
+import { Icon } from "./icons/Icon";
 import { HandoffDialogs } from "./ledger/HandoffDialogs";
 import { HistoryTab } from "./ledger/HistoryTab";
 import { InspectPanel } from "./ledger/InspectPanel";
@@ -57,13 +77,58 @@ import { RightPanel } from "./panels/RightPanel";
 import { MissingLibraryPanel } from "./resources/MissingLibraryPanel";
 import { ResourceDialogs } from "./resources/ResourceDialogs";
 import { ScalePanel, VectorPanel } from "./resources/ToolPanels";
+import { ContextMenu, type ContextMenuState } from "./shell/ContextMenu";
+import {
+  AgentNotice,
+  EdgeBannerView,
+  EdgeDialogs,
+  type FontsHost,
+  type Rejection,
+} from "./shell/EdgeLayer";
+import { Palette } from "./shell/Palette";
+import { SettingsDialog, type SettingsHost } from "./shell/SettingsDialog";
 import "./editor.css";
 import "./authoring/authoring.css";
 import "./ledger/ledger.css";
+import "./shell/shell.css";
 
 export type CommandController = ReturnType<typeof createCommandController>;
 
+/**
+ * What only the host knows about system and edge states (S01–S16); everything else is read from the engine, the
+ * resources and the composer. Without it the workspace shows none of them.
+ */
+export interface EdgeProps {
+  host: EdgeHost;
+  /** Which surfaces the person closed; the workspace makes one when absent. */
+  ui?: EdgeUi;
+  /** The file is from a newer Vellum: it opens read-only (S04). */
+  newerFormat?: number;
+  /** The file could not be parsed (S05). */
+  unreadable?: Unreadable;
+  /** The window is closing with unsaved changes (S11). */
+  closing?: { fileName: string; running: number };
+  /** Past the multi-file threshold when absent: `LARGE_FILE_LAYERS`. */
+  largeFile?: boolean;
+  /** How many layers the file has, when the host counts them (a file the editor only partly holds). */
+  layers?: number;
+  fonts?: readonly MissingFont[];
+  /** The session's engine problem; derived from the composer's engine catalog when absent. */
+  problem?: SessionProblem | null;
+  /** A write by an agent was refused while the person follows another (S07). */
+  rejection?: Rejection | null;
+  /** Panels whose content is on the way. */
+  loading?: Partial<Record<"agent" | "layers" | "assets" | "history" | "design", boolean>>;
+}
+
 export interface EditorWorkspaceProps {
+  /** The command palette (⌘/), layer context menu and Editor settings. */
+  shell?: {
+    palette?: PaletteController;
+    settings?: SettingsController;
+    settingsHost?: SettingsHost;
+  };
+  edge?: EdgeProps;
   presence?: PresenceController;
   authoring?: AuthoringController;
   /**
@@ -154,6 +219,12 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   useStore(session.subscribe);
   useStore(controller.commands.subscribe.bind(controller.commands));
   useStore(props.composer?.subscribe ?? NO_STORE);
+  const shell = props.shell;
+  const edge = props.edge;
+  useStore(shell?.settings?.subscribe ?? NO_STORE);
+  useStore(shell?.settings?.preferences.subscribe ?? NO_STORE);
+  const edgeUi = useMemo(() => edge?.ui ?? createEdgeUi(), [edge?.ui]);
+  useStore(edgeUi.subscribe);
   const root = useRef<HTMLDivElement | null>(null);
   // Menus and popovers mount inside the workspace so they follow its appearance.
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -234,7 +305,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     );
   };
 
-  const readOnly = snapshot.readOnly;
+  const readOnly = snapshot.readOnly || !!edge?.newerFormat;
   const selectedLibrary = props.design?.single()?.item.node;
   const missingLibrary =
     selectedLibrary?.type === "instance" &&
@@ -338,6 +409,236 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     enabled: enabled(command as string),
     key: shortcut(command as string),
   }));
+  const prefs = shell?.settings?.preferences.state;
+  const shellActions = useMemo(
+    () =>
+      createShellActions({
+        workspace,
+        session,
+        document: () => engine.snapshot().document,
+        composer,
+        selectSession: (id) => void props.agent?.select(id),
+        resources: props.resources,
+      }),
+    [workspace, session, engine, composer, props.agent, props.resources],
+  );
+  // The palette runs commands the way a shortcut does, and falls back to the host's own actions.
+  const runRef = useRef(run);
+  runRef.current = run;
+  const palette = shell?.palette;
+  useEffect(
+    () =>
+      palette?.bind({
+        run: (id) => runRef.current(id),
+        open: shellActions.open,
+        ask: shellActions.ask,
+      }),
+    [palette, shellActions],
+  );
+  const blockedRef = useRef(false);
+  const settings = shell?.settings;
+  useEffect(() => {
+    const added: { dispose(): void }[] = [];
+    const add = (c: Parameters<typeof controller.registerCommand>[0]) => {
+      if (!controller.commands.get(c.id)) added.push(controller.registerCommand(c));
+    };
+    if (settings)
+      add({
+        id: "settings.open",
+        title: "Editor settings",
+        category: "View",
+        run: () => settings.open(),
+      });
+    if (composer) {
+      const usable = () => session.state.selection.length > 0 && !blockedRef.current;
+      add({
+        id: "agent.askAbout",
+        title: "Ask about this…",
+        category: "Agents",
+        enabled: usable,
+        run: () => shellActions.askAbout(),
+      });
+      add({
+        id: "agent.redesign",
+        title: "Redesign this…",
+        category: "Agents",
+        enabled: () => usable() && !engine.snapshot().readOnly,
+        run: () => shellActions.redesign(),
+      });
+    }
+    return () => {
+      for (const registration of added) registration.dispose();
+    };
+  }, [controller, settings, composer, session, engine, shellActions]);
+  // Settings → Canvas: snapping follows the preferences; the rest is read where it is used.
+  const snapObjects = prefs?.["canvas.snapObjects"];
+  const snapGrid = prefs?.["canvas.snapPixelGrid"];
+  useEffect(() => {
+    if (snapObjects === undefined || snapGrid === undefined) return;
+    session.setSnap({ objects: snapObjects, grid: snapGrid ? 1 : null });
+  }, [session, snapObjects, snapGrid]);
+
+  // The layer context menu (C24): right-click on a layer, in the panel or on the canvas.
+  const [menu, setMenu] = useState<ContextMenuState | null>(null);
+  const onContextMenu = (e: React.MouseEvent) => {
+    if (!shell) return;
+    const target = e.target as HTMLElement;
+    const frameBox = root.current?.getBoundingClientRect();
+    if (!frameBox || target.closest(".vp-menu")) return;
+    let id: string | null = target.closest<HTMLElement>("[data-layer]")?.dataset.layer ?? null;
+    const canvas = target.closest(".vc-canvas");
+    if (!id && canvas) {
+      const b = canvas.getBoundingClientRect();
+      const hit = engine.scene.hitPoint(
+        world({ x: e.clientX - b.left, y: e.clientY - b.top }, session.state.viewport),
+        "deepest",
+      );
+      id = hit ?? null;
+    }
+    if (!id) return;
+    e.preventDefault();
+    const current = session.state.selection;
+    if (!current.includes(id)) session.select([id]);
+    setMenu({
+      x: e.clientX - frameBox.left,
+      y: e.clientY - frameBox.top,
+      ids: current.includes(id) ? current : [id],
+    });
+  };
+
+  // System and edge states (S01–S16): only when the host says it handles them.
+  const layerCount = useMemo(() => (doc ? documentNodes(doc).length : 0), [doc]);
+  const resources = props.resources;
+  const fontList = useMemo(
+    () =>
+      edge?.fonts ??
+      (doc && resources
+        ? missingFonts(doc, resources.host.availableFonts, resources.host.fallbackFont ?? "Inter")
+        : []),
+    [edge?.fonts, doc, resources],
+  );
+  const catalog = composer?.state.catalog ?? null;
+  const choice = composer?.state.choice ?? null;
+  const env: EdgeEnvironment | null = edge
+    ? {
+        daemon: props.connection.mode,
+        renderer: props.basicRenderer ? "basic" : "full",
+        readOnly: edge.newerFormat
+          ? { newerFormat: edge.newerFormat }
+          : snapshot.readOnly
+            ? "locked"
+            : null,
+        unreadable: edge.unreadable ?? null,
+        fonts: fontList,
+        libraries:
+          resources?.host.libraries?.filter(
+            (i) => resources.libraryInfo(i.alias)?.state === "missing",
+          ).length ?? 0,
+        layers: edge.layers ?? layerCount,
+        largeFile: edge.largeFile ?? (edge.layers ?? layerCount) >= LARGE_FILE_LAYERS,
+        problem:
+          edge.problem !== undefined
+            ? edge.problem
+            : sessionProblem({
+                catalog,
+                choice,
+                ...(props.composerHost?.timeZone ? { timeZone: props.composerHost.timeZone } : {}),
+              }),
+        closing: edge.closing ?? null,
+      }
+    : null;
+  const notice = env ? agentNotice(env) : null;
+  const banner = env ? edgeBanner(env, { dismissed: edgeUi.state.dismissed }) : null;
+  const line = env ? composerLine(env) : null;
+  blockedRef.current = !!line;
+  const problemKey = env?.problem?.kind ?? null;
+  const rendererFull = env?.renderer === "full";
+  const daemonUp = env ? env.daemon !== "offline" : true;
+  useEffect(() => {
+    // A cause that went away is news again if it comes back.
+    if (rendererFull) edgeUi.restore("renderer");
+    if (daemonUp) edgeUi.restore("daemon-toast");
+    if (problemKey !== "not-signed-in") edgeUi.restore("sign-in");
+    if (!edge?.rejection) edgeUi.restore("rejection");
+  }, [edgeUi, rendererFull, daemonUp, problemKey, edge?.rejection]);
+  const runEdge = (a: Act) => {
+    const engineId = choice?.provider ?? choice?.engine ?? "";
+    switch (a.id) {
+      case "dismiss":
+        if (banner) edgeUi.dismiss(banner.id);
+        return;
+      case "rendererSettings":
+        settings?.open();
+        return;
+      case "reviewFonts":
+        edgeUi.openFonts();
+        return;
+      case "reviewChanges":
+        workspace.switchTab("history", { reveal: true });
+        edge?.host.action(a.id);
+        return;
+      case "switchEngine":
+        composer?.open({ type: "picker" });
+        return;
+      case "updateKey":
+        if (choice?.provider) composer?.open({ type: "setup", provider: choice.provider });
+        else edge?.host.action(a.id);
+        return;
+      case "recheck":
+        void composer?.recheck(engineId);
+        edge?.host.action(a.id);
+        return;
+      default:
+        edge?.host.action(a.id);
+    }
+  };
+  const fontsHost: FontsHost = {
+    jump: (nodes) => {
+      session.select([...nodes]);
+      edgeUi.closeFonts();
+    },
+    available: resources?.host.availableFonts ?? [],
+    ...(resources?.host.action
+      ? { install: (family: string) => resources.host.action?.("font.install", { family }) }
+      : {}),
+    ...(resources && !readOnly
+      ? {
+          replace: (family: string, to: string) =>
+            resources.attempt(() => resources.replaceFont(family, to)),
+        }
+      : {}),
+    ...(edge ? { addFolder: () => edge.host.action("openAsText", { fontFolder: true }) } : {}),
+  };
+  const sessionActor = props.agent?.session()?.agent;
+  const noticeActor: ActorView = (sessionActor && props.actors[sessionActor]) ||
+    props.agents[0] || { id: "agent", kind: "agent", name: "Agent" };
+  const panelLoading = (
+    panel: "agent" | "layers" | "assets" | "history" | "design",
+    content: ReactNode,
+  ) =>
+    edge?.loading?.[panel] ? (
+      <p className="vc-caption" role="status">
+        {PANEL_LOADING[panel]}
+      </p>
+    ) : (
+      content
+    );
+  const composerHostWithEdge = line
+    ? {
+        ...props.composerHost,
+        blocked: {
+          text: line.text,
+          ...(line.action === "restartDaemon"
+            ? {
+                action: {
+                  label: "Restart",
+                  run: () => runEdge({ id: "restartDaemon", label: "Restart" }),
+                },
+              }
+            : {}),
+        },
+      }
+    : props.composerHost;
   const visible = layout.visible;
   const tool = session.state.tool;
 
@@ -349,6 +650,13 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
       data-appearance={props.appearance}
       data-canvas-appearance={canvasMode}
       data-chrome-hidden={layout.chromeHidden ? "" : undefined}
+      data-animations={prefs && !prefs["canvas.animations"] ? "off" : undefined}
+      style={
+        prefs?.["canvas.backdrop"]
+          ? ({ "--canvas-backdrop": prefs["canvas.backdrop"] } as React.CSSProperties)
+          : undefined
+      }
+      onContextMenu={onContextMenu}
       onKeyDown={(e) => {
         if (e.defaultPrevented) return;
         // Escape while dragging a mesh point or crop corner puts it back and nothing else.
@@ -385,6 +693,9 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               )
             }
             size={{ width: state.width, height: state.height }}
+            {...(prefs
+              ? { wheel: { zooms: prefs["canvas.wheelZooms"], invert: prefs["canvas.invertZoom"] } }
+              : {})}
             {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
             {...(props.content ? { content: props.content } : {})}
             {...(props.createRenderer ? { createRenderer: props.createRenderer } : {})}
@@ -431,27 +742,43 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             shortcut={shortcut("agent.focus")}
           >
             {{
-              agent: props.agent ? (
-                <AgentTab
-                  agent={props.agent}
-                  actors={props.actors}
-                  {...(composer ? { composer } : {})}
-                  {...(props.composerHost ? { composerHost: props.composerHost } : {})}
-                  composerSlot={props.slots?.agent}
-                />
-              ) : (
-                (props.slots?.agent ?? null)
-              ),
-              history: props.ledger?.history ? (
-                <HistoryTab
-                  history={props.ledger.history}
-                  readOnly={readOnly}
-                  {...(props.ledger.timeZone ? { timeZone: props.ledger.timeZone } : {})}
-                />
-              ) : (
-                (props.slots?.history ?? null)
-              ),
-              layers: (
+              agent: props.agent
+                ? panelLoading(
+                    "agent",
+                    <AgentTab
+                      agent={props.agent}
+                      actors={props.actors}
+                      {...(composer ? { composer } : {})}
+                      {...(composerHostWithEdge ? { composerHost: composerHostWithEdge } : {})}
+                      composerSlot={props.slots?.agent}
+                      {...(notice && !edge?.loading?.agent
+                        ? {
+                            notice: (
+                              <AgentNotice
+                                notice={notice}
+                                actor={noticeActor}
+                                model={composer?.modelLine() ?? null}
+                                run={runEdge}
+                              />
+                            ),
+                          }
+                        : {})}
+                    />,
+                  )
+                : (props.slots?.agent ?? null),
+              history: props.ledger?.history
+                ? panelLoading(
+                    "history",
+                    <HistoryTab
+                      history={props.ledger.history}
+                      readOnly={readOnly}
+                      {...(props.ledger.timeZone ? { timeZone: props.ledger.timeZone } : {})}
+                      {...(composer ? { onAsk: () => shellActions.askAbout() } : {})}
+                    />,
+                  )
+                : (props.slots?.history ?? null),
+              layers: panelLoading(
+                "layers",
                 <LayersTab
                   document={doc}
                   page={pageId ?? session.page}
@@ -469,9 +796,10 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                   {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
                   readOnly={readOnly}
                   onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
-                />
+                />,
               ),
-              assets: (
+              assets: panelLoading(
+                "assets",
                 <AssetsTab
                   {...props.assets}
                   {...(props.authoring?.host.loadGuidelines
@@ -492,7 +820,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                         onThemes: () => props.resources?.open("themes"),
                       }
                     : {})}
-                />
+                />,
               ),
             }}
           </PanelFrame>
@@ -514,7 +842,11 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               {...(props.presence ? { presence: props.presence } : {})}
               {...(props.onShare ? { onShare: props.onShare } : {})}
               {...(props.onPreview ? { onPreview: props.onPreview } : {})}
-              {...(props.onSettings ? { onSettings: props.onSettings } : {})}
+              {...(props.onSettings
+                ? { onSettings: props.onSettings }
+                : settings
+                  ? { onSettings: () => settings.open() }
+                  : {})}
               {...(props.onPauseAll ? { onPauseAll: props.onPauseAll } : {})}
             />
           ) : null}
@@ -646,6 +978,57 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                 }
               />
             </>
+          ) : null}
+          {env ? (
+            <>
+              {banner ? (
+                <EdgeBannerView
+                  banner={banner}
+                  top={props.ledger?.conflicts?.banner() ? 80 : 44}
+                  inset={layout.canvasInsets.left}
+                  run={runEdge}
+                />
+              ) : null}
+              {typeof env.readOnly === "object" && env.readOnly ? (
+                <div className="ve-viewonly" style={{ left: layout.canvasInsets.left + 44 }}>
+                  <Icon name="lock" size={16} />
+                  View only · file is not downgraded
+                </div>
+              ) : null}
+              <EdgeDialogs
+                env={env}
+                ui={edgeUi}
+                host={edge?.host as EdgeHost}
+                file={props.fileName}
+                notice={notice}
+                fontsHost={fontsHost}
+                readOnly={readOnly}
+                run={runEdge}
+                rejection={edge?.rejection}
+                toastLeft={layout.bottomStrip.centerX - 41}
+              />
+            </>
+          ) : null}
+          {shell?.palette ? <Palette palette={shell.palette} shortcut={shortcut} /> : null}
+          {settings ? (
+            <SettingsDialog
+              settings={settings}
+              composer={composer}
+              {...(shell?.settingsHost ? { host: shell.settingsHost } : {})}
+              platform={props.platform}
+            />
+          ) : null}
+          {menu ? (
+            <ContextMenu
+              menu={menu}
+              enabled={enabled}
+              shortcut={shortcut}
+              size={{ width: state.width, height: state.height }}
+              mac={props.platform === "mac"}
+              onClose={() => setMenu(null)}
+              run={(command) => run(command)}
+              readOnly={readOnly}
+            />
           ) : null}
           {props.authoring ? (
             <AuthoringDialogs

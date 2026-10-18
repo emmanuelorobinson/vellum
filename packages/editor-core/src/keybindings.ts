@@ -84,6 +84,7 @@ add("Edit", "canvas", [
   ["edit.pasteOver", "Paste over selection", "Mod+Shift+KeyV"],
   ["edit.copyPng", "Copy as PNG", "Mod+Shift+KeyC"],
   ["edit.copyHtml", "Copy as HTML", "Mod+Alt+KeyC"],
+  ["edit.export", "Export selection", "Mod+Shift+KeyE"],
   ["edit.duplicate", "Duplicate", "Mod+KeyD"],
   ["edit.delete", "Delete", "Delete"],
   ["edit.delete", "Delete", "Backspace"],

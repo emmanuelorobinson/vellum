@@ -43,6 +43,7 @@ edit.paste Mod+KeyV
 edit.pasteOver Mod+Shift+KeyV
 edit.copyPng Mod+Shift+KeyC
 edit.copyHtml Mod+Alt+KeyC
+edit.export Mod+Shift+KeyE
 edit.duplicate Mod+KeyD
 edit.delete Delete
 edit.nudgeLeft ArrowLeft

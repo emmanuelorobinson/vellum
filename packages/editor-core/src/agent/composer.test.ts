@@ -446,6 +446,25 @@ describe("composer: Permission card", () => {
   });
 });
 
+describe("composer: prefill and skip-all from Settings", () => {
+  it("prefill puts words in the field for the person to edit, and asks the view to focus it", async () => {
+    const { composer } = await setup();
+    const focus = composer.state.focus;
+    composer.prefill("Make the cards rounder");
+    expect(composer.draft().text).toBe("Make the cards rounder");
+    expect(composer.state.focus).toBe(focus + 1);
+    expect(composer.state.sending).toBe(false);
+  });
+  it("turning skip-all on goes through the feed, and a failed request leaves it off", async () => {
+    const { feed, composer } = await setup();
+    await composer.setSkipAll(true);
+    expect(feed.requests.at(-1)).toEqual({ type: "setSkipAll", on: true });
+    expect(composer.state.skipAll).toBe(true);
+    await composer.setSkipAll(false);
+    expect(composer.state.skipAll).toBe(false);
+  });
+});
+
 describe("composer: engine, model and providers", () => {
   it("names capabilities as words", () => {
     expect(

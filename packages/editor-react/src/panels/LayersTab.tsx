@@ -300,6 +300,7 @@ export function LayersTab(props: LayersTabProps) {
                   else rowEls.current.delete(r.id);
                 }}
                 role="treeitem"
+                data-layer={r.id}
                 aria-level={r.depth + 1}
                 aria-selected={r.selected}
                 aria-expanded={r.expandable ? r.expanded : undefined}

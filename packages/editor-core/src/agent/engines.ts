@@ -75,6 +75,8 @@ export interface InstalledEngine {
   state: InstalledState;
   /** The command that signs in ("claude"), for the signed-out line. */
   command?: string;
+  /** Usage limit: when the plan's allowance comes back, in UTC milliseconds. */
+  resetsAt?: number;
 }
 
 const INSTALLED: Record<InstalledState, string> = {

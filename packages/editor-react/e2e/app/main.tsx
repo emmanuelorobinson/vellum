@@ -9,20 +9,28 @@ import {
   createComposerController,
   createConflictController,
   createDesignController,
+  createEdgeUi,
   createEditorHandlers,
   createEditorSession,
   createExportController,
   createHistoryController,
   createInspectController,
   createPaintEditor,
+  createPaletteController,
+  createPreferences,
   createPresenceController,
   createResourceController,
+  createSettingsController,
   createTokenSyncController,
   createWorkspace,
+  type EdgeHost,
   FakeFileChanges,
   FakeHistoryHost,
+  FakePreferencesHost,
   fitViewport,
   type Mention,
+  paletteCommands,
+  paletteEntries,
   selectionLabel,
   union,
 } from "@vellum/editor-core";
@@ -56,7 +64,8 @@ import {
   resourceHost,
   resourcePasteConflicts,
 } from "../../fixtures/resource-scenarios";
-import { EditorWorkspace } from "../../src/EditorWorkspace";
+import { EDGE_RESET, type EdgeScenario, edgeSetup } from "../../fixtures/shell-scenarios";
+import { type EdgeProps, EditorWorkspace } from "../../src/EditorWorkspace";
 import "./fonts.css";
 import { authoringDocument, authoringHost } from "../../fixtures/authoring-scenarios";
 import {
@@ -71,11 +80,14 @@ import { sceneOf } from "./test-scene";
 
 const q = new URLSearchParams(location.search);
 const scenario = q.get("scenario");
+const edgeName = q.get("edge") as EdgeScenario | null;
+const edgeConf = edgeName ? edgeSetup(edgeName) : null;
+const shellOn = q.has("shell") || !!edgeName;
 const authoringName = q.get("authoring");
 const collaborationName = q.get("collaboration");
 const ledgerName = q.get("ledger") as LedgerScenario | null;
 const collaboration = collaborationName ? collaborationScenario(collaborationName) : null;
-const resourceName = q.get("resource");
+const resourceName = q.get("resource") ?? (edgeConf?.library ? "missingLibrary" : null);
 const designName = q.get("design") as DesignScenario | null;
 const appearance = (q.get("appearance") ?? "light") as "light" | "dark" | "hc-light" | "hc-dark";
 
@@ -151,10 +163,14 @@ const documentOf = (children: Node[]): Document =>
   ({
     meta: { formatVersion: 1, name: "juniper.vellum", createdWith: "test" },
     components: {
-      c1: {
-        name: "Button / Primary",
-        root: { type: "frame", id: "c1root", name: "Button", width: 120, height: 40 },
-      },
+      ...(edgeConf?.empty
+        ? {}
+        : {
+            c1: {
+              name: "Button / Primary",
+              root: { type: "frame", id: "c1root", name: "Button", width: 120, height: 40 },
+            },
+          }),
       ...(scenario === "juniper"
         ? {
             c2: {
@@ -191,7 +207,7 @@ let current = authoringName
             ? collaborationNodes(collaborationName)
             : ledgerName
               ? ledgerNodes(ledgerName)
-              : q.get("empty")
+              : q.get("empty") || edgeConf?.empty
                 ? []
                 : scenario === "juniper"
                   ? juniperNodes()
@@ -212,7 +228,7 @@ const snapshotOf = (doc: Document, readOnly = false): EngineSnapshot => ({
   readOnly,
 });
 const engine = new FakeEngineClient(
-  { revision: 0, document: current, readOnly: q.has("readonly") },
+  { revision: 0, document: current, readOnly: q.has("readonly") || !!edgeConf?.readOnly },
   sceneOf(() => current),
 );
 // Every request the UI makes, applied or refused: the fake records only the ones it answers.
@@ -321,7 +337,7 @@ if (
   ["variables", "themes", "libraries", "fonts", "manageFonts"].includes(resourceName)
 )
   resources.open(resourceName as "variables");
-if (resourceName === "missingLibrary") resources.open("libraries");
+if (q.get("resource") === "missingLibrary") resources.open("libraries");
 if (resourceName === "convert") resources.requestConversion();
 if (resourceName === "paste" || resourceName === "conflicts")
   resources.requestPaste({
@@ -365,7 +381,7 @@ if (q.get("edit")) {
 
 // The Agent tab over a scripted session feed (fixtures/agent-scenarios.ts). `hold` keeps the scripted updates
 // back until a test sends them with `agentEmit`.
-const agentName = q.get("agent") as AgentScenario | null;
+const agentName = (q.get("agent") ?? edgeConf?.agent ?? null) as AgentScenario | null;
 const agentSetup = collaboration ?? (agentName ? agentScenario(agentName) : null);
 let agentClock = AGENT_NOW;
 const agent = agentSetup
@@ -445,7 +461,7 @@ if (collaborationName === "c35") session.select(["step2"]);
 const handoffHost = new JuniperHandoff();
 const ledger = ledgerName
   ? (() => {
-      const historyHost = new FakeHistoryHost(ledgerEntries(ledgerName));
+      const historyHost = new FakeHistoryHost(edgeConf?.empty ? [] : ledgerEntries(ledgerName));
       historyHost.attach(
         engine,
         { id: "sam", kind: "person", name: "Sam" },
@@ -489,16 +505,73 @@ const ledger = ledgerName
       };
     })()
   : null;
-const controller = createCommandController(
-  createEditorHandlers({
-    workspace,
-    session,
-    design,
-    ...(agent ? { agent } : {}),
-    ...(composer ? { composer } : {}),
-    ...(ledger ? { exporter: ledger.exporter } : {}),
-  }),
-);
+// The palette lists what the controller holds; it is built first because ⌘/ needs it.
+const palette = shellOn
+  ? createPaletteController({
+      commands: () => paletteCommands(controller.commands),
+      entries: () => paletteEntries(engine.snapshot().document, agent?.state.sessions ?? []),
+    })
+  : null;
+const editorHandlers = createEditorHandlers({
+  workspace,
+  session,
+  design,
+  ...(agent ? { agent } : {}),
+  ...(composer ? { composer } : {}),
+  ...(ledger ? { exporter: ledger.exporter } : {}),
+  ...(palette ? { palette } : {}),
+  ...(shellOn ? { pauseAll: () => hostActions.push({ command: "agents.pauseAll" }) } : {}),
+});
+// The document edit commands belong to a later prompt: here they only record that the menu or palette ran them.
+if (shellOn)
+  for (const id of [
+    "edit.copy",
+    "edit.paste",
+    "edit.group",
+    "edit.wrap",
+    "edit.autoLayout",
+    "component.toggle",
+    "arrange.forward",
+    "edit.copyPng",
+    "edit.delete",
+  ])
+    editorHandlers[id] ??= () => void hostActions.push({ command: id });
+const controller = createCommandController(editorHandlers);
+const preferencesHost = new FakePreferencesHost();
+const preferences = createPreferences(preferencesHost);
+const settings = shellOn
+  ? createSettingsController({
+      preferences,
+      keys: controller.keys,
+      context: {
+        host: "browser",
+        platform: navigator.platform.startsWith("Mac") ? "mac" : "linux",
+        focus: "panel",
+      },
+    })
+  : null;
+const edgeUi = createEdgeUi();
+if (edgeConf?.openFonts) edgeUi.openFonts();
+const edgeHost: EdgeHost = {
+  action: (id, detail) =>
+    hostActions.push({ command: `edge.${id}`, ...(detail ? { detail } : {}) }),
+  closeChoice: (choice) => hostActions.push({ command: "edge.close", detail: { choice } }),
+};
+const edgeProps: EdgeProps | null = edgeConf
+  ? {
+      host: edgeHost,
+      ui: edgeUi,
+      ...(edgeConf.newerFormat ? { newerFormat: edgeConf.newerFormat } : {}),
+      ...(edgeConf.unreadable ? { unreadable: edgeConf.unreadable } : {}),
+      ...(edgeConf.fonts ? { fonts: edgeConf.fonts } : {}),
+      ...(edgeConf.largeFile ? { largeFile: true, layers: edgeConf.largeFile.layers } : {}),
+      ...(edgeConf.rejection ? { rejection: edgeConf.rejection } : {}),
+      ...(edgeConf.closing ? { closing: edgeConf.closing } : {}),
+      ...(edgeConf.loading
+        ? { loading: { agent: true, layers: true, assets: true, history: true, design: true } }
+        : {}),
+    }
+  : null;
 const pendingAgentUpdates = [...(agentSetup?.updates ?? [])];
 const agentReady = (async () => {
   if (!agent || !agentSetup) return;
@@ -506,7 +579,20 @@ const agentReady = (async () => {
   await agent.load();
   const initialSession = "current" in agentSetup ? agentSetup.current : null;
   if (initialSession) await agent.select(initialSession);
+  if (edgeConf?.engine && agentSetup) {
+    const catalog = agentSetup.feed.catalog;
+    const claude = catalog.installed.find((e) => e.id === "claude-code");
+    if (edgeConf.engine === "key-failed") {
+      const provider = catalog.builtin.find((p) => p.id === "openrouter");
+      if (provider) provider.status = "failed";
+    } else if (claude) {
+      claude.state = edgeConf.engine === "signed-out" ? "signed_out" : "usage_limit";
+      if (edgeConf.engine === "usage-limit") claude.resetsAt = EDGE_RESET;
+    }
+  }
   await composer?.load();
+  if (edgeConf?.engine && edgeConf.engine !== "key-failed")
+    composer?.choose({ engine: "claude-code", model: "claude-code" });
   if (!q.has("hold")) for (const u of pendingAgentUpdates.splice(0)) agentSetup.feed.emit(u);
   agentClock += ("elapse" in agentSetup ? agentSetup.elapse : 0) ?? 0;
   render();
@@ -521,15 +607,21 @@ const agentReady = (async () => {
         : ({ type: surface } as never),
     );
   if (composer && q.has("inline")) composer.openInline();
+  const paletteQuery = q.get("palette");
+  if (palette && paletteQuery !== null) {
+    palette.open();
+    palette.setQuery(paletteQuery);
+  }
 })();
+if (settings && q.get("settings") === "open") settings.open();
 
 const clock = 1_000_000;
 const recent: Record<string, { agent: string; at: number }> = {};
 if (scenario === "juniper") recent.habit = { agent: "teal", at: clock - 2000 };
 const connection =
-  q.get("connection") === "headless"
+  q.get("connection") === "headless" || edgeConf?.connection === "headless"
     ? ({ mode: "headless" } as const)
-    : q.get("connection") === "offline"
+    : q.get("connection") === "offline" || edgeConf?.connection === "offline"
       ? ({ mode: "offline", note: "Editing and saving available" } as const)
       : ({ mode: "live", agents: 1 } as const);
 type Hooks = {
@@ -575,6 +667,11 @@ type Hooks = {
   ledgerState(): unknown;
   /** The next write is answered with this document (a revert, a token import, a conflict pick). */
   ledgerReply(children: Node[]): void;
+  /** The saved preferences, newest last, and the palette's state. */
+  preferences(): unknown;
+  preferencesSaved(): unknown[];
+  palette(): unknown;
+  edgeUi(): unknown;
 };
 declare global {
   interface Window {
@@ -659,6 +756,10 @@ window.__vellum = {
     current = withChildren(children);
     engine.script(snapshotOf(current));
   },
+  preferences: () => preferences.state,
+  preferencesSaved: () => preferencesHost.saved,
+  palette: () => (palette ? { ...palette.state, results: palette.results() } : null),
+  edgeUi: () => edgeUi.state,
 };
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
@@ -682,14 +783,33 @@ function render() {
       actors={{ teal: { id: "teal", kind: "agent", name: "Teal", hue: "teal" }, ...AGENT_ACTORS }}
       onShare={() => {}}
       onPreview={() => {}}
-      onSettings={() => {}}
-      onAction={() => {}}
+      {...(settings ? {} : { onSettings: () => {} })}
+      onAction={(command) => {
+        if (shellOn) hostActions.push({ command });
+      }}
+      basicRenderer={!!edgeConf?.basicRenderer}
+      {...(shellOn
+        ? {
+            shell: {
+              ...(palette ? { palette } : {}),
+              ...(settings ? { settings } : {}),
+              settingsHost: {
+                providerKeySet: true,
+                stockProviders: [{ id: "pixabay", name: "Pixabay" }],
+                changeProviderKey: () => hostActions.push({ command: "stock.key" }),
+              },
+            },
+          }
+        : {})}
+      {...(edgeProps ? { edge: edgeProps } : {})}
       recent={recent}
       componentRoots={new Set(scenario === "juniper" ? ["habit"] : [])}
       now={() => clock}
       nextNodeId={() => `a${++counter}`}
       assets={{
-        libraries: [{ alias: "Juniper Core", state: "synced", components: 8 }],
+        libraries: edgeConf?.empty
+          ? []
+          : [{ alias: "Juniper Core", state: "synced", components: 8 }],
         iconSets: [
           { id: "lucide", label: "Lucide" },
           { id: "material", label: "Material Symbols" },
@@ -712,7 +832,7 @@ function render() {
             : [{ id: "starter-minimal", name: "Starter Minimal" }],
         onAction: () => {},
       }}
-      {...(resourceName ? { resources } : {})}
+      {...(resourceName || edgeConf?.fonts ? { resources } : {})}
       {...(authoring ? { authoring } : {})}
       {...(ledger
         ? {

@@ -38,6 +38,8 @@ export interface AgentTabProps {
   composerHost?: ComposerHost;
   /** A host's own composer, used when `composer` is absent. */
   composerSlot?: ReactNode;
+  /** An edge state's notice (S01–S09, S16): in place of the first-open prompt, or above the turns. */
+  notice?: ReactNode;
 }
 
 const NO_STORE = () => ({ dispose() {} });
@@ -55,6 +57,7 @@ export function AgentTab({
   composer,
   composerHost = {},
   composerSlot,
+  notice,
 }: AgentTabProps) {
   useStore(agent.subscribe);
   useStore(composer?.subscribe ?? NO_STORE);
@@ -72,11 +75,13 @@ export function AgentTab({
         agent={agent}
         turns={turns}
         empty={
-          composer && !external ? (
+          notice ??
+          (composer && !external ? (
             <FirstOpen composer={composer} host={composerHost} field={field} />
-          ) : null
+          ) : null)
         }
       >
+        {turns.length > 0 ? notice : null}
         {external && s && turns.length === 0 ? (
           <section className="va-turn" aria-label={`${sessionTitle(s)} session`}>
             <ExternalHeader session={s} agent={agent} actor={actor(s.agent)} />
@@ -164,6 +169,11 @@ function SessionBar({
             collisionPadding={8}
           >
             <Menu.Popup className="va-switcher" aria-label="Sessions">
+              {agent.groups().length === 0 ? (
+                <p className="va-switcher__empty" role="status">
+                  No sessions yet
+                </p>
+              ) : null}
               {agent.groups().map((g) => (
                 <Menu.Group key={g.group} className="va-switcher__group">
                   <Menu.GroupLabel className="va-switcher__label">{g.group}</Menu.GroupLabel>

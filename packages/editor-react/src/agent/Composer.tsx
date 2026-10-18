@@ -31,6 +31,8 @@ export interface ComposerHost {
   /** S01: the daemon is not running; Restart asks the host to start it. */
   offline?: boolean;
   onRestart?(): void;
+  /** S04, S05: the composer cannot send, and why. Wins over `offline`. */
+  blocked?: { text: string; action?: { label: string; run(): void } };
   /** Bundled design systems and visual styles for the first-open suggestions (C01). */
   designSystems?: readonly { id: string; name: string; swatches: readonly string[] }[];
   visualStyles?: readonly {
@@ -64,8 +66,16 @@ export function Composer({
   const draft = composer.draft();
   const chips = composer.chips();
   const action = composer.action();
-  const offline = !!host.offline;
   const [offlineLine, restart] = copy.composerWhenOffline.split(" · ");
+  const blocked =
+    host.blocked ??
+    (host.offline
+      ? {
+          text: offlineLine as string,
+          ...(host.onRestart ? { action: { label: restart as string, run: host.onRestart } } : {}),
+        }
+      : null);
+  const offline = !!blocked;
   const hasTurns = agent.turns().length > 0;
   const model = composer.modelLine();
   const focus = s.focus;
@@ -161,12 +171,12 @@ export function Composer({
         </div>
         <MentionMenu composer={composer} anchor={box} />
       </div>
-      {offline ? (
+      {blocked ? (
         <p className="vk-offline" role="status">
-          <span>{offlineLine}</span>
-          {host.onRestart ? (
-            <button type="button" className="va-link" onClick={host.onRestart}>
-              {restart}
+          <span>{blocked.text}</span>
+          {blocked.action ? (
+            <button type="button" className="va-link" onClick={blocked.action.run}>
+              {blocked.action.label}
             </button>
           ) : null}
         </p>

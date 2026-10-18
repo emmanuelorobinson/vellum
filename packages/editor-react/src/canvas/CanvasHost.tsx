@@ -41,6 +41,8 @@ export interface CanvasHostProps {
   /** Label for assistive technology; the layers panel is the accessible tree. */
   label?: string;
   dpr?: number;
+  /** Settings → Canvas: a plain scroll wheel zooms, and the zoom direction can be flipped. */
+  wheel?: { zooms: boolean; invert: boolean };
 }
 
 const cursorFor = (tool: string, mode: string) =>
@@ -67,6 +69,7 @@ export function CanvasHost({
   colour,
   label = "Canvas",
   dpr = typeof devicePixelRatio === "number" ? devicePixelRatio : 1,
+  wheel: wheelPrefs,
 }: CanvasHostProps) {
   useStore(session.subscribe);
   useStore(paintEditor ? paintEditor.subscribe : NO_SUBSCRIPTION);
@@ -210,15 +213,15 @@ export function CanvasHost({
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
       const v = session.state.viewport;
-      if (e.ctrlKey || e.metaKey) {
-        const factor = Math.exp(-e.deltaY * 0.01);
+      if (e.ctrlKey || e.metaKey || wheelPrefs?.zooms) {
+        const factor = Math.exp(-e.deltaY * 0.01 * (wheelPrefs?.invert ? -1 : 1));
         session.setViewport(zoomAbout(v, point(e), v.zoom * factor));
       } else if (e.shiftKey) session.setViewport({ ...v, x: v.x - (e.deltaX || e.deltaY) });
       else session.setViewport({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY });
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
-  }, [session]);
+  }, [session, wheelPrefs?.zooms, wheelPrefs?.invert]);
 
   return (
     <div

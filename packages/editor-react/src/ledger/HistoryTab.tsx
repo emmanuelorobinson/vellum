@@ -34,10 +34,13 @@ export function HistoryTab({
   history,
   timeZone,
   readOnly = false,
+  onAsk,
 }: {
   history: HistoryController;
   timeZone?: string;
   readOnly?: boolean;
+  /** S12: the empty ledger's one next step, Ask the agent. */
+  onAsk?: () => void;
 }) {
   useStore(history.subscribe);
   const s = history.state;
@@ -105,7 +108,19 @@ export function HistoryTab({
         </div>
       ) : null}
       {entries.length === 0 ? (
-        <p className="vl-empty">{history.empty() ? history.emptyText : "No changes match"}</p>
+        history.empty() ? (
+          <section className="vl-blank" aria-label="History is empty">
+            <h3>History is empty</h3>
+            <p className="vl-empty">{history.emptyText}</p>
+            {onAsk ? (
+              <button type="button" className="vx-button" data-primary="" onClick={onAsk}>
+                Ask the agent
+              </button>
+            ) : null}
+          </section>
+        ) : (
+          <p className="vl-empty">No changes match</p>
+        )
       ) : (
         <ol className="vl-entries" aria-label="Change ledger">
           {entries.map((e) => {

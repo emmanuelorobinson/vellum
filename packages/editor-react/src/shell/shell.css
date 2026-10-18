@@ -1,0 +1,619 @@
+/* Command palette (C23), layer context menu (C24), Editor settings (C25) and the edge states (S01–S16).
+   Dimensions are read from the design's frames; colours are tokens. */
+
+/* Palette */
+.vp-palette {
+  top: 112px;
+  width: 620px;
+  border-radius: 12px;
+}
+.vp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--chrome-secondary);
+}
+.vp-search > span {
+  flex: none;
+  width: 76px;
+}
+.vp-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font:
+    450 12px / 16px var(--font-mono),
+    monospace;
+}
+.vp-results {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+button.vp-result {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  color: var(--chrome-text);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+}
+.vp-result[data-active] {
+  background: var(--chrome-selected);
+}
+.vp-result__icon {
+  flex: none;
+  color: var(--chrome-secondary);
+}
+.vp-result[data-kind="component"] .vp-result__icon {
+  color: var(--canvas-component);
+}
+.vp-result__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vp-result__hint {
+  flex: none;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 15px;
+}
+.vp-note {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 13px;
+}
+
+/* Context menu */
+.vp-menu {
+  position: absolute;
+  z-index: 60;
+  box-sizing: border-box;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--chrome-raised);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 4px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  color: var(--chrome-text);
+  font:
+    450 12px / 15px var(--font-ui),
+    sans-serif;
+}
+.vp-menu__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vp-menu__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.vp-menu__row:hover,
+.vp-menu__row:focus-visible {
+  background: var(--chrome-hover);
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: -2px;
+}
+.vp-menu__row:hover:not(:focus-visible) {
+  outline: none;
+}
+.vp-menu__row[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+.vp-menu__row[data-destructive] {
+  color: var(--chrome-error);
+}
+.vp-menu__key {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+
+/* Settings */
+.vs-settings {
+  top: 80px;
+  left: max(16px, min(224px, calc(100% - 1056px)));
+  transform: none;
+  width: min(1032px, calc(100% - 32px));
+  max-height: calc(100% - 104px);
+  gap: 16px;
+  border-radius: var(--radius-lg);
+}
+.vs-title {
+  margin: 0;
+  font:
+    600 20px / 24px var(--font-ui),
+    sans-serif;
+}
+.vs-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.vs-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.vs-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.vs-section h3 {
+  margin: 0;
+  font:
+    600 12px / 15px var(--font-ui),
+    sans-serif;
+  color: var(--chrome-text);
+}
+.vs-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  align-items: center;
+  align-self: stretch;
+  min-height: 24px;
+  color: var(--chrome-secondary);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.vs-row__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--chrome-secondary);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.vs-switch,
+.vs-segmented button,
+.vs-link,
+.vs-chord {
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font:
+    450 12px / 15px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+}
+.vs-switch {
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vs-switch[aria-checked="true"] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.vs-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.vs-segmented button {
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vs-segmented button[data-checked] {
+  background: var(--chrome-selected);
+  box-shadow: inset 0 0 0 1px var(--chrome-focus);
+}
+.vs-link {
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.vs-link:disabled,
+.vs-switch:disabled,
+.vs-chord:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.vs-select,
+.vs-input {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font:
+    450 12px / 16px var(--font-ui),
+    sans-serif;
+}
+.vs-input.vc-mono {
+  font-family: var(--font-mono), monospace;
+}
+.vs-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.vs-number .vs-input {
+  width: 56px;
+}
+.vs-unit {
+  color: var(--chrome-secondary);
+}
+.vs-problem {
+  margin: 0;
+  color: var(--chrome-error);
+  font:
+    450 12px / 15px var(--font-ui),
+    sans-serif;
+}
+.vs-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--chrome-secondary);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.vs-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.vs-checks {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: flex-end;
+}
+.vs-checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.vs-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.vs-disclosure {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.vs-shortcuts {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vs-shortcuts__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 168px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vs-shortcuts__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--chrome-secondary);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.vs-shortcuts__title {
+  flex: 1;
+  min-width: 0;
+}
+.vs-chord {
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono), monospace;
+  box-shadow: inset 0 0 0 1px var(--chrome-separator);
+}
+.vs-host {
+  color: var(--chrome-attention);
+}
+.vs-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.vs-settings button:focus-visible,
+.vs-settings select:focus-visible,
+.vs-settings input:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+
+/* Edge states */
+.ve-banner {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.ve-banner[data-tone="attention"] {
+  background: var(--chrome-attention-bg);
+  color: var(--chrome-attention);
+}
+.ve-banner > span {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ve-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font:
+    600 12px / 15px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ve-viewonly {
+  position: absolute;
+  z-index: 4;
+  top: 80px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-raised);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  color: var(--chrome-text);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.ve-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  color: var(--chrome-text);
+}
+.ve-notice__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font:
+    600 12px / 15px var(--font-ui),
+    sans-serif;
+}
+.ve-notice__status {
+  color: var(--chrome-secondary);
+  font:
+    450 11px / 13px var(--font-ui),
+    sans-serif;
+}
+.ve-notice__model,
+.ve-notice__foot {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 12px;
+  line-height: 19px;
+}
+.ve-notice__foot {
+  font-family: var(--font-ui), sans-serif;
+}
+.ve-notice h3 {
+  margin: 0;
+  font:
+    600 15px / 18px var(--font-ui),
+    sans-serif;
+}
+.ve-notice[data-tone="error"] h3 {
+  color: var(--chrome-error);
+}
+.ve-notice[data-tone="attention"] h3 {
+  color: var(--chrome-attention);
+}
+.ve-notice__body {
+  margin: 0;
+  font:
+    450 14px / 22px var(--font-ui),
+    sans-serif;
+}
+.ve-notice__command {
+  margin: 0;
+  padding: 12px 16px;
+  align-self: stretch;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ve-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ve-notice .vx-button {
+  height: 31px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-weight: 600;
+}
+.ve-notice .ve-link {
+  font-weight: 450;
+  font-size: 12px;
+  line-height: 19px;
+}
+.ve-toast {
+  position: absolute;
+  z-index: 30;
+  bottom: 72px;
+  box-sizing: border-box;
+  width: 356px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-raised);
+  box-shadow: 0 4px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  color: var(--chrome-text);
+}
+.ve-toast strong {
+  font:
+    600 13px / 16px var(--font-ui),
+    sans-serif;
+}
+.ve-toast strong[data-tone="error"] {
+  color: var(--chrome-error);
+}
+.ve-toast p {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font:
+    450 12px / 18px var(--font-ui),
+    sans-serif;
+}
+.ve-toast__close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+}
+.ve-toast__close:focus-visible,
+.ve-toast:hover .ve-toast__close {
+  opacity: 1;
+}
+.ve-font {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  box-shadow: inset 0 -1px 0 var(--chrome-separator);
+}
+.ve-font h3 {
+  margin: 0;
+  font:
+    600 14px / 17px var(--font-ui),
+    sans-serif;
+  color: var(--chrome-attention);
+}
+.ve-font p {
+  color: var(--chrome-secondary);
+}
+.ve-where {
+  margin: 0;
+  color: var(--chrome-error);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ve-detail {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 17px;
+}
+.ve-command {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ve-unsaved__actions {
+  justify-content: flex-start;
+}
+/* The design's confirm and missing-fonts buttons are 32 px tall, its body text 21 px, and the confirm dialog's gap 16 px. */
+.ve-fonts .vc-resource-button,
+.ve-unsaved .vc-resource-button,
+.ve-unreadable .vc-resource-button {
+  height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.ve-fonts .vc-resource-description,
+.ve-unsaved .vc-resource-description {
+  line-height: 21px;
+}
+.ve-unsaved {
+  gap: 16px;
+}
+[data-animations="off"] *,
+[data-animations="off"] *::before,
+[data-animations="off"] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: switching animations off must beat every component's own timing */
+  animation-duration: 0.001ms !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  animation-iteration-count: 1 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  transition-duration: 0.001ms !important;
+}

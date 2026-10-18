@@ -61,6 +61,9 @@ export type AgentScenario =
   | "c11"
   | "c26"
   | "c27"
+  | "c03-stuck"
+  | "edge"
+  | "none"
   | "claude-code"
   | "codex"
   | "stream";
@@ -506,6 +509,15 @@ export function agentScenario(name: AgentScenario): {
 }
 
 function baseScenario(name: AgentScenario): ReturnType<typeof agentScenario> {
+  if (name === "none") return { feed: new FakeAgentFeed([], {}), updates: [] };
+  if (name === "edge")
+    return {
+      feed: new FakeAgentFeed(
+        [session(SESSIONS.onboarding, { title: "Onboarding screens", state: null, model: MODEL })],
+        { [SESSIONS.onboarding]: [] },
+      ),
+      updates: [],
+    };
   if (name === "c01" || name === "c26")
     return {
       feed: new FakeAgentFeed(
@@ -606,6 +618,6 @@ function baseScenario(name: AgentScenario): ReturnType<typeof agentScenario> {
       [SESSIONS.onboarding]: b.events,
     }),
     updates: b.live,
-    elapse: name === "c03" ? 6000 : 0,
+    elapse: name === "c03" ? 6000 : name === "c03-stuck" ? 136_000 : 0,
   };
 }

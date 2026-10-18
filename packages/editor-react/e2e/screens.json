@@ -1313,6 +1313,269 @@
           "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
         }
       ]
+    },
+    {
+      "id": "C23",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C23-{mode}-1280.png",
+      "query": "agent=c11&shell=1&palette=auto",
+      "regions": [
+        {
+          "name": "header",
+          "selector": ".vp-palette .vc-resource-header",
+          "design": [354, 136, 572, 18],
+          "fraction": 0.062,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "search field",
+          "selector": ".vp-search input",
+          "design": [438, 216, 488, 26]
+        }
+      ]
+    },
+    {
+      "id": "C25",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C25-{mode}-1280.png",
+      "query": "agent=c11&shell=1&settings=open",
+      "regions": [
+        {
+          "name": "appearance heading",
+          "selector": ".vs-column:nth-child(1) .vs-section:nth-child(1) h3",
+          "design": [248, 144, 71, 15],
+          "offset": [0, 0],
+          "fraction": 0.071,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S01",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S01-{mode}-1280.png",
+      "query": "edge=s01",
+      "regions": [
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 212],
+          "fraction": 0.054,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "daemon offline toast",
+          "selector": ".ve-toast",
+          "design": [570, 610, 356, 118],
+          "fraction": 0.05,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S02-{mode}-1280.png",
+      "query": "edge=s02",
+      "regions": [
+        {
+          "name": "banner",
+          "selector": ".ve-banner",
+          "design": [0, 44, 1280, 36],
+          "fraction": 0.043,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 212],
+          "fraction": 0.05,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S03-{mode}-1280.png",
+      "query": "edge=s03",
+      "regions": [
+        {
+          "name": "missing fonts dialog",
+          "selector": ".ve-fonts",
+          "design": [300, 164, 680, 415],
+          "fraction": 0.016,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 212],
+          "fraction": 0.067,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S04-{mode}-1280.png",
+      "query": "edge=s04",
+      "regions": [
+        {
+          "name": "banner",
+          "selector": ".ve-banner",
+          "design": [0, 44, 1280, 36],
+          "fraction": 0.046,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 212],
+          "fraction": 0.048,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S05",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S05-{mode}-1280.png",
+      "query": "edge=s05",
+      "regions": [
+        {
+          "name": "file cannot be read dialog",
+          "selector": ".ve-unreadable",
+          "design": [330, 200, 620, 232],
+          "fraction": 0.033,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 243],
+          "fraction": 0.071,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S06",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S06-{mode}-1280.png",
+      "query": "edge=s06",
+      "regions": [
+        {
+          "name": "banner",
+          "selector": ".ve-banner",
+          "design": [0, 44, 1280, 36],
+          "fraction": 0.062,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 212],
+          "fraction": 0.056,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S11",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S11-{mode}-1280.png",
+      "query": "edge=s11",
+      "regions": [
+        {
+          "name": "unsaved dialog",
+          "selector": ".ve-unsaved",
+          "design": [440, 260, 400, 151],
+          "fraction": 0.036,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 190],
+          "fraction": 0.056,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S16",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S16-{mode}-1280.png",
+      "query": "edge=s16",
+      "regions": [
+        {
+          "name": "sign-in dialog",
+          "selector": ".ve-signin",
+          "design": [340, 124, 600, 227],
+          "fraction": 0.025,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S12",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S12-{mode}-1280.png",
+      "query": "agent=c11&ledger=c10&edge=m-empty",
+      "regions": [
+        {
+          "name": "history empty",
+          "selector": ".vl-blank",
+          "design": [24, 116, 328, 95],
+          "fraction": 0.07,
+          "why": "Text rows: Inter glyph anti-aliasing differs between pen.dev and Chromium, and the design's sentence ends with a full stop that Appendix B's does not (DESIGN-GAPS)."
+        }
+      ]
+    },
+    {
+      "id": "S07",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S07-{mode}-1280.png",
+      "query": "edge=s07",
+      "regions": [
+        {
+          "name": "rejection toast",
+          "selector": ".ve-toast",
+          "design": [570, 610, 356, 118],
+          "fraction": 0.033,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "S08",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S08-{mode}-1280.png",
+      "query": "edge=s08",
+      "regions": [
+        {
+          "name": "agent status",
+          "selector": ".ve-notice",
+          "design": [8, 148, 360, 212],
+          "fraction": 0.05,
+          "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

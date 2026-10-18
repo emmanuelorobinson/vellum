@@ -122,6 +122,32 @@
   margin: 24px 0;
   color: var(--chrome-secondary);
 }
+.vl-blank {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0;
+  color: var(--chrome-text);
+}
+.vl-blank h3 {
+  margin: 0;
+  font:
+    600 15px / 18px var(--font-ui),
+    sans-serif;
+}
+.vl-blank .vl-empty {
+  margin: 0;
+  color: var(--chrome-text);
+  font:
+    450 14px / 22px var(--font-ui),
+    sans-serif;
+}
+.vl-blank .vx-button {
+  height: 31px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
 .vl-footer {
   margin: auto 0 8px;
   padding: 0;

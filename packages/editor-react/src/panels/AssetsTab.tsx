@@ -3,6 +3,7 @@ import {
   type AssetPayload,
   type AssetsInput,
   assetSections,
+  PANEL_EMPTY,
 } from "@vellum/editor-core";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../icons/Icon";
@@ -91,6 +92,11 @@ export function AssetsTab(props: AssetsTabProps) {
       ) : null}
       {sections.length === 0 ? (
         <p className="vc-caption" role="status">{`Nothing matches “${query.trim()}”`}</p>
+      ) : null}
+      {!query.trim() && !Object.keys(props.components).length && !props.libraries.length ? (
+        <p className="vc-caption" role="status">
+          {PANEL_EMPTY.assets}
+        </p>
       ) : null}
       {sections.map((s) => (
         <section key={s.id} className="vc-assets__section" aria-labelledby={`vc-assets-${s.id}`}>

@@ -8,6 +8,20 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Wire Prompt 54's shell into a host, decide its copy, and finish its pixel acceptance.** (1) Nothing serves the new
+  ports yet: hosts must create the palette, `PreferencesHost`, `SettingsHost` and `EdgeProps`/`EdgeHost` and handle the
+  document-edit commands the context menu runs (`edit.copy`, `paste`, `pasteHere`, `group`, `wrap`, `autoLayout`,
+  `component.toggle`, `arrange.forward`, `copyCss`, `copyPng`, `copyNodeId`, `delete`; none exists in the editor yet, so
+  those rows are greyed out until a host handles them). See `docs/runbooks/shell.md`. (2) Copy the design does not give
+  and I wrote plainly: panel loading lines ("Loading sessions/layers/assets/history/properties"), the Assets empty line
+  ("No components or libraries yet"), "No sessions yet" in the switcher, the Settings control labels, and "Redesign "
+  as the start of Redesign this…. Confirm or replace them (all in `packages/editor-core/src/shell/edge.ts` and
+  `SettingsDialog.tsx`). (3) Fifteen DESIGN-GAPS lines record where the frames and DESIGN.md disagree; DESIGN.md won.
+  (4) C24 (the menu) is not pixel-compared: DESIGN.md's order makes it taller than the frame. C25's body is a text
+  sketch in the design, so only its section heading is compared. (5) Not implemented: drawing the pixel grid (the
+  preference is stored and snapping follows it), a Remove-skill and stock-key host, applying theme, language, renderer
+  and the agent/permission defaults (the host reads them from the preferences).
+
 - **Finish Prompt 52 visual acceptance and connect its authoring host.** Sixteen new comparisons remain above
   the existing 1% tolerance; C29's definition section passes both themes. C28's dark error/empty surfaces differ
   especially: the design draws fixed light document art, while diagnostic overlays use appearance tokens.
@@ -3231,3 +3245,42 @@ vitest unit project (299; 3 new), `playwright test e2e/ledger.spec.ts` (12), `ts
 `check-clean-room.sh`, `harness:check`, `git diff --check`. Biome on the touched files reports no errors (existing
 warnings elsewhere). Not re-run this prompt: Rust tests (no Rust changed), `cargo deny`, `pnpm lint`.
 Nothing committed.
+
+## Prompt 54
+
+Built the command palette, the layer context menu, Editor settings and every system and edge state (S01–S12, S16;
+S13–S15 were Prompts 46 and 48). No Rust code, dependency or format change.
+
+- **Headless** (`editor-core/src/shell/`): `palette` (search over actions, layers, pages, components, variables and
+  sessions; Ask the agent first for any query; the highlight starts on the first real match), `context-menu`, `preferences`
+  (typed, validated local preferences behind one `PreferencesHost`; telemetry off with its exact three-line
+  disclosure), `settings` (shortcuts list, search, rebind with conflicts and host chords, reset), `edge` (the notice,
+  banner, composer line and `panelView` state matrix, with the words in one place; `createEdgeUi`), `actions`
+  (palette entries, command list, Ask / Redesign / open). Small additions elsewhere: `composer.prefill` and
+  `composer.setSkipAll`, `session.setSnap`, `edit.export` (⇧⌘E, DESIGN.md C21's route; Prompt 53 left it to this
+  prompt), `palette.open` / `agent.pauseAll` handlers, `InstalledEngine.resetsAt`.
+- **React** (`editor-react/src/shell/`): Palette, ContextMenu, SettingsDialog, AgentNotice, EdgeBannerView, EdgeDialogs
+  (Missing fonts, file can't be read, Save, sign-in, daemon and write-rejected toasts). `EditorWorkspace` takes `shell`
+  and `edge`; right-click works on the canvas and in Layers. The Agent tab shows the notice where the first-open prompt
+  goes; the composer says why it is disabled (daemon, newer format, unreadable file). Also: S10's Stop / Retry step
+  block, the History empty state with Ask the agent (S12), Assets' empty line, the switcher's empty line, loading
+  lines, canvas preferences applied (backdrop, animations, scroll-wheel zoom and direction, snapping).
+- **Design**: Pencil confirmed `.design-cache/vellum.readonly.pen`; read C23, C24, C25, S01–S12, S16 and their
+  components (read only). Fifteen append-only DESIGN-GAPS lines; DESIGN.md won every conflict. No DESIGN-DECISIONS row
+  was undecided. No §3.2 row names P54; nothing ported, no dependency added.
+- **TDD**: tests first for palette, context menu, preferences/settings and the edge states, run to red (module
+  missing), then the code; 115 new `editor-core` tests including the 35-cell state matrix (panel × loading, empty,
+  offline daemon, read-only, basic renderer, missing fonts, missing library). The browser run caught a real bug (a
+  conflict message named the command id, not its title). The browser spec `shell.spec.ts` (59) covers the palette, menu, settings, each edge state and the matrix on the real panels.
+- **Goldens (light and dark)**: 26 new comparisons (13 screens, light and dark) pass against the design PNGs (C23 header and search, C25 heading,
+  S01 notice and toast, S02, S03, S04, S05 dialog and notice, S06, S07 toast, S08, S11, S12 History empty, S16); each
+  text row has its measured limit and reason in `e2e/screens.json`. Full browser suite: 324 pass, 63 fail, all the
+  same visual goldens as before this prompt (52 earlier plus 11 from Prompt 53); nothing new fails.
+- Not verified: any real host (nothing serves these ports); a real OS key chord for a rebind outside Chromium;
+  Arabic mirroring of the new surfaces; the pixel grid (not drawn); a live "Install from Google Fonts".
+
+Passed: `editor-core` vitest (2,371), `editor-react` vitest (1,353), `playwright test` (shell.spec 59 passing, 4 repeats
+stable; goldens above), `tsc --noEmit` in `editor-core`, `editor-react`, `engine-client`, `token-lint`, `copy-lint`,
+`ui-icons-gen --check`, `design-check`, `spec-checksums check`, `check-deps.sh`, `check-clean-room.sh`, Biome on every
+touched file (no errors). `design-spec-rules.test.mjs` still fails on Prompt 46's DESIGN-GAPS line (existing); my lines
+match its format. Not re-run: Rust tests, `cargo deny`. Nothing committed.
