@@ -1,6 +1,7 @@
 import {
   type AgentController,
   type BindingContext,
+  type ComposerController,
   type createCommandController,
   type DesignController,
   type EditorHost,
@@ -9,6 +10,7 @@ import {
   type PaintEditor,
   type Platform,
   type ResourceController,
+  selectionLabel,
   type ToolTransaction,
   type Workspace,
   world,
@@ -18,6 +20,8 @@ import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId, Value } from
 import type { Mode } from "@vellum/ui-tokens";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentTab } from "./agent/AgentTab";
+import type { ComposerHost } from "./agent/Composer";
+import { InlinePrompt, type ScreenRect, SelectionToolbar } from "./agent/InlinePrompt";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
 import type { ActorView } from "./chrome/ActorMarker";
 import { BottomStrip, type Connection } from "./chrome/BottomStrip";
@@ -71,15 +75,18 @@ export interface EditorWorkspaceProps {
   assets: Omit<AssetsTabProps, "onDropComponent" | "readOnly" | "components">;
   /** The Agent tab's sessions and turns; with it the tab is built in and `slots.agent` is its composer. */
   agent?: AgentController;
+  /** The built-in composer, inline prompt and selection toolbar's Ask (with `agent`). */
+  composer?: ComposerController;
+  composerHost?: ComposerHost;
   /** The properties panel's controller and the fill editor's canvas state; with them the right panel is built in. */
   design?: DesignController;
   resources?: ResourceController;
   paintEditor?: PaintEditor;
   designHost?: DesignHost;
   /**
-   * The composer (Prompt 50) and the History tab belong to later prompts, as do Inspect and Activity in the right
-   * panel; the host mounts them here. Without `agent`, `slots.agent` is the whole Agent tab. `right` replaces the
-   * whole right panel when no design controller is given.
+   * The History tab belongs to a later prompt, as do Inspect and Activity in the right panel; the host mounts them
+   * here. Without `agent`, `slots.agent` is the whole Agent tab; without `composer`, it is the composer. `right`
+   * replaces the whole right panel when no design controller is given.
    */
   slots?: {
     agent?: ReactNode;
@@ -98,6 +105,8 @@ export interface EditorWorkspaceProps {
   onAction?: (command: string) => void;
 }
 
+const NO_STORE = () => ({ dispose() {} });
+
 const focusOf = (target: EventTarget | null): BindingContext["focus"] => {
   const el = target as HTMLElement | null;
   if (el?.closest("input,textarea,select,[contenteditable='true']")) return "text";
@@ -112,6 +121,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const snapshot = useEngineSnapshot(engine);
   useStore(session.subscribe);
   useStore(controller.commands.subscribe.bind(controller.commands));
+  useStore(props.composer?.subscribe ?? NO_STORE);
   const root = useRef<HTMLDivElement | null>(null);
   // Menus and popovers mount inside the workspace so they follow its appearance.
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -235,6 +245,35 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         else props.designHost?.onAction?.("component.goToMain", target);
       }),
   };
+  const composer = props.composer;
+  const selection = session.state.selection;
+  const selectionRect = ((): ScreenRect | null => {
+    if (!composer || !selection.length || readOnly) return null;
+    const v = session.state.viewport;
+    let box: ScreenRect | null = null;
+    for (const id of selection) {
+      const b = session.sceneBounds(id);
+      if (!b) continue;
+      box = box
+        ? {
+            x: Math.min(box.x, b.x),
+            y: Math.min(box.y, b.y),
+            width: Math.max(box.x + box.width, b.x + b.width) - Math.min(box.x, b.x),
+            height: Math.max(box.y + box.height, b.y + b.height) - Math.min(box.y, b.y),
+          }
+        : { x: b.x, y: b.y, width: b.width, height: b.height };
+    }
+    return box
+      ? {
+          x: box.x * v.zoom + v.x,
+          y: box.y * v.zoom + v.y,
+          width: box.width * v.zoom,
+          height: box.height * v.zoom,
+        }
+      : null;
+  })();
+  const scopeLabel =
+    doc && selection.length ? selectionLabel(doc, pageId ?? session.page, selection) : null;
   const canvasMode = props.canvasAppearance ?? props.appearance;
   const zoomLabel = workspace.zoomLabel(session.state.viewport.zoom);
   const zoomItems = [
@@ -321,7 +360,13 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
           >
             {{
               agent: props.agent ? (
-                <AgentTab agent={props.agent} actors={props.actors} composer={props.slots?.agent} />
+                <AgentTab
+                  agent={props.agent}
+                  actors={props.actors}
+                  {...(composer ? { composer } : {})}
+                  {...(props.composerHost ? { composerHost: props.composerHost } : {})}
+                  composerSlot={props.slots?.agent}
+                />
               ) : (
                 (props.slots?.agent ?? null)
               ),
@@ -444,6 +489,26 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               y={layout.zoomPill.y}
               label={zoomLabel}
               items={zoomItems}
+            />
+          ) : null}
+          {selectionRect &&
+          composer &&
+          !composer.state.inline &&
+          !layout.chromeHidden &&
+          tool !== "path" &&
+          session.state.mode.type !== "path" ? (
+            <SelectionToolbar
+              rect={selectionRect}
+              shortcut={shortcut("agent.inline") ?? ""}
+              onAsk={() => composer.openInline()}
+            />
+          ) : null}
+          {composer?.state.inline && (selectionRect || composer.state.inline.phase === "sent") ? (
+            <InlinePrompt
+              composer={composer}
+              rect={selectionRect ?? { x: state.width / 2 - 180, y: 120, width: 0, height: 0 }}
+              label={scopeLabel ?? "Selection"}
+              bounds={{ width: state.width, height: state.height }}
             />
           ) : null}
           {session.state.mode.type === "path" ? (

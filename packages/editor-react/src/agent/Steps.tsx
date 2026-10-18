@@ -3,6 +3,7 @@ import { copy } from "@vellum/config";
 import type { AgentController, StepView, TurnItem } from "@vellum/editor-core";
 import { useState } from "react";
 import { Icon } from "../icons/Icon";
+import { DecidedPermission } from "./PermissionCard";
 
 const STATE_ICON = {
   working: "loader-circle",
@@ -192,7 +193,9 @@ export function TurnItems({
   const runs: TurnItem[][] = [];
   for (const item of items) {
     const last = runs[runs.length - 1];
-    if (item.type !== "prose" && last && last[0]?.type !== "prose") last.push(item);
+    const loose = item.type === "prose" || item.type === "permission";
+    if (!loose && last && last[0]?.type !== "prose" && last[0]?.type !== "permission")
+      last.push(item);
     else runs.push([item]);
   }
   return (
@@ -205,6 +208,8 @@ export function TurnItems({
               {first.text}
             </p>
           );
+        if (first.type === "permission")
+          return <DecidedPermission key={first.key} card={first.card} />;
         return (
           <div key={first.key} className="va-steps">
             {run.map((item) =>

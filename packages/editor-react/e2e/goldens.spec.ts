@@ -114,6 +114,12 @@ for (const screen of screens.screens)
       await expect(page.locator(".vc-docbar")).toBeVisible();
       const open = (screen as { open?: string }).open;
       if (open) await page.getByRole("button", { name: open, exact: true }).first().click();
+      // Text the design shows typed: the composer's "/" (C26), the inline prompt's request (C08).
+      for (const f of (screen as { fill?: { selector: string; text: string }[] }).fill ?? []) {
+        await page.locator(f.selector).fill(f.text);
+        // The design draws the field at rest; its focus ring is checked by the behaviour tests.
+        await page.locator(f.selector).blur();
+      }
       const hover = (screen as { hover?: string }).hover;
       if (hover)
         await page

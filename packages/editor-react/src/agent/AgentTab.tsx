@@ -7,6 +7,7 @@ import { Popover } from "@base-ui/react/popover";
 import { copy } from "@vellum/config";
 import {
   type AgentController,
+  type ComposerController,
   connectedFor,
   createScrollFollow,
   type SessionInfo,
@@ -15,18 +16,15 @@ import {
   sessionTitle,
   type TurnView,
 } from "@vellum/editor-core";
-import {
-  type ReactNode,
-  type RefObject,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { usePortalContainer } from "../chrome/portal";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
 import { ResourceButton, ResourceDialog } from "../resources/Dialog";
+import { Composer, type ComposerHost } from "./Composer";
+import { FirstOpen } from "./FirstOpen";
+import { PermissionCard } from "./PermissionCard";
 import { TurnItems } from "./Steps";
 import "./agent.css";
 
@@ -34,9 +32,14 @@ export interface AgentTabProps {
   agent: AgentController;
   /** Every agent that can be named here, by agent id. */
   actors: Readonly<Record<string, ActorView>>;
-  /** The composer (Prompt 50). */
-  composer?: ReactNode;
+  /** The built-in composer, first-open prompt and Permission cards. */
+  composer?: ComposerController;
+  composerHost?: ComposerHost;
+  /** A host's own composer, used when `composer` is absent. */
+  composerSlot?: ReactNode;
 }
+
+const NO_STORE = () => ({ dispose() {} });
 
 const DOT_WORDS = {
   working: "working",
@@ -45,8 +48,16 @@ const DOT_WORDS = {
   failed: "failed",
 } as const;
 
-export function AgentTab({ agent, actors, composer }: AgentTabProps) {
+export function AgentTab({
+  agent,
+  actors,
+  composer,
+  composerHost = {},
+  composerSlot,
+}: AgentTabProps) {
   useStore(agent.subscribe);
+  useStore(composer?.subscribe ?? NO_STORE);
+  const field = useRef<HTMLTextAreaElement>(null);
   const s = agent.session();
   const turns = agent.turns();
   const external = s?.kind.type === "external";
@@ -56,7 +67,15 @@ export function AgentTab({ agent, actors, composer }: AgentTabProps) {
   return (
     <div className="va-tab" ref={root}>
       <SessionBar agent={agent} session={s} actor={actor} />
-      <Conversation agent={agent} turns={turns}>
+      <Conversation
+        agent={agent}
+        turns={turns}
+        empty={
+          composer && !external ? (
+            <FirstOpen composer={composer} host={composerHost} field={field} />
+          ) : null
+        }
+      >
         {external && s && turns.length === 0 ? (
           <section className="va-turn" aria-label={`${sessionTitle(s)} session`}>
             <ExternalHeader session={s} agent={agent} actor={actor(s.agent)} />
@@ -68,6 +87,7 @@ export function AgentTab({ agent, actors, composer }: AgentTabProps) {
             turn={t}
             agent={agent}
             actor={actor}
+            composer={composer ?? null}
             lead={
               external && s && i === 0 ? (
                 <ExternalHeader session={s} agent={agent} actor={actor(s.agent)} />
@@ -88,8 +108,16 @@ export function AgentTab({ agent, actors, composer }: AgentTabProps) {
       <div className="va-bottom">
         {external && s?.kind.type === "external" ? (
           <ExternalLine client={s.kind.client} onStop={() => void agent.stop()} />
+        ) : composer ? (
+          <Composer
+            composer={composer}
+            agent={agent}
+            actor={actor}
+            host={composerHost}
+            field={field}
+          />
         ) : (
-          composer
+          composerSlot
         )}
       </div>
       <UndoConfirm agent={agent} actor={actor} root={root} />
@@ -216,10 +244,13 @@ function SessionBar({
 function Conversation({
   agent,
   turns,
+  empty,
   children,
 }: {
   agent: AgentController;
   turns: readonly TurnView[];
+  /** What a session with no turns shows (C01); a plain line without a composer. */
+  empty: ReactNode;
   children: ReactNode;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -261,9 +292,9 @@ function Conversation({
       >
         <div className="va-turns" ref={content} aria-live="polite" aria-relevant="additions">
           {children}
-          {turns.length === 0 && !agent.state.loading ? (
-            <p className="va-empty">{copy.composerPlaceholder}</p>
-          ) : null}
+          {turns.length === 0 && !agent.state.loading
+            ? (empty ?? <p className="va-empty">{copy.composerPlaceholder}</p>)
+            : null}
         </div>
       </div>
       {latest ? (
@@ -321,16 +352,19 @@ function Turn({
   turn,
   agent,
   actor,
+  composer,
   lead,
 }: {
   turn: TurnView;
   agent: AgentController;
   actor(id: string | null | undefined): ActorView;
+  composer: ComposerController | null;
   /** An external agent's session header, which takes the place of the turn's own. */
   lead: ReactNode;
 }) {
   const external = turn.external;
   const first = actor(turn.agents[0]);
+  const question = composer && !external ? composer.questionFor(turn.id) : null;
   return (
     <article className="va-turn" aria-label={turn.prompt ? `Turn: ${turn.prompt.text}` : "Steps"}>
       {turn.prompt ? (
@@ -364,6 +398,13 @@ function Turn({
         </>
       )}
       <TurnItems items={turn.items} agent={agent} turn={turn.id} />
+      {question ? (
+        <PermissionCard
+          question={question}
+          agentName={actor(question.agent ?? turn.agents[0]).name}
+          composer={composer as ComposerController}
+        />
+      ) : null}
       {turn.state === "stopped" && !turn.undone ? (
         <div className="va-card">
           <p className="va-card__title">{turn.label}</p>

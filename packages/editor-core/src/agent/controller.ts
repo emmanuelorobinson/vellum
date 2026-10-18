@@ -71,6 +71,8 @@ export function createAgentController(deps: AgentControllerDeps) {
       change({ sessions: u.sessions });
       return;
     }
+    // Questions, usage, engines and settings are the composer's.
+    if (u.type !== "event" && u.type !== "live") return;
     if (u.session !== state.current) return;
     if (u.type === "event") {
       if (state.events.some((e) => e.seq === u.event.seq)) return;

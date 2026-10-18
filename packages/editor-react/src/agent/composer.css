@@ -1,0 +1,1009 @@
+/* The composer, its popovers, the Permission card, first open and the inline prompt. Sizes are the design's C01,
+   C08, C11, C26 and C27 frames (read through the Pencil MCP); every colour, radius and space is a token. */
+
+.vk-composer-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.vk-composer-wrap p {
+  margin: 0;
+}
+
+/* The box: chips, field, controls (C08 "Composer": 328 wide, 12 inside, 12 between). */
+.vk-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-sunken);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vk-composer:focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 0 0 2px var(--chrome-focus);
+}
+.vk-composer[data-disabled] {
+  opacity: 0.6;
+}
+.vk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The × shows on hover and keyboard focus, so a chip reads as the design draws it. */
+.vk-chip__remove {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-secondary);
+  cursor: pointer;
+  opacity: 0;
+}
+.vk-chip:hover .vk-chip__remove,
+.vk-chip__remove:focus-visible {
+  opacity: 1;
+}
+.vk-chip__remove:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 1px;
+}
+.vk-field {
+  display: block;
+  width: 100%;
+  height: 22px;
+  max-height: 160px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font:
+    400 14px / 22px var(--font-ui),
+    system-ui,
+    sans-serif;
+  resize: none;
+  outline: none;
+}
+.vk-field::placeholder {
+  color: var(--chrome-secondary);
+}
+.vk-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 31px;
+}
+.vk-composer .vk-attach {
+  width: 24px;
+  height: 24px;
+  margin: -4px;
+  color: var(--chrome-secondary);
+}
+.vk-footer-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-secondary);
+  font:
+    400 11px / 13px var(--font-ui),
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+}
+.vk-footer-button:hover {
+  color: var(--chrome-text);
+}
+.vk-footer-button:focus-visible,
+.vk-model-button:focus-visible,
+.vk-send:focus-visible,
+.vk-suggestion:focus-visible,
+.vk-option:focus-visible,
+.vk-installed:focus-visible,
+.vk-provider:focus-visible,
+.vk-seltool__ask:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 1px;
+}
+.vk-ring {
+  display: block;
+}
+.vk-ring__track {
+  fill: none;
+  stroke: var(--chrome-secondary);
+  stroke-width: 1.5;
+}
+.vk-ring__fill {
+  fill: none;
+  stroke: var(--chrome-text);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.vk-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-text);
+  box-shadow: inset 0 0 0 1px var(--chrome-text);
+  color: var(--chrome-inverse);
+  font:
+    600 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+}
+.vk-send:disabled {
+  cursor: default;
+}
+.vk-model-button {
+  align-self: stretch;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-secondary);
+  text-align: start;
+  cursor: pointer;
+  outline: none;
+}
+.vk-model {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.55;
+}
+.vk-model-button:hover .vk-model {
+  color: var(--chrome-text);
+}
+.vk-connect {
+  align-self: flex-start;
+  font-weight: 500;
+}
+.vk-offline {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--chrome-secondary);
+}
+.vk-error {
+  padding: 0;
+}
+
+/* Skip all (Permission / Skip all): a persistent line above the composer while prompts are skipped. */
+.vk-skipall {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--chrome-attention-bg);
+  box-shadow: inset 0 0 0 1px var(--chrome-attention);
+  font-size: 12px;
+  line-height: 15px;
+}
+.vk-skipall > svg {
+  flex: none;
+  color: var(--chrome-attention);
+}
+.vk-skipall__text {
+  flex: 1;
+}
+
+/* Queue after this turn or Stop and send now (Turn / Queue). */
+.vk-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--chrome-sunken);
+}
+.vk-queue__title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+/* Popovers from the footer: Parallel, Explore, usage, attach, Stop. */
+.vk-popover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 200px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    400 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  outline: none;
+  z-index: 30;
+}
+/* The popups hold focus for their controls; the controls carry the ring. */
+.vc-workspace .vk-popover:focus-visible,
+.vc-workspace .vk-picker:focus-visible,
+.vc-workspace .vk-menu:focus-visible,
+.vc-workspace .vk-effort:focus-visible {
+  outline: none;
+}
+.vk-popover--menu {
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+.vk-popover__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.vk-popover__label {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.vk-popover__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--chrome-text);
+  font: inherit;
+  text-align: start;
+  cursor: default;
+  outline: none;
+}
+.vk-popover__row[data-highlighted],
+.vk-popover__row:hover {
+  background: var(--chrome-hover);
+}
+.vk-popover__row:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--chrome-focus);
+}
+.vk-popover__row > svg {
+  flex: none;
+  color: var(--chrome-secondary);
+}
+.vk-popover__check {
+  display: inline-flex;
+  margin-inline-start: auto;
+}
+.vk-popover__separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--chrome-separator);
+}
+.vk-popover__note {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.vk-stepper legend {
+  float: left;
+  padding: 0;
+  margin-inline-end: auto;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 17px;
+  color: var(--chrome-text);
+}
+.vk-stepper__value {
+  min-width: 32px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 17px;
+}
+.vk-choice {
+  display: flex;
+  gap: var(--space-1);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.vk-choice__option {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--chrome-secondary);
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.vk-choice__option[aria-checked="true"] {
+  background: var(--chrome-panel);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  color: var(--chrome-text);
+}
+.vk-choice__option:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+}
+
+/* Usage (C27: 344 wide, 24 inside, 16 between). */
+.vk-popover--usage {
+  gap: var(--space-4);
+  width: 344px;
+  padding: var(--space-6);
+}
+.vk-usage__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+}
+.vk-usage__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 16px;
+}
+.vk-usage__row dd {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.vk-usage__cost {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-usage__note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+
+/* @ mentions and the / skills menu (C26: 448 wide, 24 inside, 16 between every row). */
+.vk-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 360px;
+  max-height: var(--available-height);
+  overflow-y: auto;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    400 12px / 19px var(--font-ui),
+    system-ui,
+    sans-serif;
+  outline: none;
+  z-index: 30;
+}
+.vk-menu[data-kind="skills"] {
+  gap: var(--space-4);
+  width: 448px;
+  padding: var(--space-6);
+}
+.vk-menu [role="listbox"],
+.vk-menu__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.vk-menu[data-kind="skills"] [role="listbox"],
+.vk-menu[data-kind="skills"] .vk-menu__group {
+  gap: var(--space-4);
+}
+.vk-menu__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.vk-menu__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 27px;
+  padding: 0 var(--space-1);
+  margin: 0 calc(-1 * var(--space-1));
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+.vk-menu__row > svg {
+  flex: none;
+  color: var(--chrome-secondary);
+}
+.vk-menu__row[data-mono] span {
+  font-family: var(--font-mono), monospace;
+}
+.vk-menu__row[aria-selected="true"] {
+  background: var(--chrome-hover);
+}
+.vk-menu__empty {
+  margin: 0;
+  color: var(--chrome-secondary);
+}
+.vk-menu__add {
+  align-self: flex-start;
+}
+
+/* Engine and model (C11: 680 wide, 16 inside, 12 between). */
+.vk-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 680px;
+  max-height: var(--available-height);
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    400 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  outline: none;
+  z-index: 30;
+}
+.vk-picker p {
+  margin: 0;
+}
+.vk-picker__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.vk-picker__group {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.vk-picker__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+.vk-picker__column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vk-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  cursor: pointer;
+  outline: none;
+}
+.vk-option:hover {
+  background: var(--chrome-hover);
+}
+.vk-option[aria-pressed="true"] {
+  background: var(--chrome-selected);
+}
+.vk-option__provider {
+  font-weight: 600;
+}
+.vk-option__model {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font-size: 11px;
+  line-height: 15px;
+  text-align: start;
+  cursor: pointer;
+}
+.vk-option__caps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.vk-picker .vk-option__effort {
+  width: 16px;
+  height: 13px;
+  color: var(--chrome-secondary);
+}
+.vk-picker__installed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.vk-installed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--chrome-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.vk-installed:disabled {
+  cursor: default;
+}
+.vk-installed__name {
+  font-weight: 600;
+}
+.vk-installed[aria-pressed="true"] .vk-installed__name {
+  text-decoration: underline;
+}
+.vk-installed__state {
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--chrome-success);
+}
+.vk-installed__state:not([data-state="signed_in"]) {
+  color: var(--chrome-attention);
+}
+.vk-picker__note {
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-picker__note[data-warn] {
+  color: var(--chrome-attention);
+}
+.vk-picker__add {
+  font-weight: 500;
+}
+.vk-effort {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 144px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    400 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  outline: none;
+  z-index: 31;
+}
+.vk-effort [role="group"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.vk-effort__title {
+  font-weight: 600;
+}
+.vk-effort__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: default;
+  outline: none;
+}
+.vk-effort__row[data-highlighted] {
+  text-decoration: underline;
+}
+.vk-effort__row .vk-popover__check {
+  margin-inline-start: 0;
+}
+
+/* Add provider (C11-providers, C11-provider). */
+.vk-providers__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  padding: 0 var(--space-6);
+}
+.vk-providers__column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vk-provider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 31px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font:
+    400 12px / 1.55 var(--font-ui),
+    system-ui,
+    sans-serif;
+  text-align: start;
+  cursor: pointer;
+  outline: none;
+}
+.vk-provider:hover {
+  background: var(--chrome-hover);
+}
+.vk-provider__name {
+  flex: 1;
+}
+.vk-provider__status {
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.vk-provider > svg {
+  color: var(--chrome-secondary);
+}
+.vk-providers__hint {
+  margin: 0;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-setup__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-6) var(--space-6);
+  font-size: 12px;
+  line-height: 15px;
+}
+.vk-setup__provider {
+  align-self: flex-start;
+}
+.vk-setup__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.vk-input {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font-size: 12px;
+  outline: none;
+}
+.vk-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--chrome-focus);
+}
+.vk-setup__note {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-setup__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.vk-setup__status [role="status"] {
+  color: var(--chrome-secondary);
+}
+.vk-setup__status [data-status="failed"] {
+  color: var(--chrome-error);
+}
+
+/* The Permission card (C27: 12 inside, 12 between). */
+.vk-permission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--chrome-attention-bg);
+  box-shadow: inset 0 0 0 1px var(--chrome-attention);
+}
+.vk-permission[data-decided] {
+  box-shadow: none;
+}
+.vk-permission[data-decided="Denied"] {
+  background: var(--chrome-error-bg);
+}
+.vk-permission p {
+  margin: 0;
+}
+.vk-permission__state,
+.vk-permission__caption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 15px;
+}
+.vk-permission__state {
+  font-weight: 600;
+  line-height: 15px;
+  color: var(--chrome-attention);
+}
+.vk-permission__caption {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.vk-permission__sentence {
+  font-size: 14px;
+  line-height: 22px;
+}
+.vk-permission .vk-permission__target {
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--chrome-secondary);
+  overflow-wrap: anywhere;
+}
+.vk-permission[data-busy] .va-button {
+  cursor: progress;
+}
+
+/* First open (C01). */
+.vk-first {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 72px var(--space-4) 0;
+}
+.vk-first__heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.vk-first__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.vk-first__suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vk-suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-panel);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  color: var(--chrome-text);
+  font:
+    500 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  text-align: start;
+  cursor: pointer;
+  outline: none;
+}
+.vk-suggestion:hover {
+  background: var(--chrome-hover);
+}
+.vk-suggestion > svg {
+  color: var(--chrome-secondary);
+}
+.vk-first__hint {
+  height: 13px;
+  margin: 0;
+  padding-top: 1px;
+  font-size: 11px;
+  line-height: 12px;
+  color: var(--chrome-secondary);
+}
+.vk-swatches {
+  display: inline-flex;
+  gap: 2px;
+}
+.vk-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vk-styles__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 var(--space-6) var(--space-6);
+  list-style: none;
+}
+.vk-style {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.vk-style__sample {
+  font-size: 28px;
+  line-height: 1.2;
+}
+.vk-style__palette {
+  display: flex;
+  gap: var(--space-1);
+}
+.vk-style__colour {
+  width: 48px;
+  height: 12px;
+}
+.vk-style__name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+/* Selection toolbar with Ask (C13) and the inline prompt (C08: 360 wide, 16 inside, 12 between). */
+.vk-seltool {
+  position: absolute;
+  z-index: 20;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-raised);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 1px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+}
+.vk-seltool__ask {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--chrome-text);
+  font:
+    400 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  outline: none;
+}
+.vk-seltool__ask > svg {
+  color: var(--chrome-secondary);
+}
+.vk-seltool__ask:hover {
+  background: var(--chrome-hover);
+}
+.vk-seltool__key {
+  font:
+    400 11px / 13px var(--font-ui),
+    system-ui,
+    sans-serif;
+  color: var(--chrome-secondary);
+}
+.vk-inline {
+  position: absolute;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 360px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    400 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+}
+.vk-inline p {
+  margin: 0;
+}
+.vk-inline__scope {
+  color: var(--chrome-secondary);
+}
+.vk-inline__field {
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font:
+    400 14px / 22px var(--font-ui),
+    system-ui,
+    sans-serif;
+  resize: none;
+  outline: none;
+}
+.vk-inline__field::placeholder {
+  color: var(--chrome-secondary);
+}
+.vk-inline__progress {
+  font-size: 14px;
+  line-height: 22px;
+}
+.vk-inline__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.vk-inline__hint {
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}

@@ -11,7 +11,7 @@ and design agree; if it shows both, pick one.
 | Lease tab position | A Above the frame's top-left · B Inside the frame's top edge | UNDECIDED | | |
 | Placeholder style | A Dashed outline + shimmer · B Tinted fill + label | UNDECIDED | | |
 | Alternatives layout on canvas | A Row with A/B/C labels · B Grid for 4+ | UNDECIDED | | |
-| Inline prompt anchor | A Beside the selection · B Below the selection toolbar | UNDECIDED | | |
+| Inline prompt anchor | A Beside the selection · B Below the selection toolbar | A Beside the selection | 2026-10-18 | Owner (chose A when asked, Prompt 50) |
 | Slot marker | A Dotted inner outline · B Hatched fill | UNDECIDED | | |
-| Selection toolbar contents | A Ask only · B Ask + quick actions | UNDECIDED | | |
+| Selection toolbar contents | A Ask only · B Ask + quick actions | A Ask only | 2026-10-18 | Owner (chose A when asked, Prompt 50) |
 | UI golden tolerance vs design snapshots | 0.5 % · 1 % · per-screen | 1 % | 2026-10-17 | Owner (delegated to agent, Prompt 43) |

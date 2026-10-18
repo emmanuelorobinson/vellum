@@ -8,6 +8,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review Prompt 50's composer choices; no daemon serves the composer yet** (Prompt 50). (1) The design draws the
+  composer two ways (C01 "1× parallel · 1× variants", Send at the right, no ring; C08 and later "1× Split · Explore off"
+  with a ring, Send packed left). I built C08's everywhere; C01's composer is therefore not compared, only its intro.
+  (2) The Permission card adds a warning symbol before "Waiting for permission" (AGENTS.md: state is a symbol plus a
+  label); C27 draws the label alone. (3) Eleven DESIGN-GAPS lines record these and the other differences. (4) **Not wired
+  by any host**: `AgentFeed` gained `send`, `stopAgent`, `questions`/`answer` (plus `question`/`answered` updates),
+  `permissionSettings`/`setSkipAll`, `usage`, `skills`/`addSkill`, `files`, `engines`, `saveProvider`/`recheckProvider`/
+  `clearKey`. The daemon and hosts (Prompts 54–56) must serve them; Prompt 42's `Brokered` prompts can use the card once
+  the daemon sends `question` updates. The OS notification for a waiting permission is the host's and is not built.
+
 - **Review Prompt 49's Agent tab decisions and one red golden** (Prompt 49). (1) The C09 verdict line ("Fixed: CTA text
   overflowed at 375 px") differs from the design PNG by 12.6–13.3%: one line of 12 px text, sized exactly as the design,
   differing at glyph edges. That is above the 11% cap, so it stays red at 1%. Every other new region passes, with a
@@ -2993,4 +3003,56 @@ Passed (Node 24.21.0, pnpm 12.11.2, telemetry opt-outs set):
 Failing, unchanged by this prompt: `pnpm test:scripts` 197 pass, 3 fail, 5 skipped (ADR-000 status, Prompt 46's
 DESIGN-GAPS line format, REFERENCE-INDEX); the DESIGN-DECISIONS test passes with the recorded choice. `pnpm lint` and
 `cargo deny check` were not rerun in full (their known failures are Prompt 48's). Nothing is committed.
+
+## Prompt 50
+
+Built the composer and its parts: context chips (selection or page added automatically and removable, files, frames,
+components, variables, attachments), @ mentions (workspace files from the feed, frames and components from the
+document), the / skills menu grouped Built-in, Design system and Yours with Add skill…, attach (+) and file drop through
+the host, Parallel (1–6, Split or Side by side) and Explore (off or 2–6, Layout or Style), the engine and model picker
+(C11: providers in two columns with capabilities in words, model and reasoning-effort menus, installed agents, the
+provider-switch note, Add provider with its list, key, endpoint, API style, Test and continue, status words, Re-check and
+Clear key), the usage ring and popover ("Estimated cost at API rates", plan usage for subscriptions), Send ↔ Stop (Stop
+this agent per agent and Stop all with several), the queue-or-stop prompt, prompt history on ↑/↓, a draft per session,
+the offline line (S01); first open (C01) with five suggestions, the design-system popover and the visual-style dialog;
+the Permission card (Allow once / for this session / Deny, buttons held until the daemon records the answer), decided
+cards in the turn, and the skip-all line; the selection toolbar's Ask and the inline prompt (⌘K, ⌥K in the IDE) with its
+progress line and Undo. ⌘L, ⌘K, ⌘., ⌥⌘N and next/previous session now run through `createEditorHandlers`.
+
+- Headless: `packages/editor-core/src/agent/{composer,engines,permissions,usage,selection}.ts`, the feed port and fake
+  extended, decided permissions folded into turns. React: `packages/editor-react/src/agent/{Composer,EnginePicker,
+  PermissionCard,FirstOpen,InlinePrompt}.tsx` and `composer.css`; `EditorWorkspace` takes `composer` and
+  `composerHost`; `AgentTab`'s slot prop is now `composerSlot`.
+- Decisions: DESIGN-DECISIONS "Inline prompt anchor" and "Selection toolbar contents" were UNDECIDED; I asked and the
+  owner chose A (beside the selection) and A (Ask only); both are recorded.
+- API keys: the setup field is uncontrolled, read once on submit and cleared; the controller passes the key to the
+  feed and keeps nothing (a browser test checks the page, the composer state and the feed's request log).
+- Design read: Pencil confirmed `.design-cache/vellum.readonly.pen`; read C01, C01-style, C08, C08-running, C11,
+  C11-provider, C11-providers, C26, C26-selected, C27, the Permission, Composer and Turn / Queue components and C13's
+  selection toolbar. No Pencil writes. Eleven DESIGN-GAPS lines.
+- Order of work: the core tests (`composer.test.ts`, 25) were written first and seen red; the React unit and browser
+  tests were written after the components, before their first run (the first browser run failed everywhere on a
+  duplicate command registration, fixed by moving the shortcuts into the handlers).
+- Not done or not verified: no daemon endpoint serves the new feed calls (see Needs a person); goldens for C08-running,
+  C01-style, C11-provider(s) and C26-selected are not added (their behaviour is covered by browser tests); the changed
+  layers tinting in C08's second state belongs to the presence layer (Prompt 51); OS notifications are the host's.
+
+Passed (Node 24.21.0, pnpm 12.11.2, telemetry opt-outs set):
+- `pnpm --dir packages/editor-core exec vitest run` (2,205; 25 new in `composer.test.ts`, first seen red);
+  `pnpm --dir packages/editor-react exec vitest run --project unit` (295, 3 new).
+- `pnpm --dir packages/editor-react exec playwright test --config e2e/playwright.config.ts e2e/composer.spec.ts
+  e2e/agent.spec.ts` (26: permission card blocks the turn until decided; Deny and skip-all; Stop whenever any agent
+  works, with Stop this agent and Stop all; queue-or-stop; Enter/Shift+Enter with Parallel, Explore and engine; history
+  and drafts per session; ⌘L; offline; skills; mentions; selection chip; attach; first open; picker and effort; the API
+  key never shown again; usage; inline prompt from Ask and from ⌘K).
+- Goldens: C01, C08, C11, C26 and C27 regions pass in light and dark, sizes equal to the design's; regions over 1 %
+  have a limit (measured worst plus 0.3) and a reason in `e2e/screens.json`.
+- Full browser suite: 194 pass, 20 fail, the same 20 as Prompt 49 (Prompt 48's 17, C34-frame dark, C09 light and dark).
+- `pnpm type-check`; `pnpm tokens:lint`; `pnpm copy-lint`; `pnpm deps:check`; `pnpm ui-icons:check`; `pnpm checksum`;
+  `pnpm design:check`; `pnpm --dir packages/editor-react harness:check`; Biome on editor-core and editor-react;
+  `git diff --check`.
+
+Failing, unchanged by this prompt: `pnpm test:scripts` 197 pass, 3 fail (ADR-000 status, Prompt 46's DESIGN-GAPS line
+format, REFERENCE-INDEX). `pnpm lint` and `cargo deny check` were not rerun in full (no Rust changed). Nothing is
+committed.
 

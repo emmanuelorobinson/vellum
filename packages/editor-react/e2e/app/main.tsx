@@ -4,12 +4,15 @@
 import {
   createAgentController,
   createCommandController,
+  createComposerController,
   createDesignController,
   createEditorHandlers,
   createEditorSession,
   createPaintEditor,
   createResourceController,
   createWorkspace,
+  type Mention,
+  selectionLabel,
 } from "@vellum/editor-core";
 import { type EngineSnapshot, FakeEngineClient } from "@vellum/engine-client";
 import { FakeDaemonClient } from "@vellum/host-api";
@@ -23,6 +26,7 @@ import {
   AGENT_NOW,
   type AgentScenario,
   agentScenario,
+  COMPOSER_HOST,
 } from "../../fixtures/agent-scenarios";
 import {
   DESIGN_DEFAULTS,
@@ -279,7 +283,7 @@ if (resourceName === "vector") {
     session.dispatch({ type: "pointerUp", point: { x: 770, y: 410 } });
   }
 }
-const controller = createCommandController(createEditorHandlers({ workspace, session, design }));
+
 if (designName && !q.get("select")) session.select([designSelection(designName)]);
 if (q.get("edit")) {
   // Open the selected text layer for typing, as a double-click on it does.
@@ -311,17 +315,70 @@ const agent = agentSetup
         hostActions.push({ command: "history.reviewTurn", detail: { session: s, turn } }),
     })
   : null;
+// The composer over the same feed: the selection and page come from the editor session.
+const composer =
+  agent && agentSetup
+    ? createComposerController({
+        agent,
+        feed: agentSetup.feed,
+        timeZone: "UTC",
+        defaultEngine: {
+          engine: "builtin",
+          provider: "openrouter",
+          model: "deepseek/deepseek-v4.1-flash",
+        },
+        scope: () => {
+          const ids = session.state.selection;
+          const page = current.pages.find((p) => p.id === session.page) ?? null;
+          const label = ids.length ? selectionLabel(current, session.page, ids) : null;
+          return {
+            selection: label ? { ids, label } : null,
+            page: page ? { id: page.id, name: page.name } : null,
+          };
+        },
+        documentMentions: (query) => {
+          const q = query.toLowerCase();
+          const frames: Mention[] = (current.pages[0]?.children ?? [])
+            .filter((n) => n.type === "frame")
+            .map((n) => ({ kind: "frame", label: n.name ?? n.id, value: n.id }));
+          const components: Mention[] = Object.entries(current.components ?? {}).map(([id, c]) => ({
+            kind: "component",
+            label: c.name,
+            value: id,
+          }));
+          return [...frames, ...components].filter((m) => m.label.toLowerCase().includes(q));
+        },
+      })
+    : null;
+const controller = createCommandController(
+  createEditorHandlers({
+    workspace,
+    session,
+    design,
+    ...(agent ? { agent } : {}),
+    ...(composer ? { composer } : {}),
+  }),
+);
 const pendingAgentUpdates = [...(agentSetup?.updates ?? [])];
 const agentReady = (async () => {
   if (!agent || !agentSetup) return;
   await agent.load();
   if (agentSetup.current) await agent.select(agentSetup.current);
+  await composer?.load();
   if (!q.has("hold")) for (const u of pendingAgentUpdates.splice(0)) agentSetup.feed.emit(u);
   agentClock += agentSetup.elapse ?? 0;
   render();
   for (const key of agentSetup.expanded ?? []) agent.toggle(key);
   if (q.has("switcher")) agent.toggleSwitcher(true);
   if (q.has("undo")) agent.askUndo(agent.turns().at(-1)?.id ?? null);
+  const surface = q.get("composer");
+  if (composer && surface)
+    composer.open(
+      surface === "setup"
+        ? { type: "setup", provider: "openrouter" }
+        : ({ type: surface } as never),
+    );
+  if (composer && q.has("inline")) composer.openInline();
 })();
 
 const clock = 1_000_000;
@@ -359,6 +416,12 @@ type Hooks = {
   /** What the panel asked the daemon for: undo turn, retry, stop... */
   agentRequests(): unknown[];
   agentTick(ms: number): void;
+  /** The composer's state, as JSON (to prove what it holds and what it does not). */
+  composerState(): string;
+  /** Requests the composer sent, with their sessions. */
+  composerSent(): unknown[];
+  /** Keys the fake keychain holds, by provider. */
+  keychain(): Record<string, string>;
 };
 declare global {
   interface Window {
@@ -406,6 +469,9 @@ window.__vellum = {
     agentClock += ms;
     render();
   },
+  composerState: () => JSON.stringify(composer?.state ?? null),
+  composerSent: () => agentSetup?.feed.sent ?? [],
+  keychain: () => agentSetup?.feed.keys ?? {},
 };
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
@@ -460,6 +526,26 @@ function render() {
       }}
       {...(resourceName ? { resources } : {})}
       {...(agent ? { agent } : {})}
+      {...(composer && !q.has("slot")
+        ? {
+            composer,
+            composerHost: {
+              ...COMPOSER_HOST,
+              timeZone: "UTC",
+              onConnectAgents: () => hostActions.push({ command: "agents.connect" }),
+              attach: async () => {
+                hostActions.push({ command: "composer.attach" });
+                return [{ kind: "attachment" as const, label: "hero.png", value: "attachment:1" }];
+              },
+              ...(connection.mode === "offline"
+                ? {
+                    offline: true,
+                    onRestart: () => hostActions.push({ command: "daemon.restart" }),
+                  }
+                : {}),
+            },
+          }
+        : {})}
       design={design}
       paintEditor={paintEditor}
       designHost={{

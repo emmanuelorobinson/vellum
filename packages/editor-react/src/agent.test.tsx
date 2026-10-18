@@ -1,6 +1,6 @@
 // TEST DATA: the Juniper sessions of fixtures/agent-scenarios.ts.
 import { copy } from "@vellum/config";
-import { createAgentController } from "@vellum/editor-core";
+import { createAgentController, createComposerController } from "@vellum/editor-core";
 import { renderToStaticMarkup as html } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,6 +9,7 @@ import {
   AGENT_NOW,
   type AgentScenario,
   agentScenario,
+  COMPOSER_HOST,
 } from "../fixtures/agent-scenarios";
 import { AgentTab } from "./agent/AgentTab";
 import { TipProvider } from "./chrome/Tooltip";
@@ -29,7 +30,7 @@ async function render(name: AgentScenario, composer = <div data-testid="composer
     agent,
     out: html(
       <TipProvider>
-        <AgentTab agent={agent} actors={AGENT_ACTORS} composer={composer} />
+        <AgentTab agent={agent} actors={AGENT_ACTORS} composerSlot={composer} />
       </TipProvider>,
     ),
   };
@@ -101,10 +102,76 @@ describe("agent tab", () => {
     await agent.load();
     const out = html(
       <TipProvider>
-        <AgentTab agent={agent} actors={{}} composer={<div data-testid="composer" />} />
+        <AgentTab agent={agent} actors={{}} composerSlot={<div data-testid="composer" />} />
       </TipProvider>,
     );
     expect(out).toContain('data-testid="composer"');
     expect(out).toContain("New session");
+  });
+});
+
+async function renderComposer(name: AgentScenario, slot = false) {
+  const s = agentScenario(name);
+  const agent = createAgentController({ feed: s.feed, now: () => AGENT_NOW, timeZone: "UTC" });
+  const composer = createComposerController({
+    agent,
+    feed: s.feed,
+    scope: () => ({ selection: null, page: { id: "p1", name: "Onboarding" } }),
+    documentMentions: () => [],
+    defaultEngine: {
+      engine: "builtin",
+      provider: "openrouter",
+      model: "deepseek/deepseek-v4.1-flash",
+    },
+  });
+  await agent.load();
+  await composer.load();
+  for (const u of s.updates) s.feed.emit(u);
+  return html(
+    <TipProvider>
+      <AgentTab
+        agent={agent}
+        actors={AGENT_ACTORS}
+        {...(slot ? {} : { composer, composerHost: COMPOSER_HOST })}
+      />
+    </TipProvider>,
+  );
+}
+
+describe("composer", () => {
+  it("C01: first open asks the question with five suggestions and the engine line", async () => {
+    const t = text(await renderComposer("c01"));
+    expect(t).toContain(copy.firstOpenHeading);
+    for (const s of [
+      "Design from a spec",
+      "Start from a design system",
+      "Pick a visual style",
+      "Import tokens from CSS",
+      "Recreate a screen from my code",
+    ])
+      expect(t).toContain(s);
+    expect(t).toContain(copy.drawByHandHint);
+    expect(t).toContain("OpenRouter · deepseek/deepseek-v4.1-flash");
+    expect(t).toContain("1× Split");
+    expect(t).toContain("Explore off");
+  });
+
+  it("C27: the turn waits on a Permission card with the exact path, and the composer shows Stop", async () => {
+    const out = await renderComposer("c27");
+    const t = text(out);
+    expect(t).toContain("Waiting for permission");
+    expect(t).toContain("Teal wants to read DESIGN.md");
+    expect(t).toContain("~/code/juniper/DESIGN.md");
+    expect(t).toMatch(/Allow once .*Allow for this session .*Deny/);
+    expect(out).toMatch(/class="vk-send" data-stop="">Stop</);
+    expect(out).not.toMatch(/>Send</);
+    expect(out).toContain('aria-label="Context usage · 18%"');
+  });
+
+  it("C08: a finished session sends, and without a composer the host's slot is used", async () => {
+    const out = await renderComposer("c08");
+    expect(out).toMatch(/class="vk-send"[^>]*>Send</);
+    expect(out).toContain(`placeholder="${copy.composerPlaceholder}"`);
+    expect(await renderComposer("c08", true)).not.toContain("vk-composer");
   });
 });

@@ -680,6 +680,129 @@
           "design": [24, 379, 328, 19]
         }
       ]
+    },
+    {
+      "id": "C01",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C01-{mode}-1280.png",
+      "query": "scenario=juniper&empty=1&zoom=0.5&tab=agent&agent=c01",
+      "regions": [
+        {
+          "name": "first-open heading",
+          "selector": ".vk-first__heading",
+          "design": [24, 236, 328, 24]
+        },
+        {
+          "name": "suggestions",
+          "selector": ".vk-first__suggestions",
+          "design": [24, 328, 328, 192],
+          "fraction": 0.035,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        },
+        {
+          "name": "draw-by-hand hint",
+          "selector": ".vk-first__hint",
+          "design": [24, 532, 328, 13],
+          "fraction": 0.05,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C08-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c08&select=habit,title,continue&inline=1",
+      "fill": [
+        {
+          "selector": ".vk-inline__field",
+          "text": "Make these feel less crowded"
+        }
+      ],
+      "regions": [
+        {
+          "name": "composer",
+          "selector": ".vk-composer",
+          "design": [24, 633, 328, 118],
+          "fraction": 0.03,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        },
+        {
+          "name": "engine line",
+          "selector": ".vk-model",
+          "design": [24, 759, 328, 17]
+        },
+        {
+          "name": "inline prompt",
+          "selector": ".vk-inline",
+          "design": [760, 290, 360, 124],
+          "fraction": 0.025,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        }
+      ]
+    },
+    {
+      "id": "C11",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C11-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c11&composer=picker",
+      "regions": [
+        {
+          "name": "engine and model picker",
+          "selector": ".vk-picker",
+          "design": [440, 80, 680, 528],
+          "fraction": 0.025,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        }
+      ]
+    },
+    {
+      "id": "C26",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C26-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c26",
+      "fill": [
+        {
+          "selector": ".vk-field",
+          "text": "/"
+        }
+      ],
+      "regions": [
+        {
+          "name": "skills menu",
+          "selector": ".vk-menu",
+          "design": [16, 256, 448, 467],
+          "fraction": 0.02,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        }
+      ]
+    },
+    {
+      "id": "C27",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C27-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c27&composer=usage",
+      "regions": [
+        {
+          "name": "permission card",
+          "selector": ".vk-permission",
+          "design": [24, 285, 328, 190],
+          "fraction": 0.06,
+          "why": "Glyph edges, plus the warning symbol before \"Waiting for permission\": AGENTS.md says a state is a symbol plus a label, and the design draws the label alone (DESIGN-GAPS). Size equals the design's (Prompt 50 measured)."
+        },
+        {
+          "name": "usage popover",
+          "selector": ".vk-popover--usage",
+          "design": [388, 430, 344, 247],
+          "fraction": 0.04,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

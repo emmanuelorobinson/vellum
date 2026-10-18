@@ -6,6 +6,7 @@
 import { guardReasons } from "@vellum/config";
 import type { AgentId, TurnId } from "@vellum/types-ts";
 import { type SessionEvent, type StepBody, TERMINAL, type TurnStateName } from "./log";
+import { type DecidedCard, decidedCard, type PermissionAction } from "./permissions";
 import {
   describeStep,
   formatDuration,
@@ -25,7 +26,9 @@ export type LiveItem =
 export type TurnItem =
   | { type: "prose"; key: string; text: string; streaming: boolean }
   | { type: "step"; key: string; step: StepView }
-  | { type: "group"; key: string; line: string; icon: string; steps: StepView[] };
+  | { type: "group"; key: string; line: string; icon: string; steps: StepView[] }
+  /** A decision the person made on a Permission card. Rules and skip-all decide quietly. */
+  | { type: "permission"; key: string; card: DecidedCard };
 
 export interface TurnFooter {
   changes: number;
@@ -161,6 +164,24 @@ function interleave(
   return items;
 }
 
+/** Places each decision before the first step that came after it. */
+function decisions(events: SessionEvent[], items: TurnItem[]): TurnItem[] {
+  const out = [...items];
+  for (const e of events) {
+    const b = e.body;
+    if (b.type !== "permission" || b.source.kind !== "person") continue;
+    const item: TurnItem = {
+      type: "permission",
+      key: `perm:${e.seq}`,
+      card: decidedCard(b.action as PermissionAction, b.answer),
+    };
+    const at = out.findIndex((i) => i.type === "step" && (i.step.seq ?? 0) > e.seq);
+    if (at < 0) out.push(item);
+    else out.splice(at, 0, item);
+  }
+  return out;
+}
+
 export function footerLines(f: TurnFooter): string[] {
   const made = [`Made ${f.changes} ${f.changes === 1 ? "change" : "changes"}`];
   if (f.frames) made.push(`${f.frames} ${f.frames === 1 ? "frame" : "frames"}`);
@@ -209,7 +230,7 @@ export function buildTurns(events: readonly SessionEvent[], options: BuildOption
     const undo = list.find((e) => e.body.type === "undo")?.body;
     const undone = undo?.type === "undo" ? { changed: undo.changed, kept: undo.kept } : null;
     const items = group(
-      interleave(list, steps, id ? options.live?.[id] : undefined, now, !terminal),
+      decisions(list, interleave(list, steps, id ? options.live?.[id] : undefined, now, !terminal)),
     );
     const done = steps.map((s) => s.view).filter((s) => s.state === "done");
     const changes = done.reduce((n, s) => n + changesOf(s), 0);

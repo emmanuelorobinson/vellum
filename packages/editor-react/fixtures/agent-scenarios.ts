@@ -3,6 +3,7 @@
 import {
   FakeAgentFeed,
   type FeedUpdate,
+  type ModelCaps,
   type SessionEvent,
   type SessionInfo,
   type StepDetail,
@@ -50,7 +51,19 @@ export const AGENT_LAYER_NAMES: Record<string, string> = {
   step2: "Step 2",
   step3: "Step 3",
 };
-export type AgentScenario = "c03" | "c06" | "c06e" | "c09" | "claude-code" | "codex" | "stream";
+export type AgentScenario =
+  | "c01"
+  | "c03"
+  | "c06"
+  | "c06e"
+  | "c08"
+  | "c09"
+  | "c11"
+  | "c26"
+  | "c27"
+  | "claude-code"
+  | "codex"
+  | "stream";
 
 let seq = 0;
 const ev = (
@@ -296,6 +309,187 @@ function details(): SessionEvent[] {
   ];
 }
 
+/** What the composer reads from the daemon in every scenario: C11's providers, C26's skills, C27's usage. */
+function composerData(feed: FakeAgentFeed): FakeAgentFeed {
+  const model = (id: string, label: string, caps: Partial<ModelCaps> = {}) => ({
+    id,
+    label,
+    caps: { vision: false, fast: false, reasoning: false, contextTokens: 128_000, ...caps },
+  });
+  feed.catalog = {
+    builtin: [
+      {
+        id: "openrouter",
+        name: "OpenRouter",
+        status: "connected",
+        models: [model(MODEL, MODEL, { vision: true, fast: true, contextTokens: 1_000_000 })],
+      },
+      {
+        id: "anthropic",
+        name: "Anthropic",
+        status: "api_key_set",
+        models: [
+          model("claude-sonnet", "Claude Sonnet", { vision: true, contextTokens: 1_000_000 }),
+        ],
+      },
+      {
+        id: "openai",
+        name: "OpenAI",
+        status: "api_key_set",
+        models: [
+          model("reasoning", "Reasoning model", { vision: true, reasoning: true }),
+          model("fast", "Fast model", { vision: true, fast: true }),
+        ],
+      },
+      {
+        id: "google",
+        name: "Google",
+        status: "api_key_set",
+        models: [
+          model("gemini", "Gemini", { vision: true, contextTokens: 1_000_000 }),
+          model("gemini-flash", "Gemini Flash", { vision: true, fast: true }),
+        ],
+      },
+      {
+        id: "deepseek",
+        name: "DeepSeek",
+        status: "api_key_set",
+        models: [
+          model("deepseek", "DeepSeek", { fast: true, reasoning: true }),
+          model("deepseek-chat", "DeepSeek Chat", { fast: true }),
+        ],
+      },
+      {
+        id: "xai",
+        name: "xAI",
+        status: "api_key_set",
+        models: [
+          model("grok", "Grok", { vision: true, reasoning: true }),
+          model("grok-fast", "Grok Fast", { fast: true }),
+        ],
+      },
+      {
+        id: "local",
+        name: "Local",
+        status: "configured_externally",
+        models: [model("local", "localhost:11434", { local: true })],
+      },
+    ],
+    installed: [
+      { id: "claude-code", name: "Claude Code", state: "signed_in", command: "claude" },
+      { id: "codex", name: "Codex", state: "signed_in", command: "codex" },
+    ],
+  };
+  feed.skillList = [
+    { path: "workflows/design-a-screen.md", name: "Design a screen", group: "builtin" },
+    { path: "workflows/build-a-design-system.md", name: "Build a design system", group: "builtin" },
+    { path: "workflows/recreate-from-code.md", name: "Recreate from code", group: "builtin" },
+    {
+      path: "workflows/make-a-chart-with-a-script.md",
+      name: "Make a chart with a script",
+      group: "builtin",
+    },
+    {
+      path: "design-system/starter-minimal/guidelines.md",
+      name: "Starter Minimal guidelines",
+      group: "design_system",
+    },
+    { path: "~/skills/juniper-voice/SKILL.md", name: "Juniper voice", group: "user" },
+    { path: "~/skills/a11y/SKILL.md", name: "Accessibility", group: "user" },
+  ];
+  feed.fileList = ["DESIGN.md", "README.md", "src/tokens.css", "src/components/HabitCard.tsx"];
+  for (const id of Object.values(SESSIONS))
+    feed.usages[id] = {
+      contextTokens: 8100,
+      window: 45_000,
+      conversation: 4200,
+      files: 2800,
+      screenshots: 1100,
+      estimate: 40_000,
+    };
+  return feed;
+}
+
+/** C27: Teal asks to read DESIGN.md. */
+export const PERMISSION_QUESTION = {
+  id: "q-design",
+  turn: TURN,
+  agent: AGENTS.teal,
+  engine: "builtin",
+  action: { readFile: { path: "~/code/juniper/DESIGN.md" } },
+  kind: "read_repo",
+  offered: ["allow_once", "allow_for_session", "deny"],
+} as const;
+
+/** The composer's host data: bundled design systems and visual styles (C01-style). */
+export const COMPOSER_HOST = {
+  designSystems: [
+    { id: "starter-minimal", name: "Starter Minimal", swatches: ["#18222D", "#DDE5EE", "#F4F7F9"] },
+    {
+      id: "starter-editorial",
+      name: "Starter Editorial",
+      swatches: ["#4C332B", "#D6B59B", "#F6EFE8"],
+    },
+    {
+      id: "starter-technical",
+      name: "Starter Technical",
+      swatches: ["#17394F", "#9CC8DB", "#E6F1F5"],
+    },
+  ],
+  visualStyles: [
+    {
+      id: "product",
+      name: "Product Data Grid",
+      font: "Inter",
+      palette: ["#18222D", "#DDE5EE", "#F4F7F9"],
+    },
+    {
+      id: "artisan",
+      name: "Artisan Editorial",
+      font: "Lora",
+      palette: ["#4C332B", "#D6B59B", "#F6EFE8"],
+    },
+    {
+      id: "blueprint",
+      name: "Blueprint Technical",
+      font: "JetBrains Mono",
+      palette: ["#17394F", "#9CC8DB", "#E6F1F5"],
+    },
+  ],
+};
+
+function simpleTurn(s: string, text: string, context: string[], reply: string, done: boolean) {
+  const t0 = AGENT_NOW - 60_000;
+  return [
+    ev(s, { type: "prompt", text, context, images: [] }, t0, person),
+    ev(
+      s,
+      { type: "turn", turn: TURN, from: "queued", input: "start", to: "planning" },
+      t0 + 100,
+      person,
+    ),
+    ev(
+      s,
+      { type: "turn", turn: TURN, from: "planning", input: "no_plan_needed", to: "running" },
+      t0 + 200,
+    ),
+    ...(done
+      ? [
+          ev(
+            s,
+            { type: "messages", messages: [{ role: "assistant", parts: [{ text: reply }] }] },
+            t0 + 1200,
+          ),
+          ev(
+            s,
+            { type: "turn", turn: TURN, from: "running", input: "done", to: "done" },
+            t0 + 1300,
+          ),
+        ]
+      : []),
+  ];
+}
+
 /** The feed, its scripted updates (sent after the panel loads) and what the panel opens with. */
 export function agentScenario(name: AgentScenario): {
   feed: FakeAgentFeed;
@@ -306,6 +500,69 @@ export function agentScenario(name: AgentScenario): {
   elapse?: number;
 } {
   seq = 0;
+  const scenario = baseScenario(name);
+  composerData(scenario.feed);
+  return scenario;
+}
+
+function baseScenario(name: AgentScenario): ReturnType<typeof agentScenario> {
+  if (name === "c01" || name === "c26")
+    return {
+      feed: new FakeAgentFeed(
+        [session(SESSIONS.onboarding, { title: "New session", state: null, model: MODEL })],
+        { [SESSIONS.onboarding]: [] },
+      ),
+      updates: [],
+    };
+  if (name === "c08" || name === "c11")
+    return {
+      feed: new FakeAgentFeed(
+        [
+          session(SESSIONS.onboarding, {
+            title: name === "c08" ? "Refine Step 2" : "Onboarding screens",
+            state: "done",
+          }),
+        ],
+        {
+          [SESSIONS.onboarding]: simpleTurn(
+            SESSIONS.onboarding,
+            name === "c08"
+              ? "Make these feel less crowded"
+              : "Refine Step 2 using our spacing tokens.",
+            name === "c08" ? ["3 layers in Step 2"] : [],
+            name === "c08"
+              ? "The selected card and two buttons are attached to this request."
+              : "I've refined Step 2 and checked the layout. Review agent changes in History.",
+            true,
+          ),
+        },
+      ),
+      updates: [],
+    };
+  if (name === "c27") {
+    const events = [
+      ...simpleTurn(SESSIONS.onboarding, "Design onboarding from @DESIGN.md.", [], "", false),
+    ];
+    events.push(
+      ev(
+        SESSIONS.onboarding,
+        {
+          type: "turn",
+          turn: TURN,
+          from: "running",
+          input: "ask_permission",
+          to: "awaiting_permission",
+        },
+        AGENT_NOW - 50_000,
+      ),
+    );
+    return {
+      feed: new FakeAgentFeed([session(SESSIONS.onboarding, { state: "awaiting_permission" })], {
+        [SESSIONS.onboarding]: events,
+      }),
+      updates: [{ type: "question", session: SESSIONS.onboarding, question: PERMISSION_QUESTION }],
+    };
+  }
   if (name === "claude-code" || name === "codex") {
     const f = (name === "codex" ? codex : claudeCode) as unknown as TranscriptFixture;
     const feed = FakeAgentFeed.fromTranscript(f, { upTo: 3 });

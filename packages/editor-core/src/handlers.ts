@@ -1,3 +1,4 @@
+import type { AgentController, ComposerController } from "./agent";
 import { detachOps } from "./design/component";
 import type { DesignController } from "./design/controller";
 import { union } from "./geometry";
@@ -18,9 +19,32 @@ export function createEditorHandlers(deps: {
   session: EditorSession;
   /** The properties panel's controller: with it the component commands work. */
   design?: DesignController;
+  /** The Agent tab and its composer: with them the Agents shortcuts work. */
+  agent?: AgentController;
+  composer?: ComposerController;
 }): Record<string, Handler> {
-  const { workspace, session, design } = deps;
+  const { workspace, session, design, agent, composer } = deps;
   const handlers: Record<string, Handler> = {};
+  if (composer) {
+    handlers["agent.focus"] = () => {
+      workspace.switchTab("agent", { reveal: true });
+      composer.requestFocus();
+    };
+    handlers["agent.inline"] = () => composer.openInline();
+    handlers["agent.stop"] = () => composer.stopAll();
+  }
+  if (agent) {
+    handlers["session.new"] = () => agent.newSession();
+    const step = (by: 1 | -1) => () => {
+      const list = [...agent.state.sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+      if (!list.length) return;
+      const at = list.findIndex((s) => s.id === agent.state.current);
+      const next = list[(at + by + list.length) % list.length];
+      if (next) return agent.select(next.id);
+    };
+    handlers["session.next"] = step(1);
+    handlers["session.previous"] = step(-1);
+  }
   for (const tab of PANEL_TABS)
     handlers[`panel.${tab}`] = () => workspace.switchTab(tab, { reveal: true });
   handlers["view.hidePanels"] = () => workspace.hideAllPanels();
