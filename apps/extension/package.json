@@ -6,15 +6,101 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "node build.mjs",
+    "test:vscode": "node build.mjs --with-daemon && node test/run.mjs"
   },
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "engines": {
     "vscode": "^1.140.0"
   },
   "devDependencies": {
     "@types/vscode": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "esbuild": "0.28.2",
+    "@vscode/test-electron": "2.5.2"
+  },
+  "displayName": "Vellum",
+  "publisher": "vellum",
+  "categories": [
+    "Visualization"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onCustomEditor:vellum.design"
+  ],
+  "dependencies": {
+    "@vellum/config": "workspace:*",
+    "@vellum/host-api": "workspace:*",
+    "@vellum/host-vscode": "workspace:*",
+    "@vellum/editor-core": "workspace:*",
+    "@vellum/editor-react": "workspace:*",
+    "@vellum/engine-client": "workspace:*",
+    "@vellum/types-ts": "workspace:*",
+    "@vellum/ui-tokens": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "vellum.design",
+        "displayName": "Vellum",
+        "selector": [
+          {
+            "filenamePattern": "*.vellum"
+          },
+          {
+            "filenamePattern": "*.lib.vellum"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vellum.newDesign",
+        "title": "New Design File",
+        "category": "Vellum"
+      },
+      {
+        "command": "vellum.toggleView",
+        "title": "Toggle Design / Text View",
+        "category": "Vellum"
+      },
+      {
+        "command": "vellum.openWelcome",
+        "title": "Open Welcome File",
+        "category": "Vellum"
+      },
+      {
+        "command": "vellum.pauseAllAgents",
+        "title": "Pause All Agents",
+        "category": "Vellum"
+      }
+    ],
+    "configuration": {
+      "title": "Vellum",
+      "properties": {
+        "vellum.matchEditorColours": {
+          "type": "boolean",
+          "default": false,
+          "description": "Match editor colours for chrome surfaces and text."
+        }
+      }
+    }
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Vellum starts a bundled local daemon."
+    },
+    "virtualWorkspaces": false
   }
 }

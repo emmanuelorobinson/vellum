@@ -617,3 +617,39 @@ fn writes_over_mcp_are_attributed_to_the_connection_and_leave_steps() {
         "Claude Code"
     );
 }
+
+#[test]
+fn host_pause_all_requires_initialize_and_pauses_every_open_document() {
+    let mut server = server();
+    let denied = rpc(&mut server, 8, 1, "vellum/pauseAll", json!({}));
+    assert!(denied.get("error").is_some());
+    rpc(
+        &mut server,
+        8,
+        2,
+        "initialize",
+        json!({
+            "protocolVersion": "2025-11-25", "capabilities": {},
+            "clientInfo": {"name": "vellum-vscode", "version": "0.0.0"}
+        }),
+    );
+    let invalid = rpc(
+        &mut server,
+        8,
+        3,
+        "vellum/pauseAll",
+        json!({"unexpected": true}),
+    );
+    assert!(invalid.get("error").is_some());
+    let paused = rpc(&mut server, 8, 4, "vellum/pauseAll", json!({}));
+    assert_eq!(paused["result"]["paused"], true);
+    // A subsequent agent write still goes through the Guard and is rejected.
+    call(&mut server, "open_document", json!({"path": PATH}));
+    let write = call(
+        &mut server,
+        "update_nodes",
+        json!({"updates": [{"id": "frameHero1", "set": {"name": "paused"}}]}),
+    );
+    assert_eq!(write["result"]["isError"], true);
+    assert!(text(&write).contains("paused"));
+}

@@ -8,6 +8,8 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 55 is incomplete: the VS Code host opens read-only.** The compiled WASM module has no document-operation/scene ABI, and the daemon has no wire implementation of `EditorLink`. The host, lifecycle boundary, commands and relay are built, but real editing, document rendering, writer attachment, hot exit and external-checkout Ops still require those integrations. Runtime-boundary tests use scripted core replies; the VS Code lane is explicitly a host smoke, not acceptance. See `docs/runbooks/vscode-host.md`.
+
 - **Wire Prompt 54's shell into a host, decide its copy, and finish its pixel acceptance.** (1) Nothing serves the new
   ports yet: hosts must create the palette, `PreferencesHost`, `SettingsHost` and `EdgeProps`/`EdgeHost` and handle the
   document-edit commands the context menu runs (`edit.copy`, `paste`, `pasteHere`, `group`, `wrap`, `autoLayout`,
@@ -3284,3 +3286,68 @@ stable; goldens above), `tsc --noEmit` in `editor-core`, `editor-react`, `engine
 `ui-icons-gen --check`, `design-check`, `spec-checksums check`, `check-deps.sh`, `check-clean-room.sh`, Biome on every
 touched file (no errors). `design-spec-rules.test.mjs` still fails on Prompt 46's DESIGN-GAPS line (existing); my lines
 match its format. Not re-run: Rust tests, `cargo deny`. Nothing committed.
+
+## Prompt 55
+
+**Incomplete.** Built the VS Code host foundation, not the required editable end-to-end editor.
+The compiled WASM module has renderer exports only, and `EditorLink` has no wire implementation.
+The product explicitly opens read-only with an unavailable-engine notice and Open as text; its canvas
+has no document rendering. No fake engine or TypeScript document write path was introduced.
+
+- `apps/extension`: CustomEditorProvider for design/library files; shared custom document across split
+  panels; static existing EditorWorkspace bundle; nonce CSP, scoped resources and typed message allowlist;
+  `host-vscode` native services; all four commands; four appearance mappings and Match editor colours.
+  New Design File uses core's existing `open_document(create)` tool; Welcome copies the TEST DATA fixture
+  into the isolated/user storage, preserving an existing copy. Native file writes use fsync + rename.
+- `DesignDocument` implements serialized save/save-as/revert/backup/recovery callbacks through an injected
+  runtime port, revision-safe dirty acknowledgement, cancellation and failure retention. The production
+  read-only runtime cannot apply revert/recovery/external Ops. Full edit, canonical save, hot exit, git
+  checkout merge, live writer/follower routing/promotion, content renderer and native undo/keyboard
+  acceptance remain unbuilt/unverified. Feature ports from Prompts 49–54 remain unserved.
+- Native relay starts bundled `vellum mcp`, which authenticates and starts/reuses the daemon. No token,
+  discovery metadata, arbitrary RPC or document bytes enter the webview. Added `vellum/pauseAll` outside
+  the agent tool list: initialized connections with empty parameters can pause the Guards for all open
+  and future documents. It does not claim to interrupt an engine not hosted by the daemon.
+- TDD: lifecycle/security suites were observed red on missing modules; the Rust Pause All contract was
+  observed red before the method existed. Later relay, file-failure and concurrency checks followed
+  implementation. Unit tests use mocked I/O/scripted runtime replies, not real core document edits.
+- Reference study: read the pinned vscode-samples README, pawDrawEditor/extension and pawDraw.js.
+  Kept native shared-document ownership, provider lifecycle callbacks and the ready handshake; replaced
+  JS stroke replay/webview serialization with a Rust-runtime boundary and narrowed resources/messages.
+  Checked sibling auto-themer's extension activation pattern. No source ported. DESIGN.md's Keyboard/host
+  conflicts were read; no new design frame was implemented or pixel acceptance claimed.
+- Native smoke caught two harness/build issues: command errors awaited a notification click, and rewriting
+  an existing copied executable inode caused macOS launch termination. Errors now return a failure result;
+  bundled binaries are replaced by rename. The socket directory is short enough for macOS. An initial
+  smoke used the default daemon directory and did not assert Pause All acknowledgement; it is not counted
+  as isolated verification. Final tests use their own daemon/profile, disable telemetry before launch,
+  require the ready handshake and Pause All acknowledgement, stop that daemon and remove its directory.
+- Build output is `apps/extension/dist/package` with an unscoped VS Code manifest; the workspace package
+  stays `@vellum/extension`. `--with-daemon` includes this machine's native binary. Distribution is still
+  Prompt 56. Tool versions are recorded in version-baseline; details in `docs/runbooks/vscode-host.md`.
+
+Passed (Node 24.21.0, pnpm 12.11.2; both telemetry opt-outs):
+- `apps/extension/node_modules/.bin/vitest run --root apps/extension` (26);
+  `apps/extension/node_modules/.bin/tsc --noEmit -p apps/extension` (source and native test suite).
+- `node scripts/skia-build.mjs build -p vellum`; `node apps/extension/build.mjs --with-daemon`;
+  `VELLUM_VSCODE_EXECUTABLE='/Applications/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders'
+  node apps/extension/test/run.mjs` (VS Code 1.143.0 Insiders host smoke: registration, library opening,
+  actual webview boot under CSP, text/design toggle, split opening and acknowledged Pause All).
+- `node scripts/skia-build.mjs test -p vellum --test mcp` (21);
+  `node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`;
+  `cargo fmt --all -- --check`; `pnpm type-check` (33 tasks).
+- Biome on `apps/extension`; `bash scripts/check-deps.sh`; `bash scripts/check-clean-room.sh`;
+  `node scripts/token-lint.mjs`; `node scripts/copy-lint.mjs`; `pnpm checksum`; `git diff --check`.
+
+Global checks retain existing failures: `pnpm lint` fails on the four fixture/import-format errors;
+`cargo deny check` fails on the same nine advisories already listed above (bans/licences/sources pass).
+The first script-test run had six failures: the three existing specification/reference checks plus
+three format-generation checks whose direct cargo invocations tried Skia registry synchronization in
+this sandbox. The rerun with the source-build environment is recorded below. No unrelated tests,
+reference images, tolerances or advisory policies were changed. Nothing committed.
+
+The script-test rerun with `FORCE_SKIA_BUILD=1`, `SKIA_SOURCE_DIR` pointing at the existing pinned Skia
+source and `SKIA_GN_ARGS` from `scripts/skia-config.json` finished with **197 pass, 3 fail, 5 skipped**:
+only the existing ADR-000 status, append-only DESIGN-GAPS line format and REFERENCE-INDEX failures remain.
+The final isolated VS Code smoke, extension source/test type check, scoped Biome and specification checksum
+also pass after the last changes.

@@ -1,0 +1,32 @@
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+/* Match only neutral chrome surfaces and text. Selection, components and agent marks retain their tokens. */
+[data-match-editor-colours="true"] [data-appearance] {
+  --chrome-panel: var(--vscode-editor-background);
+  --chrome-raised: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --chrome-sunken: var(--vscode-input-background, var(--vscode-editor-background));
+  --chrome-text: var(--vscode-editor-foreground);
+  --chrome-secondary: var(--vscode-descriptionForeground, var(--vscode-editor-foreground));
+  --chrome-tertiary: var(--vscode-descriptionForeground, var(--vscode-editor-foreground));
+  --chrome-border: var(--vscode-panel-border, var(--vscode-contrastBorder, currentColor));
+  --chrome-separator: var(--vscode-panel-border, var(--vscode-contrastBorder, currentColor));
+}
+.vellum-host-problem {
+  padding: var(--space-4);
+  font-family: var(--font-ui);
+  color: var(--chrome-text);
+}
+.vellum-host-problem button {
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  cursor: pointer;
+}

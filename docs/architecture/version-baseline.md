@@ -290,3 +290,13 @@ The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused;
   `history` (the design's name for what it now calls `rotate-ccw-clock`; same drawing) and no `message-square-play` (the design's
   prompt-node icon; `message-square-more` stands in until the catalog has one). Its `git-branch` is drawn differently from the
   design's. The lockfile gained `@base-ui/react`, `@base-ui/utils`, `@floating-ui/*` and `@playwright/test`; none is a prerelease.
+
+## Prompt 55 extension host tooling
+
+- `@vscode/test-electron` 2.5.2 (MIT; Node >=16) is pinned for the tagged VS Code host lane.
+  Its `runTests` API was checked against the official VS Code docs through Context7. The local smoke
+  runs against the already-installed VS Code Insiders 1.143.0; no editor was installed or upgraded.
+- `esbuild` 0.28.2 (MIT; Node >=18), already in the lockfile through Vite, is now also a direct build
+  tool for the extension's CommonJS host and static webview bundles. React, VS Code types and the
+  renderer retain their existing catalog versions. The workspace package remains scoped; the generated
+  VS Code manifest has an unscoped extension name, as the extension host requires.

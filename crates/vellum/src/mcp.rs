@@ -227,6 +227,19 @@ impl McpServer {
         let outcome = match method {
             "initialize" => self.initialize(conn, &params).map_err(|m| (-32602, m)),
             "ping" => Ok(json!({})),
+            // Host control is separate from the agent tool registry. The local authenticated connection
+            // still initializes first; the browser can request this action only through its host.
+            "vellum/pauseAll" => {
+                if self.client(conn).is_none() {
+                    Err((-32002, "Initialize the host connection first".to_owned()))
+                } else if params.as_object().is_none_or(|p| !p.is_empty()) {
+                    Err((-32602, "Pause all takes no parameters".to_owned()))
+                } else {
+                    self.docs
+                        .control_all(&vellum_core::guard::AgentControl::PauseAll);
+                    Ok(json!({"paused": true}))
+                }
+            }
             "server/discover" => Ok(Self::discover()),
             "tools/list" => Ok(self.tools_list()),
             "tools/call" => self.tools_call(conn, &params).map_err(|m| (-32602, m)),
