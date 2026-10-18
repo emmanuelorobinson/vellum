@@ -4,6 +4,7 @@
 import {
   contextForSelection,
   createAgentController,
+  createAuthoringController,
   createCommandController,
   createComposerController,
   createDesignController,
@@ -48,10 +49,12 @@ import {
 } from "../../fixtures/resource-scenarios";
 import { EditorWorkspace } from "../../src/EditorWorkspace";
 import "./fonts.css";
+import { authoringDocument, authoringHost } from "../../fixtures/authoring-scenarios";
 import { sceneOf } from "./test-scene";
 
 const q = new URLSearchParams(location.search);
 const scenario = q.get("scenario");
+const authoringName = q.get("authoring");
 const collaborationName = q.get("collaboration");
 const collaboration = collaborationName ? collaborationScenario(collaborationName) : null;
 const resourceName = q.get("resource");
@@ -159,19 +162,21 @@ const documentOf = (children: Node[]): Document =>
     ],
   }) as unknown as Document;
 
-let current = resourceName
-  ? resourceDocument(resourceName)
-  : designName
-    ? designDocument(designName)
-    : documentOf(
-        collaborationName
-          ? collaborationNodes(collaborationName)
-          : q.get("empty")
-            ? []
-            : scenario === "juniper"
-              ? juniperNodes()
-              : startNodes(),
-      );
+let current = authoringName
+  ? authoringDocument(authoringName)
+  : resourceName
+    ? resourceDocument(resourceName)
+    : designName
+      ? designDocument(designName)
+      : documentOf(
+          collaborationName
+            ? collaborationNodes(collaborationName)
+            : q.get("empty")
+              ? []
+              : scenario === "juniper"
+                ? juniperNodes()
+                : startNodes(),
+        );
 /** The document with other layers on its first page: the design scenarios keep their variables and components. */
 const withChildren = (children: Node[]): Document =>
   designName
@@ -233,6 +238,31 @@ const design = createDesignController({
 });
 const paintEditor = createPaintEditor({ session, design });
 const hostActions: { command: string; detail?: unknown }[] = [];
+const authoringRequests: unknown[] = [];
+const authoringFeatureHost = authoringName
+  ? authoringHost(authoringName, () => engine.snapshot().revision, authoringRequests)
+  : undefined;
+const authoring = authoringName
+  ? createAuthoringController({
+      engine,
+      device,
+      nextNodeId: () => `n${++counter}`,
+      host: authoringFeatureHost as import("@vellum/editor-core").AuthoringHost,
+    })
+  : undefined;
+if (authoringName) {
+  session.select([
+    authoringName.startsWith("c28")
+      ? "script"
+      : authoringName === "c29"
+        ? "slot"
+        : authoringName === "c29-filled"
+          ? "instance"
+          : authoringName.startsWith("c30")
+            ? "photo"
+            : "frame",
+  ]);
+}
 const resources = createResourceController({
   engine,
   device,
@@ -450,6 +480,8 @@ type Hooks = {
   selection(): readonly string[];
   tool(): string;
   viewport(): unknown;
+  authoringRequests(): unknown[];
+  authoringEmit(view: import("@vellum/editor-core").ScriptView): void;
   nodes(): Node[];
   /** Resolves once the Agent tab's scenario has loaded. */
   agentReady(): Promise<void>;
@@ -494,6 +526,8 @@ window.__vellum = {
     current = doc;
     engine.script(snapshotOf(current), operation);
   },
+  authoringRequests: () => authoringRequests,
+  authoringEmit: (view) => authoringFeatureHost?.emitScript(view),
   hostActions: () => hostActions,
   document: () => current,
   transactions: () => attempts,
@@ -583,6 +617,7 @@ function render() {
         onAction: () => {},
       }}
       {...(resourceName ? { resources } : {})}
+      {...(authoring ? { authoring } : {})}
       {...(agent ? { agent } : {})}
       {...(composer && !q.has("slot")
         ? {
@@ -618,3 +653,6 @@ function render() {
 render();
 void daemon;
 void host;
+
+if (authoringName === "c12-guidelines") void authoring?.openGuidelines();
+if (authoringName?.startsWith("c30")) authoring?.openImage("photo", "fill", 0);

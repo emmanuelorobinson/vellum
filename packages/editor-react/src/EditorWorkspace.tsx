@@ -1,5 +1,6 @@
 import {
   type AgentController,
+  type AuthoringController,
   type BindingContext,
   type ComposerController,
   type createCommandController,
@@ -25,6 +26,8 @@ import { CollaborationNodes } from "./agent/CollaborationNodes";
 import type { ComposerHost } from "./agent/Composer";
 import { InlinePrompt, type ScreenRect, SelectionToolbar } from "./agent/InlinePrompt";
 import { PresenceLayer } from "./agent/PresenceLayer";
+import { AuthoringDialogs } from "./authoring/AuthoringDialogs";
+import { CanvasAuthoring } from "./authoring/CanvasAuthoring";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
 import type { ActorView } from "./chrome/ActorMarker";
 import { BottomStrip, type Connection } from "./chrome/BottomStrip";
@@ -46,11 +49,13 @@ import { MissingLibraryPanel } from "./resources/MissingLibraryPanel";
 import { ResourceDialogs } from "./resources/ResourceDialogs";
 import { ScalePanel, VectorPanel } from "./resources/ToolPanels";
 import "./editor.css";
+import "./authoring/authoring.css";
 
 export type CommandController = ReturnType<typeof createCommandController>;
 
 export interface EditorWorkspaceProps {
   presence?: PresenceController;
+  authoring?: AuthoringController;
   workspace: Workspace;
   session: EditorSession;
   engine: EngineClient;
@@ -236,6 +241,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   // Go to main component: the main is a layer on a page when the scene has it; otherwise the host shows it.
   const designHost: DesignHost = {
     ...props.designHost,
+    ...(props.authoring ? { authoring: props.authoring } : {}),
     ...(props.resources ? { resources: props.resources } : {}),
     onGoToMain:
       props.designHost?.onGoToMain ??
@@ -347,6 +353,14 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               ? { colour: (c: Value<string>) => props.design?.colour(c, doc) ?? (c as string) }
               : {})}
           />
+          {props.authoring ? (
+            <CanvasAuthoring
+              authoring={props.authoring}
+              session={session}
+              readOnly={readOnly}
+              contentAvailable={!!(props.content && props.createRenderer)}
+            />
+          ) : null}
           <CollaborationNodes
             offline={props.composerHost?.offline ?? false}
             document={doc}
@@ -412,6 +426,14 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               assets: (
                 <AssetsTab
                   {...props.assets}
+                  {...(props.authoring?.host.loadGuidelines
+                    ? {
+                        onAction: (action, item) => {
+                          if (action === "guidelines") void props.authoring?.openGuidelines();
+                          else props.assets.onAction?.(action, item);
+                        },
+                      }
+                    : {})}
                   components={components}
                   readOnly={readOnly}
                   onDropComponent={dropComponent}
@@ -546,6 +568,13 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               session={session}
               design={props.design}
               readOnly={readOnly}
+            />
+          ) : null}
+          {props.authoring ? (
+            <AuthoringDialogs
+              authoring={props.authoring}
+              readOnly={readOnly}
+              design={props.design}
             />
           ) : null}
           {session.notice ? (

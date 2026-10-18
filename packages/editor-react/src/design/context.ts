@@ -1,4 +1,5 @@
 import type {
+  AuthoringController,
   DesignController,
   DesignModel,
   Edit,
@@ -11,6 +12,7 @@ import type { Document, Value } from "@vellum/types-ts";
 
 /** What the host (the app around the editor) can do that the panel cannot do itself. Absent means disabled. */
 export interface DesignHost {
+  authoring?: AuthoringController;
   resources?: ResourceController;
   /** Font families that can be drawn here, for the font picker and the missing-font banner. */
   fonts?: readonly string[];

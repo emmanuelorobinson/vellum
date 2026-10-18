@@ -8,6 +8,8 @@ import {
 } from "@vellum/editor-core";
 import type { Document, Value } from "@vellum/types-ts";
 import type { ReactNode } from "react";
+import { ScriptSection } from "../authoring/ScriptSection";
+import { SlotSection } from "../authoring/SlotSection";
 import { useStore } from "../hooks";
 import { ThemeSection } from "../resources/ToolPanels";
 import type { DesignContext, DesignHost } from "./context";
@@ -76,15 +78,26 @@ export function DesignTab(props: DesignTabProps) {
     edit: (edit: Edit) => void design.edit(edit),
     colour: (value: Value<string>) => design.colour(value, doc),
   };
+  if (model.kinds.length === 1 && model.kinds[0] === "script")
+    return (
+      <div className="vc-design">
+        <ScriptSection ctx={ctx} />
+      </div>
+    );
+  const slots = design.single()?.item.node;
+  const hasSlot = slots?.type === "frame" && !!slots.slot;
   return (
     <div className="vc-design" data-selection={model.count}>
+      <SlotSection ctx={ctx} />
       {props.host?.resources && doc ? (
         <ThemeSection design={design} session={session} document={doc} disabled={props.readOnly} />
       ) : null}
-      {model.sections.map((id) => {
-        const Section = SECTIONS[id];
-        return <Section key={id} ctx={ctx} />;
-      })}
+      {model.sections
+        .filter((id) => !(hasSlot && id === "notes"))
+        .map((id) => {
+          const Section = SECTIONS[id];
+          return <Section key={id} ctx={ctx} />;
+        })}
     </div>
   );
 }

@@ -12,6 +12,6 @@ and design agree; if it shows both, pick one.
 | Placeholder style | A Dashed outline + shimmer · B Tinted fill + label | A Dashed outline + shimmer | 2026-10-18 | Owner (approved defaults, Prompt 51) |
 | Alternatives layout on canvas | A Row with A/B/C labels · B Grid for 4+ | A Row with A/B/C labels | 2026-10-18 | Owner (approved defaults, Prompt 51) |
 | Inline prompt anchor | A Beside the selection · B Below the selection toolbar | A Beside the selection | 2026-10-18 | Owner (chose A when asked, Prompt 50) |
-| Slot marker | A Dotted inner outline · B Hatched fill | UNDECIDED | | |
+| Slot marker | A Dotted inner outline · B Hatched fill | A Dotted inner outline | 2026-10-18 | Owner (chose A when asked, Prompt 52) |
 | Selection toolbar contents | A Ask only · B Ask + quick actions | A Ask only | 2026-10-18 | Owner (chose A when asked, Prompt 50) |
 | UI golden tolerance vs design snapshots | 0.5 % · 1 % · per-screen | 1 % | 2026-10-17 | Owner (delegated to agent, Prompt 43) |

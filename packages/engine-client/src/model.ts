@@ -36,6 +36,8 @@ export type DocumentShell = Required<
   Pick<Document, "meta" | "imports" | "themes" | "styles" | "fonts">
 >;
 export type ToolOp =
+  | { type: "convertScript"; id: NodeId }
+  | { type: "makeSlot"; id: NodeId; suggested: ComponentId[] }
   | { type: "setComponent"; id: ComponentId; component: Component | null }
   | { type: "setVariables"; set: Record<VariableId, Variable>; remove: VariableId[] }
   | { type: "setShell"; shell: DocumentShell }

@@ -450,6 +450,7 @@ export function HexInline(props: {
 /* ------------------------------------------------------------------------------------------ image */
 
 function ImageBody(props: {
+  onChoose?(): void;
   ctx: DesignContext;
   paint: Paint;
   scope: PaintScope;
@@ -460,15 +461,27 @@ function ImageBody(props: {
   const isImage = paintKind(paint) === "image";
   const raw = paint as unknown as Loose;
   const cropping = ctx.paintEditor.state?.cropping ?? false;
-  const choose = (command: string) =>
-    ctx.host.onAction?.(command, { scope: props.scope, index: props.index });
+  const choose = (command: string) => {
+    if (ctx.host.authoring && ctx.session.state.selection.length === 1) {
+      ctx.host.authoring.openImage(
+        ctx.session.state.selection[0] as string,
+        props.scope,
+        props.index,
+      );
+      props.onChoose?.();
+    } else ctx.host.onAction?.(command, { scope: props.scope, index: props.index });
+  };
   if (!isImage)
     return (
       <>
         <p className="vc-paint__hint">Fill with a picture from a file, a link or stock images.</p>
         <TextButton
-          disabled={ctx.disabled || !ctx.host.onAction}
-          title={ctx.host.onAction ? undefined : "Choosing an image is not available here"}
+          disabled={ctx.disabled || (!ctx.host.onAction && !ctx.host.authoring)}
+          title={
+            ctx.host.onAction || ctx.host.authoring
+              ? undefined
+              : "Choosing an image is not available here"
+          }
           onClick={() => choose("image.choose")}
         >
           Choose image…
@@ -497,8 +510,12 @@ function ImageBody(props: {
           {cropping ? "Done cropping" : "Crop on canvas"}
         </TextButton>
         <TextButton
-          disabled={ctx.disabled || !ctx.host.onAction}
-          title={ctx.host.onAction ? undefined : "Replacing an image is not available here"}
+          disabled={ctx.disabled || (!ctx.host.onAction && !ctx.host.authoring)}
+          title={
+            ctx.host.onAction || ctx.host.authoring
+              ? undefined
+              : "Replacing an image is not available here"
+          }
           onClick={() => choose("image.replace")}
         >
           Replace…
@@ -649,7 +666,14 @@ export function PaintPopover(props: {
                   <GradientBody ctx={ctx} paint={paint} scope={scope} index={index} apply={apply} />
                 ) : null}
                 {tab === "image" ? (
-                  <ImageBody ctx={ctx} paint={paint} scope={scope} index={index} apply={apply} />
+                  <ImageBody
+                    ctx={ctx}
+                    paint={paint}
+                    scope={scope}
+                    index={index}
+                    apply={apply}
+                    onChoose={() => setOpen(false)}
+                  />
                 ) : null}
                 {tab === "shader" ? <ShaderBody ctx={ctx} paint={paint} /> : null}
                 <Popover.Close className="vc-button vc-paint__done" data-primary="">

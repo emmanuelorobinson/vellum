@@ -114,7 +114,14 @@ for (const screen of screens.screens)
         await page.evaluate(() => window.__vellum.agentReady());
       await expect(page.locator(".vc-docbar")).toBeVisible();
       const open = (screen as { open?: string }).open;
-      if (open) await page.getByRole("button", { name: open, exact: true }).first().click();
+      if (open)
+        await page
+          .getByRole((screen as { openRole?: "button" | "tab" }).openRole ?? "button", {
+            name: open,
+            exact: true,
+          })
+          .first()
+          .click();
       // Text the design shows typed: the composer's "/" (C26), the inline prompt's request (C08).
       for (const f of (screen as { fill?: { selector: string; text: string }[] }).fill ?? []) {
         await page.locator(f.selector).fill(f.text);
@@ -131,6 +138,18 @@ for (const screen of screens.screens)
       // verified separately by the behaviour tests.
       if (screen.query.includes("resource=") && (await page.locator(".vc-resource-header").count()))
         await page.locator(".vc-resource-header").click({ position: { x: 10, y: 9 } });
+      if (
+        screen.query.includes("authoring=") &&
+        (await page.locator(".vx-guidelines .vc-resource-header").count())
+      )
+        await page
+          .locator(".vx-guidelines .vc-resource-header")
+          .click({ position: { x: 4, y: 4 } });
+      if (screen.query.includes("authoring=") && (await page.locator(".vx-image-picker").count()))
+        await page.locator(".vx-image-picker").evaluate((el) => {
+          const active = el.ownerDocument.activeElement;
+          if (active instanceof HTMLElement) active.blur();
+        });
       const design = readFileSync(file);
       mkdirSync(out, { recursive: true });
       const failures: string[] = [];

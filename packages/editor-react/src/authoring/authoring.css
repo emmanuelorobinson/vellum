@@ -1,0 +1,473 @@
+/* Prompt 52: measured C12/C28/C29/C30 dimensions; colour, radius and fonts use the exported tokens. */
+.vx-section {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 0;
+  font-weight: 400;
+}
+.vx-section h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+}
+.vx-section p {
+  margin: 0;
+  line-height: 19px;
+}
+.vx-muted {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+.vx-section .vx-muted {
+  font-size: 12px;
+}
+.vx-script-path.vc-mono {
+  width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 19px;
+}
+.vx-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  align-self: start;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--chrome-text);
+  background: var(--chrome-panel);
+  font: inherit;
+  font-weight: 600;
+  line-height: 15px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vx-button[data-primary] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  border-color: var(--chrome-text);
+  box-shadow: inset 0 0 0 1px var(--chrome-text);
+}
+.vx-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.vx-input {
+  width: 100%;
+  display: grid;
+  gap: 0;
+}
+.vx-input label {
+  display: grid;
+  gap: 0;
+  line-height: 19px;
+}
+.vx-input input:not([type="checkbox"]),
+.vx-input select,
+.vx-slot-section select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  padding: 5px 8px;
+  font: inherit;
+}
+.vx-input input[type="checkbox"] {
+  justify-self: start;
+}
+.vx-input .vx-binding {
+  color: var(--chrome-variable-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: none;
+}
+.vx-script-error {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--chrome-error);
+  width: 100%;
+}
+.vx-script-error p {
+  margin: 0;
+}
+.vx-script-error pre {
+  margin: 0;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--chrome-sunken);
+  color: var(--chrome-secondary);
+  font: 12px / 1.55 var(--font-mono);
+  user-select: text;
+  line-height: 19px;
+}
+.vx-error {
+  color: var(--chrome-error);
+}
+.vx-canvas-authoring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.vx-script-node {
+  position: absolute;
+  border: 2px solid var(--canvas-selection);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 20px;
+  overflow: auto;
+}
+.vx-script-node[data-state="error"] {
+  border-color: var(--chrome-error);
+}
+.vx-script-node h2 {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.55;
+  margin: 0;
+}
+.vx-script-node .vx-script-error {
+  gap: 20px;
+}
+.vx-script-node .vx-script-error h2 {
+  font-weight: 600;
+}
+.vx-script-node .vx-script-error p:not(.vc-mono) {
+  font-size: 14px;
+  color: var(--chrome-text);
+  line-height: 1.55;
+}
+.vx-script-node .vc-mono {
+  font-size: 12px;
+  color: var(--chrome-secondary);
+}
+.vx-script-node button {
+  pointer-events: auto;
+}
+.vx-slot-marker {
+  position: absolute;
+  outline: 1px dotted var(--canvas-component);
+  outline-offset: -8px;
+  color: var(--canvas-component);
+  padding: 16px;
+  font-size: 11px;
+}
+.vx-slot-section h3 {
+  color: var(--canvas-component);
+}
+.vx-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vx-script-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.vx-guidelines.vc-resource-dialog {
+  left: clamp(16px, calc(50% - 184px), calc(100% - 760px));
+  top: 80px;
+  transform: none;
+  padding: 24px;
+  gap: 16px;
+  max-width: calc(100% - 32px);
+  font-weight: 400;
+}
+.vx-guidelines .vc-resource-header {
+  margin: 0;
+  min-height: 24px;
+}
+.vx-guidelines .vc-resource-header h2 {
+  font-size: 20px;
+  line-height: 24px;
+}
+.vx-guidelines .vc-resource-description {
+  font-size: 14px;
+  line-height: 22px;
+  margin: 0;
+}
+.vx-guidelines-text {
+  display: block;
+  width: 100%;
+  height: 324px;
+  resize: vertical;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font: 12px / 1.65 var(--font-mono);
+  user-select: text;
+}
+.vx-guidelines-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.vx-guidelines-location {
+  margin: 0;
+  color: var(--chrome-secondary);
+  overflow-wrap: anywhere;
+  display: none;
+}
+.vx-image-picker.vc-resource-dialog {
+  top: 100px;
+  left: auto;
+  right: 16px;
+  transform: none;
+  padding: 12px;
+  gap: 10px;
+  font-weight: 400;
+}
+.vx-image-picker .vc-resource-header {
+  margin: 0;
+  height: 17px;
+  min-height: 17px;
+}
+.vx-image-picker .vc-resource-header h2 {
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.vx-image-tabs {
+  display: flex;
+  gap: 12px;
+}
+.vx-image-tabs button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--chrome-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.vx-image-tabs button[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--chrome-text);
+}
+.vx-image-tabs button:disabled {
+  cursor: default;
+}
+.vx-upload {
+  height: 176px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.vx-upload p {
+  margin: 0;
+}
+.vx-upload .vx-button {
+  align-self: center;
+}
+.vx-image-picker .vx-muted {
+  margin: 0;
+  line-height: 17px;
+}
+.vx-image-property {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vx-image-property input,
+.vx-image-property select {
+  flex: 1;
+  width: 0;
+  padding: 5px 8px;
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+.vx-stock-search {
+  display: flex;
+  background: var(--chrome-sunken);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+}
+.vx-stock-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--chrome-text);
+  font: inherit;
+}
+.vx-stock-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-height: 360px;
+  overflow: auto;
+}
+.vx-stock-grid figure {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.vx-stock-photo {
+  width: 100%;
+  display: block;
+  border: 2px solid transparent;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--chrome-sunken);
+}
+.vx-stock-photo[aria-pressed="true"] {
+  border-color: var(--canvas-selection);
+}
+.vx-stock-photo img {
+  width: 100%;
+  height: 108px;
+  object-fit: cover;
+  display: block;
+}
+.vx-stock-grid figcaption {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.vx-stock-grid a {
+  color: inherit;
+}
+.vx-stock-pages {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 11px;
+}
+.vx-stock-pages .vx-button {
+  padding: 4px;
+}
+.vx-action-error {
+  position: absolute;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  background: var(--chrome-panel);
+  color: var(--chrome-error);
+  padding: 12px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.vc-notes__body {
+  gap: 8px;
+  padding-top: 0;
+}
+.vc-notes__toggle[aria-expanded="true"] {
+  padding-bottom: 8px;
+}
+.vc-section[data-section="notes"] .vc-notes__text {
+  min-height: 62px;
+  height: 62px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  font-weight: 400;
+  line-height: 1.55;
+}
+.vc-notes__hint {
+  font-weight: 400;
+  line-height: 17px;
+}
+.vx-script-location {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.vx-script-error p .vc-icon {
+  display: inline;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.vx-input input:not([type="checkbox"]),
+.vx-input select {
+  border: 0;
+  height: 19px;
+  padding: 0;
+  background: transparent;
+  font-weight: 400;
+}
+.vx-input input:focus,
+.vx-input select:focus {
+  background: var(--chrome-sunken);
+}
+.vx-input[data-kind="number"] label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.vx-input[data-kind="number"] input {
+  width: 80px;
+}
+.vx-input:focus-within .vx-binding,
+.vx-input[data-bound] .vx-binding {
+  display: block;
+}
+.vx-input[data-bound] input {
+  display: none;
+}
+.vx-image-picker--stock.vc-resource-dialog {
+  padding: 24px;
+  gap: 16px;
+}
+.vx-image-picker--stock .vc-resource-header {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+.vx-image-picker--stock .vc-resource-header h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@media (max-width: 960px) {
+  .vx-guidelines.vc-resource-dialog {
+    left: 16px;
+    max-width: calc(100% - 32px);
+  }
+}
+
+.vx-input textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font: inherit;
+  user-select: text;
+}

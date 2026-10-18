@@ -8,6 +8,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Finish Prompt 52 visual acceptance and connect its authoring host.** Sixteen new comparisons remain above
+  the existing 1% tolerance; C29's definition section passes both themes. C28's dark error/empty surfaces differ
+  especially: the design draws fixed light document art, while diagnostic overlays use appearance tokens.
+  Review the comparison sheets in `target/screen-goldens/` and the recorded gaps. Hosts must serve versioned
+  `guidelines.md` reads/writes with SkillSource refresh, revision-tagged script headers/diagnostics and derived
+  ContentSource output, source opening/picking and permission-brokered agent fix/write requests, and configured
+  ImageSource/AssetStore imports with attribution. Map the new facade requests to core's existing MakeSlot and
+  ConvertScript Ops. Native/compiled-WASM composition and imported-library slot editing are not verified here;
+  see `docs/runbooks/authoring.md`.
+
 - **Finish Prompt 51 visual acceptance and connect its feature ports.** Sixteen new screen comparisons remain red at
   the recorded 1% tolerance (C04; C05 in four appearances at 1280 and 1512; C07 Side by side and Explore; C35).
   C35's note region passes in both themes; remaining differences include text rendering, added state symbols and
@@ -3121,3 +3131,65 @@ The socket-enabled rerun passed: `node scripts/skia-build.mjs test -p vellum-cor
 31 tagged tests ignored, zero failures across 35 suites. The ignored tests retain their stated engines/network/
 measurement requirements. The final seven collaboration browser tests passed after session-scoped run timestamps;
 `pnpm checksum` still passes after the full Rust and browser runs.
+
+
+## Prompt 52
+
+Built Notes for agents' measured expanded state; the design-system Markdown Guidelines editor from Assets;
+script diagnostics on the node and panel, header-generated number/string/multiline/enum/colour/boolean/ref
+controls and variable binding, Open in editor, Choose file, Ask and Convert to layers; dotted slot markers,
+definition suggestion editing and one-click instance insertion; image Upload/drop and Stock search, selection,
+source/author/licence links, pagination and import, with Generate disabled for v1.1. Owner chose slot marker A;
+recorded in DESIGN-DECISIONS. No dependency or Rust code was added.
+
+- Headless `editor-core/src/authoring/` exposes the controller and host port; React `src/authoring/` integrates with
+  EditorWorkspace, DesignTab, Assets and PaintPopover. All document changes remain person Ops. `convertScript`
+  and `makeSlot` extend the in-process EngineClient request union for existing Rust operations. Slot insertion
+  retains earlier content; selected nested instances use an override. Async imports refuse changed revisions or
+  closed pickers; older stock searches are discarded. Guidelines use an optimistic file version and retain dirty
+  text after failure. Script results carry a document revision; live diagnostics subscribe independently of edits.
+- Design: Pencil confirmed `.design-cache/vellum.readonly.pen`; read C12, C28, C29, C30 and their named states in
+  light/dark, components and token references; captured the named frames in both appearances and compared
+  implementation screenshots with the snapshots. No Pencil writes. Design-open still cannot find the old app
+  name; MCP works. Eight append-only DESIGN-GAPS lines document choices. No §3.2 row names P52. Sibling filename
+  searches found no relevant reusable host-neutral authoring UI; no source was ported.
+- TDD: sixteen headless tests and the React diagnostic test were first seen red (missing modules, later the
+  colour-normalization import); browser flows were authored after the components. The live-diagnostic browser
+  test later failed because only the canvas subscribed to runtime updates; ScriptSection now subscribes too.
+  The full browser run caught Notes textarea CSS affecting C14's shared class; scoped it and confirmed C14's
+  original 66 px height. A checkbox test was corrected to script the accepted checked document, rather than
+  replying with the unchanged state. Early browser attempts hit the sandbox's local-port restriction and Vite
+  reloads; the stable reruns below used local Chromium/server access. Golden focus setup originally clicked a
+  picker close control; it now blurs focus, with keyboard behavior covered separately.
+- Visual acceptance is pending: full browser suite **216 pass, 52 fail**, all failures goldens: the same 36 prior
+  failures plus 16 new comparisons. C29's definition section passes both appearances (0.68%/0.52%). New region
+  sizes match the design; remaining differences include control/disclosure/resize affordances, glyph rendering,
+  v1.1 wording and the fixed light script surface drawn even in the dark design. The implementation uses neutral
+  appearance tokens for diagnostics, so those dark node comparisons differ greatly. No tolerance, reference or
+  old golden was changed. C30 compares source controls, not a different stock provider's sample photography.
+- Not verified: native source watching, QuickJS-to-ContentSource rendering, original-byte image imports or native
+  guidelines writes; hosts do not yet serve this port. The existing compiled WASM document-operation ABI gap
+  remains. With no content renderer, ready script output is explicitly shown as preview unavailable. Imported
+  library slot definitions are unavailable here; editing a selected nested instance is supported, not arbitrary
+  expanded nested-slot ownership. Component Storybook specimens retain their existing pending status.
+  Host contracts and binding requirements are in `docs/runbooks/authoring.md`.
+
+Passed (Node 24.21.0, pnpm 12.11.2 through `/private/tmp/vellum-p45-bin`; both telemetry opt-outs):
+- `packages/editor-core/node_modules/.bin/vitest run --root packages/editor-core` (2,233; 16 new);
+  `packages/editor-react/node_modules/.bin/vitest run --project unit --root packages/editor-react` (296; one new);
+  `packages/engine-client/node_modules/.bin/vitest run --root packages/engine-client` (6).
+- `packages/editor-react/node_modules/.bin/playwright test --config packages/editor-react/e2e/playwright.config.ts
+  packages/editor-react/e2e/authoring.spec.ts --workers=4` (13); full run of the same config (216 pass/52 visual
+  failures, no behavioral failures). Comparison sheets remain in `target/screen-goldens/`.
+- `node scripts/skia-build.mjs test -p vellum-core --test script_nodes --lib` (327 + 6);
+  `node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`; `cargo fmt --all -- --check`.
+- `pnpm type-check` (33 tasks); `pnpm deps:check`; scoped Biome on editor-core/editor-react/engine-client;
+  `node scripts/token-lint.mjs`; `node scripts/copy-lint.mjs`; `node scripts/ui-icons-gen.mjs --check`;
+  `pnpm clean-room`; `pnpm --dir packages/editor-react harness:check`; `node scripts/design-check.mjs`;
+  `pnpm checksum`; `git diff --check`.
+
+Unchanged global failures: repository Biome reports four errors (two fixture/script import-order errors and the
+agent transcript JSON formatting); `pnpm lint` therefore fails. `cargo deny check` fails on the same nine Rust
+advisories in Needs a person (bans/licences/sources pass); it required advisory-cache access after the sandbox
+refused its lock. `node --test 'scripts/__tests__/*.test.mjs'`: 197 pass, 3 fail, 5 skipped (ADR-000 status,
+Prompt 46's DESIGN-GAPS line format, REFERENCE-INDEX). No changes to dependency/advisory policy. Nothing committed.

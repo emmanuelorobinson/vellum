@@ -920,6 +920,150 @@
           "design": [24, 570, 155, 31]
         }
       ]
+    },
+    {
+      "id": "C12",
+      "snapshot": "C12-{mode}-1280.png",
+      "query": "authoring=c12",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "notes",
+          "selector": "[data-section=notes]",
+          "design": [992, 100, 280, 132]
+        }
+      ]
+    },
+    {
+      "id": "C12-guidelines",
+      "snapshot": "C12-guidelines-{mode}-1280.png",
+      "query": "authoring=c12-guidelines",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "guidelines",
+          "selector": ".vx-guidelines",
+          "design": [456, 80, 744, 497]
+        }
+      ]
+    },
+    {
+      "id": "C28",
+      "snapshot": "C28-{mode}-1280.png",
+      "query": "authoring=c28",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "script",
+          "selector": ".vx-section[data-section=script]",
+          "design": [992, 100, 280, 287]
+        }
+      ]
+    },
+    {
+      "id": "C28-error",
+      "snapshot": "C28-error-{mode}-1280.png",
+      "query": "authoring=c28-error",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "script",
+          "selector": ".vx-section[data-section=script]",
+          "design": [992, 100, 280, 261]
+        },
+        {
+          "name": "error-node",
+          "selector": ".vx-script-node",
+          "design": [468, 168, 480, 384]
+        }
+      ]
+    },
+    {
+      "id": "C28-empty",
+      "snapshot": "C28-empty-{mode}-1280.png",
+      "query": "authoring=c28-empty",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "script",
+          "selector": ".vx-section[data-section=script]",
+          "design": [992, 100, 280, 163]
+        },
+        {
+          "name": "empty-node",
+          "selector": ".vx-script-node",
+          "design": [468, 168, 480, 384]
+        }
+      ]
+    },
+    {
+      "id": "C29",
+      "snapshot": "C29-{mode}-1280.png",
+      "query": "authoring=c29",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "slot",
+          "selector": ".vx-slot-section",
+          "design": [992, 100, 280, 218]
+        }
+      ]
+    },
+    {
+      "id": "C29-filled",
+      "snapshot": "C29-filled-{mode}-1280.png",
+      "query": "authoring=c29-filled",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "slot",
+          "selector": ".vx-slot-section",
+          "design": [992, 100, 280, 199]
+        }
+      ]
+    },
+    {
+      "id": "C30-upload",
+      "snapshot": "C30-upload-{mode}-1280.png",
+      "query": "authoring=c30-upload",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "upload",
+          "selector": ".vx-image-picker",
+          "design": [920, 100, 344, 351]
+        }
+      ]
+    },
+    {
+      "id": "C30",
+      "snapshot": "C30-{mode}-1280.png",
+      "query": "authoring=c30",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "open": "Stock",
+      "fill": [
+        {
+          "selector": "input[aria-label=\"Search stock images\"]",
+          "text": "plants"
+        }
+      ],
+      "regions": [
+        {
+          "name": "source tabs",
+          "selector": ".vx-image-tabs",
+          "design": [944, 124, 296, 15]
+        }
+      ],
+      "openRole": "tab"
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."
