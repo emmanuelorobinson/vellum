@@ -9,6 +9,7 @@ import {
 import type { Document, Value } from "@vellum/types-ts";
 import type { ReactNode } from "react";
 import { useStore } from "../hooks";
+import { ThemeSection } from "../resources/ToolPanels";
 import type { DesignContext, DesignHost } from "./context";
 import {
   AppearanceSection,
@@ -77,6 +78,9 @@ export function DesignTab(props: DesignTabProps) {
   };
   return (
     <div className="vc-design" data-selection={model.count}>
+      {props.host?.resources && doc ? (
+        <ThemeSection design={design} session={session} document={doc} disabled={props.readOnly} />
+      ) : null}
       {model.sections.map((id) => {
         const Section = SECTIONS[id];
         return <Section key={id} ctx={ctx} />;

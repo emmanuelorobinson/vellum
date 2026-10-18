@@ -1,6 +1,8 @@
 import type {
+  Component,
   ComponentId,
   DeviceId,
+  Document,
   Node,
   NodeId,
   NodeIdPath,
@@ -9,6 +11,8 @@ import type {
   PageId,
   Point,
   PropDef,
+  Variable,
+  VariableId,
   Variant,
 } from "@vellum/types-ts";
 
@@ -28,7 +32,13 @@ export interface Place {
   index: number;
 }
 /** In-process requests corresponding to vellum_core::ops::Op, NOT a wire format or a DocStore. */
+export type DocumentShell = Required<
+  Pick<Document, "meta" | "imports" | "themes" | "styles" | "fonts">
+>;
 export type ToolOp =
+  | { type: "setComponent"; id: ComponentId; component: Component | null }
+  | { type: "setVariables"; set: Record<VariableId, Variable>; remove: VariableId[] }
+  | { type: "setShell"; shell: DocumentShell }
   | { type: "insert"; to: Place; node: Node }
   | { type: "update"; id: NodeId; patch: NodePatch }
   | { type: "replace"; id: NodeId; node: Node }
@@ -117,4 +127,8 @@ export interface ToolScene {
   /** World point to path viewBox coordinates. */
   toLocal(address: NodeIdPath, point: Point): Point;
   path(address: NodeIdPath): EditablePath | null;
+  /** Engine-owned nearest path target, including segments and their parameter. World coordinates/tolerance.
+   * An older binding may omit it; point handles still work, segment gestures are then unavailable.
+   */
+  hitPath?(address: NodeIdPath, point: Point, tolerance: number): PathTarget | null;
 }

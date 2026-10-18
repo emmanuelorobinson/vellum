@@ -47,8 +47,39 @@ export function Bound(props: {
   suffix?: string;
   set(value: Value<number>): void;
 }) {
+  const container = usePortalContainer();
   const { field } = props;
-  if (field.kind !== "bound") return null;
+  if (field.kind !== "bound") {
+    if (!props.ctx.host.resources || field.kind === "none") return null;
+    return (
+      <Menu.Root>
+        <Menu.Trigger
+          className="vc-chip vc-chip--button"
+          aria-label="Bind variable"
+          disabled={props.ctx.disabled || !props.ctx.numbers.length}
+        >
+          <Icon name="link" size={12} />
+          Bind variable
+        </Menu.Trigger>
+        <Menu.Portal container={container}>
+          <Menu.Positioner side="bottom" align="start" sideOffset={4}>
+            <Menu.Popup className="vc-menu">
+              {props.ctx.numbers.map((v) => (
+                <Menu.Item
+                  key={v.id}
+                  className="vc-menu__item"
+                  onClick={() => props.set({ $var: v.id })}
+                >
+                  <span className="vc-mono-value">{v.name}</span>
+                  <span className="vc-menu__key">{String(v.value ?? "")}</span>
+                </Menu.Item>
+              ))}
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+    );
+  }
   const resolved = field.variable.value;
   return (
     <VariableChip
@@ -204,6 +235,20 @@ function SizeField(props: {
         <Menu.Portal container={container}>
           <Menu.Positioner side="bottom" align="end" sideOffset={4}>
             <Menu.Popup className="vc-menu">
+              {ctx.host.resources ? (
+                <Menu.Group>
+                  <Menu.GroupLabel className="vc-menu__heading">Variables</Menu.GroupLabel>
+                  {ctx.numbers.map((v) => (
+                    <Menu.Item
+                      key={v.id}
+                      className="vc-menu__item"
+                      onClick={() => ctx.edit(setSize(axis, { $var: v.id }))}
+                    >
+                      {v.name}
+                    </Menu.Item>
+                  ))}
+                </Menu.Group>
+              ) : null}
               {SIZINGS.map((s) => (
                 <Menu.Item
                   key={s.value}

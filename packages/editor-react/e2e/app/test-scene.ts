@@ -1,6 +1,6 @@
 // TEST DATA helper: a read-only Scene over a document snapshot for the browser tests. It answers geometry
 // questions about literal positions and sizes only; it is not a layout engine and never changes a document.
-import type { SceneItem, ToolScene } from "@vellum/editor-core";
+import type { EditablePath, SceneItem, ToolScene } from "@vellum/editor-core";
 import type { Document, Node, Point } from "@vellum/types-ts";
 
 type Positioned = Node & {
@@ -78,7 +78,36 @@ export function sceneOf(read: () => Document | null): ToolScene {
     },
     snap: () => ({ offset: { x: 0, y: 0 }, guides: [] }),
     toParent: (_a, p) => p,
-    toLocal: (_a, p) => p,
-    path: () => null,
+    toLocal: (a, p) => {
+      const b = items().get(a)?.bounds;
+      return b ? { x: p.x - b.x, y: p.y - b.y } : p;
+    },
+    hitPath: (address, point, tolerance) => {
+      const item = items().get(address);
+      const hits =
+        (
+          item?.node as
+            | {
+                metadata?: {
+                  testPathHits?: {
+                    point: Point;
+                    target: import("@vellum/editor-core").PathTarget;
+                  }[];
+                };
+              }
+            | undefined
+        )?.metadata?.testPathHits ?? [];
+      if (!item) return null;
+      return (
+        hits.find(
+          (h) =>
+            Math.hypot(point.x - item.bounds.x - h.point.x, point.y - item.bounds.y - h.point.y) <=
+            tolerance,
+        )?.target ?? null
+      );
+    },
+    path: (a) =>
+      (items().get(a)?.node as { metadata?: { testPath?: EditablePath } } | undefined)?.metadata
+        ?.testPath ?? null,
   };
 }

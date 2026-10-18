@@ -7,6 +7,7 @@ import {
   createEditorHandlers,
   createEditorSession,
   createPaintEditor,
+  createResourceController,
   createWorkspace,
 } from "@vellum/editor-core";
 import { type EngineSnapshot, FakeEngineClient } from "@vellum/engine-client";
@@ -21,12 +22,18 @@ import {
   designDocument,
   designSelection,
 } from "../../fixtures/design-scenarios";
+import {
+  resourceDocument,
+  resourceHost,
+  resourcePasteConflicts,
+} from "../../fixtures/resource-scenarios";
 import { EditorWorkspace } from "../../src/EditorWorkspace";
 import "./fonts.css";
 import { sceneOf } from "./test-scene";
 
 const q = new URLSearchParams(location.search);
 const scenario = q.get("scenario");
+const resourceName = q.get("resource");
 const designName = q.get("design") as DesignScenario | null;
 const appearance = (q.get("appearance") ?? "light") as "light" | "dark" | "hc-light" | "hc-dark";
 
@@ -131,9 +138,11 @@ const documentOf = (children: Node[]): Document =>
     ],
   }) as unknown as Document;
 
-let current = designName
-  ? designDocument(designName)
-  : documentOf(q.get("empty") ? [] : scenario === "juniper" ? juniperNodes() : startNodes());
+let current = resourceName
+  ? resourceDocument(resourceName)
+  : designName
+    ? designDocument(designName)
+    : documentOf(q.get("empty") ? [] : scenario === "juniper" ? juniperNodes() : startNodes());
 /** The document with other layers on its first page: the design scenarios keep their variables and components. */
 const withChildren = (children: Node[]): Document =>
   designName
@@ -195,6 +204,73 @@ const design = createDesignController({
 });
 const paintEditor = createPaintEditor({ session, design });
 const hostActions: { command: string; detail?: unknown }[] = [];
+const resources = createResourceController({
+  engine,
+  device,
+  nextVariableId: () => `variable${++counter}`,
+  host: {
+    ...resourceHost,
+    libraries:
+      resourceName === "missingLibrary" || resourceName === "missingDetails"
+        ? [{ alias: "core", name: "Juniper Core", state: "missing", cached: true }]
+        : resourceHost.libraries,
+    chooseLibrary: async (alias) => ({
+      alias: alias ?? "imported",
+      path: "../libraries/located.lib.vellum",
+    }),
+    chooseFont: async () => ({ asset: "b".repeat(64), face: { family: "Imported Font" } }),
+    save: async () => {
+      hostActions.push({ command: "document.save" });
+      return true;
+    },
+    action: (command, detail) => hostActions.push({ command, detail }),
+    openLibrary: (alias) => hostActions.push({ command: "library.open", detail: { alias } }),
+    planPaste: async (_request, choices) => {
+      hostActions.push({ command: "paste.plan", detail: choices });
+      return [
+        {
+          type: "insert",
+          to: { parent: { type: "page", id: "p1" }, index: 0 },
+          node: { type: "rect", id: "pasted", name: "Pasted", width: 10, height: 10 },
+        },
+      ];
+    },
+  },
+});
+if (
+  resourceName &&
+  ["variables", "themes", "libraries", "fonts", "manageFonts"].includes(resourceName)
+)
+  resources.open(resourceName as "variables");
+if (resourceName === "missingLibrary") resources.open("libraries");
+if (resourceName === "convert") resources.requestConversion();
+if (resourceName === "paste" || resourceName === "conflicts")
+  resources.requestPaste({
+    id: "clip1",
+    ...(resourceName === "paste" ? { libraryPath: "../libraries/juniper.lib.vellum" } : {}),
+    conflicts: resourceName === "conflicts" ? resourcePasteConflicts : [],
+    omissions:
+      resourceName === "conflicts"
+        ? []
+        : ["Juniper Sans (custom font)", "images/hero.png (missing)"],
+  });
+if (resourceName) session.select([resourceName === "vector" ? "vector" : "card"]);
+if (resourceName === "scale") {
+  session.dispatch({ type: "tool", tool: "scale" });
+  session.dispatch({ type: "scaleFactor", factor: "200%" });
+  session.dispatch({ type: "scaleAnchor", anchor: { x: 0, y: 0 } });
+}
+if (resourceName === "vector") {
+  session.dispatch({ type: "tool", tool: "path" });
+  if (q.has("point")) {
+    session.dispatch({
+      type: "pointerDown",
+      point: { x: 770, y: 410 },
+      target: { type: "point", contour: 0, index: 1 },
+    });
+    session.dispatch({ type: "pointerUp", point: { x: 770, y: 410 } });
+  }
+}
 const controller = createCommandController(createEditorHandlers({ workspace, session, design }));
 if (designName && !q.get("select")) session.select([designSelection(designName)]);
 if (q.get("edit")) {
@@ -321,6 +397,7 @@ function render() {
             : [{ id: "starter-minimal", name: "Starter Minimal" }],
         onAction: () => {},
       }}
+      {...(resourceName ? { resources } : {})}
       design={design}
       paintEditor={paintEditor}
       designHost={{

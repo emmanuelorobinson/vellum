@@ -4,12 +4,14 @@ import type {
   Edit,
   EditorSession,
   PaintEditor,
+  ResourceController,
   VariableInfo,
 } from "@vellum/editor-core";
 import type { Document, Value } from "@vellum/types-ts";
 
 /** What the host (the app around the editor) can do that the panel cannot do itself. Absent means disabled. */
 export interface DesignHost {
+  resources?: ResourceController;
   /** Font families that can be drawn here, for the font picker and the missing-font banner. */
   fonts?: readonly string[];
   /** A main component lives elsewhere on a page or in a library: the host shows it. */

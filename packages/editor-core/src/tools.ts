@@ -245,7 +245,7 @@ function penNode(node: Node, path: EditablePath): Node {
 function pathOp(session: PathSession, ctx: ToolContext): ToolOp | null {
   const item = ctx.scene.get(session.address);
   if (!item) return null;
-  const node = pathNode(session);
+  const node = pathNode({ ...session, node: item.node });
   return item.instance
     ? replacement(item, node)
     : session.node.type === "vector"
@@ -619,6 +619,19 @@ function step(s: ToolState, e: ToolEvent, ctx: ToolContext): ToolResult {
       },
       ctx,
     );
+  }
+  if (e.type === "pathPoint") {
+    const m = s.mode;
+    if (m.type !== "path" || m.drag) return result(s, ctx);
+    if (e.target.type !== "point" || !validTarget(m.path, e.target) || !finitePoint(e.point))
+      return result(s, ctx, [], "invalid-input");
+    const from = m.path.contours[e.target.contour]?.points[e.target.index]?.point;
+    if (!from) return result(s, ctx, [], "missing-data");
+    const path = dragPath(m.path, e.target, [e.target], from, e.point, false, false, false);
+    const next = { ...m, path, selected: [e.target] };
+    const op = pathOp(next, ctx);
+    if (!op) return result(s, ctx, [], "missing-data");
+    return write(s, ctx, [op], reset(s, { ...next, node: pathNode(next) }));
   }
   if (e.type === "pathAction") {
     const m = s.mode;

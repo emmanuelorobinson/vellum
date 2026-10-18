@@ -1,0 +1,539 @@
+/* Dimensions and structure from C17, C34, C36–38 and S15; colours follow the exported variables. */
+.vc-resource-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+}
+.vc-resource-dialog {
+  position: absolute;
+  z-index: 41;
+  left: 50%;
+  top: 124px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 148px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 12px;
+  line-height: 15px;
+}
+.vc-resource-dialog--variables {
+  top: 112px;
+  border-radius: var(--radius-md);
+}
+.vc-resource-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 18px;
+}
+.vc-resource-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.vc-resource-header .vc-iconbutton {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+}
+.vc-resource-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--chrome-secondary);
+}
+.vc-resource-dialog p {
+  margin: 0;
+}
+.vc-resource-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vc-resource-button {
+  flex: none;
+  padding: 8px 12px;
+  width: max-content;
+  border: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font:
+    500 12px / 15px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+}
+.vc-resource-button[data-primary] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.vc-resource-button:disabled,
+.vc-font-choice:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.vc-resource-dialog button:focus-visible,
+.vc-resource-dialog input:focus-visible,
+.vc-resource-dialog select:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+.vc-resource-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  box-shadow: inset 0 -1px 0 var(--chrome-separator);
+}
+.vc-resource-section h3 {
+  margin: 0;
+  font:
+    600 11px / 13px var(--font-ui),
+    sans-serif;
+  color: var(--chrome-secondary);
+}
+.vc-resource-hint {
+  color: var(--chrome-secondary);
+  font-size: 12px;
+  line-height: 19px;
+}
+.vc-resource-warning {
+  color: var(--chrome-attention);
+  font-size: 12px;
+  line-height: 19px;
+}
+.vc-library-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vc-library-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vc-library-row strong {
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+}
+.vc-library-row .vc-resource-hint {
+  font-size: 11px;
+  line-height: 13px;
+}
+.vc-library-path {
+  font:
+    450 12px / 16px var(--font-mono),
+    monospace;
+  overflow-wrap: anywhere;
+}
+.vc-library-row .vc-library-path {
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.vc-resource-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  color: var(--chrome-secondary);
+}
+.vc-resource-search input {
+  margin-left: 34px;
+  flex: 1;
+  min-width: 0;
+}
+.vc-resource-dialog input,
+.vc-resource-dialog select {
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font:
+    450 12px / 16px var(--font-ui),
+    sans-serif;
+  padding: 6px 8px;
+}
+.vc-font-choices {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 16px;
+  flex-wrap: wrap;
+}
+.vc-font-choice {
+  border: 0;
+  background: transparent;
+  color: var(--chrome-text);
+  padding: 0;
+  font:
+    450 13px / 16px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+}
+.vc-resource-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+}
+.vc-resource-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vc-resource-form input {
+  width: 160px;
+}
+.vc-variable-workspace {
+  display: flex;
+  gap: 24px;
+}
+.vc-variable-collections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 160px;
+  flex: none;
+}
+.vc-variable-workspace--axes {
+  display: block;
+}
+.vc-variable-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vc-variable-workspace--axes .vc-variable-main {
+  gap: 20px;
+}
+.vc-variable-main > .vc-resource-actions {
+  gap: 8px;
+}
+.vc-variable-scroll {
+  overflow: auto;
+}
+.vc-variable-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font:
+    450 12px / 16px var(--font-mono),
+    monospace;
+}
+.vc-variable-table th,
+.vc-variable-table td {
+  height: 44px;
+  padding: 0 8px;
+  text-align: left;
+  font-weight: 450;
+  border-bottom: 1px solid var(--chrome-separator);
+}
+.vc-variable-table th:first-child {
+  width: 25%;
+}
+.vc-variable-table[data-axes] {
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vc-variable-table[data-axes] th,
+.vc-variable-table[data-axes] td {
+  height: 40px;
+  padding: 12px;
+}
+.vc-variable-table[data-axes] th:first-child {
+  width: 20%;
+}
+.vc-variable-table .vc-variable-input {
+  width: 100%;
+  min-width: 90px;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+}
+.vc-theme-section,
+.vc-scale-section {
+  padding: 12px;
+  gap: 10px;
+}
+.vc-theme-section .vc-prop,
+.vc-scale-section .vc-prop {
+  gap: 12px;
+}
+.vc-theme-section .vc-select,
+.vc-scale-section .vc-field {
+  height: 28px;
+}
+.vc-theme-section p,
+.vc-scale-section p {
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--chrome-secondary);
+  margin: 0;
+}
+.vc-scale-anchor {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  gap: 4px;
+}
+.vc-scale-anchor input {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-secondary);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  display: grid;
+  place-items: center;
+}
+.vc-scale-anchor input:checked {
+  background: var(--chrome-selected);
+  color: var(--chrome-text);
+}
+.vc-resource-panel {
+  min-height: 100%;
+  background: var(--chrome-panel);
+}
+.vc-path-done {
+  position: absolute;
+  z-index: 5;
+  top: 92px;
+  left: 56.25%;
+}
+.vc-resource-save {
+  position: absolute;
+  z-index: 42;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-raised);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+
+.vc-scale-anchor label {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+.vc-scale-anchor input {
+  appearance: none;
+  margin: 0;
+}
+.vc-scale-anchor svg {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  pointer-events: none;
+}
+.vc-scale-section > p:first-of-type {
+  line-height: 15px;
+}
+.vc-library-row > span:first-child {
+  flex: 1;
+}
+.vc-variable-table[data-axes] tr {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(150px, 1fr);
+  gap: 12px;
+  padding: 12px;
+  box-shadow: inset 0 -1px 0 var(--chrome-separator);
+}
+.vc-variable-table[data-axes] th,
+.vc-variable-table[data-axes] td {
+  display: block;
+  width: auto;
+  height: 16px;
+  padding: 0;
+  border: 0;
+}
+.vc-variable-table[data-axes] th:first-child {
+  width: auto;
+}
+.vc-resource-dialog--variables {
+  border-radius: 12px;
+}
+
+.vc-missing-library {
+  padding: 12px;
+  gap: 10px;
+}
+.vc-missing-library strong {
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+}
+.vc-missing-library p {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 12px;
+  line-height: 19px;
+}
+.vc-missing-library .vc-library-path {
+  font-size: 11px;
+  line-height: 15px;
+}
+.vc-missing-library__badge {
+  font-size: 11px;
+  line-height: 13px;
+}
+.vc-library-badge {
+  position: absolute;
+  z-index: 3;
+  padding: 8px;
+  border-radius: var(--radius-xs);
+  color: var(--chrome-attention);
+  background: var(--chrome-attention-bg);
+  font-size: 11px;
+  line-height: 13px;
+  pointer-events: none;
+}
+
+.vc-resource-search {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 12px;
+}
+.vc-resource-search input {
+  margin: 0;
+  width: 100%;
+}
+.vc-resource-dialog:has(.vc-font-choices) > p:last-child {
+  font-size: 11px;
+  line-height: 17px;
+}
+.vc-resource-dialog--variables .vc-resource-description {
+  line-height: 21px;
+}
+.vc-resource-dialog--variables .vc-resource-button {
+  line-height: 16px;
+}
+.vc-variable-table:not([data-axes]) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vc-variable-table:not([data-axes]) thead,
+.vc-variable-table:not([data-axes]) tbody {
+  display: contents;
+}
+.vc-variable-table:not([data-axes]) tr {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 16px;
+  height: 44px;
+  box-shadow: inset 0 -1px 0 var(--chrome-separator);
+}
+.vc-variable-table:not([data-axes]) th,
+.vc-variable-table:not([data-axes]) td {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+.vc-variable-swatch {
+  display: inline-block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+
+.vc-variable-table[data-axes] {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.vc-resource-dialog .vc-font-choice {
+  line-height: 16px;
+}
+.vc-resource-dialog:has([aria-label^="Replace "]) .vc-resource-warning {
+  line-height: 15px;
+}
+
+.vc-resource-dialog .vc-font-status {
+  line-height: 15px;
+}
+
+.vc-resource-dialog .vc-variable-name {
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  font: inherit;
+}
+/* pen.dev's supplied screen PNGs draw non-hundred UI weight 450 as regular; preserve their visible weight here. */
+.vc-resource-dialog,
+.vc-resource-dialog p,
+.vc-resource-dialog input,
+.vc-resource-dialog .vc-font-choice {
+  font-weight: 400;
+}
+.vc-workspace .vc-resource-button {
+  font-weight: 500;
+}
+
+.vc-theme-section,
+.vc-scale-section,
+.vc-missing-library {
+  font-weight: 400;
+}
+.vc-theme-section .vc-select__value {
+  flex: none;
+}
+.vc-theme-section.vc-section .vc-select__icon {
+  opacity: 1;
+}
+.vc-workspace .vc-font-choice {
+  font:
+    400 13px / 16px var(--font-ui),
+    sans-serif;
+}
+
+.vc-variable-cell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.vc-variable-alias {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.vc-resource-error,
+.vc-section p.vc-resource-error {
+  color: var(--chrome-error);
+  font-size: 12px;
+  line-height: 19px;
+}

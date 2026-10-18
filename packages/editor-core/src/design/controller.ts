@@ -1,8 +1,9 @@
 import type { EngineClient, EngineCommit } from "@vellum/engine-client";
 import type { Document, Value } from "@vellum/types-ts";
+import { frameTheme } from "../resources/variables";
 import type { EditorSession } from "../session";
 import type { ToolOp } from "../tool-types";
-import { defaultMode, isVarRef, type Mode, resolveVariable } from "./bindings";
+import { isVarRef, type Mode, resolveVariable } from "./bindings";
 import { type DesignModel, type DesignTarget, readDesign } from "./model";
 import { editTransaction, personTransaction } from "./patch";
 import type { Edit } from "./patches";
@@ -60,7 +61,8 @@ export function createDesignController(deps: DesignDeps) {
     },
     editing: () => session.state.mode.type === "editing",
     /** The theme the colours are shown under. */
-    mode: (doc: Document | null = document()): Mode => mode ?? defaultMode(doc),
+    mode: (doc: Document | null = document()): Mode =>
+      mode ?? frameTheme(doc, session.state.selection[0] ?? null, (id) => session.sceneItem(id)),
     setMode(next: Mode | null) {
       mode = next;
     },

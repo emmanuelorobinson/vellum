@@ -56,3 +56,5 @@ specific, because the guide ranks the design file above itself (§2); the line s
 - 2026-10-18 · text alignment (Prompt 47) · DESIGN.md says: C14 has "alignment" · vellum.pen has: Left, Center and Right · code follows it; the format also has `justify`, and a layer that already uses it shows no segment selected, because no control sets it
 - 2026-10-18 · text styles (Prompt 47) · DESIGN.md says: C14 has a style picker · vellum.pen has: a "Heading / Medium" style field · code applies a chosen style's settings to the runs and stores its id, because the core does not apply `textStyle` when it draws or lays out (it is only stored)
 - 2026-10-18 · Notes for agents on other layers (Prompt 47) · DESIGN.md says: C12 notes belong to a frame · vellum.pen has: the section in C13 only · every layer has `agentNotes` in the format; code shows the section for frames only
+
+- 2026-10-18 · C17 aliases (Prompt 48) · DESIGN.md says: aliases appear as Variable chips · vellum.pen has: plain arrow labels inside mode cells · code follows the table's arrow labels, preserving stable-id bindings; focus exposes an editable alias name or id

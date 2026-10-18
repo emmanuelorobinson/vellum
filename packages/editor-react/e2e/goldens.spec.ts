@@ -118,6 +118,10 @@ for (const screen of screens.screens)
           .getByRole("treeitem", { name: hover === "continue" ? "Continue" : hover })
           .hover();
       else await page.mouse.move(0, 0);
+      // Resource dialogs are compared in the pointer state shown in the design. Their keyboard focus is
+      // verified separately by the behaviour tests.
+      if (screen.query.includes("resource=") && (await page.locator(".vc-resource-header").count()))
+        await page.locator(".vc-resource-header").click({ position: { x: 10, y: 9 } });
       const design = readFileSync(file);
       mkdirSync(out, { recursive: true });
       const failures: string[] = [];

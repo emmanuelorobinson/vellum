@@ -99,14 +99,26 @@ export function TextSection({ ctx }: { ctx: DesignContext }) {
         <Banner icon="info">Font missing · using {font ?? "the fallback"}</Banner>
       ) : null}
       <PropertyRow label="Font">
-        <SelectField
-          label="Font"
-          value={font}
-          mixed={t.font.kind === "mixed"}
-          options={[...families].map((f) => ({ value: f, label: f }))}
-          disabled={ctx.disabled}
-          onChange={(f) => change(ctx, (item) => fontPatch(item, f))}
-        />
+        {ctx.host.resources ? (
+          <button
+            type="button"
+            className="vc-field"
+            aria-label="Font"
+            disabled={ctx.disabled}
+            onClick={() => ctx.host.resources?.open("fonts")}
+          >
+            {font ?? "Mixed"}
+          </button>
+        ) : (
+          <SelectField
+            label="Font"
+            value={font}
+            mixed={t.font.kind === "mixed"}
+            options={[...families].map((f) => ({ value: f, label: f }))}
+            disabled={ctx.disabled}
+            onChange={(f) => change(ctx, (item) => fontPatch(item, f))}
+          />
+        )}
       </PropertyRow>
       <Pair>
         <ValueField

@@ -31,6 +31,7 @@ export interface CanvasHostProps {
   session: EditorSession;
   size: { width: number; height: number };
   componentRoots?: ReadonlySet<string>;
+  missingLibraries?: ReadonlyMap<string, boolean>;
   content?: ContentSource;
   createRenderer?: RendererFactory;
   /** The fill editor's points on the canvas: a mesh gradient's points and an image's crop corners. */
@@ -59,6 +60,7 @@ export function CanvasHost({
   session,
   size,
   componentRoots,
+  missingLibraries,
   content,
   createRenderer,
   paintEditor,
@@ -141,7 +143,11 @@ export function CanvasHost({
         : [];
     });
     const hover = session.hovered ? (session.sceneBounds(session.hovered) ?? null) : null;
+    const mapPath = session.overlay.pathAddress
+      ? session.pathMapping(session.overlay.pathAddress)
+      : null;
     return overlayShapes({
+      ...(mapPath ? { mapPath } : {}),
       overlay: session.overlay,
       viewport: session.state.viewport,
       size,
@@ -169,7 +175,10 @@ export function CanvasHost({
       (h) => h.kind === "handle" && Math.hypot(h.at.x - p.x, h.at.y - p.y) <= HANDLE_SIZE,
     );
     const h = i >= 0 ? handles[i] : undefined;
-    if (!h) return {};
+    if (!h) {
+      const target = session.pathHit(p);
+      return target ? { target } : {};
+    }
     if (h.target) return { target: h.target };
     if (h.kind === "corner" && session.state.mode.type === "scaling") {
       const corners = [
@@ -249,7 +258,14 @@ export function CanvasHost({
         if (e.currentTarget.hasPointerCapture(e.pointerId))
           e.currentTarget.releasePointerCapture(e.pointerId);
       }}
-      onDoubleClick={(e) => session.dispatch({ type: "doubleClick", point: point(e), ...mods(e) })}
+      onDoubleClick={(e) =>
+        session.dispatch({
+          type: "doubleClick",
+          point: point(e),
+          ...mods(e),
+          ...handleAt(point(e)),
+        })
+      }
     >
       <canvas
         ref={contentCanvas}
@@ -264,6 +280,25 @@ export function CanvasHost({
         height={Math.round(size.height * dpr)}
         aria-hidden
       />
+      {session.state.selection.flatMap((id) => {
+        const item = session.sceneItem(id);
+        if (
+          item?.node.type !== "instance" ||
+          !item.node.library ||
+          !missingLibraries?.has(item.node.library)
+        )
+          return [];
+        const v = session.state.viewport;
+        return [
+          <span
+            key={id}
+            className="vc-library-badge"
+            style={{ left: item.bounds.x * v.zoom + v.x, top: item.bounds.y * v.zoom + v.y - 34 }}
+          >
+            ⚠ Missing library · cached copy
+          </span>,
+        ];
+      })}
       <TextEditor session={session} {...(colour ? { colour } : {})} />
     </div>
   );

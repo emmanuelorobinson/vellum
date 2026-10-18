@@ -7,6 +7,7 @@ import {
   instanceTransaction,
   type PaintEditor,
   type Platform,
+  type ResourceController,
   type ToolTransaction,
   type Workspace,
   world,
@@ -32,6 +33,9 @@ import { AssetsTab, type AssetsTabProps } from "./panels/AssetsTab";
 import { LayersTab } from "./panels/LayersTab";
 import { PanelFrame } from "./panels/PanelFrame";
 import { RightPanel } from "./panels/RightPanel";
+import { MissingLibraryPanel } from "./resources/MissingLibraryPanel";
+import { ResourceDialogs } from "./resources/ResourceDialogs";
+import { ScalePanel, VectorPanel } from "./resources/ToolPanels";
 import "./editor.css";
 
 export type CommandController = ReturnType<typeof createCommandController>;
@@ -65,6 +69,7 @@ export interface EditorWorkspaceProps {
   assets: Omit<AssetsTabProps, "onDropComponent" | "readOnly" | "components">;
   /** The properties panel's controller and the fill editor's canvas state; with them the right panel is built in. */
   design?: DesignController;
+  resources?: ResourceController;
   paintEditor?: PaintEditor;
   designHost?: DesignHost;
   /**
@@ -132,7 +137,8 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const context = (target: EventTarget | null): BindingContext => ({
     host: props.host,
     platform: props.platform,
-    focus: focusOf(target),
+    focus:
+      focusOf(target) === "canvas" && session.state.mode.type === "path" ? "path" : focusOf(target),
   });
   const shortcut = (command: string) =>
     shortcutLabel(command, { host: props.host, platform: props.platform });
@@ -182,16 +188,45 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   };
 
   const readOnly = snapshot.readOnly;
+  const selectedLibrary = props.design?.single()?.item.node;
+  const missingLibrary =
+    selectedLibrary?.type === "instance" &&
+    selectedLibrary.library &&
+    props.resources?.libraryInfo(selectedLibrary.library)?.state === "missing"
+      ? selectedLibrary.library
+      : null;
+  useEffect(() => {
+    if (!props.resources) return;
+    const r = props.resources;
+    const registrations = (
+      [
+        ["variables.open", "Variables", "variables"],
+        ["themes.open", "Themes", "themes"],
+        ["libraries.open", "Libraries", "libraries"],
+        ["fonts.manage", "Manage fonts", "manageFonts"],
+      ] as const
+    )
+      .filter(([id]) => !controller.commands.get(id))
+      .map(([id, title, dialog]) =>
+        controller.registerCommand({ id, title, category: "View", run: () => r.open(dialog) }),
+      );
+    return () => {
+      for (const registration of registrations) registration.dispose();
+    };
+  }, [controller, props.resources]);
   // Go to main component: the main is a layer on a page when the scene has it; otherwise the host shows it.
   const designHost: DesignHost = {
     ...props.designHost,
+    ...(props.resources ? { resources: props.resources } : {}),
     onGoToMain:
       props.designHost?.onGoToMain ??
       ((target) => {
         const root = (
           doc?.components?.[target.componentId as ComponentId]?.root as Node | undefined
         )?.id;
-        if (!target.library && root && session.sceneItem(root)) session.select([root]);
+        if (target.library && props.resources?.host.openLibrary)
+          props.resources.host.openLibrary(target.library);
+        else if (!target.library && root && session.sceneItem(root)) session.select([root]);
         else props.designHost?.onAction?.("component.goToMain", target);
       }),
   };
@@ -246,6 +281,15 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         <TipProvider>
           <CanvasHost
             session={session}
+            missingLibraries={
+              new Map(
+                props.resources?.host.libraries
+                  ?.filter((i) => props.resources?.libraryInfo(i.alias)?.state === "missing")
+                  .map(
+                    (i) => [i.alias, !!props.resources?.libraryInfo(i.alias)?.cached] as const,
+                  ) ?? [],
+              )
+            }
             size={{ width: state.width, height: state.height }}
             {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
             {...(props.content ? { content: props.content } : {})}
@@ -299,6 +343,13 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                   components={components}
                   readOnly={readOnly}
                   onDropComponent={dropComponent}
+                  {...(props.resources
+                    ? {
+                        onVariables: () => props.resources?.open("variables"),
+                        onLibraries: () => props.resources?.open("libraries"),
+                        onThemes: () => props.resources?.open("themes"),
+                      }
+                    : {})}
                 />
               ),
             }}
@@ -307,7 +358,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             <ToolRail
               x={layout.toolRail.x}
               y={layout.toolRail.y}
-              tool={tool}
+              tool={tool === "path" ? "move" : tool}
               selectTool={(t) => session.dispatch({ type: "tool", tool: t })}
               run={run}
               enabled={enabled}
@@ -336,17 +387,29 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               }}
               aria-label="Properties"
             >
-              {props.design && props.paintEditor ? (
+              {props.resources && missingLibrary ? (
+                <MissingLibraryPanel
+                  resources={props.resources}
+                  alias={missingLibrary}
+                  disabled={readOnly}
+                />
+              ) : props.design && props.paintEditor ? (
                 <RightPanel
                   design={
-                    <DesignTab
-                      design={props.design}
-                      session={session}
-                      paintEditor={props.paintEditor}
-                      document={doc}
-                      readOnly={readOnly}
-                      host={designHost}
-                    />
+                    session.state.mode.type === "scaling" ? (
+                      <ScalePanel session={session} disabled={readOnly} />
+                    ) : session.state.mode.type === "path" ? (
+                      <VectorPanel session={session} design={props.design} disabled={readOnly} />
+                    ) : (
+                      <DesignTab
+                        design={props.design}
+                        session={session}
+                        paintEditor={props.paintEditor}
+                        document={doc}
+                        readOnly={readOnly}
+                        host={designHost}
+                      />
+                    )
                   }
                   {...(props.slots?.inspect ? { inspect: props.slots.inspect } : {})}
                   {...(props.slots?.activity ? { activity: props.slots.activity } : {})}
@@ -372,6 +435,24 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               y={layout.zoomPill.y}
               label={zoomLabel}
               items={zoomItems}
+            />
+          ) : null}
+          {session.state.mode.type === "path" ? (
+            <button
+              type="button"
+              className="vc-resource-button vc-path-done"
+              data-primary=""
+              onClick={() => session.dispatch({ type: "finish" })}
+            >
+              Done · Enter
+            </button>
+          ) : null}
+          {props.resources ? (
+            <ResourceDialogs
+              resources={props.resources}
+              session={session}
+              design={props.design}
+              readOnly={readOnly}
             />
           ) : null}
           {session.notice ? (

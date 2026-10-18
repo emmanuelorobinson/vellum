@@ -2,6 +2,7 @@ import type { EngineClient, EngineCommit } from "@vellum/engine-client";
 import type { DeviceId, NodeId, NodeIdPath, PageId, Point } from "@vellum/types-ts";
 import { world } from "./geometry";
 import type { Disposable } from "./registries";
+import { invertPathMapping } from "./resources/path-map";
 import type {
   Place,
   SnapOptions,
@@ -195,6 +196,19 @@ export function createEditorSession(deps: SessionDeps) {
     },
     sceneItem(id: NodeIdPath) {
       return engine.scene.get(id) ?? null;
+    },
+    pathHit(point: Point) {
+      const mode = state.mode;
+      return mode.type === "path"
+        ? (engine.scene.hitPath?.(
+            mode.address,
+            world(point, state.viewport),
+            6 / state.viewport.zoom,
+          ) ?? null)
+        : null;
+    },
+    pathMapping(id: NodeIdPath) {
+      return invertPathMapping((point) => engine.scene.toLocal(id, point));
     },
     sceneBounds(id: NodeIdPath) {
       return engine.scene.get(id)?.bounds ?? null;

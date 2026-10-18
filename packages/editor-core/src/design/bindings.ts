@@ -44,25 +44,22 @@ export function defaultMode(doc: Document | null): Mode {
   return mode;
 }
 
-const MAX_ALIAS_DEPTH = 16;
-/** The last entry whose conditions the mode satisfies wins; aliases are followed, cycles give up. */
-export function resolveVariable(
-  doc: Document | null,
-  id: VariableId,
-  mode: Mode,
-  depth = 0,
-): unknown {
-  if (depth > MAX_ALIAS_DEPTH) return undefined;
-  const variable = variablesOf(doc)[id];
-  if (!variable) return undefined;
-  const matching = variable.values.filter((e) =>
-    Object.entries(e.when ?? {}).every(([axis, value]) => mode[axis] === value),
-  );
-  const entry = matching.at(-1);
-  if (!entry) return undefined;
-  return entry.$alias !== undefined
-    ? resolveVariable(doc, entry.$alias, mode, depth + 1)
-    : entry.value;
+/** The last entry whose conditions the mode satisfies wins. A seen-id set terminates cycles. */
+export function resolveVariable(doc: Document | null, id: VariableId, mode: Mode): unknown {
+  const variables = variablesOf(doc),
+    seen = new Set<string>();
+  while (!seen.has(id)) {
+    seen.add(id);
+    const variable = variables[id];
+    if (!variable) return undefined;
+    const entry = variable.values
+      .filter((e) => Object.entries(e.when ?? {}).every(([axis, value]) => mode[axis] === value))
+      .at(-1);
+    if (!entry) return undefined;
+    if (entry.$alias === undefined) return entry.value;
+    id = entry.$alias;
+  }
+  return undefined;
 }
 
 export function listVariables(

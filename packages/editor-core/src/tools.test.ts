@@ -835,3 +835,60 @@ describe("double-clicking text", () => {
     ).toBe("pressed");
   });
 });
+
+// TEST DATA: the point inspector writes through the existing path transaction path.
+describe("path inspector coordinates", () => {
+  it("sets a selected anchor and preserves its handles in one transaction", () => {
+    const f = fixture();
+    f.down(1, 1, { command: true });
+    f.up(1, 1, { command: true });
+    f.key("Enter");
+    const result = f.send({
+      type: "pathPoint",
+      target: { type: "point", contour: 0, index: 1 },
+      point: p(75, 30),
+    } as ToolEvent);
+    expect(result.transactions).toHaveLength(1);
+    expect(JSON.stringify(result.transactions)).toContain("75 30");
+  });
+  it("rejects non-finite coordinates without writing", () => {
+    const f = fixture();
+    f.down(1, 1, { command: true });
+    f.up(1, 1, { command: true });
+    f.key("Enter");
+    const result = f.send({
+      type: "pathPoint",
+      target: { type: "point", contour: 0, index: 0 },
+      point: p(Number.NaN, 0),
+    } as ToolEvent);
+    expect(result.error).toBe("invalid-input");
+    expect(result.transactions).toHaveLength(0);
+  });
+});
+
+it("a point edit inside an instance preserves appearance edited while the path is open", () => {
+  const f = fixture();
+  const item = f.items.get("rect");
+  if (!item) throw Error("Missing TEST DATA");
+  item.node = {
+    ...item.node,
+    type: "vector",
+    path: "M 0 0 L 50 0 L 100 20",
+    viewBox: { x: 0, y: 0, width: 100, height: 20 },
+  } as Node;
+  item.instance = { id: "instance", path: "root/rect" };
+  f.down(1, 1, { command: true });
+  f.up(1, 1, { command: true });
+  f.key("Enter");
+  item.node = { ...item.node, stroke: { width: 7, paints: [] } } as Node;
+  const result = f.send({
+    type: "pathPoint",
+    target: { type: "point", contour: 0, index: 1 },
+    point: p(55, 0),
+  });
+  expect(result.transactions[0]?.ops[0]).toMatchObject({
+    type: "replaceInInstance",
+    id: "instance",
+    node: { stroke: { width: 7 } },
+  });
+});

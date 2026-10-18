@@ -16,6 +16,9 @@ export interface AssetsTabProps extends Omit<AssetsInput, "query"> {
   /** Add (starter system), Browse (SVG folder), Guidelines: the host does these; absent disables them. */
   onAction?(action: "add" | "browse" | "guidelines" | "icons" | "library", item: AssetItem): void;
   readOnly: boolean;
+  onVariables?(): void;
+  onLibraries?(): void;
+  onThemes?(): void;
 }
 
 export function AssetsTab(props: AssetsTabProps) {
@@ -73,6 +76,19 @@ export function AssetsTab(props: AssetsTabProps) {
           onChange={(e) => setQuery(e.target.value)}
         />
       </label>
+      {props.onVariables ? (
+        <div className="vc-resource-actions">
+          <button type="button" className="vc-secondary" onClick={props.onVariables}>
+            Variables
+          </button>
+          <button type="button" className="vc-secondary" onClick={props.onThemes}>
+            Themes
+          </button>
+          <button type="button" className="vc-secondary" onClick={props.onLibraries}>
+            Libraries
+          </button>
+        </div>
+      ) : null}
       {sections.length === 0 ? (
         <p className="vc-caption" role="status">{`Nothing matches “${query.trim()}”`}</p>
       ) : null}
@@ -104,7 +120,11 @@ export function AssetsTab(props: AssetsTabProps) {
                       type="button"
                       className="vc-asset__label vc-asset__open"
                       disabled={!props.onAction}
-                      onClick={() => props.onAction?.(openAction, item)}
+                      onClick={() =>
+                        openAction === "library" && props.onLibraries
+                          ? props.onLibraries()
+                          : props.onAction?.(openAction, item)
+                      }
                     >
                       {item.label}
                       {item.detail ? ` · ${item.detail}` : ""}

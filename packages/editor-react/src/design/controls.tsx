@@ -483,6 +483,7 @@ export function IconToggle(props: {
 /* ------------------------------------------------------------------------------------------ structure */
 
 export function Section(props: {
+  className?: string;
   id: string;
   title: string;
   /** Spacing: dense for frames, roomy for text and components, wide for rows of detail (paint, stroke, effects). */
@@ -496,7 +497,7 @@ export function Section(props: {
   const heading = `vc-section-${props.id}`;
   return (
     <section
-      className="vc-section"
+      className={`vc-section ${props.className ?? ""}`}
       data-section={props.id}
       data-density={props.density ?? "dense"}
       aria-labelledby={heading}

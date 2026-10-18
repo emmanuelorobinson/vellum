@@ -80,6 +80,7 @@ export type ToolEvent =
   | { type: "cancel" | "finish" }
   | { type: "scaleFactor"; factor: string | number }
   | { type: "scaleAnchor"; anchor: Point }
+  | { type: "pathPoint"; target: PathTarget; point: Point }
   | { type: "content"; content: string | TextRun[] }
   | { type: "pathAction"; action: PathAction; target?: PathTarget; other?: PathTarget; t?: number };
 export interface PathSession {

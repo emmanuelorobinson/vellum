@@ -45,6 +45,22 @@ export function createEditorHandlers(deps: {
   handlers["tool.holdZoom"] = () =>
     session.dispatch({ type: "keyDown", key: "z", canvasFocus: true });
   handlers["tool.releaseZoom"] = () => session.dispatch({ type: "keyUp", key: "z" });
+  for (const [id, key, mods] of [
+    ["path.finish", "Enter", {}],
+    ["path.cut", "x", {}],
+    ["path.connect", "j", { command: true }],
+    ["path.delete", "Delete", {}],
+    ["path.selectAll", "a", { command: true }],
+    ...["Up", "Down", "Left", "Right"].flatMap((d) => [
+      [`path.nudge${d}`, `Arrow${d}`, {}],
+      [`path.bigNudge${d}`, `Arrow${d}`, { shift: true }],
+    ]),
+  ] as [string, string, { command?: boolean; shift?: boolean }][])
+    handlers[id] = () => session.dispatch({ type: "keyDown", key, canvasFocus: true, ...mods });
+  handlers["path.pen"] = () => session.dispatch({ type: "tool", tool: "pen" });
+  handlers["path.select"] = () => session.dispatch({ type: "tool", tool: "move" });
+  handlers["path.toggleSmooth"] = () =>
+    session.dispatch({ type: "pathAction", action: "toggleSmooth" });
   handlers["edit.undo"] = () => void session.undo();
   handlers["edit.redo"] = () => void session.redo();
   handlers["select.clear"] = () =>

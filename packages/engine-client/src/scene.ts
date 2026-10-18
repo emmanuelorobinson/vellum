@@ -13,6 +13,8 @@ export function sceneView(current: () => ToolScene): ToolScene {
       clone(current().toParent(...clone(args))),
     toLocal: (...args: Parameters<ToolScene["toLocal"]>) =>
       clone(current().toLocal(...clone(args))),
+    hitPath: (address: string, point: import("@vellum/types-ts").Point, tolerance: number) =>
+      clone(current().hitPath?.(address, clone(point), tolerance) ?? null),
     path: (...args: Parameters<ToolScene["path"]>) => clone(current().path(...args)),
   });
 }

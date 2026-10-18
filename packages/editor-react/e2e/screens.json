@@ -393,6 +393,174 @@
           "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
         }
       ]
+    },
+    {
+      "id": "C17",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C17-{mode}-1280.png",
+      "query": "resource=variables",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [124, 112, 1032, 594]
+        }
+      ]
+    },
+    {
+      "id": "C34",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C34-{mode}-1280.png",
+      "query": "resource=themes",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [160, 124, 960, 430]
+        }
+      ]
+    },
+    {
+      "id": "C34-frame",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C34-frame-{mode}-1280.png",
+      "query": "resource=frame",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-theme-section",
+          "design": [992, 56, 280, 202]
+        }
+      ]
+    },
+    {
+      "id": "C36",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C36-{mode}-1280.png",
+      "query": "resource=libraries",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [310, 124, 660, 599]
+        }
+      ]
+    },
+    {
+      "id": "C36-confirm",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C36-confirm-{mode}-1280.png",
+      "query": "resource=convert",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [340, 124, 600, 159]
+        }
+      ]
+    },
+    {
+      "id": "C37",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C37-{mode}-1280.png",
+      "query": "resource=fonts",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [380, 124, 520, 576]
+        }
+      ]
+    },
+    {
+      "id": "C37-manage",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C37-manage-{mode}-1280.png",
+      "query": "resource=manageFonts",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [330, 124, 620, 463]
+        }
+      ]
+    },
+    {
+      "id": "C38",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C38-{mode}-1280.png",
+      "query": "resource=scale",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-scale-section",
+          "design": [992, 56, 280, 456]
+        }
+      ]
+    },
+    {
+      "id": "C15",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C15-{mode}-1280.png",
+      "query": "resource=vector&point=1",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": "[data-section=\"vector-point\"]",
+          "design": [992, 100, 280, 109]
+        }
+      ]
+    },
+    {
+      "id": "S14",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S14-{mode}-1280.png",
+      "query": "resource=missingDetails",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-missing-library",
+          "design": [992, 56, 280, 248]
+        }
+      ]
+    },
+    {
+      "id": "S15",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S15-{mode}-1280.png",
+      "query": "resource=paste",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [330, 124, 620, 276]
+        }
+      ]
+    },
+    {
+      "id": "S15-variables",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "S15-variables-{mode}-1280.png",
+      "query": "resource=conflicts",
+      "regions": [
+        {
+          "name": "resource panel",
+          "selector": ".vc-resource-dialog",
+          "design": [260, 124, 760, 446]
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

@@ -120,3 +120,21 @@ describe("describeValue", () => {
     expect(describeValue({ id: "x", name: null, value: undefined }, "")).toBe("Missing variable");
   });
 });
+
+it("resolves long valid alias chains without an arbitrary depth cut-off", () => {
+  const chain: Document = {
+    meta: { formatVersion: 1, name: "TEST DATA", createdWith: "test" },
+    pages: [],
+    variables: Object.fromEntries(
+      Array.from({ length: 32 }, (_, i) => [
+        `v${i}`,
+        {
+          type: "number" as const,
+          name: `space/${i}`,
+          values: [i === 31 ? { value: 42 } : { $alias: `v${i + 1}` }],
+        },
+      ]),
+    ),
+  };
+  expect(resolveVariable(chain, "v0", {})).toBe(42);
+});

@@ -85,3 +85,45 @@ panel never writes the document: every control calls `ctx.edit(...)`, which is o
   effects, read-only), and goldens for C13, C14, C16, C16-instance, C33 and C33-effects in `e2e/screens.json`. Text-dense regions
   carry their own limits, with the reason, because the two engines draw glyph edges differently. Test colours live in
   `fixtures/design-scenarios.ts` (TEST DATA), which the token lint exempts.
+
+## Prompt 48: variables and resources
+
+Pass `resources: createResourceController({engine, device, host, nextVariableId})` to `EditorWorkspace`.
+It supplies the Assets routes and registered Variables, Themes, Libraries and Manage fonts commands;
+`ResourceController.open` also opens them directly. The host owns the controller and disposes it when the
+editor closes. Scale and the vector inspector use the existing `EditorSession`.
+
+`ResourceHost` is deliberately injected. `chooseLibrary` opens and validates a library through the core,
+returning its alias and a path relative to this document. `chooseFont` accepts TTF/OTF/WOFF/WOFF2, stores
+its original bytes through AssetStore, and returns its SHA-256 asset id and inspected `FontFace`.
+`save`, `openLibrary`, installed/cached font catalogs and library/cache status come from the host.
+Absent file/save actions are disabled. No UI code reads a file, downloads a font or maintains a library cache.
+Google font installation, bundled-library Add/Guidelines, token import/export and Ask agent are explicit
+`action` callbacks. A font catalog should contain families the host's FontSource can supply.
+
+For clipboard paste, the host first asks the core for dependencies, conflicting variable names/types and
+missing asset/font/script bytes; it presents that data with `requestPaste`. After Link/Copies and each
+Existing/Renamed choice, `planPaste` invokes the Rust paste planner against the supplied latest snapshot.
+It returns the ordinary `setShell`, `setVariables`, `setComponent` and structural requests; the controller
+commits them in one Person transaction. No JavaScript paste planner or document store exists here.
+A document revision change or dialog dismissal discards a pending picker/planner result. A successful
+Locate offers Save; a refused change or failed save retains an error and the retryable state.
+
+The Variables editor uses stable ids, same-type aliases (names or ids at input), collections by the first
+name segment and grouped combinations of all theme axes (explicit error beyond 128 columns). Frame Theme
+edits are patches through the existing instance-aware path. Numeric sizing menus and Bind variable chips
+can create bindings. Font usage counts editable source text, including local component definitions;
+it does not count expanded occurrences, slot payloads or text replacements inside instance overrides.
+Replacement changes matching source text runs; it does not rewrite library definitions or instance content.
+
+Path coordinates use the engine Scene's inverse mapping, inverted for the overlay; point/handle dragging,
+point coordinates and Done are wired. The current path model has no per-point radius, so that field is
+disabled with a reason. Segment hits (bend/cut/add-point on the canvas) come through `ToolScene.hitPath` in world coordinates,
+including the segment parameter. Older bindings may omit it, making those gestures unavailable; point
+handles still work. The compiled host must supply that method; there is no second path hit-testing engine in the UI.
+
+`e2e/resources.spec.ts` uses scripted engine replies and host results; Rust scale/theme/library regression
+suites verify the underlying operations separately. The browser tests do not prove a native font/file
+picker, disk save/cache or compiled WASM content rendering. `resources.stories.tsx` covers 15 states.
+The new screen goldens retain the design decision's 1% limit; remaining mismatches are reported in reports.md,
+with comparison sheets under `target/screen-goldens/` when a comparison fails.

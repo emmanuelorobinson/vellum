@@ -16,6 +16,8 @@ export default defineConfig({
       },
       {
         extends: true,
+        // Avoid a late optimizer reload when the browser imports the new resource dialogs.
+        optimizeDeps: { include: ["@base-ui/react/dialog"] },
         plugins: [
           storybookTest({ configDir: fileURLToPath(new URL(".storybook", import.meta.url)) }),
         ],

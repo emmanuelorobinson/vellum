@@ -61,3 +61,22 @@ describe("typed WASM boundary", () => {
     fake.dispose();
   });
 });
+
+it("forwards segment hits through the retained Scene facade without exposing mutable records", () => {
+  const target = { type: "segment" as const, contour: 0, index: 1, t: 0.5 };
+  const fake = new FakeEngineClient();
+  const bindings = new FakeEngineClient(undefined, {
+    ...fake.scene,
+    hitPath: (_address, point) => {
+      point.x = 999;
+      return target;
+    },
+  });
+  const engine = new WasmEngineClient(bindings);
+  const point = { x: 10, y: 20 };
+  const hit = engine.scene.hitPath?.("path", point, 4);
+  expect(hit).toEqual(target);
+  if (hit) hit.index = 7;
+  expect(target.index).toBe(1);
+  expect(point).toEqual({ x: 10, y: 20 });
+});
