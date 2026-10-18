@@ -1,0 +1,629 @@
+/* Prompt 53: C10 History, C19 Inspect, C20 Token sync, C21 Export, C22 File changed. Colour and radius are tokens. */
+.vl-history {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 16px;
+  gap: 8px;
+}
+.vl-filters {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 0 8px;
+  height: 31px;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.vl-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.vl-select::after {
+  content: "▾";
+  pointer-events: none;
+  font-size: 10px;
+}
+.vl-select select {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.vl-select:not(:first-child) {
+  color: var(--chrome-secondary);
+}
+.vl-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vl-entry {
+  padding: 6px 0 5px;
+  border-bottom: 1px solid var(--chrome-separator);
+}
+.vl-entry + .vl-entry {
+  margin-top: 8px;
+}
+.vl-entry__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.vl-entry__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vl-entry__who strong {
+  font-weight: 600;
+}
+.vl-entry__meta {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+.vl-file {
+  display: inline-flex;
+  color: var(--chrome-secondary);
+}
+.vl-entry__summary {
+  font-size: 13px;
+  line-height: 19px;
+}
+.vl-entry__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.vl-op {
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--chrome-secondary);
+  overflow-wrap: anywhere;
+}
+.vl-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vl-actions button,
+.vl-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font: inherit;
+  font-size: 11px;
+  line-height: 13px;
+  cursor: pointer;
+}
+.vl-actions button:disabled,
+.vl-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.vl-empty {
+  margin: 24px 0;
+  color: var(--chrome-secondary);
+}
+.vl-footer {
+  margin: auto 0 8px;
+  padding: 0;
+  line-height: 17px;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+.vl-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-error-bg);
+  color: var(--chrome-error);
+  font-size: 12px;
+}
+.vl-error span {
+  flex: 1;
+}
+.vl-muted {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+
+/* Toast, revert prompt, file banner, conflict marks */
+.vl-toast {
+  position: absolute;
+  z-index: 30;
+  bottom: 36px;
+  width: 356px;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-raised);
+  box-shadow: 0 4px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+}
+.vl-toast strong {
+  display: block;
+  font-size: 13px;
+  line-height: 16px;
+}
+.vl-toast p {
+  margin: 10px 0 0;
+  color: var(--chrome-secondary);
+  line-height: 18px;
+}
+.vl-toast__action {
+  margin-top: 10px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.vl-toast .vc-iconbutton {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+}
+.vl-toast .vc-iconbutton:focus-visible,
+.vl-toast:hover .vc-iconbutton {
+  opacity: 1;
+}
+.vl-revert {
+  position: absolute;
+  z-index: 40;
+  top: 180px;
+  right: 40px;
+  width: 380px;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-raised);
+  box-shadow: 0 4px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+}
+.vl-revert h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.vl-revert p {
+  margin: 0 0 18px;
+  line-height: 19px;
+  color: var(--chrome-secondary);
+}
+.vl-revert__actions {
+  display: flex;
+  gap: 8px;
+}
+.vl-banner {
+  position: absolute;
+  z-index: 5;
+  top: 44px;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--chrome-attention-bg);
+  color: var(--chrome-attention);
+}
+.vl-banner > span {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 18px;
+}
+.vl-banner .vl-link {
+  color: var(--chrome-attention);
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: 600;
+}
+.vl-conflict {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--chrome-attention);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+}
+.vl-conflict__tag {
+  position: absolute;
+  left: 22px;
+  top: -37px;
+  height: 23px;
+  padding: 0 7px;
+  border: 1px solid var(--chrome-attention);
+  border-radius: var(--radius-xs);
+  background: var(--chrome-attention-bg);
+  color: var(--chrome-attention);
+  font: inherit;
+  font-size: 11px;
+  line-height: 21px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.vc-resource-dialog.vl-resolver {
+  top: 180px;
+}
+.vl-versions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.vl-version {
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  background: var(--chrome-sunken);
+  min-height: 149px;
+}
+.vl-version h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--chrome-secondary);
+}
+.vl-version dl {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.vl-version dl div {
+  display: flex;
+  gap: 8px;
+}
+.vl-version dt {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  min-width: 56px;
+}
+.vl-version dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.vl-resolver__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vl-resolver__actions .vl-link {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+/* Inspect */
+.vl-inspect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+.vl-inspect section {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 6px;
+}
+.vl-inspect h3 {
+  margin: 0;
+  line-height: 13px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--chrome-secondary);
+}
+.vl-inspect pre {
+  margin: 0;
+  font-size: 12px;
+  line-height: 17px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vl-code {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.vl-stack {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  height: 15px;
+  font-size: 13px;
+  line-height: 15px;
+}
+.vl-inspect .vl-muted {
+  line-height: 17px;
+}
+.vl-flavour,
+.vl-menu > .vl-link {
+  line-height: 19px;
+}
+.vl-menu > .vl-link {
+  line-height: 17px;
+  font-size: 12px;
+}
+.vl-stack select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.vl-inspect .vl-handoff {
+  gap: 12px;
+}
+.vl-menu {
+  position: relative;
+}
+.vl-popup {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  margin: 4px 0 0;
+  padding: 4px;
+  min-width: 200px;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-raised);
+  box-shadow: 0 4px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+}
+.vl-popup button {
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.vl-popup button:hover {
+  background: var(--chrome-hover);
+}
+.vl-popup label {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+}
+.vl-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* Dialogs */
+.vc-resource-dialog.vl-dialog {
+  top: 120px;
+}
+.vc-resource-dialog.vl-dialog--import {
+  top: 110px;
+}
+.vl-field {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.vl-field input,
+.vl-field select,
+.vl-exportrow select {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 26px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font: inherit;
+}
+.vl-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.vl-segments {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.vl-preview {
+  margin: 0;
+  font-size: 12px;
+  line-height: 19px;
+  white-space: pre-wrap;
+}
+.vl-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-top: 1px solid var(--chrome-separator);
+  padding-top: 20px;
+}
+.vl-diff h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.vl-diff__row {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 70px 180px 1fr;
+  column-gap: 16px;
+  height: 44px;
+  padding-top: 14px;
+  border-bottom: 1px solid var(--chrome-separator);
+  font-size: 12px;
+  line-height: 16px;
+}
+.vl-diff__row[data-kind="added"] > span:first-child {
+  color: var(--chrome-success);
+}
+.vl-diff__row[data-kind="changed"] > span:first-child {
+  color: var(--chrome-attention);
+}
+.vl-diff__row[data-kind="removed"] > span:first-child {
+  color: var(--chrome-error);
+}
+.vl-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.vl-exportrow {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 160px repeat(3, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: 44px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--chrome-separator);
+}
+.vl-exportrow label {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding-left: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.vl-exportrow label select {
+  flex: 1;
+  background: transparent;
+  padding: 7px 0;
+}
+.vl-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.vl-thumbs figure {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 15px;
+}
+.vl-thumb {
+  box-sizing: border-box;
+  height: 72px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-xs);
+  background-color: var(--chrome-sunken);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+fieldset.vl-segments,
+fieldset.vl-flavour {
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+fieldset.vl-segments {
+  box-sizing: border-box;
+  height: 28px;
+  padding: 2px;
+}
+.vl-footer-actions .vx-button,
+.vl-revert__actions .vx-button,
+.vl-resolver__actions .vx-button {
+  height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.vl-segments label,
+.vl-flavour label {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+.vl-segments input,
+.vl-flavour input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+}
+.vl-segments label span {
+  display: block;
+  padding: 6px;
+  line-height: 12px;
+  border-radius: var(--radius-xs);
+  color: var(--chrome-secondary);
+  font-size: 12px;
+  text-align: center;
+}
+.vl-segments input:checked + span {
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vl-flavour {
+  display: flex;
+  padding: 0;
+}
+.vl-flavour label + label::before {
+  content: "/";
+  margin: 0 6px;
+}
+.vl-flavour label {
+  display: flex;
+  color: var(--chrome-secondary);
+}
+.vl-flavour input:checked + span {
+  color: var(--chrome-text);
+}
+.vl-segments input:focus-visible + span,
+.vl-flavour input:focus-visible + span {
+  outline: 2px solid var(--chrome-focus);
+}
+.vl-inspect .vl-handoff .vl-muted {
+  line-height: 13px;
+}

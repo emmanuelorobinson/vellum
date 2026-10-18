@@ -1064,6 +1064,255 @@
         }
       ],
       "openRole": "tab"
+    },
+    {
+      "id": "C10",
+      "snapshot": "C10-{mode}-1280.png",
+      "query": "ledger=c10&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "filter bar",
+          "selector": ".vl-filters",
+          "design": [24, 116, 328, 31],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "expanded entry",
+          "selector": ".vl-entry[data-entry=teal]",
+          "design": [24, 155, 328, 106],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "collapsed entry",
+          "selector": ".vl-entry[data-entry=saffron]",
+          "design": [24, 269, 328, 51],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "footer",
+          "selector": ".vl-footer",
+          "design": [24, 767, 328, 17],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ],
+      "open": "History",
+      "openRole": "tab"
+    },
+    {
+      "id": "C10-revert",
+      "snapshot": "C10-revert-{mode}-1280.png",
+      "query": "ledger=c10-revert&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "revert popover",
+          "selector": ".vl-revert",
+          "design": [860, 180, 380, 148],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ],
+      "open": "History",
+      "openRole": "tab"
+    },
+    {
+      "id": "C10-undone",
+      "snapshot": "C10-undone-{mode}-1280.png",
+      "query": "ledger=c10-undone&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "undone toast",
+          "selector": ".vl-toast",
+          "design": [600, 670, 356, 94],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ],
+      "open": "History",
+      "openRole": "tab"
+    },
+    {
+      "id": "C19",
+      "snapshot": "C19-{mode}-1280.png",
+      "query": "ledger=c19&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "spec",
+          "selector": ".vl-inspect section:nth-of-type(1)",
+          "design": [1004, 112, 256, 70],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "tokens",
+          "selector": ".vl-inspect section:nth-of-type(2)",
+          "design": [1004, 194, 256, 70],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "code preview",
+          "selector": ".vl-inspect section:nth-of-type(4)",
+          "design": [1004, 324, 256, 128],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "hand-off",
+          "selector": ".vl-handoff",
+          "design": [1004, 464, 256, 99],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "html export",
+          "selector": ".vl-inspect section:nth-of-type(6)",
+          "design": [1004, 575, 256, 98],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ],
+      "open": "Inspect",
+      "openRole": "tab"
+    },
+    {
+      "id": "C19-copied",
+      "snapshot": "C19-copied-{mode}-1280.png",
+      "query": "ledger=c19-copied&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "copied toast",
+          "selector": ".vl-toast",
+          "design": [600, 680, 356, 94],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ],
+      "open": "Inspect",
+      "openRole": "tab"
+    },
+    {
+      "id": "C20",
+      "snapshot": "C20-{mode}-1280.png",
+      "query": "ledger=c20&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "import dialog",
+          "selector": ".vl-dialog--import",
+          "design": [240, 110, 800, 552],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "C20-export",
+      "snapshot": "C20-export-{mode}-1280.png",
+      "query": "ledger=c20-export&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "export dialog",
+          "selector": ".vc-resource-dialog.vl-dialog",
+          "design": [260, 120, 760, 409],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "C20-applied",
+      "snapshot": "C20-applied-{mode}-1280.png",
+      "query": "ledger=c20-applied&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "applied toast",
+          "selector": ".vl-toast",
+          "design": [570, 660, 356, 136],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "C21",
+      "snapshot": "C21-{mode}-1280.png",
+      "query": "ledger=c21&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "export dialog",
+          "selector": ".vc-resource-dialog.vl-dialog",
+          "design": [220, 120, 840, 514],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "C22",
+      "snapshot": "C22-{mode}-1280.png",
+      "query": "ledger=c22&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "banner",
+          "selector": ".vl-banner",
+          "design": [0, 44, 1280, 36],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "banner action",
+          "selector": ".vl-banner .vl-link",
+          "design": [1185, 55, 83, 15],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
+    },
+    {
+      "id": "C22-conflict",
+      "snapshot": "C22-conflict-{mode}-1280.png",
+      "query": "ledger=c22-conflict&pan=484,197",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "regions": [
+        {
+          "name": "resolver",
+          "selector": ".vc-resource-dialog.vl-resolver",
+          "design": [340, 180, 600, 328],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        },
+        {
+          "name": "conflict tag",
+          "selector": ".vl-conflict__tag",
+          "design": [730, 160, 120, 23],
+          "fraction": 0.08,
+          "why": "Text-dense row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

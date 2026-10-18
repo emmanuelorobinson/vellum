@@ -7,15 +7,24 @@ import {
   createAuthoringController,
   createCommandController,
   createComposerController,
+  createConflictController,
   createDesignController,
   createEditorHandlers,
   createEditorSession,
+  createExportController,
+  createHistoryController,
+  createInspectController,
   createPaintEditor,
   createPresenceController,
   createResourceController,
+  createTokenSyncController,
   createWorkspace,
+  FakeFileChanges,
+  FakeHistoryHost,
+  fitViewport,
   type Mention,
   selectionLabel,
+  union,
 } from "@vellum/editor-core";
 import { type EngineSnapshot, FakeEngineClient } from "@vellum/engine-client";
 import { FakeDaemonClient } from "@vellum/host-api";
@@ -50,12 +59,21 @@ import {
 import { EditorWorkspace } from "../../src/EditorWorkspace";
 import "./fonts.css";
 import { authoringDocument, authoringHost } from "../../fixtures/authoring-scenarios";
+import {
+  JuniperHandoff,
+  LEDGER_BASE,
+  type LedgerScenario,
+  ledgerChange,
+  ledgerEntries,
+  ledgerNodes,
+} from "../../fixtures/ledger-scenarios";
 import { sceneOf } from "./test-scene";
 
 const q = new URLSearchParams(location.search);
 const scenario = q.get("scenario");
 const authoringName = q.get("authoring");
 const collaborationName = q.get("collaboration");
+const ledgerName = q.get("ledger") as LedgerScenario | null;
 const collaboration = collaborationName ? collaborationScenario(collaborationName) : null;
 const resourceName = q.get("resource");
 const designName = q.get("design") as DesignScenario | null;
@@ -171,11 +189,13 @@ let current = authoringName
       : documentOf(
           collaborationName
             ? collaborationNodes(collaborationName)
-            : q.get("empty")
-              ? []
-              : scenario === "juniper"
-                ? juniperNodes()
-                : startNodes(),
+            : ledgerName
+              ? ledgerNodes(ledgerName)
+              : q.get("empty")
+                ? []
+                : scenario === "juniper"
+                  ? juniperNodes()
+                  : startNodes(),
         );
 /** The document with other layers on its first page: the design scenarios keep their variables and components. */
 const withChildren = (children: Node[]): Document =>
@@ -422,6 +442,53 @@ const presence = collaboration
     })
   : null;
 if (collaborationName === "c35") session.select(["step2"]);
+const handoffHost = new JuniperHandoff();
+const ledger = ledgerName
+  ? (() => {
+      const historyHost = new FakeHistoryHost(ledgerEntries(ledgerName));
+      historyHost.attach(
+        engine,
+        { id: "sam", kind: "person", name: "Sam" },
+        () => LEDGER_BASE + 46 * 60_000,
+      );
+      const history = createHistoryController({
+        engine,
+        device,
+        host: historyHost,
+        select: (ids) => session.select(ids),
+        zoom: (ids) => {
+          const target = union(ids.flatMap((id) => session.sceneBounds(id) ?? []));
+          if (target)
+            session.setViewport(
+              fitViewport(target, workspace.state, workspace.layout().canvasInsets, { maxZoom: 1 }),
+            );
+        },
+      });
+      const feed = new FakeFileChanges(ledgerChange(ledgerName));
+      const conflicts = createConflictController({
+        engine,
+        device,
+        feed,
+        fileName: "juniper.vellum",
+        nextNodeId: () => `n${++counter}`,
+        askAgent: (node) => hostActions.push({ command: "conflict.askAgent", detail: { node } }),
+        openLedger: (entry) => {
+          workspace.switchTab("history", { reveal: true });
+          history.open(entry);
+        },
+      });
+      return {
+        history,
+        historyHost,
+        conflicts,
+        feed,
+        inspect: createInspectController({ engine, host: handoffHost }),
+        tokens: createTokenSyncController({ engine, device, host: handoffHost }),
+        exporter: createExportController({ engine, host: handoffHost }),
+        timeZone: "UTC",
+      };
+    })()
+  : null;
 const controller = createCommandController(
   createEditorHandlers({
     workspace,
@@ -429,6 +496,7 @@ const controller = createCommandController(
     design,
     ...(agent ? { agent } : {}),
     ...(composer ? { composer } : {}),
+    ...(ledger ? { exporter: ledger.exporter } : {}),
   }),
 );
 const pendingAgentUpdates = [...(agentSetup?.updates ?? [])];
@@ -503,6 +571,10 @@ type Hooks = {
   }[];
   /** Keys the fake keychain holds, by provider. */
   keychain(): Record<string, string>;
+  /** The change ledger's state, the entries the host holds and what the handoff host recorded. */
+  ledgerState(): unknown;
+  /** The next write is answered with this document (a revert, a token import, a conflict pick). */
+  ledgerReply(children: Node[]): void;
 };
 declare global {
   interface Window {
@@ -563,6 +635,30 @@ window.__vellum = {
       request: import("@vellum/editor-core").PromptRequest & Record<string, unknown>;
     }[],
   keychain: () => agentSetup?.feed.keys ?? {},
+  ledgerState: () =>
+    ledger
+      ? {
+          history: ledger.history.state,
+          entries: ledger.historyHost.entries(),
+          undone: ledger.historyHost.undone,
+          copied: ledger.historyHost.copied,
+          tokens: ledger.tokens.state,
+          exporter: ledger.exporter.state,
+          inspect: ledger.inspect.state,
+          conflict: ledger.conflicts.state.node?.id ?? null,
+          clipboard: handoffHost.clipboard,
+          written: handoffHost.written,
+          exported: handoffHost.exported,
+          copiedAs: handoffHost.copiedAs,
+          implemented: handoffHost.implemented,
+          html: handoffHost.htmlRequests,
+          hostActions,
+        }
+      : null,
+  ledgerReply(children) {
+    current = withChildren(children);
+    engine.script(snapshotOf(current));
+  },
 };
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
@@ -618,6 +714,18 @@ function render() {
       }}
       {...(resourceName ? { resources } : {})}
       {...(authoring ? { authoring } : {})}
+      {...(ledger
+        ? {
+            ledger: {
+              history: ledger.history,
+              conflicts: ledger.conflicts,
+              inspect: ledger.inspect,
+              tokens: ledger.tokens,
+              exporter: ledger.exporter,
+              timeZone: ledger.timeZone,
+            },
+          }
+        : {})}
       {...(agent ? { agent } : {})}
       {...(composer && !q.has("slot")
         ? {
@@ -654,5 +762,33 @@ render();
 void daemon;
 void host;
 
+if (ledger && ledgerName) {
+  const name = ledgerName;
+  if (name.startsWith("c10")) {
+    workspace.switchTab("history");
+    ledger.history.filter({ session: "s1" });
+    ledger.history.open("teal");
+    if (name === "c10-revert" || name === "c10-reverted") ledger.history.askRevert("teal");
+    if (name === "c10-reverted") {
+      engine.script(snapshotOf(current));
+      ledger.history.confirmRevert();
+    }
+    if (name === "c10-undone") void ledger.history.undo("teal");
+  }
+  if (name === "c19" || name === "c19-copied") session.select(["step2"]);
+  if (name === "c19-copied")
+    void ledger.inspect.load("step2").then(() => ledger.inspect.copyPrompt());
+  if (name === "c20" || name === "c20-applied") ledger.tokens.openImport();
+  if (name === "c20-export") ledger.tokens.openExport();
+  if (name === "c20-applied") {
+    void ledger.tokens.preview().then(() => {
+      engine.script(snapshotOf(current));
+      void ledger.tokens.apply();
+    });
+  }
+  if (name === "c21") void ledger.exporter.open(["step1", "step2", "step3"]);
+  if (name === "c22-conflict") ledger.conflicts.open("step2");
+  if (name === "c22") workspace.switchTab("agent");
+}
 if (authoringName === "c12-guidelines") void authoring?.openGuidelines();
 if (authoringName?.startsWith("c30")) authoring?.openImage("photo", "fill", 0);

@@ -3,16 +3,21 @@ import {
   type AuthoringController,
   type BindingContext,
   type ComposerController,
+  type ConflictController,
   type createCommandController,
   type DesignController,
   type EditorHost,
   type EditorSession,
+  type ExportController,
+  type HistoryController,
+  type InspectController,
   instanceTransaction,
   type PaintEditor,
   type Platform,
   type PresenceController,
   type ResourceController,
   selectionLabel,
+  type TokenSyncController,
   type ToolTransaction,
   type Workspace,
   world,
@@ -41,6 +46,10 @@ import { ZoomPill } from "./chrome/ZoomPill";
 import type { DesignHost } from "./design/context";
 import { DesignTab } from "./design/DesignTab";
 import { useEngineSnapshot, useStore, useWorkspace } from "./hooks";
+import { HandoffDialogs } from "./ledger/HandoffDialogs";
+import { HistoryTab } from "./ledger/HistoryTab";
+import { InspectPanel } from "./ledger/InspectPanel";
+import { LedgerLayer } from "./ledger/LedgerLayer";
 import { AssetsTab, type AssetsTabProps } from "./panels/AssetsTab";
 import { LayersTab } from "./panels/LayersTab";
 import { PanelFrame } from "./panels/PanelFrame";
@@ -50,12 +59,26 @@ import { ResourceDialogs } from "./resources/ResourceDialogs";
 import { ScalePanel, VectorPanel } from "./resources/ToolPanels";
 import "./editor.css";
 import "./authoring/authoring.css";
+import "./ledger/ledger.css";
 
 export type CommandController = ReturnType<typeof createCommandController>;
 
 export interface EditorWorkspaceProps {
   presence?: PresenceController;
   authoring?: AuthoringController;
+  /**
+   * The change ledger (History tab, file-changed banner, conflict resolver) and the hand-off panels (Inspect,
+   * token sync, Export). Each is optional: without one, its slot or its section stays empty.
+   */
+  ledger?: {
+    history?: HistoryController;
+    conflicts?: ConflictController;
+    inspect?: InspectController;
+    tokens?: TokenSyncController;
+    exporter?: ExportController;
+    /** The IANA zone ledger times show in; the viewer's own when absent. */
+    timeZone?: string;
+  };
   workspace: Workspace;
   session: EditorSession;
   engine: EngineClient;
@@ -243,6 +266,16 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     ...props.designHost,
     ...(props.authoring ? { authoring: props.authoring } : {}),
     ...(props.resources ? { resources: props.resources } : {}),
+    ...(props.ledger?.exporter
+      ? {
+          // "Add export" opens the multi-frame Export dialog for the selection (C21).
+          onAction: (command: string, detail?: Record<string, unknown>) => {
+            if (command === "export.add")
+              void props.ledger?.exporter?.open(session.state.selection);
+            else props.designHost?.onAction?.(command, detail);
+          },
+        }
+      : {}),
     onGoToMain:
       props.designHost?.onGoToMain ??
       ((target) => {
@@ -255,8 +288,15 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         else props.designHost?.onAction?.("component.goToMain", target);
       }),
   };
+  const [activityRequest, setActivityRequest] = useState(0);
   const composer = props.composer;
   const selection = session.state.selection;
+  // Inspect follows the first selected layer; a spec that arrives late for an earlier one is dropped.
+  const inspected = selection[0] ?? null;
+  const inspect = props.ledger?.inspect;
+  useEffect(() => {
+    void inspect?.load(inspected);
+  }, [inspect, inspected, snapshot.revision]);
   const selectionRect = ((): ScreenRect | null => {
     if (!composer || !selection.length || readOnly) return null;
     const v = session.state.viewport;
@@ -402,7 +442,15 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               ) : (
                 (props.slots?.agent ?? null)
               ),
-              history: props.slots?.history ?? null,
+              history: props.ledger?.history ? (
+                <HistoryTab
+                  history={props.ledger.history}
+                  readOnly={readOnly}
+                  {...(props.ledger.timeZone ? { timeZone: props.ledger.timeZone } : {})}
+                />
+              ) : (
+                (props.slots?.history ?? null)
+              ),
               layers: (
                 <LayersTab
                   document={doc}
@@ -490,6 +538,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                 />
               ) : props.design && props.paintEditor ? (
                 <RightPanel
+                  activityRequest={activityRequest}
                   design={
                     session.state.mode.type === "scaling" ? (
                       <ScalePanel session={session} disabled={readOnly} />
@@ -506,7 +555,11 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                       />
                     )
                   }
-                  {...(props.slots?.inspect ? { inspect: props.slots.inspect } : {})}
+                  {...(props.ledger?.inspect
+                    ? { inspect: <InspectPanel inspect={props.ledger.inspect} /> }
+                    : props.slots?.inspect
+                      ? { inspect: props.slots.inspect }
+                      : {})}
                   {...(props.slots?.activity ? { activity: props.slots.activity } : {})}
                 />
               ) : (
@@ -569,6 +622,30 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               design={props.design}
               readOnly={readOnly}
             />
+          ) : null}
+          {props.ledger ? (
+            <>
+              <LedgerLayer
+                history={props.ledger.history}
+                conflicts={props.ledger.conflicts}
+                session={session}
+                readOnly={readOnly}
+                insets={layout.canvasInsets}
+                width={state.width}
+              />
+              <HandoffDialogs
+                tokens={props.ledger.tokens}
+                exporter={props.ledger.exporter}
+                inspect={props.ledger.inspect}
+                readOnly={readOnly}
+                onOpenActivity={() => setActivityRequest((n) => n + 1)}
+                toastLeft={
+                  layout.canvasInsets.left +
+                  (state.width - layout.canvasInsets.left - layout.canvasInsets.right) / 2 -
+                  178
+                }
+              />
+            </>
           ) : null}
           {props.authoring ? (
             <AuthoringDialogs

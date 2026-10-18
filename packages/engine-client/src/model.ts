@@ -44,6 +44,8 @@ export type ToolOp =
   | { type: "insert"; to: Place; node: Node }
   | { type: "update"; id: NodeId; patch: NodePatch }
   | { type: "replace"; id: NodeId; node: Node }
+  /** A node and its subtree (Op::Delete). */
+  | { type: "delete"; id: NodeId }
   | { type: "replaceInInstance"; id: NodeId; path: NodeIdPath; node: Node }
   | { type: "scale"; id: NodeId; factor: number; anchor: Point }
   /** To another parent or page; `to.index` is the final index among the new siblings. */

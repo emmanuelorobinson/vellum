@@ -3193,3 +3193,41 @@ agent transcript JSON formatting); `pnpm lint` therefore fails. `cargo deny chec
 advisories in Needs a person (bans/licences/sources pass); it required advisory-cache access after the sandbox
 refused its lock. `node --test 'scripts/__tests__/*.test.mjs'`: 197 pass, 3 fail, 5 skipped (ADR-000 status,
 Prompt 46's DESIGN-GAPS line format, REFERENCE-INDEX). No changes to dependency/advisory policy. Nothing committed.
+
+## Prompt 53
+
+Built the change ledger and the design-to-code hand-off: the History tab (entries with actor, time and size; expand
+to ops; Select layers, Zoom to, Undo this change, Revert, Copy as JSON; session/actor/page filters; footer and empty
+copy from `@vellum/config`), the Revert prompt and its toast, Inspect (spec, tokens, components, stack code,
+Copy prompt for your coding agent, Implement with…, HTML + Tailwind/CSS Copy and Export with a settings popover),
+the token sync dialogs (import with the exact diff, export with a preview) and toast with Open Activity, the Export
+frames dialog (per-frame format, scale, suffix, file names, thumbnails), Copy as PNG / HTML shortcuts, the
+file-changed banner with View in ledger, and conflict nodes: canvas mark, banner, resolver (Keep ours / theirs / both,
+Ask agent to merge). No Rust code, dependency or format change; `ToolOp` gained `delete` (Op::Delete).
+
+- Headless `editor-core/src/ledger/` (`history`, `files`, `handoff`, `fake`); React `editor-react/src/ledger/`;
+  `EditorWorkspace.ledger`; host contracts in `docs/runbooks/handoff.md`. Revert, token apply and conflict picks are
+  single person transactions; nothing writes a ledger entry itself, the host records it from the commit.
+- Design: Pencil confirmed `.design-cache/vellum.readonly.pen`; read C10 (and revert/undone/reverted), C19 (+copied),
+  C20 (+export, applied), C21, C22 (+conflict), the ledger and diff components, and bounds for every region; compared
+  with the committed PNGs. No Pencil writes. Nine append-only DESIGN-GAPS lines. DESIGN.md wins where the frames
+  disagree (Undo this change, Copy as JSON, scales 1×/2×/3×). No DESIGN-DECISIONS row was undecided. No §3.2 row names
+  P53; no source ported and no dependency added.
+- TDD: I wrote the headless tests first but only ran them after the code existed, so I did not observe them failing
+  (23 tests). Browser flows (12) and three unit tests followed the components. The browser run caught a sandboxed
+  platform modifier (Mod is Meta on this Mac) and toast role ambiguity in my own tests.
+- Visual acceptance is pending: full browser suite **239 pass, 63 fail**, all failures goldens (52 earlier plus 11
+  new: text anti-aliasing, 1-2 px offsets and the design's rendered frame thumbnails in the dark resolver). All new
+  regions match the design's sizes within one pixel. No tolerance or snapshot was changed.
+- Not verified: any real host (nothing serves these ports yet; the WASM document-operation ABI gap remains),
+  `undo_turn` through a host, a token import against a real file, a real PNG/HTML clipboard write, "Implement with…"
+  against an installed engine, the ⇧⌘E Export route (no binding exists), the context-menu Copy as PNG (Prompt 54).
+  C10-reverted's older Activity layout is not built; the ledger lives in the History tab. Version cards in the
+  resolver list conflicting properties instead of rendering the frame.
+
+Passed: `packages/editor-core` vitest (2,256; 23 new), `packages/engine-client` vitest (6), `packages/editor-react`
+vitest unit project (299; 3 new), `playwright test e2e/ledger.spec.ts` (12), `tsc --noEmit` in the three packages,
+`token-lint`, `copy-lint`, `ui-icons-gen --check`, `design-check`, `spec-checksums check`, `check-deps.sh`,
+`check-clean-room.sh`, `harness:check`, `git diff --check`. Biome on the touched files reports no errors (existing
+warnings elsewhere). Not re-run this prompt: Rust tests (no Rust changed), `cargo deny`, `pnpm lint`.
+Nothing committed.

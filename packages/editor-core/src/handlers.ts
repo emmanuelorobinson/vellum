@@ -2,6 +2,7 @@ import type { AgentController, ComposerController } from "./agent";
 import { detachOps } from "./design/component";
 import type { DesignController } from "./design/controller";
 import { union } from "./geometry";
+import type { ExportController } from "./ledger";
 import type { EditorSession } from "./session";
 import type { Box, ToolId } from "./tool-types";
 import { fitViewport, nextZoomStep, zoomAbout } from "./viewport";
@@ -22,9 +23,15 @@ export function createEditorHandlers(deps: {
   /** The Agent tab and its composer: with them the Agents shortcuts work. */
   agent?: AgentController;
   composer?: ComposerController;
+  /** Copy as PNG / HTML (⇧⌘C, ⌥⌘C) put the selection on the clipboard through the host. */
+  exporter?: ExportController;
 }): Record<string, Handler> {
-  const { workspace, session, design, agent, composer } = deps;
+  const { workspace, session, design, agent, composer, exporter } = deps;
   const handlers: Record<string, Handler> = {};
+  if (exporter) {
+    handlers["edit.copyPng"] = () => void exporter.copyPng(session.state.selection);
+    handlers["edit.copyHtml"] = () => void exporter.copyHtml(session.state.selection);
+  }
   if (composer) {
     handlers["agent.focus"] = () => {
       workspace.switchTab("agent", { reveal: true });

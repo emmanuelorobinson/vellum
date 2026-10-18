@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 type RightTab = "design" | "inspect" | "activity";
 const TABS: readonly { id: RightTab; label: string }[] = [
@@ -15,8 +15,14 @@ export function RightPanel(props: {
   design: ReactNode;
   inspect?: ReactNode;
   activity?: ReactNode;
+  /** Each increase opens the Activity tab (a toast's "Open Activity"). */
+  activityRequest?: number;
 }) {
   const [tab, setTab] = useState<RightTab>("design");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new request switches the tab
+  useEffect(() => {
+    if (props.activityRequest) setTab("activity");
+  }, [props.activityRequest]);
   const body: Record<RightTab, ReactNode> = {
     design: props.design,
     inspect: props.inspect ?? <p className="vc-design__empty">Inspect is not available yet.</p>,
