@@ -16,7 +16,8 @@
     "test:storybook": "vitest run --project storybook",
     "test:goldens": "node ../../scripts/component-goldens.mjs",
     "harness:check": "node ../../scripts/component-harness.mjs --check",
-    "harness:generate": "node ../../scripts/component-harness.mjs"
+    "harness:generate": "node ../../scripts/component-harness.mjs",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "devDependencies": {
     "typescript": "catalog:",
@@ -28,15 +29,22 @@
     "@storybook/addon-vitest": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "playwright": "catalog:",
+    "@playwright/test": "catalog:",
     "storybook": "catalog:",
     "vite": "catalog:"
   },
   "dependencies": {
     "react": "catalog:",
+    "@base-ui/react": "catalog:",
+    "@vellum/config": "workspace:*",
+    "@vellum/editor-core": "workspace:*",
+    "@vellum/types-ts": "workspace:*",
+    "@vellum/renderer-api": "workspace:*",
     "react-dom": "catalog:",
     "@vellum/ui-tokens": "workspace:*",
     "@vellum/engine-client": "workspace:*",
     "@vellum/host-api": "workspace:*",
-    "@vellum/host-fake": "workspace:*"
+    "@vellum/host-fake": "workspace:*",
+    "@vellum/host-browser": "workspace:*"
   }
 }

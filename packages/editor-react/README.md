@@ -41,3 +41,22 @@ repo's design-read procedure. No product component or brand choice is implemente
 303 appearance cases have no matching reference in the design. They still have a story, marked
 with `reference: "missing"`; their sizing box comes from another appearance, never a fabricated
 golden. Once built, that appearance fails the golden runner until the design supplies its reference.
+
+# Editor chrome (Prompt 46)
+
+`EditorWorkspace` composes the floating chrome over a full-bleed canvas: document bar, tool rail, top-right bar, bottom strip,
+zoom pill, the agent panel with its four tabs (Layers and Assets are built; Agent, History and the right panel are slots the
+host mounts, for Prompts 47–52) and the collapsed strip. `CanvasHost` is a content canvas (the injected `Renderer` draws the
+engine's display list; with none it says `data-content="unavailable"`) under an overlay canvas that draws the tool controller's
+selection, handles, guides and measurements from the tokens. Menus and tooltips are Base UI; styling is `src/editor.css` over the
+token variables; icons are `icons/lucide.generated.ts` (`pnpm ui-icons:gen`).
+
+- `pnpm --filter @vellum/editor-react test` runs the state tests (server-rendered markup, no DOM).
+- `pnpm --filter @vellum/editor-react test:e2e` (chrome lane; `playwright install chromium` first) runs `e2e/editor.spec.ts`
+  in a Vite app (`e2e/app`) with the real workspace over a `FakeEngineClient` and a scene helper that only answers geometry
+  questions. Each test says what the engine answers next and checks the transaction the UI sent. Nothing applies operations
+  to a document in TypeScript. `e2e/goldens.spec.ts` compares the chrome with C03, C18 and S13 (`e2e/screens.json`) at 1280, 960
+  and 760 px, light, dark and, for C03, high contrast; it skips when `docs/design/snapshots/*.png` is missing and writes
+  comparison sheets to `target/screen-goldens/` when it fails.
+- The harness's component specimens stay pending: every design component this prompt covers lacks its high-contrast reference
+  (see the Prompt 45 note), and a built case without a reference fails its golden.

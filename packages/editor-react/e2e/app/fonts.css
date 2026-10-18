@@ -1,0 +1,18 @@
+/* Inter and JetBrains Mono from the repo, for the browser test app. */
+@font-face {
+  font-family: "Inter";
+  src: url("../../../../crates/adapters/text-parley/fonts/InterVariable.ttf") format("truetype");
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../../../ui-tokens/fonts/JetBrainsMono-wght.ttf") format("truetype");
+  font-weight: 100 800;
+}
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}

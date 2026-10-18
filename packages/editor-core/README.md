@@ -60,3 +60,25 @@ key even after modifiers or focus change; `blur` releases every held tool. Suppl
 handlers for temporary tools. Pass a `preventDefault` callback to `keyDown` for synchronous
 cancellation. Overrides are scoped to host and platform; Settings will persist them in Prompt 54. Registry/keybinding commands describe features; they do not implement
 slides, clipboard export, panel UI, file dialogs or the later component editors.
+
+# Workspace, layers, assets, overlay and session (Prompt 46)
+
+All of it is headless: no React, DOM or renderer.
+
+- `createWorkspace()` / `computeLayout(size, state)`: DESIGN.md's layout rules as rectangles. The agent panel is 360 (resizable
+  320–520 from 1040 up), 320 below 1040, a 44 px strip below 960 that opens as an overlay; the right panel appears with a
+  selection, docked from 1200 and over the canvas below; Tab hides all chrome, ⌘\ only the panels; the last tab is kept per
+  document. `canvasInsets` says what docked chrome covers, for fit commands.
+- `layerRows`, `createLayerIndex`, `dropTarget`, `planDrop`, `renameTransaction`, `setVisibleTransaction`,
+  `setLockedTransaction`: the Layers tab. Rows list children in **document order** (`order: "front-first"` reverses it); a marker
+  shows for agent-made layers younger than 10 s by the injected clock. Dropping gives `reorder` among siblings and `move` to
+  another parent, placed after an anchor so several dragged layers stay together and layers already in place produce no op.
+- `assetSections`, `instanceTransaction`: the Assets tab's sections, search and the instance a dropped component makes.
+- `overlayShapes`, `distanceLabels`: screen-space shapes (outlines, handles, guides, size and distance labels, frame names) from
+  the tool controller's overlay. Drawing them is the host's job.
+- `createEditorSession(deps)`: one person's session over an `EngineClient`. It feeds tool events, hands Person transactions to the
+  engine, puts the tool back to idle (and keeps a notice) when the engine refuses, drops selected ids that no longer exist,
+  and does only the person's own undo and redo.
+- `createEditorHandlers({ workspace, session })`: handlers for `createCommandController` (panels, tools, undo/redo, selection keys,
+  zoom and fit). Commands without a handler stay disabled.
+- `ToolOp` gained `move` and `reorder`, matching core's `Move` and `Reorder`.

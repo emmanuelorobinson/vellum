@@ -30,7 +30,11 @@ export type ToolOp =
   | { type: "update"; id: NodeId; patch: NodePatch }
   | { type: "replace"; id: NodeId; node: Node }
   | { type: "replaceInInstance"; id: NodeId; path: NodeIdPath; node: Node }
-  | { type: "scale"; id: NodeId; factor: number; anchor: Point };
+  | { type: "scale"; id: NodeId; factor: number; anchor: Point }
+  /** To another parent or page; `to.index` is the final index among the new siblings. */
+  | { type: "move"; id: NodeId; to: Place }
+  /** Among the node's siblings; `index` is the final index, after the node is taken out. */
+  | { type: "reorder"; id: NodeId; index: number };
 export interface ToolTransaction {
   origin: Origin & { actor: { kind: "person"; device: DeviceId } };
   ops: ToolOp[];

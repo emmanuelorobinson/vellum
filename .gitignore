@@ -36,3 +36,7 @@ docs/design/snapshots/components/*.png
 
 *storybook.log
 storybook-static
+
+# Playwright output (editor browser tests)
+test-results/
+playwright-report/

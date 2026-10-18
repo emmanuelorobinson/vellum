@@ -70,16 +70,16 @@
 | React | 19.3.0 | 19.3.x | `pnpm-workspace.yaml` catalog | latest stable patch |
 | @types/react | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
 | @types/react-dom | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
-| @base-ui/react | 1.9.0 | 1.9.x | not yet used | editor UI (Prompt 46) |
+| @base-ui/react | 1.9.0 | 1.9.x | `pnpm-workspace.yaml` catalog; `@vellum/editor-react` | menus and tooltips of the editor chrome (Prompt 46, C26) |
 | shadcn | 4.21.4 | CLI current at scaffold (generated source, not a dependency) | not installed | C11 |
-| Tailwind CSS | 4.3.3 | 4.3.x | not yet used | editor UI (Prompt 46) |
-| Zustand | 5.0.15 | 5.0.x | not yet used | vanilla stores in editor-core (Prompt 44) |
+| Tailwind CSS | 4.3.3 | 4.3.x | not yet used | not adopted in Prompt 46: the chrome is plain CSS over the token variables (C26) |
+| Zustand | 5.0.15 | 5.0.x | not yet used | not adopted in Prompt 46: the workspace and session are small subscribable objects in editor-core (C26) |
 | Zod | 4.6.6 | 4.6.x | not yet used | schemas at the edges (Prompt 10 onward) |
 | i18next | 26.4.3 | 26.x | not yet used | copy and locale work (Prompt 70) |
 | Biome | 2.5.15 | 2.5.x | root devDependencies (`@biomejs/biome`) | latest stable patch |
 | dependency-cruiser | 18.5.0 | 18.5.x | root devDependencies | C10 and C3 |
 | Vitest | 5.0.3 | 5.0.x | `pnpm-workspace.yaml` catalog | latest stable patch |
-| Playwright | 1.64.1 | 1.64.x | `pnpm-workspace.yaml` catalog (`playwright`) | Storybook story tests (Prompt 43, C24); `@playwright/test` from Prompt 46 |
+| Playwright | 1.64.1 | 1.64.x | `pnpm-workspace.yaml` catalog (`playwright`) | Storybook story tests (Prompt 43, C24); `@playwright/test` in `@vellum/editor-react` for the browser tests (Prompt 46, C26) |
 | Storybook | 10.6.2 | 10.6.x | `pnpm-workspace.yaml` catalog | `@vellum/ui-tokens` stories (Prompt 43, C24) |
 
 ## Frontend apps, desktop, extension and cloud
@@ -282,3 +282,11 @@ The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused;
   excludes it. No dependency version already in use was changed.
 - Skia remains 0.153.3, source-only. `webp` (encode and decode) joins gl/pdf/jpeg/embed-freetype so WEBP uses the same full
   drawing path and packaged source build; `scripts/skia-config.json` changes the native/WASM cache key.
+- **C26: editor chrome stack** (Prompt 46). `@base-ui/react` 1.9.0 (Menu, Tooltip; MIT) and `@playwright/test` 1.64.1 are pinned in
+  the catalog and used only by `@vellum/editor-react`. Tailwind and Zustand stay uninstalled: the chrome is plain CSS over the token
+  variables (the token lint forbids literals either way), and `editor-core`'s workspace and session are small subscribable objects,
+  so a store library had nothing to do. Icons are not a dependency: `scripts/ui-icons-gen.mjs` writes the 49 Lucide paths the chrome
+  uses from the catalog already in `crates/adapters/icons/data/lucide.json` (lucide-static 1.59.0, ISC). That version has no
+  `history` (the design's name for what it now calls `rotate-ccw-clock`; same drawing) and no `message-square-play` (the design's
+  prompt-node icon; `message-square-more` stands in until the catalog has one). Its `git-branch` is drawn differently from the
+  design's. The lockfile gained `@base-ui/react`, `@base-ui/utils`, `@floating-ui/*` and `@playwright/test`; none is a prerelease.

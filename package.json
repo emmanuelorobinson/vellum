@@ -32,6 +32,8 @@
     "design:snapshot": "bash scripts/design-snapshot",
     "design:check": "bash scripts/design-check",
     "design:tokens": "bash scripts/design-tokens",
+    "ui-icons:gen": "node scripts/ui-icons-gen.mjs",
+    "ui-icons:check": "node scripts/ui-icons-gen.mjs --check",
     "tokens:check": "node scripts/design-tokens.mjs --check",
     "tokens:lint": "node scripts/token-lint.mjs",
     "fixtures:record": "bash scripts/record-engine-fixtures.sh",

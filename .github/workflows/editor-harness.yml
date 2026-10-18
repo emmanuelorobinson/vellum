@@ -25,6 +25,9 @@ jobs:
       - run: pnpm --filter @vellum/editor-react exec playwright install chromium --with-deps
       - run: pnpm --filter @vellum/editor-react test:storybook
       - run: pnpm --filter @vellum/editor-react build-storybook
+      # Draw, select, reorder, drop, hide panels and undo through the real workspace over a scripted engine.
+      # The design goldens inside it skip without the design snapshot PNGs, which CI does not have.
+      - run: pnpm --filter @vellum/editor-react test:e2e
       # Initially all specimens are pending. Once implemented, missing design PNGs fail explicitly;
       # the design exporter must provide those snapshots to this lane before those components land.
       - name: Component goldens against design snapshots (pending until implemented)

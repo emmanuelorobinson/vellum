@@ -10,6 +10,7 @@
       "!packages/types-ts/src/generated",
       "!packages/skills/src/generated",
       "!packages/ui-tokens/src/generated",
+      "!packages/editor-react/src/icons/lucide.generated.ts",
       "!packages/ui-tokens/source/tokens.json",
       "!packages/types-ts/src/index.ts",
       "!pnpm-lock.yaml",

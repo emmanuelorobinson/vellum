@@ -1,0 +1,210 @@
+{
+  "_note": "TEST DATA. Regions of the design's screens that this package builds, read through the Pencil MCP from the read-only copy (frame ids and node boxes in frame coordinates). `design` is the box in the design PNG, `selector` the element that must match it, `clipHeight` limits the comparison to the top of a taller element.",
+  "tolerance": {
+    "fraction": 0.01,
+    "channel": 48
+  },
+  "screens": [
+    {
+      "id": "C03",
+      "size": [1280, 800],
+      "modes": ["light", "dark", "hc-light", "hc-dark"],
+      "snapshot": "C03-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "document bar",
+          "selector": ".vc-docbar",
+          "design": [8, 8, 360, 40],
+          "fraction": 0.04
+        },
+        {
+          "name": "panel tabs",
+          "selector": ".vc-panel",
+          "design": [8, 56, 360, 44],
+          "clipHeight": 44,
+          "fraction": 0.1
+        },
+        {
+          "name": "tool rail",
+          "selector": ".vc-rail",
+          "design": [376, 56, 44, 310],
+          "clipHeight": 310,
+          "fraction": 0.04
+        },
+        {
+          "name": "top-right bar",
+          "selector": ".vc-topright",
+          "design": [1079, 8, 193, 40],
+          "fraction": 0.05
+        },
+        {
+          "name": "bottom strip",
+          "selector": ".vc-strip",
+          "design": [496, 756, 229, 32],
+          "fraction": 0.11
+        },
+        {
+          "name": "zoom pill",
+          "selector": ".vc-zoom",
+          "design": [1212, 756, 60, 32],
+          "fraction": 0.09
+        }
+      ]
+    },
+    {
+      "id": "C18-layers",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C18-layers-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=layers&select=habit&connection=headless",
+      "hover": "continue",
+      "regions": [
+        {
+          "name": "document bar",
+          "selector": ".vc-docbar",
+          "design": [8, 8, 360, 40],
+          "fraction": 0.03
+        },
+        {
+          "name": "layers panel",
+          "selector": ".vc-panel",
+          "design": [8, 56, 360, 736],
+          "fraction": 0.03
+        },
+        {
+          "name": "tool rail",
+          "selector": ".vc-rail",
+          "design": [376, 56, 44, 310],
+          "clipHeight": 310,
+          "fraction": 0.03
+        },
+        {
+          "name": "top-right bar",
+          "selector": ".vc-topright",
+          "design": [1079, 8, 193, 40],
+          "fraction": 0.05
+        },
+        {
+          "name": "bottom strip",
+          "selector": ".vc-strip",
+          "design": [496, 756, 235, 32],
+          "fraction": 0.09
+        },
+        {
+          "name": "zoom pill",
+          "selector": ".vc-zoom",
+          "design": [1212, 756, 60, 32],
+          "fraction": 0.08
+        }
+      ]
+    },
+    {
+      "id": "C18-assets",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C18-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=0.5&tab=assets",
+      "regions": [
+        {
+          "name": "assets panel",
+          "selector": ".vc-panel",
+          "design": [8, 56, 360, 736],
+          "fraction": 0.06
+        },
+        {
+          "name": "bottom strip",
+          "selector": ".vc-strip",
+          "design": [496, 756, 229, 32],
+          "fraction": 0.08
+        }
+      ]
+    },
+    {
+      "id": "S13-960",
+      "size": [960, 640],
+      "modes": ["light", "dark"],
+      "snapshot": "S13-{mode}-960.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "document bar",
+          "selector": ".vc-docbar",
+          "design": [8, 8, 320, 40],
+          "fraction": 0.04
+        },
+        {
+          "name": "panel tabs",
+          "selector": ".vc-panel",
+          "design": [8, 56, 320, 44],
+          "clipHeight": 44,
+          "fraction": 0.07
+        },
+        {
+          "name": "tool rail",
+          "selector": ".vc-rail",
+          "design": [336, 56, 44, 310],
+          "clipHeight": 310,
+          "fraction": 0.03
+        },
+        {
+          "name": "top-right bar",
+          "selector": ".vc-topright",
+          "design": [759, 8, 193, 40],
+          "fraction": 0.05
+        },
+        {
+          "name": "bottom strip",
+          "selector": ".vc-strip",
+          "design": [400, 600, 229, 32],
+          "fraction": 0.08
+        },
+        {
+          "name": "zoom pill",
+          "selector": ".vc-zoom",
+          "design": [892, 600, 60, 32],
+          "fraction": 0.08
+        }
+      ]
+    },
+    {
+      "id": "S13-760",
+      "size": [760, 640],
+      "modes": ["light", "dark"],
+      "snapshot": "S13-{mode}-760.png",
+      "query": "scenario=juniper&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "document bar",
+          "selector": ".vc-docbar",
+          "design": [8, 8, 320, 40],
+          "fraction": 0.04
+        },
+        {
+          "name": "collapsed panel strip",
+          "selector": ".vc-panel",
+          "design": [8, 56, 44, 576]
+        },
+        {
+          "name": "top-right bar",
+          "selector": ".vc-topright",
+          "design": [559, 8, 193, 40],
+          "fraction": 0.05
+        },
+        {
+          "name": "bottom strip",
+          "selector": ".vc-strip",
+          "design": [232, 600, 229, 32],
+          "fraction": 0.08
+        },
+        {
+          "name": "zoom pill",
+          "selector": ".vc-zoom",
+          "design": [692, 600, 60, 32],
+          "fraction": 0.08
+        }
+      ]
+    }
+  ],
+  "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."
+}
