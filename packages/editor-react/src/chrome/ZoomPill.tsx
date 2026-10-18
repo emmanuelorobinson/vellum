@@ -1,5 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
 import { Icon } from "../icons/Icon";
+import { usePortalContainer } from "./portal";
 
 export interface ZoomItem {
   label: string;
@@ -19,6 +20,7 @@ export function ZoomPill({
   label: string;
   items: readonly ZoomItem[];
 }) {
+  const container = usePortalContainer();
   return (
     <div className="vc-bar vc-zoom" style={{ left: x, top: y }}>
       <Menu.Root>
@@ -26,7 +28,7 @@ export function ZoomPill({
           <span>{label}</span>
           <Icon name="chevron-down" size={10} />
         </Menu.Trigger>
-        <Menu.Portal>
+        <Menu.Portal container={container}>
           <Menu.Positioner side="top" align="end" sideOffset={8}>
             <Menu.Popup className="vc-menu">
               {items.map((i) => (

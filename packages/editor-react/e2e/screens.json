@@ -204,6 +204,195 @@
           "fraction": 0.08
         }
       ]
+    },
+    {
+      "id": "C13",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C13-{mode}-1280.png",
+      "query": "design=c13&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "panel tabs",
+          "selector": ".vc-right__tabs",
+          "design": [992, 56, 280, 44],
+          "fraction": 0.065,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "notes",
+          "selector": ".vc-section[data-section=\"notes\"]",
+          "design": [992, 100, 280, 37],
+          "fraction": 0.035,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "position",
+          "selector": ".vc-section[data-section=\"position\"]",
+          "design": [992, 137, 280, 97],
+          "fraction": 0.02,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "layout",
+          "selector": ".vc-section[data-section=\"layout\"]",
+          "design": [992, 234, 280, 250],
+          "fraction": 0.025,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "appearance",
+          "selector": ".vc-section[data-section=\"appearance\"]",
+          "design": [992, 484, 280, 63],
+          "fraction": 0.03,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "fill",
+          "selector": ".vc-section[data-section=\"fill\"]",
+          "design": [992, 547, 280, 63],
+          "fraction": 0.03,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "stroke",
+          "selector": ".vc-section[data-section=\"stroke\"]",
+          "design": [992, 610, 280, 53],
+          "fraction": 0.015,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "effects",
+          "selector": ".vc-section[data-section=\"effects\"]",
+          "design": [992, 663, 280, 53],
+          "fraction": 0.015,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "export",
+          "selector": ".vc-section[data-section=\"export\"]",
+          "design": [992, 716, 280, 67],
+          "fraction": 0.035,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        }
+      ]
+    },
+    {
+      "id": "C14",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C14-{mode}-1280.png",
+      "query": "design=c14&edit=1&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "text",
+          "selector": ".vc-section[data-section=\"text\"]",
+          "design": [992, 100, 280, 297],
+          "fraction": 0.03,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "fill",
+          "selector": ".vc-section[data-section=\"fill\"]",
+          "design": [992, 397, 280, 73],
+          "fraction": 0.025,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "content",
+          "selector": ".vc-section[data-section=\"content\"]",
+          "design": [992, 470, 280, 66],
+          "fraction": 0.05,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        }
+      ]
+    },
+    {
+      "id": "C16",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C16-{mode}-1280.png",
+      "query": "design=c16&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "component",
+          "selector": ".vc-section[data-section=\"component\"]",
+          "design": [992, 100, 280, 247],
+          "fraction": 0.025,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        }
+      ]
+    },
+    {
+      "id": "C16-instance",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C16-instance-{mode}-1280.png",
+      "query": "design=c16i&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "instance",
+          "selector": ".vc-section[data-section=\"component\"]",
+          "design": [992, 100, 280, 312],
+          "clipHeight": 312,
+          "fraction": 0.03,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        }
+      ]
+    },
+    {
+      "id": "C33",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C33-{mode}-1280.png",
+      "query": "design=c33&zoom=0.5&tab=agent",
+      "open": "Edit fill",
+      "regions": [
+        {
+          "name": "fill",
+          "selector": ".vc-section[data-section=\"fill\"]",
+          "design": [992, 71, 280, 192]
+        },
+        {
+          "name": "fill editor header",
+          "selector": "[data-testid=\"paint-editor\"]",
+          "design": [608, 144, 360, 64],
+          "clipHeight": 64,
+          "fraction": 0.06,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "fill editor rows",
+          "selector": "[data-testid=\"paint-editor\"]",
+          "design": [608, 403, 360, 206],
+          "offset": [0, 259],
+          "fraction": 0.03,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        }
+      ]
+    },
+    {
+      "id": "C33-effects",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C33-effects-{mode}-1280.png",
+      "query": "design=c33e&zoom=0.5&tab=agent",
+      "regions": [
+        {
+          "name": "stroke",
+          "selector": ".vc-section[data-section=\"stroke\"]",
+          "design": [992, 71, 280, 281],
+          "fraction": 0.02,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        },
+        {
+          "name": "effects",
+          "selector": ".vc-section[data-section=\"effects\"]",
+          "design": [992, 352, 280, 272],
+          "fraction": 0.02,
+          "why": "Text anti-aliasing: pen.dev and Chrome rasterise glyph edges differently. The compare sheets in target/screen-goldens show only glyph edges differ (sizes match to the pixel)."
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

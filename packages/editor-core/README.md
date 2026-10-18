@@ -82,3 +82,34 @@ All of it is headless: no React, DOM or renderer.
 - `createEditorHandlers({ workspace, session })`: handlers for `createCommandController` (panels, tools, undo/redo, selection keys,
   zoom and fit). Commands without a handler stay disabled.
 - `ToolOp` gained `move` and `reorder`, matching core's `Move` and `Reorder`.
+
+# Properties: values, paints, strokes, effects, text and components (Prompt 47)
+
+Still headless. Everything the right panel's Design tab does is here; `editor-react` only draws it.
+
+- `parseField`, `formatField`, `stepField`, `scrubField`, `mergeValues`: the value-field rules. Numbers keep their unit; a sum
+  such as `16*2` is read by a small parser (no names, calls or properties); arrows step by 1, 10 with Shift, 0.1 with Alt; a
+  selection that disagrees is `mixed`.
+- `readDesign({ targets, document, mode, readOnly, text, editing })` returns the `DesignModel`: the sections a selection has
+  (`sectionsFor`: Text, Component or Notes first, as design screens C13, C14, C16 show), each field as a `FieldValue`
+  (`value`, `bound` to a variable with its name and what it resolves to under the theme, `mixed`, or `none`), size per axis as
+  hug, fill or fixed, paints, strokes and effects as rows, the text model and the component or instance model.
+- `design/patches.ts`: one `Edit` per field (`setOpacity`, `setGap`, `setPaddingSide`, `addFill`, `updateStroke`, `setBlend` …).
+  An edit gives a `NodePatch` for a target or `null`; `combine` merges several so one click is one transaction. A default
+  value is written as `null`, which the core reads as "back to the default", so files print one spelling. A part of an instance
+  is changed with `replaceInInstance`, never by writing the component. Variables are `{ $var }` values anywhere a number or colour is.
+- `paint.ts`: paint kinds and conversions (a solid becomes a gradient from its colour to clear; a gradient becomes a 2 × 2 mesh),
+  stops, gradient angle, mesh resize (colours resampled), point moves, `renderMesh` (RGBA pixels laid onto the quads the points
+  make), image fit and crop (`cropCorners`, `dragCropCorner`), opacity, visibility, the 18 blend modes. `stroke.ts`, `effects.ts`,
+  `text.ts` and `component.ts` do the same for their parts; `component.ts` also builds the core's `Detach` and `UpdateComponent`.
+- `createDesignController({ session, engine, defaults, text })`: the selected layers as targets (including whether a parent's
+  layout places them), the model, `edit(edit)` (one Person transaction through `session.commit`), `ops(ops)`, and the request
+  the Replace inside instance command makes of the panel. A text layer open for typing is read as its draft.
+- `createPaintEditor({ session, design })`: the fill editor's part of the canvas. While a mesh gradient is open its points can be
+  dragged where they are on the shape, and an image's crop corners while cropping; a drag is shown at once and written as one
+  transaction on release; `cancel()` puts it back. `overlayShapes` draws them (`paintHandles`).
+- Tools: with the move tool, a double-click on a text layer opens it for typing (DESIGN.md C14). `EditorSession` gained `commit`
+  and `device`; `ToolOp` gained `detach` and `updateComponent`; `createEditorHandlers` takes the design controller and then
+  handles `component.detach` and `component.replace`.
+- Not here: a TypeScript document engine, variable creation and binding a plain number to a variable (Prompt 48), range formatting
+  of text (changes apply to every run of a layer), fallback sizes next to hug and fill, and anything that reads or writes files.

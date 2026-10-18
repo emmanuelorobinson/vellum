@@ -2,13 +2,18 @@ import {
   type EditorSession,
   HANDLE_SIZE,
   overlayShapes,
+  type PaintEditor,
   type SelectedItem,
   zoomAbout,
 } from "@vellum/editor-core";
 import type { Frame, Renderer } from "@vellum/renderer-api";
+import type { Value } from "@vellum/types-ts";
 import { useEffect, useRef } from "react";
 import { useStore } from "../hooks";
 import { drawOverlay, readPalette } from "./draw-overlay";
+import { TextEditor } from "./TextEditor";
+
+const NO_SUBSCRIPTION = () => ({ dispose() {} });
 
 /** Where the content canvas gets its frames: the engine's display list for the current viewport. */
 export interface ContentSource {
@@ -28,6 +33,10 @@ export interface CanvasHostProps {
   componentRoots?: ReadonlySet<string>;
   content?: ContentSource;
   createRenderer?: RendererFactory;
+  /** The fill editor's points on the canvas: a mesh gradient's points and an image's crop corners. */
+  paintEditor?: PaintEditor;
+  /** Resolves a colour that may be a variable, for the text being typed. */
+  colour?: (value: Value<string>) => string;
   /** Label for assistive technology; the layers panel is the accessible tree. */
   label?: string;
   dpr?: number;
@@ -52,10 +61,13 @@ export function CanvasHost({
   componentRoots,
   content,
   createRenderer,
+  paintEditor,
+  colour,
   label = "Canvas",
   dpr = typeof devicePixelRatio === "number" ? devicePixelRatio : 1,
 }: CanvasHostProps) {
   useStore(session.subscribe);
+  useStore(paintEditor ? paintEditor.subscribe : NO_SUBSCRIPTION);
   const root = useRef<HTMLDivElement>(null);
   const contentCanvas = useRef<HTMLCanvasElement>(null);
   const overlayCanvas = useRef<HTMLCanvasElement>(null);
@@ -138,6 +150,7 @@ export function CanvasHost({
       frameLabels,
       hover,
       altMeasure: alt.current,
+      ...(paintEditor ? { paintHandles: paintEditor.handles(session.state.viewport) } : {}),
     });
   })();
 
@@ -218,15 +231,21 @@ export function CanvasHost({
         e.currentTarget.focus({ preventScroll: true });
         e.currentTarget.setPointerCapture(e.pointerId);
         const p = point(e);
+        // A press on the canvas ends the text being typed, wherever focus was.
+        if (session.state.mode.type === "editing") session.dispatch({ type: "finish" });
+        // A mesh point or crop corner of the open fill editor is grabbed before the tools see the press.
+        if (paintEditor?.press(p)) return;
         session.dispatch({ type: "pointerDown", point: p, ...mods(e), ...handleAt(p) });
       }}
       onPointerMove={(e) => {
         alt.current = e.altKey;
+        if (paintEditor?.drag(point(e))) return;
         if (e.altKey) session.hover(point(e));
         session.dispatch({ type: "pointerMove", point: point(e), ...mods(e) });
       }}
       onPointerUp={(e) => {
-        session.dispatch({ type: "pointerUp", point: point(e), ...mods(e) });
+        if (!paintEditor?.release(point(e)))
+          session.dispatch({ type: "pointerUp", point: point(e), ...mods(e) });
         if (e.currentTarget.hasPointerCapture(e.pointerId))
           e.currentTarget.releasePointerCapture(e.pointerId);
       }}
@@ -245,6 +264,7 @@ export function CanvasHost({
         height={Math.round(size.height * dpr)}
         aria-hidden
       />
+      <TextEditor session={session} {...(colour ? { colour } : {})} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Tooltip } from "@base-ui/react/tooltip";
 import type { ReactElement } from "react";
+import { usePortalContainer } from "./portal";
 
 /** The design's tool tooltip: the name, then the shortcut in mono. */
 export function Tip({
@@ -13,10 +14,11 @@ export function Tip({
   children: ReactElement;
   side?: "top" | "right" | "bottom" | "left";
 }) {
+  const container = usePortalContainer();
   return (
     <Tooltip.Root>
       <Tooltip.Trigger render={children} />
-      <Tooltip.Portal>
+      <Tooltip.Portal container={container}>
         <Tooltip.Positioner side={side} sideOffset={8}>
           <Tooltip.Popup className="vc-tooltip">
             <span>{name}</span>

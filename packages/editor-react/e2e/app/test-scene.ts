@@ -24,9 +24,17 @@ export function sceneOf(read: () => Document | null): ToolScene {
         const x = ox + (n.position?.type === "absolute" ? n.position.x : 0);
         const y = oy + (n.position?.type === "absolute" ? n.position.y : 0);
         const kids = n.children ?? [];
+        const test = (
+          n as unknown as { metadata?: { testBounds?: { width: number; height: number } } }
+        ).metadata?.testBounds;
         out.set(node.id, {
           node,
-          bounds: { x, y, width: Number(n.width), height: Number(n.height) },
+          bounds: {
+            x,
+            y,
+            width: typeof n.width === "number" ? n.width : (test?.width ?? 0),
+            height: typeof n.height === "number" ? n.height : (test?.height ?? 0),
+          },
           children: kids.map((k) => k.id),
           parent,
           selectable: n.locked !== true && n.visible !== false,

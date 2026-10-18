@@ -1,4 +1,5 @@
 import type {
+  ComponentId,
   DeviceId,
   Node,
   NodeId,
@@ -7,6 +8,8 @@ import type {
   Origin,
   PageId,
   Point,
+  PropDef,
+  Variant,
 } from "@vellum/types-ts";
 
 export interface Box {
@@ -34,7 +37,17 @@ export type ToolOp =
   /** To another parent or page; `to.index` is the final index among the new siblings. */
   | { type: "move"; id: NodeId; to: Place }
   /** Among the node's siblings; `index` is the final index, after the node is taken out. */
-  | { type: "reorder"; id: NodeId; index: number };
+  | { type: "reorder"; id: NodeId; index: number }
+  /** Expands one instance into its tree; nested instances and variable links stay linked (Op::Detach). */
+  | { type: "detach"; id: NodeId }
+  /** A component's name, props and variants, as they should read (Op::UpdateComponent); its tree stays. */
+  | {
+      type: "updateComponent";
+      id: ComponentId;
+      name: string;
+      props: Record<string, PropDef>;
+      variants: Variant[];
+    };
 export interface ToolTransaction {
   origin: Origin & { actor: { kind: "person"; device: DeviceId } };
   ops: ToolOp[];

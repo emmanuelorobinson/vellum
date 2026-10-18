@@ -60,3 +60,28 @@ token variables; icons are `icons/lucide.generated.ts` (`pnpm ui-icons:gen`).
   comparison sheets to `target/screen-goldens/` when it fails.
 - The harness's component specimens stay pending: every design component this prompt covers lacks its high-contrast reference
   (see the Prompt 45 note), and a built case without a reference fails its golden.
+
+# Properties panel (Prompt 47)
+
+`EditorWorkspace` builds the right panel when it is given a `DesignController` and a `PaintEditor` (from `@vellum/editor-core`):
+`RightPanel` (Design, Inspect, Activity; the last two are slots) around `DesignTab`, which lists the sections the selection has.
+Spacing is dense for frames, roomy for text and components, wide for fill, stroke and effects detail (see DESIGN-GAPS). The
+panel never writes the document: every control calls `ctx.edit(...)`, which is one Person transaction through the controller.
+
+- Controls (`design/controls.tsx`): `ValueField` (sums, arrows, scrubbing the label, Mixed, bound, disabled with its reason, a brief
+  message beside the field when input is refused; Escape reverts without writing), `Segmented` (real radios in a fieldset),
+  `SelectField`, `ToggleRow`, `TextField`, `VariableChip` (menu: another variable of the type, or Detach), `Section`, `PropertyRow`.
+- `PaintPopover` is the fill editor (C33): Solid with Color and Variables, Gradient (linear, radial, angular with stops and angle;
+  mesh with a preview, grid, point and points that are dragged on the canvas), Image (fit, crop on canvas; choosing or replacing
+  a file is the host's), Shader (v1.1, read-only). It stays open while the canvas is used.
+- `DesignHost` is what the app around the editor provides: `fonts`, `onGoToMain`, and `onAction` for what the panel cannot do
+  (`export.add`, `image.choose`, `image.replace`, `component.goToMain`). A control that needs one is disabled without it.
+- Menus, selects and popovers mount in the workspace element (`chrome/portal.tsx`), so they take its appearance.
+- The canvas types text in place (`canvas/TextEditor.tsx`): a double-click on text opens it; the Text section edits the draft while
+  it is open, so typing and restyling are one change; a press on the canvas, ⌘ Enter or leaving the panel ends it; Escape cancels.
+- Tests: `design.test.tsx` (every control state and the panel for several selections, static markup), `layout-oracle.test.ts` (all
+  187 oracle fixtures read into the panel and written back with its edits give the same layout properties), `e2e/design.spec.ts`
+  (typing, scrubbing, bindings, layout and sizing, fills, the fill editor, dragging mesh points, text, components and overrides,
+  effects, read-only), and goldens for C13, C14, C16, C16-instance, C33 and C33-effects in `e2e/screens.json`. Text-dense regions
+  carry their own limits, with the reason, because the two engines draw glyph edges differently. Test colours live in
+  `fixtures/design-scenarios.ts` (TEST DATA), which the token lint exempts.

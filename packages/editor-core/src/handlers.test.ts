@@ -3,6 +3,7 @@ import { type EngineSnapshot, FakeEngineClient, type ToolScene } from "@vellum/e
 import type { Node } from "@vellum/types-ts";
 import { describe, expect, it } from "vitest";
 import { createCommandController } from "./command-controller";
+import { createDesignController } from "./design/controller";
 import { createEditorHandlers } from "./handlers";
 import { createEditorSession } from "./session";
 import { createWorkspace } from "./workspace";
@@ -152,5 +153,94 @@ describe("editor handlers", () => {
     engine.script(snap(1), "undo");
     handlers["edit.undo"]?.();
     expect(engine.historyActors).toEqual([{ kind: "person", device: "dev" }]);
+  });
+});
+
+describe("component commands", () => {
+  const instanceScene: ToolScene = {
+    ...scene,
+    get: (id) =>
+      id === "inst"
+        ? {
+            node: {
+              id,
+              type: "instance",
+              name: "Button",
+              componentId: "c1",
+              width: 10,
+              height: 10,
+            } as unknown as Node,
+            bounds: { x: 0, y: 0, width: 10, height: 10 },
+            children: [],
+            parent: null,
+          }
+        : id === "nested"
+          ? {
+              node: {
+                id,
+                type: "instance",
+                name: "Icon",
+                componentId: "c2",
+                width: 10,
+                height: 10,
+              } as unknown as Node,
+              bounds: { x: 0, y: 0, width: 10, height: 10 },
+              children: [],
+              parent: null,
+              instance: { id: "inst", path: "inst/nested" },
+            }
+          : scene.get(id),
+  };
+  function withDesign() {
+    const engine = new FakeEngineClient(snap(0), instanceScene);
+    const session = createEditorSession({
+      engine,
+      device: "dev",
+      page: "p",
+      nextNodeId: () => "n",
+      createNode: () => ({}) as Node,
+      viewportSize: () => ({ width: 1000, height: 600 }),
+    });
+    const workspace = createWorkspace();
+    const design = createDesignController({
+      session,
+      engine,
+      defaults: { fill: "#D9D9D9", stroke: "#1F1F1F", shadow: "#00000040" },
+      text: { fallback: "Inter" },
+    });
+    const handlers = createEditorHandlers({ workspace, session, design });
+    return { engine, session, design, handlers, controller: createCommandController(handlers) };
+  }
+  it("has no handler for them without the properties panel, so the commands are disabled", () => {
+    const { controller } = fixture();
+    expect(controller.commands.get("component.detach")?.enabled?.()).toBe(false);
+    expect(controller.commands.get("component.replace")?.enabled?.()).toBe(false);
+  });
+  it("detaches the selected instances in one transaction", async () => {
+    const { engine, session, handlers, controller } = withDesign();
+    expect(controller.commands.get("component.detach")?.enabled?.()).toBe(true);
+    session.select(["inst"]);
+    engine.script(snap(1));
+    handlers["component.detach"]?.();
+    expect(engine.transactions).toHaveLength(1);
+    expect(engine.transactions[0]?.ops).toEqual([{ type: "detach", id: "inst" }]);
+  });
+  it("detaches nothing for layers that are not instances, or are inside another instance", () => {
+    const { engine, session, handlers } = withDesign();
+    session.select(["a", "nested"]);
+    engine.script(snap(1));
+    handlers["component.detach"]?.();
+    expect(engine.transactions).toHaveLength(0);
+  });
+  it("asks the panel to open the replace picker", () => {
+    const { design, handlers } = withDesign();
+    let seen = 0;
+    design.subscribe(() => {
+      seen++;
+    });
+    handlers["component.replace"]?.();
+    expect(seen).toBe(1);
+    expect(design.takeRequest()).toBe("replace");
+    expect(design.takeRequest()).toBeNull();
   });
 });

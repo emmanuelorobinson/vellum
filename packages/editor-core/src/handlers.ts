@@ -1,3 +1,5 @@
+import { detachOps } from "./design/component";
+import type { DesignController } from "./design/controller";
 import { union } from "./geometry";
 import type { EditorSession } from "./session";
 import type { Box, ToolId } from "./tool-types";
@@ -14,8 +16,10 @@ type Handler = () => void;
 export function createEditorHandlers(deps: {
   workspace: Workspace;
   session: EditorSession;
+  /** The properties panel's controller: with it the component commands work. */
+  design?: DesignController;
 }): Record<string, Handler> {
-  const { workspace, session } = deps;
+  const { workspace, session, design } = deps;
   const handlers: Record<string, Handler> = {};
   for (const tab of PANEL_TABS)
     handlers[`panel.${tab}`] = () => workspace.switchTab(tab, { reveal: true });
@@ -76,6 +80,12 @@ export function createEditorHandlers(deps: {
       const item = session.sceneBounds(id);
       return item ? [item] : [];
     });
+  if (design) {
+    handlers["component.detach"] = () => {
+      design.ops(design.targets().flatMap((t) => detachOps(t.item)));
+    };
+    handlers["component.replace"] = () => design.requestReplace();
+  }
   handlers["view.fitAll"] = () => fit(boxesOf(session.roots()));
   handlers["view.fitSelection"] = () => fit(boxesOf(session.state.selection));
   return handlers;

@@ -637,6 +637,26 @@ function pointer(s: ToolState, e: PointerEvent, ctx: ToolContext): ToolResult {
   const m = s.mode,
     point = world(e.point, s.viewport);
   if (e.type === "doubleClick") {
+    // The move tool opens text for typing (DESIGN.md C14 route: double-click text).
+    if (m.type === "idle" && s.tool === "move" && !ctx.readOnly) {
+      const hit = ctx.scene.hitPoint(point, "deepest"),
+        item = hit ? ctx.scene.get(hit) : undefined;
+      if (hit && item?.node.type === "text" && selectable(item))
+        return result(
+          {
+            ...s,
+            mode: {
+              type: "editing",
+              node: item.node,
+              address: hit,
+              to: ctx.placement,
+              original: item.node.content,
+            },
+            selection: [hit],
+          },
+          ctx,
+        );
+    }
     if (m.type !== "path" || !e.target) return result(s, ctx);
     const target = e.target;
     if (target.type === "point")

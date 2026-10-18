@@ -754,3 +754,84 @@ describe("resolved primitive geometry", () => {
     });
   });
 });
+
+describe("double-clicking text", () => {
+  const textItem = (): SceneItem => ({
+    node: {
+      id: "txt",
+      type: "text",
+      name: "Title",
+      width: 100,
+      height: 24,
+      content: [{ text: "Hello", font: "Inter", size: 16 }],
+    } as unknown as Node,
+    bounds: { x: 0, y: 0, width: 100, height: 24 },
+    children: [],
+    parent: null,
+  });
+  const over = (item: SceneItem) => {
+    const f = fixture();
+    const ctx: ToolContext = {
+      ...f.ctx,
+      scene: {
+        ...f.ctx.scene,
+        hitPoint: () => item.node.id,
+        get: (id) => (id === item.node.id ? item : f.ctx.scene.get(id)),
+      },
+    };
+    return { ctx, state: initialToolState() };
+  };
+  it("opens the text layer for typing with the move tool, keeping what it says", () => {
+    const { ctx, state } = over(textItem());
+    const r = transitionTool(state, { type: "doubleClick", point: p(10, 10) }, ctx);
+    expect(r.state.mode).toMatchObject({
+      type: "editing",
+      address: "txt",
+      original: [{ text: "Hello", font: "Inter", size: 16 }],
+    });
+    expect(r.state.selection).toEqual(["txt"]);
+    expect(r.transactions).toEqual([]);
+  });
+  it("opens text inside an instance too: the change is then an override of the instance", () => {
+    const inner = { ...textItem(), instance: { id: "inst", path: "inst/txt" } };
+    const { ctx, state } = over(inner);
+    const r = transitionTool(state, { type: "doubleClick", point: p(10, 10) }, ctx);
+    expect(r.state.mode.type).toBe("editing");
+    const typed = transitionTool(
+      r.state,
+      { type: "content", content: [{ text: "Bye", font: "Inter", size: 16 }] },
+      ctx,
+    );
+    const done = transitionTool(typed.state, { type: "finish" }, ctx);
+    expect(done.transactions[0]?.ops[0]).toMatchObject({
+      type: "replaceInInstance",
+      id: "inst",
+      path: "inst/txt",
+    });
+  });
+  it("does nothing to a layer that is not text", () => {
+    const f = fixture();
+    const r = transitionTool(initialToolState(), { type: "doubleClick", point: p(10, 10) }, f.ctx);
+    expect(r.state.mode.type).toBe("idle");
+  });
+  it("does not open a locked or hidden text layer, or one in a read-only file", () => {
+    const locked = textItem();
+    (locked.node as unknown as { locked: boolean }).locked = true;
+    const a = over(locked);
+    expect(
+      transitionTool(a.state, { type: "doubleClick", point: p(1, 1) }, a.ctx).state.mode.type,
+    ).toBe("idle");
+    const b = over(textItem());
+    expect(
+      transitionTool(b.state, { type: "doubleClick", point: p(1, 1) }, { ...b.ctx, readOnly: true })
+        .state.mode.type,
+    ).toBe("idle");
+  });
+  it("opens only while the tool is idle: a press in progress is left alone", () => {
+    const { ctx, state } = over(textItem());
+    const pressed = transitionTool(state, { type: "pointerDown", point: p(5, 5) }, ctx).state;
+    expect(
+      transitionTool(pressed, { type: "doubleClick", point: p(5, 5) }, ctx).state.mode.type,
+    ).toBe("pressed");
+  });
+});

@@ -1,31 +1,37 @@
 import {
   type BindingContext,
   type createCommandController,
+  type DesignController,
   type EditorHost,
   type EditorSession,
   instanceTransaction,
+  type PaintEditor,
   type Platform,
   type ToolTransaction,
   type Workspace,
   world,
 } from "@vellum/editor-core";
 import type { EngineClient } from "@vellum/engine-client";
-import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId } from "@vellum/types-ts";
+import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId, Value } from "@vellum/types-ts";
 import type { Mode } from "@vellum/ui-tokens";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
 import type { ActorView } from "./chrome/ActorMarker";
 import { BottomStrip, type Connection } from "./chrome/BottomStrip";
 import { DocumentBar, type SaveState } from "./chrome/DocumentBar";
+import { PortalContainer } from "./chrome/portal";
 import { shortcutLabel } from "./chrome/shortcuts";
 import { ToolRail } from "./chrome/ToolRail";
 import { TipProvider } from "./chrome/Tooltip";
 import { TopRightBar } from "./chrome/TopRightBar";
 import { ZoomPill } from "./chrome/ZoomPill";
+import type { DesignHost } from "./design/context";
+import { DesignTab } from "./design/DesignTab";
 import { useEngineSnapshot, useStore, useWorkspace } from "./hooks";
 import { AssetsTab, type AssetsTabProps } from "./panels/AssetsTab";
 import { LayersTab } from "./panels/LayersTab";
 import { PanelFrame } from "./panels/PanelFrame";
+import { RightPanel } from "./panels/RightPanel";
 import "./editor.css";
 
 export type CommandController = ReturnType<typeof createCommandController>;
@@ -57,8 +63,21 @@ export interface EditorWorkspaceProps {
   now(): number;
   nextNodeId(): NodeId;
   assets: Omit<AssetsTabProps, "onDropComponent" | "readOnly" | "components">;
-  /** The Agent and History tabs and the right panel belong to later prompts; the host mounts them here. */
-  slots?: { agent?: ReactNode; history?: ReactNode; right?: ReactNode };
+  /** The properties panel's controller and the fill editor's canvas state; with them the right panel is built in. */
+  design?: DesignController;
+  paintEditor?: PaintEditor;
+  designHost?: DesignHost;
+  /**
+   * The Agent and History tabs belong to later prompts, as do Inspect and Activity in the right panel; the host
+   * mounts them here. `right` replaces the whole right panel when no design controller is given.
+   */
+  slots?: {
+    agent?: ReactNode;
+    history?: ReactNode;
+    right?: ReactNode;
+    inspect?: ReactNode;
+    activity?: ReactNode;
+  };
   content?: ContentSource;
   createRenderer?: RendererFactory;
   onShare?: () => void;
@@ -83,7 +102,13 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const snapshot = useEngineSnapshot(engine);
   useStore(session.subscribe);
   useStore(controller.commands.subscribe.bind(controller.commands));
-  const root = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement | null>(null);
+  // Menus and popovers mount inside the workspace so they follow its appearance.
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  const setRoot = useCallback((el: HTMLDivElement | null) => {
+    root.current = el;
+    setContainer(el);
+  }, []);
   const doc = snapshot.document;
   const [pageId, setPageId] = useState<PageId | null>(session.page || null);
 
@@ -157,6 +182,19 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   };
 
   const readOnly = snapshot.readOnly;
+  // Go to main component: the main is a layer on a page when the scene has it; otherwise the host shows it.
+  const designHost: DesignHost = {
+    ...props.designHost,
+    onGoToMain:
+      props.designHost?.onGoToMain ??
+      ((target) => {
+        const root = (
+          doc?.components?.[target.componentId as ComponentId]?.root as Node | undefined
+        )?.id;
+        if (!target.library && root && session.sceneItem(root)) session.select([root]);
+        else props.designHost?.onAction?.("component.goToMain", target);
+      }),
+  };
   const canvasMode = props.canvasAppearance ?? props.appearance;
   const zoomLabel = workspace.zoomLabel(session.state.viewport.zoom);
   const zoomItems = [
@@ -177,13 +215,18 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: one delegating key listener; focus is in the children
     <div
-      ref={root}
+      ref={setRoot}
       className="vc-workspace"
       data-appearance={props.appearance}
       data-canvas-appearance={canvasMode}
       data-chrome-hidden={layout.chromeHidden ? "" : undefined}
       onKeyDown={(e) => {
         if (e.defaultPrevented) return;
+        // Escape while dragging a mesh point or crop corner puts it back and nothing else.
+        if (e.key === "Escape" && props.paintEditor?.cancel()) {
+          e.preventDefault();
+          return;
+        }
         if (e.key === "Escape" && layout.agent.mode === "overlay") {
           workspace.closeAgentOverlay();
           return;
@@ -199,130 +242,153 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
           void controller.blur();
       }}
     >
-      <TipProvider>
-        <CanvasHost
-          session={session}
-          size={{ width: state.width, height: state.height }}
-          {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
-          {...(props.content ? { content: props.content } : {})}
-          {...(props.createRenderer ? { createRenderer: props.createRenderer } : {})}
-        />
-        {visible.documentBar ? (
-          <DocumentBar
-            fileName={props.fileName}
-            saveState={props.saveState}
-            width={layout.documentBar.width}
-            commands={controller.commands.list()}
+      <PortalContainer.Provider value={container}>
+        <TipProvider>
+          <CanvasHost
+            session={session}
+            size={{ width: state.width, height: state.height }}
+            {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
+            {...(props.content ? { content: props.content } : {})}
+            {...(props.createRenderer ? { createRenderer: props.createRenderer } : {})}
+            {...(props.paintEditor ? { paintEditor: props.paintEditor } : {})}
+            {...(props.design
+              ? { colour: (c: Value<string>) => props.design?.colour(c, doc) ?? (c as string) }
+              : {})}
           />
-        ) : null}
-        <PanelFrame
-          layout={layout.agent}
-          tab={state.tab}
-          onTab={(tab) => workspace.switchTab(tab, { reveal: true })}
-          onCloseOverlay={() => workspace.closeAgentOverlay()}
-          shortcut={shortcut("agent.focus")}
-        >
-          {{
-            agent: props.slots?.agent ?? null,
-            history: props.slots?.history ?? null,
-            layers: (
-              <LayersTab
-                document={doc}
-                page={pageId ?? session.page}
-                onPage={(id) => {
-                  setPageId(id);
-                  session.setPage(id);
-                }}
-                selection={session.state.selection}
-                onSelect={(ids) => session.select(ids)}
-                commit={commit}
-                device={props.device}
-                now={props.now}
-                recent={props.recent}
-                actors={props.actors}
-                {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
-                readOnly={readOnly}
-                onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
-              />
-            ),
-            assets: (
-              <AssetsTab
-                {...props.assets}
-                components={components}
-                readOnly={readOnly}
-                onDropComponent={dropComponent}
-              />
-            ),
-          }}
-        </PanelFrame>
-        {visible.toolRail ? (
-          <ToolRail
-            x={layout.toolRail.x}
-            y={layout.toolRail.y}
-            tool={tool}
-            selectTool={(t) => session.dispatch({ type: "tool", tool: t })}
-            run={run}
-            enabled={enabled}
-            shortcut={shortcut}
-          />
-        ) : null}
-        {visible.topRight ? (
-          <TopRightBar
-            right={layout.topRight.right}
-            agents={props.agents}
-            {...(props.onShare ? { onShare: props.onShare } : {})}
-            {...(props.onPreview ? { onPreview: props.onPreview } : {})}
-            {...(props.onSettings ? { onSettings: props.onSettings } : {})}
-            {...(props.onPauseAll ? { onPauseAll: props.onPauseAll } : {})}
-          />
-        ) : null}
-        {layout.right.mode !== "hidden" && props.slots?.right ? (
-          <aside
-            className="vc-bar vc-right"
-            data-mode={layout.right.mode}
-            style={{
-              left: layout.right.rect.x,
-              top: layout.right.rect.y,
-              width: layout.right.rect.width,
-              height: layout.right.rect.height,
-            }}
-            aria-label="Properties"
+          {visible.documentBar ? (
+            <DocumentBar
+              fileName={props.fileName}
+              saveState={props.saveState}
+              width={layout.documentBar.width}
+              commands={controller.commands.list()}
+            />
+          ) : null}
+          <PanelFrame
+            layout={layout.agent}
+            tab={state.tab}
+            onTab={(tab) => workspace.switchTab(tab, { reveal: true })}
+            onCloseOverlay={() => workspace.closeAgentOverlay()}
+            shortcut={shortcut("agent.focus")}
           >
-            {props.slots.right}
-          </aside>
-        ) : null}
-        {visible.bottomStrip ? (
-          <BottomStrip
-            centerX={layout.bottomStrip.centerX}
-            y={layout.bottomStrip.y}
-            branch={props.branch}
-            dirty={props.dirty ?? false}
-            connection={props.connection}
-            basicRenderer={props.basicRenderer ?? false}
-          />
-        ) : null}
-        {visible.zoomPill ? (
-          <ZoomPill
-            x={layout.zoomPill.x}
-            y={layout.zoomPill.y}
-            label={zoomLabel}
-            items={zoomItems}
-          />
-        ) : null}
-        {session.notice ? (
-          <div className="vc-notice" role="status" data-kind={session.notice.kind}>
-            <span>{noticeText(session.notice)}</span>
-            <button
-              type="button"
-              className="vc-iconbutton"
-              aria-label="Dismiss"
-              onClick={() => session.clearNotice()}
+            {{
+              agent: props.slots?.agent ?? null,
+              history: props.slots?.history ?? null,
+              layers: (
+                <LayersTab
+                  document={doc}
+                  page={pageId ?? session.page}
+                  onPage={(id) => {
+                    setPageId(id);
+                    session.setPage(id);
+                  }}
+                  selection={session.state.selection}
+                  onSelect={(ids) => session.select(ids)}
+                  commit={commit}
+                  device={props.device}
+                  now={props.now}
+                  recent={props.recent}
+                  actors={props.actors}
+                  {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
+                  readOnly={readOnly}
+                  onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
+                />
+              ),
+              assets: (
+                <AssetsTab
+                  {...props.assets}
+                  components={components}
+                  readOnly={readOnly}
+                  onDropComponent={dropComponent}
+                />
+              ),
+            }}
+          </PanelFrame>
+          {visible.toolRail ? (
+            <ToolRail
+              x={layout.toolRail.x}
+              y={layout.toolRail.y}
+              tool={tool}
+              selectTool={(t) => session.dispatch({ type: "tool", tool: t })}
+              run={run}
+              enabled={enabled}
+              shortcut={shortcut}
+            />
+          ) : null}
+          {visible.topRight ? (
+            <TopRightBar
+              right={layout.topRight.right}
+              agents={props.agents}
+              {...(props.onShare ? { onShare: props.onShare } : {})}
+              {...(props.onPreview ? { onPreview: props.onPreview } : {})}
+              {...(props.onSettings ? { onSettings: props.onSettings } : {})}
+              {...(props.onPauseAll ? { onPauseAll: props.onPauseAll } : {})}
+            />
+          ) : null}
+          {layout.right.mode !== "hidden" && (props.design || props.slots?.right) ? (
+            <aside
+              className="vc-bar vc-right"
+              data-mode={layout.right.mode}
+              style={{
+                left: layout.right.rect.x,
+                top: layout.right.rect.y,
+                width: layout.right.rect.width,
+                height: layout.right.rect.height,
+              }}
+              aria-label="Properties"
             >
-              ×
-            </button>
-          </div>
-        ) : null}
-      </TipProvider>
+              {props.design && props.paintEditor ? (
+                <RightPanel
+                  design={
+                    <DesignTab
+                      design={props.design}
+                      session={session}
+                      paintEditor={props.paintEditor}
+                      document={doc}
+                      readOnly={readOnly}
+                      host={designHost}
+                    />
+                  }
+                  {...(props.slots?.inspect ? { inspect: props.slots.inspect } : {})}
+                  {...(props.slots?.activity ? { activity: props.slots.activity } : {})}
+                />
+              ) : (
+                props.slots?.right
+              )}
+            </aside>
+          ) : null}
+          {visible.bottomStrip ? (
+            <BottomStrip
+              centerX={layout.bottomStrip.centerX}
+              y={layout.bottomStrip.y}
+              branch={props.branch}
+              dirty={props.dirty ?? false}
+              connection={props.connection}
+              basicRenderer={props.basicRenderer ?? false}
+            />
+          ) : null}
+          {visible.zoomPill ? (
+            <ZoomPill
+              x={layout.zoomPill.x}
+              y={layout.zoomPill.y}
+              label={zoomLabel}
+              items={zoomItems}
+            />
+          ) : null}
+          {session.notice ? (
+            <div className="vc-notice" role="status" data-kind={session.notice.kind}>
+              <span>{noticeText(session.notice)}</span>
+              <button
+                type="button"
+                className="vc-iconbutton"
+                aria-label="Dismiss"
+                onClick={() => session.clearNotice()}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+        </TipProvider>
+      </PortalContainer.Provider>
     </div>
   );
 }

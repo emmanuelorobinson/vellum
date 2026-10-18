@@ -8,6 +8,20 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review Prompt 47's panel decisions and the golden limits for text** (Prompt 47). (1) The design spaces the properties panel three
+  ways (C13 8/6, C14 and C16 12/8, the C33 detail rows 12/10 with 28 px fields); I built all three and choose by what is selected
+  (frame, text or component, paint/stroke/effect detail). If one is the intent, say which and I will drop the others. (2) Text-dense
+  regions differ at glyph edges, as in Prompt 46: worst measured 5.8 % (panel tabs), 5.3 % (fill editor header), 4.5 % (Content), most
+  between 1 and 3 %; `e2e/screens.json` gives each region over 1 % its own limit (measured plus 0.3, rounded up to half a point,
+  never above 11 %), with the reason. Sizes of every section equal the design's. (3) Twelve DESIGN-GAPS lines (clip toggle, a fourth
+  alignment icon, a swatch in the Fill row, stroke colour in the Stroke heading, Replace and Detach under Go to main, paint opacity
+  as alpha and Blend as the layer's blend because the format has no per-paint versions, text style stored but not applied by the
+  core, no Justify, Notes for frames only, the mesh preview art, three spacings). (4) **Not wired by any host yet**: Add export,
+  Choose or Replace image (stock, URL, file), and Go to main component for a main that is not a layer in the scene call the host's
+  `onAction`/`onGoToMain`; the panel disables the control when the host gives none. The editor app of Prompt 54 and the hosts must
+  pass them. (5) Four of Prompt 46's DESIGN-GAPS lines do not follow the line format that `design-spec-rules.test.mjs` checks
+  (that test was failing before this prompt); the file is append-only, so a person should fix or loosen the test.
+
 - **Review Prompt 46's open UI choices and the golden tolerance for text** (Prompt 46). Layout equals the design to the pixel (sizes are
   checked), but text is rasterised by two engines, so text-dense chrome differs at glyph edges whatever the weight (I tried 400 and
   450): document bar 2.3 %, panel tabs 8.2 %, bottom strip 9.5 % at worst, against the 1 % decision. `e2e/screens.json` therefore
@@ -2779,3 +2793,55 @@ Passed (Node 24, pnpm 12.11.2, both telemetry opt-outs): `pnpm --filter @vellum/
 Failing as before, not touched: the two script tests (ADR-000 statuses, REFERENCE-INDEX), `pnpm tokens:check` (Prompt 43's
 unaccepted differences), `biome check .` on Prompt 42's scripts and `scripts/component-goldens.mjs` (template-literal style),
 `cargo deny` advisories. `cargo` was not run: no Rust changed. Nothing is committed.
+
+## Prompt 47
+
+Built the right panel's Design tab, the fill editor and in-canvas text editing. Design read through the Pencil MCP on
+`.design-cache/vellum.readonly.pen` (document confirmed first, read-only): C13, C14, C16, C16-instance, C33, C33-effects, and
+the components Properties (value pairs, chip, mixed, padding, sizing, alignment, colour well and picker, section header),
+Component property row, C33 fill editor and C33-effects. No Pencil write was made. No reference repository is named for this
+prompt, so none was read. I searched the other projects in the library for value fields, segmented controls, colour pickers,
+mesh gradients and inspector panels: only React Native screens and one native segmented control turned up (clarum, outpost),
+nothing reusable for a DOM editor, so everything here is written for this repo.
+
+- `editor-core`, headless (2,106 tests): `design/values` (expression parser with no eval, arrows, scrub, Mixed), `colour`,
+  `bindings` (variables by theme, aliases, cycles), `patch`/`patches` (one `Edit` per field; `combine` so a click is one
+  transaction; defaults written as `null`; parts of instances through `replaceInInstance`), `paint` (kinds, conversions, stops,
+  angle, mesh resize and `renderMesh`, image fit and crop, 18 blend modes), `stroke`, `effects`, `text`, `component` (props,
+  axes, overrides, replace, detach, `UpdateComponent`), `model` (`readDesign`, `sectionsFor`), `controller`, `paint-editor`
+  (mesh points and crop corners dragged on the canvas). Session gained `commit` and `device`; the tool controller opens text on a
+  double-click with the move tool; `ToolOp` gained `detach` and `updateComponent`; `component.detach` and `component.replace`
+  are wired; `overlayShapes` draws paint handles.
+- `editor-react`: `RightPanel` (Design, Inspect, Activity slots), `DesignTab` and its sections (Notes, Position, Layout,
+  Appearance, Fill, Stroke, Effects, Text, Content, Component or Instance, Export), the controls, `PaintPopover` (Solid with
+  Variables, Gradient with stops and angle, Mesh with preview, grid and point, Image with fit and crop, Shader as v1.1),
+  `TextEditor` on the canvas, a portal container so menus follow the appearance, 13 stories, `design-fixture`.
+- Differs from the guide: Tailwind and Zustand still not used (C26). The fill editor's Blend and Opacity rows edit the layer's
+  blend mode and the paint's alpha, because the format has no per-paint versions. Fallback sizes next to hug and fill are not
+  editable. Text changes apply to every run (no range formatting). Main components show variant axes read-only. A plain number
+  cannot be bound to a variable from the panel (the chip rebinds or detaches one that is bound); creating and binding is
+  Prompt 48. Component-board goldens stay pending; the panel is checked by the screen goldens instead.
+- Found by the browser tests, fixed: Escape in a field also wrote the draft (the blur ran with the old draft); the Replace menu
+  crashed the app (a `Menu.GroupLabel` outside a group); the fill editor closed on a canvas press, so mesh points could not be
+  dragged; sizing and alignment wrote two transactions for one click; popovers mounted in `<body>` ignored dark mode; clicking into
+  the panel ended text editing and changed the panel's layout. Found by the goldens: value text in the UI font instead of mono.
+- Test order: values, bindings, patch, paint, stroke and effects, text, component, model, patches, controller, paint editor,
+  session, tools and handlers were written first and seen failing (missing module or one failing case each); `colour` and the
+  blend list were written together with their code, and the mesh renderer's first run found a real bug (later samples overwrote a
+  point's own pixel). The React components came before their tests: `design.test.tsx` (51 states), `layout-oracle.test.ts` and
+  `e2e/design.spec.ts` (70) were written after, and their first runs, with the goldens', exposed the bugs above. The oracle test
+  passes for all 187 fixtures: every fixture's layout properties read into the panel and written back with its edits are the same
+  (padding compared as four sides, since the panel writes two-value padding as four). The oracle's boxes belong to the engine
+  (`vellum-layout-taffy`), which no Rust change touched; `cargo` was not run.
+- Not verified: a live compiled WASM engine (every test uses the scripted `FakeEngineClient`, which answers what a test says and
+  records what the panel sent); the Windows and Linux key labels; high contrast (the design has no C13, C14, C16 or C33
+  references); the Playwright lane on GitHub; anything the hosts do with `onAction`.
+
+Passed (Node 24, pnpm 12.11.2, both telemetry opt-outs): `pnpm --filter @vellum/editor-core test` (2,106) and `type-check`;
+`pnpm --filter @vellum/editor-react test` (283), `type-check`, `test:storybook` (1,031), `build-storybook`, `harness:check`,
+`test:goldens` (0 passed, 1,008 pending, 0 failed), `test:e2e` (132: the 50 from Prompt 46, 70 for the panel, 12 new screen
+goldens); `pnpm exec turbo run type-check test` (64 tasks); `pnpm exec biome check` on editor-core, editor-react and
+engine-client; `pnpm format:check`, `deps:check`, `tokens:lint`, `copy-lint`, `clean-room`, `design:check`, `ui-icons:check`,
+`checksum`. Failing as before, not touched: `pnpm lint` (Prompt 42's scripts), `pnpm tokens:check` (Prompt 43's differences),
+`cargo deny`, and three script tests (ADR-000 statuses, REFERENCE-INDEX, and the DESIGN-GAPS line format, which Prompt 46's four
+lines break). Nothing is committed.

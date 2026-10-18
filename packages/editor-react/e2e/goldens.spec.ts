@@ -17,6 +17,8 @@ type Region = {
   selector: string;
   design: number[];
   clipHeight?: number;
+  /** Compare a box inside the element instead of the element itself: skips art the design draws freehand. */
+  offset?: [number, number];
   /** Text-dense regions: how much of the region may differ, with the reason. Never above MAX_FRACTION. */
   fraction?: number;
   why?: string;
@@ -108,6 +110,8 @@ for (const screen of screens.screens)
       await page.goto(`/?appearance=${mode}&${screen.query}`);
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator(".vc-docbar")).toBeVisible();
+      const open = (screen as { open?: string }).open;
+      if (open) await page.getByRole("button", { name: open, exact: true }).first().click();
       const hover = (screen as { hover?: string }).hover;
       if (hover)
         await page
@@ -119,6 +123,7 @@ for (const screen of screens.screens)
       const failures: string[] = [];
       for (const region of screen.regions as Region[]) {
         const el = page.locator(region.selector).first();
+        await el.scrollIntoViewIfNeeded();
         const bb = (await el.boundingBox()) as {
           x: number;
           y: number;
@@ -130,12 +135,15 @@ for (const screen of screens.screens)
         const [, , dw = 0, dh = 0] = region.design;
         const height = region.clipHeight ?? bb.height;
         const near = (a: number, b: number) => Math.abs(a - b) <= SIZE_SLACK;
-        const clip = {
-          x: bb.x,
-          y: bb.y,
-          width: near(bb.width, dw) ? dw : bb.width,
-          height: near(height, dh) ? dh : height,
-        };
+        const [ox = 0, oy = 0] = region.offset ?? [];
+        const clip = region.offset
+          ? { x: bb.x + ox, y: bb.y + oy, width: dw, height: dh }
+          : {
+              x: bb.x,
+              y: bb.y,
+              width: near(bb.width, dw) ? dw : bb.width,
+              height: near(height, dh) ? dh : height,
+            };
         const mine = await page.screenshot({ clip });
         const result = await compare(page, design, mine, region.design);
         const tag = `${screen.id}-${mode}-${region.name.replace(/\W+/g, "-")}`;

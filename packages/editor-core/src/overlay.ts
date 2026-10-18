@@ -4,6 +4,8 @@ import type { Box, Overlay, Viewport } from "./tool-types";
 
 /** Handles are screen-space squares: they never scale with the canvas. */
 export const HANDLE_SIZE = 8;
+/** A mesh point is a coloured circle, 12 px across as in the design. */
+export const PAINT_POINT_SIZE = 12;
 const FRAME_LABEL_GAP = 6;
 const SIZE_LABEL_GAP = 8;
 
@@ -12,6 +14,15 @@ export type OverlayShape =
   | { kind: "outline"; role: OutlineRole; box: Box }
   | { kind: "marquee"; box: Box }
   | { kind: "handle"; role: "corner" | "point" | "in" | "out"; at: Point; size: number }
+  /** A point of a mesh gradient (it carries its colour) or a corner of an image's crop. */
+  | {
+      kind: "paintPoint";
+      role: "mesh" | "crop";
+      at: Point;
+      size: number;
+      colour: string | null;
+      selected: boolean;
+    }
   | { kind: "line"; role: "guide" | "handle" | "measure"; from: Point; to: Point }
   | {
       kind: "label";
@@ -42,6 +53,13 @@ export interface OverlayInput {
   altMeasure: boolean;
   /** Takes path-space points of `overlay.pathAddress` to world points. */
   mapPath?: (point: Point) => Point;
+  /** From the paint editor, already in screen pixels. */
+  paintHandles?: readonly {
+    role: "mesh" | "crop";
+    at: Point;
+    colour: string | null;
+    selected: boolean;
+  }[];
 }
 
 export const toScreen = (p: Point, v: Viewport): Point => ({
@@ -189,6 +207,15 @@ export function overlayShapes(input: OverlayInput): OverlayShape[] {
     }
     shapes.push({ kind: "handle", role: h.kind, at, size: HANDLE_SIZE });
   }
+  for (const h of input.paintHandles ?? [])
+    shapes.push({
+      kind: "paintPoint",
+      role: h.role,
+      at: h.at,
+      size: h.role === "mesh" ? PAINT_POINT_SIZE : HANDLE_SIZE,
+      colour: h.colour,
+      selected: h.selected,
+    });
   if (input.altMeasure && input.hover && input.selection.length) {
     const sel = union(input.selection.map((s) => s.box));
     if (sel)

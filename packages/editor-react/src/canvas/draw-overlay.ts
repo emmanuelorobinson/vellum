@@ -107,6 +107,31 @@ export function drawOverlay(
         ctx.stroke();
         break;
       }
+      case "paintPoint": {
+        const r = s.size / 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        if (s.role === "mesh") ctx.arc(s.at.x, s.at.y, r, 0, Math.PI * 2);
+        else ctx.rect(s.at.x - r, s.at.y - r, s.size, s.size);
+        ctx.fillStyle = s.colour ?? palette.panel;
+        ctx.fill();
+        // The ring is the panel colour so a point reads on any paint; the selected one adds the selection ring.
+        ctx.strokeStyle = palette.panel;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        if (s.selected) {
+          ctx.beginPath();
+          ctx.arc(s.at.x, s.at.y, r + 3, 0, Math.PI * 2);
+          ctx.strokeStyle = palette.selection;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        } else if (s.role === "crop") {
+          ctx.strokeStyle = palette.selection;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(s.at.x - r, s.at.y - r, s.size, s.size);
+        }
+        break;
+      }
       case "label":
         if (s.role === "frame" && !s.selected) {
           ctx.font = FONT;

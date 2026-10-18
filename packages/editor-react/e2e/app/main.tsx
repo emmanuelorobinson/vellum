@@ -3,8 +3,10 @@
 // the transaction the UI sent and what the UI shows after the reply.
 import {
   createCommandController,
+  createDesignController,
   createEditorHandlers,
   createEditorSession,
+  createPaintEditor,
   createWorkspace,
 } from "@vellum/editor-core";
 import { type EngineSnapshot, FakeEngineClient } from "@vellum/engine-client";
@@ -13,12 +15,19 @@ import { createBrowserHost } from "@vellum/host-browser";
 import type { Document, Node } from "@vellum/types-ts";
 import "@vellum/ui-tokens/tokens.css";
 import { createRoot } from "react-dom/client";
+import {
+  DESIGN_DEFAULTS,
+  type DesignScenario,
+  designDocument,
+  designSelection,
+} from "../../fixtures/design-scenarios";
 import { EditorWorkspace } from "../../src/EditorWorkspace";
 import "./fonts.css";
 import { sceneOf } from "./test-scene";
 
 const q = new URLSearchParams(location.search);
 const scenario = q.get("scenario");
+const designName = q.get("design") as DesignScenario | null;
 const appearance = (q.get("appearance") ?? "light") as "light" | "dark" | "hc-light" | "hc-dark";
 
 const frame = (
@@ -122,9 +131,17 @@ const documentOf = (children: Node[]): Document =>
     ],
   }) as unknown as Document;
 
-let current = documentOf(
-  q.get("empty") ? [] : scenario === "juniper" ? juniperNodes() : startNodes(),
-);
+let current = designName
+  ? designDocument(designName)
+  : documentOf(q.get("empty") ? [] : scenario === "juniper" ? juniperNodes() : startNodes());
+/** The document with other layers on its first page: the design scenarios keep their variables and components. */
+const withChildren = (children: Node[]): Document =>
+  designName
+    ? ({
+        ...current,
+        pages: current.pages.map((p, i) => (i === 0 ? { ...p, children } : p)),
+      } as Document)
+    : documentOf(children);
 let revision = 0;
 const snapshotOf = (doc: Document, readOnly = false): EngineSnapshot => ({
   revision: ++revision,
@@ -166,9 +183,30 @@ const workspace = createWorkspace();
 workspace.resize({ width: innerWidth, height: innerHeight });
 if (q.get("tab")) workspace.switchTab(q.get("tab") as "agent" | "layers" | "assets" | "history");
 const zoom = Number(q.get("zoom") ?? 1);
-if (zoom !== 1) session.setViewport({ x: 0, y: 0, zoom });
+const [panX = 0, panY = 0] = (q.get("pan") ?? "").split(",").map(Number);
+if (zoom !== 1 || panX || panY) session.setViewport({ x: panX, y: panY, zoom });
 if (q.get("select")) session.select((q.get("select") as string).split(","));
-const controller = createCommandController(createEditorHandlers({ workspace, session }));
+const fonts = ["Inter", "JetBrains Mono"];
+const design = createDesignController({
+  session,
+  engine,
+  defaults: DESIGN_DEFAULTS,
+  text: { available: (family) => fonts.includes(family), fallback: "Inter" },
+});
+const paintEditor = createPaintEditor({ session, design });
+const hostActions: { command: string; detail?: unknown }[] = [];
+const controller = createCommandController(createEditorHandlers({ workspace, session, design }));
+if (designName && !q.get("select")) session.select([designSelection(designName)]);
+if (q.get("edit")) {
+  // Open the selected text layer for typing, as a double-click on it does.
+  const at = session.sceneBounds(designSelection(designName ?? "c14"));
+  const v = session.state.viewport;
+  if (at)
+    session.dispatch({
+      type: "doubleClick",
+      point: { x: (at.x + 4) * v.zoom + v.x, y: (at.y + 4) * v.zoom + v.y },
+    });
+}
 
 const clock = 1_000_000;
 const recent: Record<string, { agent: string; at: number }> = {};
@@ -182,6 +220,13 @@ const connection =
 type Hooks = {
   /** The next write is answered with this document. */
   reply(children: Node[], operation?: "apply" | "undo" | "redo"): void;
+  /** The next write is answered with this whole document (variables and components included). */
+  replyDocument(doc: Document, operation?: "apply" | "undo" | "redo"): void;
+  /** The engine now holds this document and says so: the panel shows it (no transaction is recorded). */
+  publish(doc: Document): void;
+  /** The commands the panel asked the host for: Add export, Choose image, and so on. */
+  hostActions(): { command: string; detail?: unknown }[];
+  document(): Document;
   transactions(): unknown[];
   historyActors(): unknown[];
   mark(id: string, agent: string, ageMs: number): void;
@@ -197,9 +242,23 @@ declare global {
 }
 window.__vellum = {
   reply(children, operation = "apply") {
-    current = documentOf(children);
+    current = withChildren(children);
     engine.script(snapshotOf(current), operation);
   },
+  publish(doc) {
+    current = doc;
+    engine.script(snapshotOf(current));
+    realApply({
+      origin: { actor: { kind: "person", device } },
+      ops: [{ type: "update", id: "none", patch: {} }],
+    });
+  },
+  replyDocument(doc, operation = "apply") {
+    current = doc;
+    engine.script(snapshotOf(current), operation);
+  },
+  hostActions: () => hostActions,
+  document: () => current,
   transactions: () => attempts,
   historyActors: () => engine.historyActors,
   mark(id, agent, ageMs) {
@@ -262,7 +321,15 @@ function render() {
             : [{ id: "starter-minimal", name: "Starter Minimal" }],
         onAction: () => {},
       }}
-      slots={{ agent: <div data-testid="agent-slot" />, right: <div data-testid="right-slot" /> }}
+      design={design}
+      paintEditor={paintEditor}
+      designHost={{
+        fonts,
+        onAction: (command, detail) => {
+          hostActions.push({ command, detail });
+        },
+      }}
+      slots={{ agent: <div data-testid="agent-slot" /> }}
     />,
   );
 }

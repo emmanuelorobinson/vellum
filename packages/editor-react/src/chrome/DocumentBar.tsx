@@ -1,6 +1,7 @@
 import { Menu } from "@base-ui/react/menu";
 import type { Command } from "@vellum/editor-core";
 import { Icon } from "../icons/Icon";
+import { usePortalContainer } from "./portal";
 
 export type SaveState = "saved" | "saving" | "unsaved";
 const SAVE_LABEL: Record<SaveState, string> = {
@@ -54,6 +55,7 @@ export function DocumentBar({
   commands: readonly Command[];
   menuCategories?: readonly string[];
 }) {
+  const container = usePortalContainer();
   return (
     <section className="vc-bar vc-docbar" style={{ width }} aria-label="Document">
       <div className="vc-docbar__identity">
@@ -61,7 +63,7 @@ export function DocumentBar({
           <Menu.Trigger className="vc-iconbutton" aria-label="Main menu">
             <Icon name="menu" />
           </Menu.Trigger>
-          <Menu.Portal>
+          <Menu.Portal container={container}>
             <Menu.Positioner side="bottom" align="start" sideOffset={8}>
               <Menu.Popup className="vc-menu">
                 <MenuContent commands={commands} categories={menuCategories} />

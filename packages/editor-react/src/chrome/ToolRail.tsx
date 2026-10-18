@@ -1,6 +1,7 @@
 import { Menu } from "@base-ui/react/menu";
 import type { ToolId } from "@vellum/editor-core";
 import { Icon } from "../icons/Icon";
+import { usePortalContainer } from "./portal";
 import { Tip } from "./Tooltip";
 
 export interface RailItem {
@@ -78,6 +79,7 @@ function RailButton({
 }
 
 export function ToolRail(props: RailProps) {
+  const container = usePortalContainer();
   const shapeActive = SHAPES.has(props.tool);
   const shown = SHAPE_MENU.find((s) => s.tool === props.tool) ?? (SHAPE_MENU[0] as RailItem);
   return (
@@ -101,7 +103,7 @@ export function ToolRail(props: RailProps) {
                 <Icon name={shown.icon} size={18} />
               </Menu.Trigger>
             </Tip>
-            <Menu.Portal>
+            <Menu.Portal container={container}>
               <Menu.Positioner side="right" align="start" sideOffset={8}>
                 <Menu.Popup className="vc-menu">
                   {SHAPE_MENU.map((s) => (

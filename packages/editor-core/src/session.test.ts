@@ -188,4 +188,20 @@ describe("editor session", () => {
     expect(session.state.viewport).toEqual({ x: 10, y: 20, zoom: 2 });
     expect(() => session.setViewport({ x: 0, y: 0, zoom: 0 })).toThrow();
   });
+  it("commits a transaction made outside the tools, and says so when the engine refuses it", () => {
+    const { session, engine, reply } = fixture();
+    const tx = {
+      origin: { actor: { kind: "person" as const, device: "dev1" } },
+      ops: [{ type: "update" as const, id: "a", patch: { opacity: 0.5 } }],
+    };
+    expect(session.commit(tx)).toEqual({ status: "rejected", reason: "unavailable" });
+    expect(session.notice).toEqual({ kind: "rejected", reason: "unavailable" });
+    reply([rect("a", 10, 10)]);
+    expect(session.commit(tx)).toMatchObject({ status: "applied" });
+    expect(session.notice).toBeNull();
+    expect(engine.transactions).toEqual([tx]);
+  });
+  it("knows its device, so panels can build Person transactions", () => {
+    expect(fixture().session.device).toBe("dev1");
+  });
 });

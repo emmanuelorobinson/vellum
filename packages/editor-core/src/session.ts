@@ -9,6 +9,7 @@ import type {
   ToolEvent,
   ToolResult,
   ToolState,
+  ToolTransaction,
   Viewport,
 } from "./tool-types";
 import { initialToolState, transitionTool } from "./tools";
@@ -106,12 +107,26 @@ export function createEditorSession(deps: SessionDeps) {
     get page(): PageId {
       return page;
     },
+    get device(): DeviceId {
+      return device;
+    },
     /** Another page: the selection belongs to the old one, so it is cleared. */
     setPage(id: PageId) {
       if (id === page) return;
       page = id;
       state = { ...state, selection: [] };
       notify();
+    },
+    /**
+     * For changes made outside the tools (properties, layers, assets): the engine applies them as this person,
+     * and a refusal is reported the same way a tool's is.
+     */
+    commit(transaction: ToolTransaction): EngineCommit {
+      const commit = engine.apply(transaction);
+      if (commit.status === "rejected") notice = { kind: "rejected", reason: commit.reason };
+      else notice = null;
+      notify();
+      return commit;
     },
     /** For commits made outside the tools (layers, assets) that the engine refused. */
     reportRejection(reason: Extract<EngineCommit, { status: "rejected" }>["reason"]) {

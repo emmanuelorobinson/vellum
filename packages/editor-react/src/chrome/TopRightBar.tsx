@@ -1,6 +1,7 @@
 import { Menu } from "@base-ui/react/menu";
 import { Icon } from "../icons/Icon";
 import { ActorMarker, type ActorView } from "./ActorMarker";
+import { usePortalContainer } from "./portal";
 import { Tip } from "./Tooltip";
 
 export interface TopRightProps {
@@ -16,6 +17,7 @@ export interface TopRightProps {
 }
 
 export function TopRightBar(p: TopRightProps) {
+  const container = usePortalContainer();
   return (
     <div
       className="vc-bar vc-topright"
@@ -32,7 +34,7 @@ export function TopRightBar(p: TopRightProps) {
           </span>
           <span>Agents</span>
         </Menu.Trigger>
-        <Menu.Portal>
+        <Menu.Portal container={container}>
           <Menu.Positioner side="bottom" align="end" sideOffset={8}>
             <Menu.Popup className="vc-menu">
               {p.agents.length === 0 ? (

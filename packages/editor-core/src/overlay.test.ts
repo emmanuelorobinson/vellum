@@ -194,3 +194,47 @@ describe("guides and measurements", () => {
     ).toBe(false);
   });
 });
+
+describe("paint handles", () => {
+  it("draws the points of a mesh or the corners of a crop where the paint editor put them, in screen pixels", () => {
+    const shapes = overlayShapes(
+      input({
+        paintHandles: [
+          { role: "mesh", at: { x: 200, y: 200 }, colour: "#234D3C", selected: true },
+          { role: "crop", at: { x: 10, y: 20 }, colour: null, selected: false },
+        ],
+      }),
+    );
+    expect(shapes.filter((s) => s.kind === "paintPoint")).toEqual([
+      {
+        kind: "paintPoint",
+        role: "mesh",
+        at: { x: 200, y: 200 },
+        size: 12,
+        colour: "#234D3C",
+        selected: true,
+      },
+      {
+        kind: "paintPoint",
+        role: "crop",
+        at: { x: 10, y: 20 },
+        size: HANDLE_SIZE,
+        colour: null,
+        selected: false,
+      },
+    ]);
+  });
+  it("draws them above the selection's own handles", () => {
+    const shapes = overlayShapes(
+      input({
+        overlay: { ...empty, handles: [{ point: { x: 0, y: 0 }, kind: "corner" }] },
+        paintHandles: [{ role: "mesh", at: { x: 1, y: 1 }, colour: "#000000", selected: false }],
+      }),
+    );
+    const kinds = shapes.map((s) => s.kind);
+    expect(kinds.lastIndexOf("paintPoint")).toBeGreaterThan(kinds.lastIndexOf("handle"));
+  });
+  it("draws none by default", () => {
+    expect(overlayShapes(input()).some((s) => s.kind === "paintPoint")).toBe(false);
+  });
+});

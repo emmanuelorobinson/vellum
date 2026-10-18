@@ -1,0 +1,872 @@
+/* The properties panel. Every colour, radius and space is a token from @vellum/ui-tokens; the sizes are the design's
+   (sections pad 8 and gap 6, property rows 28, value fields 26 or 28, the heading 13). Section borders are drawn
+   inside (box-shadow) so a section is exactly as tall as the design makes it. */
+
+.vc-mono-value {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Panel body and sections */
+.vc-design {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.vc-design__empty {
+  padding: 16px 12px;
+  color: var(--chrome-secondary);
+}
+.vc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  flex: none;
+  box-shadow: inset 0 -1px 0 var(--chrome-separator);
+}
+.vc-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 13px;
+}
+.vc-section__head .vc-heading {
+  line-height: 13px;
+}
+.vc-section__actions {
+  display: inline-flex;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity var(--motion-panel) ease-out;
+  margin-block: -4px;
+}
+.vc-section:hover .vc-section__actions,
+.vc-section:focus-within .vc-section__actions {
+  opacity: 1;
+}
+.vc-section__empty {
+  color: var(--chrome-secondary);
+  line-height: 18px;
+}
+.vc-section[data-section="notes"] {
+  padding: 0;
+  gap: 0;
+}
+.vc-notes__toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  cursor: pointer;
+  text-align: start;
+}
+.vc-notes__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+.vc-notes__text {
+  width: 100%;
+  min-height: 72px;
+  padding: 6px 8px;
+  resize: vertical;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font: inherit;
+  line-height: 1.4;
+  user-select: text;
+}
+.vc-notes__hint {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+
+/* Rows */
+.vc-prop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--chrome-property-height);
+}
+.vc-prop__label {
+  flex: none;
+  width: 76px;
+  color: var(--chrome-secondary);
+  line-height: 15px;
+}
+.vc-prop__control {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.vc-pair {
+  display: flex;
+  gap: 8px;
+}
+.vc-pair > * {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Value fields */
+.vc-fieldwrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.vc-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  text-align: start;
+}
+.vc-pair .vc-field,
+.vc-field[data-height="28"] {
+  height: 28px;
+  gap: 8px;
+}
+.vc-field:hover:not([data-state="disabled"]) {
+  background: color-mix(in srgb, var(--chrome-text) 5%, var(--chrome-sunken));
+}
+.vc-field:focus-within,
+.vc-field:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: -1px;
+}
+.vc-field[data-state="disabled"] {
+  opacity: 0.5;
+}
+.vc-field[data-state="invalid"] {
+  box-shadow: inset 0 0 0 1px var(--chrome-error);
+}
+.vc-field__axis {
+  flex: none;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 13px;
+  user-select: none;
+}
+.vc-field__axis[data-scrub] {
+  cursor: ew-resize;
+  touch-action: none;
+}
+.vc-field__input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  user-select: text;
+}
+.vc-field__input:not(.vc-mono-value) {
+  font: inherit;
+}
+.vc-field__input::placeholder {
+  color: var(--chrome-text);
+  opacity: 1;
+}
+.vc-field__message {
+  position: absolute;
+  top: calc(100% + 2px);
+  inset-inline-start: 0;
+  z-index: 3;
+  max-width: 240px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-error-bg);
+  color: var(--chrome-error);
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+/* Segmented control */
+.vc-seg {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  height: 28px;
+  border-radius: 5px;
+  background: var(--chrome-sunken);
+}
+.vc-seg {
+  margin: 0;
+  min-width: 0;
+  border: 0;
+}
+.vc-seg__option {
+  position: relative;
+  display: flex;
+  height: 24px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  font-weight: 450;
+  cursor: pointer;
+}
+.vc-seg__option:hover:not([data-disabled]) {
+  color: var(--chrome-text);
+}
+.vc-seg__option[data-checked] {
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vc-seg__option[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.vc-seg__option:has(.vc-seg__input:focus-visible) {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: -2px;
+}
+.vc-seg__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+/* Select */
+.vc-select {
+  cursor: pointer;
+  font: inherit;
+}
+.vc-select__value {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vc-select__icon {
+  flex: none;
+  margin-inline-start: 3px;
+  color: var(--chrome-secondary);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+}
+.vc-select__positioner {
+  z-index: 40;
+}
+.vc-select__popup {
+  min-width: var(--anchor-width);
+  max-height: var(--available-height);
+  overflow-y: auto;
+}
+.vc-select__item {
+  padding-inline-start: 6px;
+}
+.vc-select__check {
+  display: inline-flex;
+  width: 14px;
+}
+.vc-select__item:not([data-selected]) .vc-select__check {
+  visibility: hidden;
+}
+
+/* Switch */
+.vc-togglerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+.vc-togglerow__label {
+  color: var(--chrome-text);
+}
+.vc-switch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--chrome-border);
+  cursor: pointer;
+}
+.vc-switch[data-checked] {
+  background: var(--chrome-text);
+}
+.vc-switch[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.vc-switch__thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--chrome-raised);
+  transition: transform var(--motion-panel) ease-out;
+}
+.vc-switch[data-checked] .vc-switch__thumb {
+  background: var(--chrome-inverse);
+  transform: translateX(12px);
+}
+
+/* Buttons, banners, chips */
+.vc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.vc-button:hover:not(:disabled) {
+  background: var(--chrome-hover);
+}
+.vc-button[data-primary] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.vc-button[data-primary]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--chrome-text) 88%, var(--chrome-inverse));
+}
+.vc-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.vc-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-attention-bg);
+  color: var(--chrome-attention);
+  line-height: 15px;
+}
+.vc-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-variable-bg);
+  color: var(--chrome-variable-text);
+  font-size: 11px;
+}
+.vc-chip .vc-mono-value {
+  font-size: 11px;
+  line-height: 15px;
+}
+.vc-chip--button {
+  cursor: pointer;
+}
+.vc-chip[data-missing] {
+  background: var(--chrome-attention-bg);
+  color: var(--chrome-attention);
+}
+.vc-icontoggle[aria-pressed="true"] {
+  color: var(--chrome-text);
+}
+.vc-textlink {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 13px;
+  cursor: pointer;
+}
+.vc-textlink:hover:not(:disabled) {
+  color: var(--chrome-text);
+}
+.vc-textlink:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The right panel's frame */
+.vc-panel__tabs.vc-right__tabs {
+  padding: 0 12px;
+}
+.vc-right__body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Paint rows */
+.vc-paintfield {
+  position: relative;
+  gap: 8px;
+}
+.vc-paintfield[data-hidden] .vc-field__input {
+  opacity: 0.5;
+}
+.vc-paintrow__actions {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--motion-panel) ease-out;
+}
+.vc-paintfield:hover .vc-paintrow__actions,
+.vc-paintfield:focus-within .vc-paintrow__actions,
+.vc-paintgroup:hover .vc-paintrow__actions,
+.vc-paintgroup:focus-within .vc-paintrow__actions {
+  opacity: 1;
+}
+.vc-paintgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vc-swatch {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vc-swatch--static {
+  cursor: default;
+}
+.vc-swatch__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.vc-swatch__fill[data-bound] {
+  box-shadow: inset 0 0 0 1px var(--chrome-variable-text);
+}
+
+/* Popovers: the fill editor, effects, stroke sides, alignment */
+.vc-popover {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    450 12px var(--font-ui),
+    system-ui,
+    sans-serif;
+  z-index: 30;
+  outline: 0;
+}
+.vc-popover *,
+.vc-popover *::before,
+.vc-popover *::after {
+  box-sizing: border-box;
+}
+.vc-popover .vc-field {
+  height: 28px;
+}
+.vc-paint {
+  width: 360px;
+  gap: 14px;
+}
+.vc-paint__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.vc-paint__tabs {
+  display: flex;
+  gap: 12px;
+}
+.vc-paint__tab {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--chrome-secondary);
+  font: inherit;
+  line-height: 15px;
+  cursor: pointer;
+}
+.vc-paint__tab[aria-selected="true"] {
+  color: var(--chrome-text);
+}
+.vc-paint .vc-prop {
+  gap: 12px;
+}
+.vc-paint .vc-prop__label {
+  width: 76px;
+}
+.vc-paint__hint {
+  margin: 0;
+  color: var(--chrome-secondary);
+  line-height: 19px;
+}
+.vc-paint__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vc-paint__row > .vc-fieldwrap {
+  flex: 1;
+}
+.vc-paint__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vc-paint__chips .vc-chip[aria-pressed="true"] {
+  box-shadow: 0 0 0 1.5px var(--chrome-variable-text);
+}
+.vc-paint__done {
+  align-self: flex-start;
+  height: 31px;
+}
+.vc-field__prefix {
+  flex: none;
+  white-space: pre;
+}
+.vc-gradient,
+.vc-mesh {
+  position: relative;
+  width: 328px;
+  height: 168px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+}
+.vc-mesh__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.vc-mesh__point {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--chrome-panel);
+}
+.vc-mesh__point[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--chrome-panel),
+    0 0 0 3.5px var(--canvas-selection);
+}
+.vc-stops {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vc-stop {
+  display: grid;
+  grid-template-columns: 76px 1fr 16px;
+  align-items: center;
+  gap: 8px;
+}
+.vc-stop .vc-field {
+  height: 26px;
+}
+
+/* Layout section extras */
+.vc-sizefield {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.vc-sizefield__menu {
+  position: absolute;
+  inset-inline-end: 6px;
+  top: 8px;
+  opacity: 0;
+  width: 12px;
+  height: 12px;
+}
+.vc-sizefield:hover .vc-sizefield__menu,
+.vc-sizefield:focus-within .vc-sizefield__menu {
+  opacity: 1;
+}
+.vc-linkfield,
+.vc-sidesfield,
+.vc-effectfield {
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+.vc-popover .vc-field.vc-sidesfield,
+.vc-sidesfield {
+  height: auto;
+  min-height: 28px;
+  padding-block: 6px;
+}
+.vc-sidesfield .vc-mono-value {
+  white-space: normal;
+}
+.vc-aligns,
+.vc-stops,
+.vc-component__overrides {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+.vc-aligns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 16px;
+}
+.vc-aligns .vc-iconbutton[aria-pressed="true"] {
+  color: var(--chrome-text);
+}
+.vc-matrix {
+  width: 220px;
+}
+.vc-matrix__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 16px);
+  gap: 4px;
+  padding: 8px;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  align-self: flex-start;
+}
+.vc-matrix__cell {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--chrome-border);
+  cursor: pointer;
+}
+.vc-matrix__cell[aria-pressed="true"] {
+  background: var(--chrome-text);
+}
+.vc-effect {
+  width: 280px;
+}
+.vc-sides {
+  width: 280px;
+}
+.vc-effectvis {
+  flex: none;
+}
+
+/* Text being typed on the canvas, and the Content section */
+.vc-textedit {
+  position: absolute;
+  z-index: 4;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 1.5px solid var(--canvas-selection);
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  user-select: text;
+  caret-color: var(--canvas-selection);
+}
+.vc-content__text {
+  min-height: 56px;
+}
+
+/* Component and instance */
+.vc-component__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vc-component__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.vc-component__overrides {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vc-component__override {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vc-component__path {
+  flex: none;
+}
+.vc-component__override .vc-textlink {
+  margin-inline-start: auto;
+}
+.vc-field--28 {
+  height: 28px;
+}
+
+/* Densities: dense is C13 (8 and 6); roomy is C14, C16 (12 and 8); wide is the rows of detail of C33 (12 and 10,
+   fields 28 high, labels 12 from their field). */
+.vc-section[data-density="roomy"] {
+  padding: 12px;
+  gap: 8px;
+}
+.vc-section[data-density="wide"] {
+  padding: 12px;
+  gap: 10px;
+}
+.vc-section[data-density="wide"] .vc-prop {
+  gap: 12px;
+}
+.vc-section[data-density="wide"] .vc-prop .vc-field {
+  height: 28px;
+}
+.vc-section[data-density="wide"] .vc-prop .vc-fieldwrap {
+  min-height: 28px;
+}
+.vc-prop .vc-field.vc-sidesfield,
+.vc-prop .vc-field.vc-effectfield {
+  height: auto;
+  min-height: 28px;
+}
+.vc-prop .vc-effectfield {
+  padding-block: 6px;
+}
+.vc-effectvis {
+  position: absolute;
+  inset-inline-end: 6px;
+  top: 6px;
+  opacity: 0;
+}
+.vc-prop__control:hover .vc-effectvis,
+.vc-prop__control:focus-within .vc-effectvis {
+  opacity: 1;
+}
+.vc-prop__control {
+  position: relative;
+}
+.vc-banner {
+  height: 36px;
+  padding: 0 12px;
+  gap: 10px;
+  line-height: 18px;
+}
+.vc-content__text {
+  min-height: 21px;
+  padding: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 21px;
+  resize: none;
+}
+.vc-content__text:focus {
+  background: var(--chrome-sunken);
+}
+.vc-component__row {
+  gap: 8px;
+}
+
+.vc-section__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.vc-section[data-density="wide"] .vc-paintgroup {
+  gap: 10px;
+}
+.vc-paint .vc-button,
+.vc-paintgroup .vc-button {
+  height: 31px;
+}
+.vc-section[data-density="wide"] .vc-button {
+  height: 31px;
+}
+.vc-content__text {
+  field-sizing: content;
+}
+.vc-paint__hint {
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+}
+.vc-section__tools .vc-swatch {
+  margin-block: -2px;
+}
+.vc-section .vc-prop .vc-field.vc-sidesfield,
+.vc-section .vc-prop .vc-field.vc-effectfield {
+  height: auto;
+  min-height: 28px;
+}
+.vc-togglerow .vc-textlink {
+  margin-inline: 8px auto;
+}
+.vc-select[data-nocaret] .vc-select__icon {
+  display: none;
+}
+/* A select shows its caret on hover and focus, and always where the design always draws it: in the fill editor and
+   the rows of detail (C33). */
+.vc-section:not([data-density="wide"]) .vc-select__icon {
+  opacity: 0;
+}
+.vc-section:not([data-density="wide"]) .vc-select:hover .vc-select__icon,
+.vc-section:not([data-density="wide"]) .vc-select:focus-visible .vc-select__icon,
+.vc-section:not([data-density="wide"]) .vc-select[data-popup-open] .vc-select__icon {
+  opacity: 1;
+}
+.vc-paintgroup[data-hidden] .vc-swatch {
+  opacity: 0.5;
+}
