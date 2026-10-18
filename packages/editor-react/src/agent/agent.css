@@ -1,0 +1,523 @@
+/* The Agent tab. Sizes are the design's "Component / Agent Panel / Building" (C03), C06 and C09; every colour, radius
+   and space is a token. */
+/* The tab scrolls its conversation itself, so the composer stays pinned: the panel body must not scroll it. */
+.vc-panel__body:has(> .va-tab) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.va-tab {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.va-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.va-tab p {
+  margin: 0;
+}
+
+/* Session bar */
+.va-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding: 0 var(--space-4);
+  box-shadow: inset 0 -1px var(--chrome-separator);
+}
+.va-bar__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 15px;
+}
+/* 16 px icons with a 24 px target that does not move them. */
+.va-bar .va-bar__button {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -4px;
+  color: var(--chrome-secondary);
+}
+
+/* Session switcher */
+.va-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 360px;
+  max-height: var(--available-height);
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    450 12px var(--font-ui),
+    system-ui,
+    sans-serif;
+  outline: none;
+  z-index: 30;
+}
+/* The rows carry the focus ring; the popup itself only holds focus. */
+.va-switcher:focus-visible {
+  outline: none;
+}
+.va-switcher__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.va-switcher__label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.va-switcher__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: default;
+  outline: none;
+}
+.va-switcher__row[data-highlighted] {
+  background: var(--chrome-hover);
+}
+.va-switcher__row[data-current] {
+  background: var(--chrome-selected);
+}
+.va-switcher__row:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--chrome-focus);
+}
+.va-switcher__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.va-switcher__title {
+  font-weight: 400;
+  line-height: 15px;
+}
+.va-switcher__line {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.va-switcher__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Conversation */
+.va-scroll-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.va-scroll {
+  height: 100%;
+  overflow-y: auto;
+  /* The follow logic decides where the view goes; the browser must not move it for us. */
+  overflow-anchor: none;
+}
+.va-turns {
+  display: flex;
+  flex-direction: column;
+}
+.va-empty {
+  padding: var(--space-4);
+  color: var(--chrome-secondary);
+}
+.va-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3) var(--space-4);
+}
+.va-you {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  user-select: text;
+}
+/* The design declares 450 here, and its PNGs draw it as regular (as Prompts 43 and 48 found): 400 matches. */
+.va-you__text,
+.va-prose {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.55;
+  user-select: text;
+}
+.va-you__chips {
+  line-height: 15px;
+}
+.va-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 20px;
+}
+.va-header__name {
+  font-weight: 600;
+  line-height: 15px;
+}
+.va-header__state {
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+/* Mono at 12, over .vc-mono's 11. */
+.va-tab .va-model {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--chrome-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Step Timeline */
+.va-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.va-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: var(--chrome-step-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  text-align: start;
+  cursor: pointer;
+}
+.va-step:hover {
+  background: var(--chrome-hover);
+}
+.va-step__icon {
+  color: var(--chrome-secondary);
+}
+.va-step__line {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 15px;
+}
+.va-step__state {
+  display: flex;
+}
+.va-step[data-state="done"] .va-step__state {
+  color: var(--chrome-success);
+}
+/* Agent hues are for agent marks only (token lint), so the working ring is neutral; the design's is the agent's. */
+.va-step[data-state="working"] .va-step__state {
+  color: var(--chrome-secondary);
+}
+.va-step[data-state="working"] .va-step__state svg {
+  animation: va-spin var(--motion-step-ring) linear infinite;
+}
+.va-step[data-state="warning"] .va-step__state {
+  color: var(--chrome-attention);
+}
+.va-step[data-state="failed"] .va-step__state {
+  color: var(--chrome-error);
+}
+@keyframes va-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .va-step[data-state="working"] .va-step__state svg {
+    animation: none;
+  }
+}
+.va-step__time {
+  color: var(--chrome-secondary);
+  line-height: 15px;
+}
+.va-thumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 56px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--chrome-sunken);
+  text-align: start;
+}
+button.va-thumb {
+  cursor: pointer;
+}
+button.va-thumb:hover {
+  background: var(--chrome-hover);
+}
+.va-thumb__image {
+  flex: none;
+  width: 40px;
+  height: 48px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+}
+/* A picture the cache does not hold: the usual missing-image checks, in chrome colours. */
+.va-thumb__image[data-missing] {
+  background:
+    repeating-conic-gradient(var(--chrome-border) 0 25%, var(--chrome-panel) 0 50%) 0 0 / 12px 12px;
+}
+.va-thumb__label {
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.va-note {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+  padding: var(--space-1) 0;
+}
+.va-note--text {
+  padding: 0;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--chrome-text);
+  user-select: text;
+}
+.va-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) 0 var(--space-2);
+}
+.va-details__targets {
+  white-space: pre-wrap;
+  color: var(--chrome-secondary);
+  user-select: text;
+}
+.va-details__counts {
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.va-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.va-block__text {
+  flex: 1;
+  min-width: 0;
+  max-height: 200px;
+  margin: 0;
+  overflow: auto;
+  font:
+    450 11px / 1.55 var(--font-mono),
+    ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* Buttons */
+.va-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-panel);
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  color: var(--chrome-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+}
+.va-button:hover,
+.va-button[data-highlighted] {
+  background: var(--chrome-hover);
+}
+.va-button[data-primary] {
+  background: var(--chrome-text);
+  box-shadow: inset 0 0 0 1px var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.va-button[data-primary]:hover {
+  background: color-mix(in srgb, var(--chrome-text) 88%, var(--chrome-inverse));
+}
+.va-button[data-danger] {
+  box-shadow: inset 0 0 0 1px var(--chrome-error);
+  color: var(--chrome-error);
+}
+.va-button:focus-visible,
+.va-link:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 1px;
+}
+.va-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chrome-text);
+  font-size: 12px;
+  line-height: 15px;
+  cursor: pointer;
+  outline: none;
+}
+.va-link:hover,
+.va-link[data-highlighted] {
+  text-decoration: underline;
+}
+.va-link--quiet {
+  color: var(--chrome-secondary);
+}
+.va-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.va-actions--dialog {
+  justify-content: flex-end;
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+/* Turn footer, stopped card, errors */
+.va-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: 2px;
+}
+.va-footer__usage {
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+}
+.va-footer__usage span {
+  display: block;
+}
+.va-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--chrome-sunken);
+}
+.va-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.va-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--chrome-error);
+}
+.va-error span {
+  flex: 1;
+}
+
+/* Undo this turn */
+.va-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 400px;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-border),
+    0 2px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+  font:
+    450 12px var(--font-ui),
+    system-ui,
+    sans-serif;
+  outline: none;
+  z-index: 30;
+}
+.va-confirm__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.va-confirm .va-prose {
+  margin: 0;
+}
+
+/* Latest */
+.va-latest {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+  cursor: pointer;
+  box-shadow: 0 1px var(--chrome-elevation-blur) var(--chrome-elevation-color);
+}
+
+/* Bottom: the composer, or an external agent's line */
+.va-bottom {
+  flex: none;
+}
+.va-external {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.va-external__line {
+  line-height: 1.55;
+}

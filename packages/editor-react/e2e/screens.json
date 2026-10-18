@@ -10,7 +10,7 @@
       "size": [1280, 800],
       "modes": ["light", "dark", "hc-light", "hc-dark"],
       "snapshot": "C03-{mode}-1280.png",
-      "query": "scenario=juniper&zoom=0.5&tab=agent",
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c03",
       "regions": [
         {
           "name": "document bar",
@@ -49,6 +49,48 @@
           "selector": ".vc-zoom",
           "design": [1212, 756, 60, 32],
           "fraction": 0.09
+        },
+        {
+          "name": "session bar",
+          "selector": ".va-bar",
+          "design": [8, 100, 360, 48],
+          "fraction": 0.065,
+          "why": "Glyph edges, plus the marker's 1 px panel ring and the Agent tab's underline on the region's top edge in high contrast (Prompt 49 measured 6.0%)."
+        },
+        {
+          "name": "your message",
+          "selector": ".va-you",
+          "design": [24, 160, 328, 91],
+          "fraction": 0.045,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "agent header",
+          "selector": ".va-header",
+          "design": [24, 257, 328, 20],
+          "fraction": 0.055,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "model",
+          "selector": ".va-model",
+          "design": [24, 283, 328, 16],
+          "fraction": 0.03,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "agent prose",
+          "selector": ".va-prose",
+          "design": [24, 305, 328, 44],
+          "fraction": 0.025,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "step timeline",
+          "selector": ".va-steps",
+          "design": [24, 355, 328, 246],
+          "fraction": 0.065,
+          "why": "Glyph edges in six rows, and the missing-picture pattern drawn by the panel versus the export's transparency checks (Prompt 49 measured 6.3%)."
         }
       ]
     },
@@ -559,6 +601,83 @@
           "name": "resource panel",
           "selector": ".vc-resource-dialog",
           "design": [260, 124, 760, 446]
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "modes": ["light", "dark"],
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c06&switcher=1&connection=headless",
+      "size": [1280, 800],
+      "snapshot": "C06-{mode}-1280.png",
+      "regions": [
+        {
+          "name": "session switcher",
+          "selector": ".va-switcher",
+          "design": [16, 132, 360, 422],
+          "fraction": 0.04,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured). The switcher also has a Delete session link the design lacks (DESIGN-GAPS)."
+        }
+      ]
+    },
+    {
+      "id": "C06-external",
+      "modes": ["light", "dark"],
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c06e&connection=headless",
+      "size": [1280, 800],
+      "snapshot": "C06-external-{mode}-1280.png",
+      "regions": [
+        {
+          "name": "session bar",
+          "selector": ".va-bar",
+          "design": [8, 100, 360, 48],
+          "fraction": 0.045,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "external line",
+          "selector": ".va-external",
+          "design": [8, 698, 360, 94],
+          "fraction": 0.04,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "external footer",
+          "selector": ".va-footer__usage",
+          "design": [24, 495, 328, 17]
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "modes": ["light", "dark"],
+      "query": "scenario=juniper&zoom=0.5&tab=agent&agent=c09&undo=1&connection=headless",
+      "size": [1280, 800],
+      "snapshot": "C09-{mode}-1280.png",
+      "regions": [
+        {
+          "name": "undo confirmation",
+          "selector": ".va-confirm",
+          "design": [400, 430, 400, 173],
+          "fraction": 0.03,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured)."
+        },
+        {
+          "name": "turn usage",
+          "selector": ".va-footer__usage",
+          "design": [24, 489, 328, 34]
+        },
+        {
+          "name": "failed step",
+          "selector": ".va-step[data-state=failed]",
+          "design": [24, 406, 328, 36],
+          "fraction": 0.05,
+          "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 49 measured). The row also shows its duration and a 14 px state icon, as C03's rows do (DESIGN-GAPS)."
+        },
+        {
+          "name": "verdict",
+          "selector": ".va-note--text",
+          "design": [24, 379, 328, 19]
         }
       ]
     }

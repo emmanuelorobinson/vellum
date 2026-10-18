@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@vellum/types-ts": "workspace:*",
-    "@vellum/engine-client": "workspace:*"
+    "@vellum/engine-client": "workspace:*",
+    "@vellum/config": "workspace:*"
   }
 }

@@ -8,6 +8,20 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Review Prompt 49's Agent tab decisions and one red golden** (Prompt 49). (1) The C09 verdict line ("Fixed: CTA text
+  overflowed at 375 px") differs from the design PNG by 12.6–13.3%: one line of 12 px text, sized exactly as the design,
+  differing at glyph edges. That is above the 11% cap, so it stays red at 1%. Every other new region passes, with a
+  per-region limit and reason in `e2e/screens.json` (measured worst plus 0.3, as in Prompt 47). (2) The working-step
+  ring is neutral, not the agent's hue as C03 draws it, because the token lint allows agent hues only on agent marks.
+  Loosen the lint or keep it. (3) "Delete session" is a quiet link in the switcher with a confirmation; the design has
+  no delete. (4) **Codex joins separate agent messages with no space** ("…call it once.Fixture complete" in
+  `fixtures/agent-panel/codex.json`): Prompt 37's adapter concatenates `agent_message` items. The panel shows what the
+  engine stored; fix it in `engine-codex` and rewrite the fixture. (5) **No host wires the Agent tab yet**: the daemon has
+  no session-feed endpoint, so `AgentFeed` exists only as the port, a fake and the browser scenarios. The daemon and
+  hosts (Prompts 54–56) must serve sessions, events, the live stream and the undo/retry/stop/delete requests. (6)
+  `C34-frame dark` now fails its golden (resource panel 178 px tall against 202) at HEAD without this prompt's changes;
+  Prompt 48 reported it as passing.
+
 
 - **Finish Prompt 48 visual acceptance and decide point-radius support.** The new screen comparisons keep
   DESIGN-DECISIONS.md's 1% limit: 7 of 24 pass; 17 differ by 1.01–1.83% (C34-frame light; C36, C36-confirm,
@@ -2925,3 +2939,58 @@ Failing unchanged checks: `pnpm lint` (two existing script import-order errors, 
 bans/licences/sources pass); `pnpm test:scripts` (197 pass, 3 fail, 5 skip: old ADR status expectations,
 DESIGN-GAPS line format from Prompt 46, and REFERENCE-INDEX). Native access was needed for Chromium/local ports
 and the cargo advisory cache; initial sandbox failures are not counted as passing checks. Nothing is committed.
+
+## Prompt 49
+
+Built the Agent tab: session bar and switcher (Running / Needs you / Recent, New session, Delete session with a
+confirmation), turns (your message with its context, single or stacked agent header, model, prose), the Step Timeline
+(icons, plain lines, working/done/refused/failed states with words, durations, Designed thumbnails that zoom to and
+select their frame, Checked screenshot picture and verdict, Checked layout problems, Ran script count and script with
+Copy, expanded details with targets, counts and raw output, grouping of long runs, Retry step), the turn footer (usage
+lines, Review changes, Undo this turn with its confirmation, Retry on the latest turn), Stopped by you, the external
+session view with the composer replacement line and Stop, and the Latest pill.
+
+- Headless part: `packages/editor-core/src/agent/` (`log` reads the session codec's JSON and refuses unknown kinds;
+  `steps` writes step lines in the panel's copy; `turns` folds events into turns; `sessions`; `scroll` is the pure
+  follow logic; `controller`; the `AgentFeed` port and `FakeAgentFeed`). React part: `packages/editor-react/src/agent/`,
+  mounted by `EditorWorkspace` when it gets `agent`; `slots.agent` becomes the composer (Prompt 50).
+- Decision: DESIGN-DECISIONS "Agent turn layout" was UNDECIDED. I asked; the owner chose A (interleaved, as C09
+  draws it), and it is recorded. A finished turn's order comes from its stored messages (each tool call sits between the
+  texts around it); a running turn's from the live stream.
+- Transcripts: `crates/vellum/tests/agent_panel_transcripts.rs` replays the recorded Claude Code 2.1.301 and Codex 0.158.0
+  streams through their real decoders, records the turn through `SessionLog` into `MemorySessions`, and writes
+  `fixtures/agent-panel/{claude-code,codex}.json` (check mode by default; `VELLUM_UPDATE_SNAPSHOTS=1` rewrites).
+  The core and browser tests replay them: the stream while running, then the stored turn.
+- Bugs found by tests on the way: tool names without an MCP prefix were cut to their last letter; a recorded step
+  replaced another tool's working row; the panel body, not the conversation, scrolled; and the view's own scroll event,
+  arriving after more content, read as the reader leaving the bottom. All fixed, each with a test.
+- Design read: Pencil confirmed `.design-cache/vellum.readonly.pen`; read the Agent Panel component (C03), C06 switcher
+  and external session, C09 with the undo popover, and the Turn / Latest and Turn / Stopped components. No Pencil
+  writes. Seven DESIGN-GAPS lines: popover anchor, step-row trailing state, Retry on the latest turn, no state dot,
+  delete session, working-ring colour, expanded details. Body text is 400 where the design declares 450 (its PNG
+  draws regular, as Prompts 43 and 48 found); the model line needed 12 px over `.vc-mono`'s 11.
+- Not done or not verified: no daemon endpoint or host serves the feed (see Needs a person); a session's draft text
+  and the composer are Prompt 50; parallel lanes and plan cards are Prompt 51 (a parallel turn shows the stacked header
+  and its steps flat); History filtering is Prompt 53 (`onReviewChanges` is the hook). Storybook stories for the
+  Agent Panel specimens were not added; those component boards stay pending as before.
+
+Passed (Node 24.21.0, pnpm 12.11.2, telemetry opt-outs set):
+- `pnpm --dir packages/editor-core exec vitest run` (2,180, 27 of them new in `src/agent/`, first seen red);
+  `pnpm --dir packages/editor-react exec vitest run --project unit` (292, 4 new, first seen red).
+- `cargo test -p vellum --test agent_panel_transcripts` (first red: fixtures missing);
+  `cargo clippy -p vellum --test agent_panel_transcripts -- -D warnings`; `cargo fmt --all -- --check`.
+- `pnpm --dir packages/editor-react exec playwright test --config e2e/playwright.config.ts e2e/agent.spec.ts` (8: no
+  scroll jump when scrolled up and Latest; undo-turn asks first and undoes only that turn; external session line and
+  Stop; keyboard switcher, new and delete; thumbnail zoom-and-select and expanded details; Retry step, Retry, Review
+  changes; both transcript replays).
+- Full browser suite: 166 pass, 20 fail. The failures are Prompt 48's 17 red goldens, `C34-frame dark` (fails at HEAD
+  too) and `C09` light and dark (the verdict line only). C03's six new panel regions pass in all four appearances, as do
+  C06 and C06-external.
+- `pnpm type-check`; `pnpm tokens:lint`; `pnpm copy-lint`; `pnpm deps:check`; `pnpm ui-icons:check` (78 icons);
+  `pnpm checksum`; `pnpm design:check`; `pnpm --dir packages/editor-react harness:check`; Biome on the touched
+  packages; `git diff --check`.
+
+Failing, unchanged by this prompt: `pnpm test:scripts` 197 pass, 3 fail, 5 skipped (ADR-000 status, Prompt 46's
+DESIGN-GAPS line format, REFERENCE-INDEX); the DESIGN-DECISIONS test passes with the recorded choice. `pnpm lint` and
+`cargo deny check` were not rerun in full (their known failures are Prompt 48's). Nothing is committed.
+

@@ -5,7 +5,7 @@ and design agree; if it shows both, pick one.
 
 | Decision | Options | Choice | Date | By |
 |---|---|---|---|---|
-| Agent turn layout | A Prose and steps interleaved in order · B Prose first, steps collapsed below | UNDECIDED | | |
+| Agent turn layout | A Prose and steps interleaved in order · B Prose first, steps collapsed below | A Prose and steps interleaved in order | 2026-10-18 | Owner (chose A when asked, Prompt 49) |
 | Plan card placement | A Inline in the turn · B Sheet over the panel | UNDECIDED | | |
 | Default plan threshold | 2 frames · 3 frames · 20 changes | UNDECIDED | | |
 | Lease tab position | A Above the frame's top-left · B Inside the frame's top edge | UNDECIDED | | |

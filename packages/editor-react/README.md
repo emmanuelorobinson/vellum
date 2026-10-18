@@ -127,3 +127,19 @@ suites verify the underlying operations separately. The browser tests do not pro
 picker, disk save/cache or compiled WASM content rendering. `resources.stories.tsx` covers 15 states.
 The new screen goldens retain the design decision's 1% limit; remaining mismatches are reported in reports.md,
 with comparison sheets under `target/screen-goldens/` when a comparison fails.
+
+## Prompt 49: the Agent tab
+
+Pass `agent: createAgentController({feed, now, timeZone?, nameOf?, onZoomTo?, onReviewChanges?})` to `EditorWorkspace`;
+`slots.agent` then becomes the composer pinned under the conversation (Prompt 50), and an external agent's session
+replaces it with its line and Stop. `feed` is the `AgentFeed` port in editor-core: the host composes it from the
+daemon's session store (the session codec's JSON, never raw RPC) and the running turn's stream (text, tool started).
+Nothing here talks to an engine or changes a document: Undo this turn, Retry, Retry step, Stop and session deletion are
+requests to the daemon, and the panel shows their results when the log records them. `onZoomTo` must zoom the canvas
+to the frame and select it; `onReviewChanges` opens History filtered to the turn (Prompt 53); `nameOf` names a running
+step's target. Pictures (thumbnails, screenshots) come from `feed.image(hash)`; without one the row draws the
+missing-picture pattern.
+
+`e2e/agent.spec.ts` runs the tab over `fixtures/agent-scenarios.ts` (the C03, C06 and C09 sessions) and over the
+installed-engine transcripts in `fixtures/agent-panel/`, which `crates/vellum/tests/agent_panel_transcripts.rs` makes
+by replaying the recorded Claude Code and Codex streams through their real decoders.

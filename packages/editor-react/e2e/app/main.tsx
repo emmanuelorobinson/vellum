@@ -2,6 +2,7 @@
 // Nothing here applies operations to a document: a test scripts the snapshot the engine answers with, and checks
 // the transaction the UI sent and what the UI shows after the reply.
 import {
+  createAgentController,
   createCommandController,
   createDesignController,
   createEditorHandlers,
@@ -16,6 +17,13 @@ import { createBrowserHost } from "@vellum/host-browser";
 import type { Document, Node } from "@vellum/types-ts";
 import "@vellum/ui-tokens/tokens.css";
 import { createRoot } from "react-dom/client";
+import {
+  AGENT_ACTORS,
+  AGENT_LAYER_NAMES,
+  AGENT_NOW,
+  type AgentScenario,
+  agentScenario,
+} from "../../fixtures/agent-scenarios";
 import {
   DESIGN_DEFAULTS,
   type DesignScenario,
@@ -284,6 +292,38 @@ if (q.get("edit")) {
     });
 }
 
+// The Agent tab over a scripted session feed (fixtures/agent-scenarios.ts). `hold` keeps the scripted updates
+// back until a test sends them with `agentEmit`.
+const agentName = q.get("agent") as AgentScenario | null;
+const agentSetup = agentName ? agentScenario(agentName) : null;
+let agentClock = AGENT_NOW;
+const agent = agentSetup
+  ? createAgentController({
+      feed: agentSetup.feed,
+      now: () => agentClock,
+      timeZone: "UTC",
+      nameOf: (id) => AGENT_LAYER_NAMES[id] ?? null,
+      onZoomTo: (node) => {
+        hostActions.push({ command: "agent.zoomTo", detail: { node } });
+        if (session.sceneItem(node)) session.select([node]);
+      },
+      onReviewChanges: (s, turn) =>
+        hostActions.push({ command: "history.reviewTurn", detail: { session: s, turn } }),
+    })
+  : null;
+const pendingAgentUpdates = [...(agentSetup?.updates ?? [])];
+const agentReady = (async () => {
+  if (!agent || !agentSetup) return;
+  await agent.load();
+  if (agentSetup.current) await agent.select(agentSetup.current);
+  if (!q.has("hold")) for (const u of pendingAgentUpdates.splice(0)) agentSetup.feed.emit(u);
+  agentClock += agentSetup.elapse ?? 0;
+  render();
+  for (const key of agentSetup.expanded ?? []) agent.toggle(key);
+  if (q.has("switcher")) agent.toggleSwitcher(true);
+  if (q.has("undo")) agent.askUndo(agent.turns().at(-1)?.id ?? null);
+})();
+
 const clock = 1_000_000;
 const recent: Record<string, { agent: string; at: number }> = {};
 if (scenario === "juniper") recent.habit = { agent: "teal", at: clock - 2000 };
@@ -310,6 +350,15 @@ type Hooks = {
   tool(): string;
   viewport(): unknown;
   nodes(): Node[];
+  /** Resolves once the Agent tab's scenario has loaded. */
+  agentReady(): Promise<void>;
+  /** Sends the next `n` scripted session-feed updates (all when absent). */
+  agentEmit(n?: number): number;
+  /** Sends one feed update, as the daemon would. */
+  agentSend(update: unknown): void;
+  /** What the panel asked the daemon for: undo turn, retry, stop... */
+  agentRequests(): unknown[];
+  agentTick(ms: number): void;
 };
 declare global {
   interface Window {
@@ -345,6 +394,18 @@ window.__vellum = {
   tool: () => session.state.tool,
   viewport: () => session.state.viewport,
   nodes: () => current.pages[0]?.children ?? [],
+  agentReady: () => agentReady,
+  agentEmit(n) {
+    const batch = pendingAgentUpdates.splice(0, n ?? pendingAgentUpdates.length);
+    for (const u of batch) agentSetup?.feed.emit(u);
+    return pendingAgentUpdates.length;
+  },
+  agentSend: (update) => agentSetup?.feed.emit(update as never),
+  agentRequests: () => agentSetup?.feed.requests ?? [],
+  agentTick(ms) {
+    agentClock += ms;
+    render();
+  },
 };
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
@@ -364,7 +425,7 @@ function render() {
       branch="feat/onboarding"
       connection={connection}
       agents={[{ id: "teal", kind: "agent", name: "Teal", hue: "teal" }]}
-      actors={{ teal: { id: "teal", kind: "agent", name: "Teal", hue: "teal" } }}
+      actors={{ teal: { id: "teal", kind: "agent", name: "Teal", hue: "teal" }, ...AGENT_ACTORS }}
       onShare={() => {}}
       onPreview={() => {}}
       onSettings={() => {}}
@@ -398,6 +459,7 @@ function render() {
         onAction: () => {},
       }}
       {...(resourceName ? { resources } : {})}
+      {...(agent ? { agent } : {})}
       design={design}
       paintEditor={paintEditor}
       designHost={{

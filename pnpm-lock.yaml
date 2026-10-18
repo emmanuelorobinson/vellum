@@ -424,6 +424,9 @@ importers:
 
   packages/editor-core:
     dependencies:
+      '@vellum/config':
+        specifier: workspace:*
+        version: link:../config
       '@vellum/engine-client':
         specifier: workspace:*
         version: link:../engine-client

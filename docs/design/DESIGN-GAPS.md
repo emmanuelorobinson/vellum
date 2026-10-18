@@ -58,3 +58,11 @@ specific, because the guide ranks the design file above itself (§2); the line s
 - 2026-10-18 · Notes for agents on other layers (Prompt 47) · DESIGN.md says: C12 notes belong to a frame · vellum.pen has: the section in C13 only · every layer has `agentNotes` in the format; code shows the section for frames only
 
 - 2026-10-18 · C17 aliases (Prompt 48) · DESIGN.md says: aliases appear as Variable chips · vellum.pen has: plain arrow labels inside mode cells · code follows the table's arrow labels, preserving stable-id bindings; focus exposes an editable alias name or id
+
+- 2026-10-18 · Undo-turn popover anchor (Prompt 49) · DESIGN.md says: an Undo-this-turn popover · vellum.pen has: C09 places it at x 400, y 430 regardless of the button · code opens it 32 px right of the panel, centred on the turn's Undo this turn button
+- 2026-10-18 · step row trailing state (Prompt 49) · DESIGN.md says: step rows show state and duration · vellum.pen has: duration and a 14 px state icon in C03, but no duration and a 16 px icon in C06-external and C09 · code follows C03 everywhere
+- 2026-10-18 · Retry on the latest turn (Prompt 49) · DESIGN.md says: the turn footer has Retry on the latest turn · vellum.pen has: C09's latest turn without Retry · code follows DESIGN.md
+- 2026-10-18 · session state dot (Prompt 49) · DESIGN.md says: the session switcher shows a state dot (working, needs you, done, failed) · vellum.pen has: the agent marker only, the state as the row's second line · code follows the design and says the state in the marker's label and the second line
+- 2026-10-18 · deleting a session (Prompt 49) · DESIGN.md says: the session bar has New and delete (guide Prompt 49) · vellum.pen has: New session only · code adds a quiet "Delete session" beside New session in the switcher, with a confirmation
+- 2026-10-18 · working ring colour (Prompt 49) · DESIGN.md says: agent hues only on agent marks · vellum.pen has: the working step ring in the agent's hue (C03) · code draws it in the secondary chrome colour, as the token lint requires
+- 2026-10-18 · expanded step details (Prompt 49) · DESIGN.md says: an expanded row shows targets, counts and raw output with Copy · vellum.pen has: C09's expanded Checked screenshot with its image and verdict only · code shows the image and verdict, then the details

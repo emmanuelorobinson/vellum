@@ -1,4 +1,5 @@
 import {
+  type AgentController,
   type BindingContext,
   type createCommandController,
   type DesignController,
@@ -16,6 +17,7 @@ import type { EngineClient } from "@vellum/engine-client";
 import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId, Value } from "@vellum/types-ts";
 import type { Mode } from "@vellum/ui-tokens";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AgentTab } from "./agent/AgentTab";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
 import type { ActorView } from "./chrome/ActorMarker";
 import { BottomStrip, type Connection } from "./chrome/BottomStrip";
@@ -67,14 +69,17 @@ export interface EditorWorkspaceProps {
   now(): number;
   nextNodeId(): NodeId;
   assets: Omit<AssetsTabProps, "onDropComponent" | "readOnly" | "components">;
+  /** The Agent tab's sessions and turns; with it the tab is built in and `slots.agent` is its composer. */
+  agent?: AgentController;
   /** The properties panel's controller and the fill editor's canvas state; with them the right panel is built in. */
   design?: DesignController;
   resources?: ResourceController;
   paintEditor?: PaintEditor;
   designHost?: DesignHost;
   /**
-   * The Agent and History tabs belong to later prompts, as do Inspect and Activity in the right panel; the host
-   * mounts them here. `right` replaces the whole right panel when no design controller is given.
+   * The composer (Prompt 50) and the History tab belong to later prompts, as do Inspect and Activity in the right
+   * panel; the host mounts them here. Without `agent`, `slots.agent` is the whole Agent tab. `right` replaces the
+   * whole right panel when no design controller is given.
    */
   slots?: {
     agent?: ReactNode;
@@ -315,7 +320,11 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             shortcut={shortcut("agent.focus")}
           >
             {{
-              agent: props.slots?.agent ?? null,
+              agent: props.agent ? (
+                <AgentTab agent={props.agent} actors={props.actors} composer={props.slots?.agent} />
+              ) : (
+                (props.slots?.agent ?? null)
+              ),
               history: props.slots?.history ?? null,
               layers: (
                 <LayersTab
