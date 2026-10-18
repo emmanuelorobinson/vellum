@@ -8,6 +8,15 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Finish Prompt 51 visual acceptance and connect its feature ports.** Sixteen new screen comparisons remain red at
+  the recorded 1% tolerance (C04; C05 in four appearances at 1280 and 1512; C07 Side by side and Explore; C35).
+  C35's note region passes in both themes; remaining differences include text rendering, added state symbols and
+  controls. Comparison sheets are in `target/screen-goldens/`; no tolerance or reference was changed. No host serves
+  `AgentFeed.buildPlan/editRequest/keepOptions` or the new document-bound `PresenceFeed` yet. Hosts must publish
+  agent-tagged live events, active leases/cursors/highlights, and authoritative pause/stop acknowledgements; provide
+  thumbnail URLs and page names; resolve context-node chips and `PromptRequest.sourceNode`; restore persisted prompt
+  run times when that service exists. Current last-run times cover accepted requests in the open editor session only.
+
 - **Review Prompt 50's composer choices; no daemon serves the composer yet** (Prompt 50). (1) The design draws the
   composer two ways (C01 "1× parallel · 1× variants", Send at the right, no ring; C08 and later "1× Split · Explore off"
   with a ring, Send packed left). I built C08's everywhere; C01's composer is therefore not compared, only its intro.
@@ -3056,3 +3065,59 @@ Failing, unchanged by this prompt: `pnpm test:scripts` 197 pass, 3 fail (ADR-000
 format, REFERENCE-INDEX). `pnpm lint` and `cargo deny check` were not rerun in full (no Rust changed). Nothing is
 committed.
 
+
+## Prompt 51
+
+Built inline Plan cards with grouped items, name/page/intent editing, reorder/remove, Parallel 1–6 with mode and
+per-lane models, Build and Edit request; ephemeral planned-frame overlays and live completion; collapsible agent
+lanes with separately attributed recorded and streaming steps; Side by side and Explore options with model/change
+labels, host thumbnails, hover highlight, zoom/select and a shared panel/canvas Keep choice with confirmation.
+Built presence stack/menu (Follow, Open session, Stop, Pause all), cursors with names/tasks/states, frame leases
+with Stop, rejected counts and History callback, accepted-person-edit feedback, paused banner/Resume, follow/Esc
+badge and expiring insert highlights. Canvas note/context/prompt cards support selection/drag, editing through
+person Ops, and Run through the session feed with saved engine/model and automatic removable context chips.
+
+- Headless: `editor-core/src/agent/{orchestration,presence,collaboration}.ts`, session decoding/folding and feed/controller
+  additions. `EngineClient.subscribeCommits` exposes accepted person transactions; it never changes Guard behavior.
+  React: `Orchestration`, `PresenceLayer`, `CollaborationNodes` mounted by `EditorWorkspace` and the existing Agent tab.
+- Owner approved all five pending choices; recorded in DESIGN-DECISIONS. Rust's default threshold is now three frames;
+  over twenty changes still needs a plan. Existing two-frame orchestration/parallel test rigs now explicitly configure
+  that setting, preserving their behavioral assertions; a new default-threshold test was first seen red.
+- Design: read the confirmed `.design-cache/vellum.readonly.pen` through Pencil, all named screens/appearances/widths
+  and Plan/Presence components; screenshots compared with the committed exports. The open helper could not launch
+  the old app name, but MCP worked. No design writes. Ten append-only DESIGN-GAPS lines record differences.
+- Reuse: checked the sibling outpost presence component (state in words and accessible labels); its native UI is not
+  reused. No §3.2 reference row names P51, no source ported and no dependency added.
+- TDD: orchestration, presence and collaboration modules were first tested red; a later test caught unassigned live
+  lane steps. The browser flows first failed on missing UI. A broad browser run caught older partial lane records;
+  they now stay readable with explicit unavailable model/name fallbacks. Context uses the model's pointsAt/enclosing
+  frame scope; no arbitrary proximity radius. Prompt run times are session-local acknowledgements, not completion.
+- Visual acceptance is pending: full browser suite **201 pass, 36 fail**, all failures goldens (the prior twenty plus
+  sixteen new). C35 note passes at 0.93–0.98%; the other new regions remain above 1%. Sizes match within the existing
+  one-pixel allowance. No tolerance, snapshots or unrelated failures were changed. Component Storybook specimens
+  retain their existing pending status; no missing appearance references were invented.
+
+Passed (Node 24.21.0, pnpm 12.11.2 from its cached package-manager bin; telemetry opt-outs set):
+- `packages/editor-core/node_modules/.bin/vitest run --root packages/editor-core` (2,217; twelve new tests);
+  `packages/editor-react/node_modules/.bin/vitest run --project unit --root packages/editor-react` (295);
+  `packages/engine-client/node_modules/.bin/vitest run --root packages/engine-client` (6, one new observer contract).
+- `packages/editor-react/node_modules/.bin/playwright test --config packages/editor-react/e2e/playwright.config.ts
+  packages/editor-react/e2e/collaboration.spec.ts --workers=4` (7); existing agent/composer flows also pass in the full run.
+- `cargo test -p vellum-core plans:: --lib` (12); `cargo test -p vellum --test orchestration --test parallel` (27);
+  `cargo clippy -p vellum-core -p vellum --all-targets -- -D warnings`; `cargo fmt --all -- --check`.
+- `pnpm type-check`; `pnpm deps:check`; Biome on editor-core/editor-react/engine-client (warnings, no errors);
+  `node scripts/token-lint.mjs`; `node scripts/copy-lint.mjs`; `pnpm ui-icons:check`; `pnpm clean-room`;
+  `pnpm --dir packages/editor-react harness:check`; `node scripts/design-check.mjs`; `pnpm checksum`; `git diff --check`.
+
+Other checks: `node --test 'scripts/__tests__/*.test.mjs'` has the same three prior failures (197 pass, 3 fail, 5 skipped:
+ADR-000 status, Prompt 46's DESIGN-GAPS line format, REFERENCE-INDEX). `pnpm lint` still fails on pre-existing
+fixture-generator import order and agent transcript JSON formatting. `cargo deny check` reports the same nine
+advisories already listed in Needs a person (Loro dependency chain, zip and Linux keyring dependencies). Its first
+attempt needed advisory-cache access. A direct full cargo-test attempt tried Skia's registry synchronization; the
+repository's `skia-build.mjs` wrapper fixes that. The wrapper's first full run could not open daemon sockets in the
+sandbox; rerun with local socket access is recorded below. Nothing is committed.
+
+The socket-enabled rerun passed: `node scripts/skia-build.mjs test -p vellum-core -p vellum --tests` — 619 passed,
+31 tagged tests ignored, zero failures across 35 suites. The ignored tests retain their stated engines/network/
+measurement requirements. The final seven collaboration browser tests passed after session-scoped run timestamps;
+`pnpm checksum` still passes after the full Rust and browser runs.

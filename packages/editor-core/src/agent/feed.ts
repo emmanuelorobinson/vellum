@@ -3,9 +3,10 @@
  * ports, never raw RPC"). A host composes it from the daemon's session store (ADR-006) and its live turn stream;
  * the panel never talks to an engine.
  */
-import type { AgentId, SessionId, TurnId } from "@vellum/types-ts";
+import type { AgentId, NodeId, SessionId, TurnId } from "@vellum/types-ts";
 import type { EngineCatalog, EngineChoice, ProviderSetup, ProviderStatusName } from "./engines";
 import type { SessionEvent } from "./log";
+import type { AgentPlan, PlanBuild } from "./orchestration";
 import type { PermissionAnswer, PermissionQuestion } from "./permissions";
 import type { SessionInfo } from "./sessions";
 import type { SessionUsage } from "./usage";
@@ -19,7 +20,7 @@ export type LiveEvent =
 export type FeedUpdate =
   | { type: "sessions"; sessions: SessionInfo[] }
   | { type: "event"; session: SessionId; event: SessionEvent }
-  | { type: "live"; session: SessionId; turn: TurnId; item: LiveEvent }
+  | { type: "live"; session: SessionId; turn: TurnId; agent?: AgentId; item: LiveEvent }
   /** The broker is waiting for the person (the turn is `awaiting_permission`). */
   | { type: "question"; session: SessionId; question: PermissionQuestion }
   /** The broker recorded a decision for it (or the turn stopped): the card goes. */
@@ -30,7 +31,15 @@ export type FeedUpdate =
 
 /** A composer chip: what the person attached to a request (DESIGN.md "Context chips"). */
 export interface ContextChip {
-  kind: "selection" | "page" | "file" | "frame" | "component" | "variable" | "attachment";
+  kind:
+    | "selection"
+    | "page"
+    | "file"
+    | "frame"
+    | "component"
+    | "variable"
+    | "attachment"
+    | "context";
   /** What the chip says ("3 layers in Step 2", "DESIGN.md"). */
   label: string;
   /** What the daemon resolves: node ids, a page id, a workspace path, an attachment handle. */
@@ -42,6 +51,8 @@ export type ExploreVary = "layout" | "style";
 
 /** One request from the composer. The daemon starts (or queues) a turn and answers with its id. */
 export interface PromptRequest {
+  /** Saved canvas request, for host run history. Never file content. */
+  sourceNode?: NodeId;
   text: string;
   context: ContextChip[];
   /** Skill paths, as the skills list names them. */
@@ -82,6 +93,10 @@ export interface AgentFeed {
 
   /** Starts a turn in the session (or queues it) and answers with the turn's id. */
   send(session: SessionId, request: PromptRequest): Promise<{ turn: TurnId }>;
+  buildPlan(session: SessionId, turn: TurnId, plan: AgentPlan, parallel: PlanBuild): Promise<void>;
+  editRequest(session: SessionId, turn: TurnId, text: string): Promise<void>;
+  /** Keep the chosen results; the daemon removes other options through ordinary Ops. */
+  keepOptions(session: SessionId, turn: TurnId, options: number[]): Promise<void>;
   /** Stop one agent of the session's running turn; the others go on. */
   stopAgent(session: SessionId, agent: AgentId): Promise<void>;
   /** The questions the broker is waiting on in this session. */
@@ -106,6 +121,9 @@ export interface AgentFeed {
 }
 
 export type FeedRequest =
+  | { type: "buildPlan"; session: SessionId; turn: TurnId; plan: AgentPlan; parallel: PlanBuild }
+  | { type: "editRequest"; session: SessionId; turn: TurnId; text: string }
+  | { type: "keepOptions"; session: SessionId; turn: TurnId; options: number[] }
   | { type: "remove"; session: SessionId }
   | { type: "undoTurn"; session: SessionId; turn: TurnId | null }
   | { type: "retry"; session: SessionId; turn: TurnId }

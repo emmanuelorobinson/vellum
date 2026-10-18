@@ -1,4 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
+import { type PresenceController, presenceState } from "@vellum/editor-core";
+import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
 import { ActorMarker, type ActorView } from "./ActorMarker";
 import { usePortalContainer } from "./portal";
@@ -6,6 +8,7 @@ import { Tip } from "./Tooltip";
 
 export interface TopRightProps {
   right: number;
+  presence?: PresenceController;
   /** Agents active in this document, shown as a stack of rounded squares. */
   agents: readonly ActorView[];
   /** Share is for signed-in Pro accounts; absent hides it. */
@@ -17,7 +20,13 @@ export interface TopRightProps {
 }
 
 export function TopRightBar(p: TopRightProps) {
+  useStore(p.presence?.subscribe ?? (() => ({ dispose() {} })));
   const container = usePortalContainer();
+  const agents = p.presence
+    ? p.presence
+        .agents()
+        .map((a) => ({ ...a, kind: "agent" as const, state: presenceState(a.state) }))
+    : p.agents;
   return (
     <div
       className="vc-bar vc-topright"
@@ -28,7 +37,7 @@ export function TopRightBar(p: TopRightProps) {
       <Menu.Root>
         <Menu.Trigger className="vc-textbutton vc-topright__agents" aria-label="Agents">
           <span className="vc-stack">
-            {p.agents.map((a) => (
+            {agents.map((a) => (
               <ActorMarker key={a.id} actor={a} size={16} />
             ))}
           </span>
@@ -37,24 +46,57 @@ export function TopRightBar(p: TopRightProps) {
         <Menu.Portal container={container}>
           <Menu.Positioner side="bottom" align="end" sideOffset={8}>
             <Menu.Popup className="vc-menu">
-              {p.agents.length === 0 ? (
+              {agents.length === 0 ? (
                 <Menu.Item className="vc-menu__item" disabled>
                   No agents in this document
                 </Menu.Item>
               ) : (
-                p.agents.map((a) => (
-                  <Menu.Item key={a.id} className="vc-menu__item vc-menu__item--icon" disabled>
-                    <ActorMarker actor={a} size={16} />
-                    <span>{a.name}</span>
-                    <span className="vc-menu__key">{a.state ?? ""}</span>
-                  </Menu.Item>
+                agents.map((a) => (
+                  <Menu.Group key={a.id}>
+                    <Menu.GroupLabel className="vc-menu__item vc-menu__item--icon">
+                      <ActorMarker actor={a} size={16} />
+                      <span>{a.name}</span>
+                      <span className="vc-menu__key">{a.state ?? ""}</span>
+                    </Menu.GroupLabel>
+                    {p.presence ? (
+                      <>
+                        <Menu.Item
+                          className="vc-menu__item"
+                          onClick={() => p.presence?.follow(a.id)}
+                        >
+                          Follow {a.name}
+                        </Menu.Item>
+                        <Menu.Item
+                          className="vc-menu__item"
+                          onClick={() => p.presence?.openSession(a.id)}
+                        >
+                          Open session · {a.name}
+                        </Menu.Item>
+                        <Menu.Item
+                          className="vc-menu__item"
+                          disabled={p.presence.state.pending}
+                          onClick={() =>
+                            void p.presence?.action({ type: "stopAgent", agent: a.id })
+                          }
+                        >
+                          Stop {a.name}
+                        </Menu.Item>
+                      </>
+                    ) : null}
+                  </Menu.Group>
                 ))
               )}
               <Menu.Separator className="vc-menu__separator" />
               <Menu.Item
                 className="vc-menu__item"
-                disabled={!p.onPauseAll}
-                onClick={() => p.onPauseAll?.()}
+                disabled={
+                  p.presence
+                    ? !p.presence.state.snapshot.connected || p.presence.state.pending
+                    : !p.onPauseAll
+                }
+                onClick={() =>
+                  p.presence ? void p.presence.action({ type: "pauseAll" }) : p.onPauseAll?.()
+                }
               >
                 Pause all agents
               </Menu.Item>

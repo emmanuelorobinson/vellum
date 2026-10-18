@@ -76,7 +76,11 @@ impl Rig {
     }
     fn start(&mut self, prompt: &str) -> Result<TurnState, OrchestrationError> {
         let request = self.request(prompt);
-        let orchestrator = Orchestrator::new(&self.engine, &self.registry, &self.log);
+        let orchestrator = Orchestrator::new(&self.engine, &self.registry, &self.log)
+            .with_settings(PlanSettings {
+                min_frames: 2,
+                ..PlanSettings::default()
+            });
         block_on(orchestrator.start(
             &mut self.daemon.docs,
             &mut self.session,
@@ -364,7 +368,11 @@ fn edit_request_plans_again() {
         TurnState::AwaitingPlan
     );
     let request = rig.request("Add a third step");
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
     let state = block_on(orchestrator.edit_request(
         &mut rig.daemon.docs,
         &mut rig.session,
@@ -399,7 +407,11 @@ fn planned(rig: &mut Rig) -> Vec<vellum_core::plans::Placeholder> {
         rig.start("Design onboarding").unwrap(),
         TurnState::AwaitingPlan
     );
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
     let placeholders = orchestrator.build(&mut rig.daemon.docs, &rig.spec, None);
     drop(orchestrator);
     placeholders.unwrap()
@@ -499,7 +511,11 @@ fn the_person_can_edit_the_plan_before_build() {
     let mut edited = plan_state(&rig.events(), &rig.spec.turn).unwrap().plan;
     edited.items.remove(1);
     edited.items[1].name = "Last step".into();
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
 
     // An edit that breaks the plan is refused and changes nothing: the plan still waits.
     let mut broken = edited.clone();
@@ -544,7 +560,11 @@ fn build_is_refused_unless_a_plan_waits() {
         ),
     )]]);
     assert_eq!(rig.start("Add a frame").unwrap(), TurnState::Done);
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
     let error = orchestrator.build(&mut rig.daemon.docs, &rig.spec, None);
     assert!(
         matches!(error, Err(OrchestrationError::Turn(_))),
@@ -575,7 +595,11 @@ fn report_progress_ticks_items_and_frames_take_their_placeholders_place() {
         call("get_app_state", json!({})),
     ]);
     let request = rig.request("ignored: the build prompt replaces it");
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
     let state = block_on(orchestrator.run_build(
         &mut rig.daemon.docs,
         &mut rig.session,
@@ -655,7 +679,11 @@ fn stopping_a_waiting_plan_leaves_nothing() {
         rig.start("Design onboarding").unwrap(),
         TurnState::AwaitingPlan
     );
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
     assert_eq!(
         orchestrator
             .stop(Some(&mut rig.daemon.docs), &rig.spec)
@@ -684,7 +712,11 @@ fn stopping_after_build_takes_the_placeholders_away_and_leaves_the_file_alone() 
 
     let request = rig.request("build");
     {
-        let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+        let orchestrator =
+            Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+                min_frames: 2,
+                ..PlanSettings::default()
+            });
         let mut run = pin!(orchestrator.run_build(
             &mut rig.daemon.docs,
             &mut rig.session,
@@ -736,7 +768,11 @@ fn a_build_that_fails_abandons_its_plan() {
             EngineError::RoundLimit,
         )))]);
     let request = rig.request("build");
-    let orchestrator = Orchestrator::new(&rig.engine, &rig.registry, &rig.log);
+    let orchestrator =
+        Orchestrator::new(&rig.engine, &rig.registry, &rig.log).with_settings(PlanSettings {
+            min_frames: 2,
+            ..PlanSettings::default()
+        });
     let state = block_on(orchestrator.run_build(
         &mut rig.daemon.docs,
         &mut rig.session,

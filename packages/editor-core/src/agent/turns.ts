@@ -3,9 +3,11 @@
  * the order they happened (DESIGN-DECISIONS "Agent turn layout": A). A finished turn's order comes from its stored
  * messages, where each tool call sits between the texts around it; a running turn's from the engine's live stream.
  */
+
 import { guardReasons } from "@vellum/config";
 import type { AgentId, TurnId } from "@vellum/types-ts";
 import { type SessionEvent, type StepBody, TERMINAL, type TurnStateName } from "./log";
+import { type OrchestrationView, reduceOrchestration } from "./orchestration";
 import { type DecidedCard, decidedCard, type PermissionAction } from "./permissions";
 import {
   describeStep,
@@ -18,10 +20,11 @@ import {
 } from "./steps";
 
 /** What the engine streamed while a turn runs, in arrival order. `step` is a recorded step that took its place. */
-export type LiveItem =
+export type LiveItem = (
   | { type: "text"; text: string }
   | { type: "working"; call: string; tool: string; startedAt: number; target?: string | null }
-  | { type: "step"; seq: number };
+  | { type: "step"; seq: number }
+) & { agent?: AgentId };
 
 export type TurnItem =
   | { type: "prose"; key: string; text: string; streaming: boolean }
@@ -49,6 +52,7 @@ export interface TurnView {
   state: TurnStateName;
   label: string;
   items: TurnItem[];
+  orchestration: OrchestrationView;
   footer: TurnFooter | null;
   footerLines: string[];
   latest: boolean;
@@ -254,6 +258,26 @@ export function buildTurns(events: readonly SessionEvent[], options: BuildOption
             ),
           }
         : null;
+    const orchestration = reduceOrchestration(list);
+    for (const lane of orchestration.lanes) {
+      const laneEvents = list.filter(
+        (e) => e.origin.actor.kind === "agent" && e.origin.actor.agent === lane.agent,
+      );
+      const seqs = new Set(laneEvents.map((e) => e.seq));
+      const laneSteps = steps.filter((s) => seqs.has(s.seq));
+      lane.items = group(
+        decisions(
+          laneEvents,
+          interleave(
+            laneEvents,
+            laneSteps,
+            id ? options.live?.[id]?.filter((i) => i.agent === lane.agent) : undefined,
+            now,
+            !terminal && !lane.end,
+          ),
+        ),
+      );
+    }
     const latest = index === all.length - 1;
     return {
       id,
@@ -268,6 +292,7 @@ export function buildTurns(events: readonly SessionEvent[], options: BuildOption
       state,
       label: LABELS[state],
       items,
+      orchestration,
       footer,
       footerLines: footer ? footerLines(footer) : [],
       latest,

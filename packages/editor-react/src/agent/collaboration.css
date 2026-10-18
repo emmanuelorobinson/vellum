@@ -1,0 +1,109 @@
+.vn-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.vn-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  padding: var(--space-4);
+  background: var(--chrome-panel);
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  border-radius: var(--radius-sm);
+  color: var(--chrome-text);
+  font-size: 12px;
+  line-height: 18px;
+  pointer-events: auto;
+}
+.vn-card[data-kind="note"] {
+  background: var(--chrome-attention-bg);
+}
+.vn-card p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vn-card header,
+.vn-move {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 16px;
+}
+.vn-card header strong {
+  font-weight: 600;
+}
+.vn-card .vn-secondary {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 17px;
+}
+.vn-card > .va-button {
+  align-self: flex-start;
+}
+.vn-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.vn-edit textarea {
+  width: 100%;
+  min-height: 64px;
+  box-sizing: border-box;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font: inherit;
+}
+.vn-edit-button {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  background: var(--chrome-panel);
+  border: 0;
+  color: var(--chrome-secondary);
+  padding: 2px;
+  opacity: 0;
+}
+.vn-card:hover .vn-edit-button,
+.vn-edit-button:focus-visible {
+  opacity: 1;
+}
+
+.vn-card .vn-content {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.vn-card .vn-last-run {
+  line-height: 13px;
+}
+
+.vn-card .vn-content,
+.vn-card .vn-secondary {
+  font-weight: 400;
+}
+.vn-move > svg {
+  color: var(--chrome-secondary);
+}
+.vn-card .vn-content {
+  line-height: 22px;
+}
+
+.vn-move {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: move;
+  touch-action: none;
+}

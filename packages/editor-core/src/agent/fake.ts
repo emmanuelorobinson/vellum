@@ -10,6 +10,7 @@ import type {
   SkillInfo,
 } from "./feed";
 import type { SessionEvent } from "./log";
+import type { AgentPlan, PlanBuild } from "./orchestration";
 import type { PermissionAnswer, PermissionQuestion } from "./permissions";
 import type { SessionInfo } from "./sessions";
 import type { SessionUsage } from "./usage";
@@ -207,6 +208,18 @@ export class FakeAgentFeed implements AgentFeed {
     });
     return { turn };
   }
+  async buildPlan(session: SessionId, turn: TurnId, plan: AgentPlan, parallel: PlanBuild) {
+    await this.check();
+    this.requests.push(cloneJson({ type: "buildPlan", session, turn, plan, parallel }));
+  }
+  async editRequest(session: SessionId, turn: TurnId, text: string) {
+    await this.check();
+    this.requests.push({ type: "editRequest", session, turn, text });
+  }
+  async keepOptions(session: SessionId, turn: TurnId, options: number[]) {
+    await this.check();
+    this.requests.push({ type: "keepOptions", session, turn, options: [...options] });
+  }
   async stopAgent(session: SessionId, agent: AgentId) {
     await this.check();
     this.requests.push({ type: "stopAgent", session, agent });
@@ -285,4 +298,8 @@ export class FakeAgentFeed implements AgentFeed {
     delete this.keys[provider];
     return this.setStatus(provider, "configured_externally");
   }
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }

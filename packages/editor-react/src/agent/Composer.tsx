@@ -49,7 +49,9 @@ export function Composer({
   actor,
   host,
   field,
+  compact = false,
 }: {
+  compact?: boolean;
   composer: ComposerController;
   agent: AgentController;
   actor(id: string | null | undefined): ActorView;
@@ -71,7 +73,7 @@ export function Composer({
     if (focus) field.current?.focus();
   }, [focus, field]);
   return (
-    <div className="vk-composer-wrap">
+    <div className="vk-composer-wrap" data-compact={compact ? "" : undefined}>
       {s.skipAll ? (
         <div className="vk-skipall" role="status">
           <Icon name="triangle-alert" size={14} />

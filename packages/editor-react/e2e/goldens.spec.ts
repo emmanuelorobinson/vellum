@@ -110,7 +110,8 @@ for (const screen of screens.screens)
       await page.goto(`/?appearance=${mode}&${screen.query}`);
       await page.evaluate(() => document.fonts.ready);
       // The Agent tab's sessions load from their feed after the first paint.
-      if (screen.query.includes("agent=")) await page.evaluate(() => window.__vellum.agentReady());
+      if (screen.query.includes("agent=") || screen.query.includes("collaboration="))
+        await page.evaluate(() => window.__vellum.agentReady());
       await expect(page.locator(".vc-docbar")).toBeVisible();
       const open = (screen as { open?: string }).open;
       if (open) await page.getByRole("button", { name: open, exact: true }).first().click();

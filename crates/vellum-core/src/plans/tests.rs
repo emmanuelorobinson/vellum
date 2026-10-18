@@ -70,8 +70,11 @@ fn event(seq: u64, turn_n: u32, plan: PlanEvent) -> SessionEvent {
 // ---- the threshold ---------------------------------------------------------------------------------------------
 
 #[test]
-fn one_frame_needs_no_plan_and_two_do() {
-    let settings = PlanSettings::default();
+fn a_two_frame_setting_plans_multi_frame_work() {
+    let settings = PlanSettings {
+        min_frames: 2,
+        ..PlanSettings::default()
+    };
     assert!(!settings.needs_plan(&plan(&["Welcome"])));
     assert!(settings.needs_plan(&plan(&["Welcome", "Step 1"])));
 }
@@ -294,4 +297,11 @@ fn the_build_prompt_lists_every_item_and_its_placeholder() {
         "{text}"
     );
     assert!(text.contains("report_progress"), "{text}");
+}
+
+#[test]
+fn owner_chosen_default_plans_at_three_frames() {
+    let settings = PlanSettings::default();
+    assert!(!settings.needs_plan(&plan(&["Welcome", "Step 1"])));
+    assert!(settings.needs_plan(&plan(&["Welcome", "Step 1", "Step 2"])));
 }

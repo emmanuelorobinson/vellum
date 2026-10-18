@@ -109,6 +109,10 @@ fn rig(teal: Vec<Vec<FakeStep>>) -> Rig {
 macro_rules! orchestrator {
     ($rig:expr) => {
         Orchestrator::new(&$rig.teal, &$rig.registry, &$rig.log)
+            .with_settings(vellum_core::plans::PlanSettings {
+                min_frames: 2,
+                ..Default::default()
+            })
             .with_helpers(vec![&$rig.saffron, &$rig.rose], names())
     };
 }

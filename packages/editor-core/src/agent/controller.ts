@@ -3,8 +3,9 @@
  * Undo-this-turn confirmation. Every action goes to the AgentFeed; nothing here changes a document.
  */
 import type { AgentId, NodeId, SessionId, TurnId } from "@vellum/types-ts";
-import type { AgentFeed, FeedUpdate } from "./feed";
+import type { AgentFeed, FeedUpdate, PromptRequest } from "./feed";
 import type { SessionEvent } from "./log";
+import { type AgentPlan, type PlanBuild, validatePlan } from "./orchestration";
 import { groupSessions, type SessionInfo } from "./sessions";
 import { targetOf, toolName } from "./steps";
 import { buildTurns, type LiveItem, type TurnView } from "./turns";
@@ -17,6 +18,8 @@ export interface AgentControllerDeps {
   onZoomTo?(node: NodeId): void;
   /** A layer's name, for the line of a step still running ("Designing Step 1"). */
   nameOf?(node: NodeId): string | null;
+  pageName?(page: string): string;
+  thumbnail?(node: NodeId): string | null;
   /** Review changes: open History filtered to this turn. */
   onReviewChanges?(session: SessionId, turn: TurnId | null): void;
 }
@@ -33,6 +36,10 @@ export interface AgentState {
   confirmUndo: string | null;
   error: string | null;
   loading: boolean;
+  highlighted: NodeId | null;
+  lastRuns: Record<string, number>;
+  runningNodes: ReadonlySet<NodeId>;
+  selectedOptions: Record<string, number[]>;
 }
 
 export function createAgentController(deps: AgentControllerDeps) {
@@ -47,6 +54,10 @@ export function createAgentController(deps: AgentControllerDeps) {
     confirmUndo: null,
     error: null,
     loading: false,
+    highlighted: null,
+    lastRuns: {},
+    runningNodes: new Set(),
+    selectedOptions: {},
   };
   // A slower answer for a session the person has already left is dropped.
   let generation = 0;
@@ -81,21 +92,40 @@ export function createAgentController(deps: AgentControllerDeps) {
       if (u.event.body.type === "step" && turn && live[turn]) {
         const items = [...(live[turn] as LiveItem[])];
         const tool = u.event.body.tool;
-        const at = items.findIndex((i) => i.type === "working" && toolName(i.tool) === tool);
+        const eventAgent =
+          u.event.origin.actor.kind === "agent" ? u.event.origin.actor.agent : undefined;
+        const at = items.findIndex(
+          (i) =>
+            i.type === "working" &&
+            toolName(i.tool) === tool &&
+            (!i.agent || i.agent === eventAgent),
+        );
         // The step takes the place of its own call's working row; another tool's step goes after.
-        if (at >= 0) items[at] = { type: "step", seq: u.event.seq };
-        else items.push({ type: "step", seq: u.event.seq });
+        if (at >= 0)
+          items[at] = {
+            type: "step",
+            seq: u.event.seq,
+            ...(eventAgent ? { agent: eventAgent } : {}),
+          };
+        else
+          items.push({
+            type: "step",
+            seq: u.event.seq,
+            ...(eventAgent ? { agent: eventAgent } : {}),
+          });
         live = { ...live, [turn]: items };
       }
       change({ events: [...state.events, u.event], live });
       return;
     }
     const items = [...(state.live[u.turn] ?? [])];
-    if (u.item.type === "text") items.push({ type: "text", text: u.item.text });
+    if (u.item.type === "text")
+      items.push({ type: "text", text: u.item.text, agent: u.agent ?? info()?.agent });
     else if (u.item.type === "toolStarted") {
       const node = targetOf(u.item.arguments);
       items.push({
         type: "working",
+        agent: u.agent ?? info()?.agent,
         call: u.item.call,
         tool: u.item.name,
         startedAt: deps.now(),
@@ -206,6 +236,46 @@ export function createAgentController(deps: AgentControllerDeps) {
       const session = state.current;
       if (session) await attempt(() => feed.retryStep(session, turn, seq));
     },
+    async runPromptNode(node: NodeId, request: PromptRequest) {
+      if (state.runningNodes.has(node) || !request.text.trim()) return;
+      change({ runningNodes: new Set([...state.runningNodes, node]) });
+      await attempt(async () => {
+        let session = state.current;
+        if (!session) {
+          const s = await feed.create();
+          change({ sessions: [...state.sessions, s] });
+          await open(s.id);
+          session = s.id;
+        }
+        await feed.send(session, { ...request, sourceNode: node });
+        change({ lastRuns: { ...state.lastRuns, [`${session}:${node}`]: deps.now() } });
+      });
+      const nodes = new Set(state.runningNodes);
+      nodes.delete(node);
+      change({ runningNodes: nodes });
+    },
+    async buildPlan(turn: TurnId, plan: AgentPlan, parallel: PlanBuild) {
+      const session = state.current;
+      if (!session) return;
+      await attempt(async () => {
+        const error = validatePlan(plan);
+        if (error) throw Error(error);
+        if (!Number.isInteger(parallel.count) || parallel.count < 1 || parallel.count > 6)
+          throw Error("Choose 1–6 agents");
+        await feed.buildPlan(session, turn, plan, parallel);
+      });
+    },
+    async editRequest(turn: TurnId, text: string) {
+      const session = state.current;
+      if (session) await attempt(() => feed.editRequest(session, turn, text));
+    },
+    chooseOption(turn: TurnId, option: number) {
+      change({ selectedOptions: { ...state.selectedOptions, [turn]: [option] } });
+    },
+    async keepOptions(turn: TurnId, options: number[]) {
+      const session = state.current;
+      if (session) await attempt(() => feed.keepOptions(session, turn, options));
+    },
     async stop() {
       const session = state.current;
       if (session) await attempt(() => feed.stop(session));
@@ -215,6 +285,11 @@ export function createAgentController(deps: AgentControllerDeps) {
     },
     zoomTo(node: NodeId) {
       deps.onZoomTo?.(node);
+    },
+    pageName: (page: string) => deps.pageName?.(page) ?? page,
+    thumbnail: (node: NodeId) => deps.thumbnail?.(node) ?? null,
+    highlight(node: NodeId | null) {
+      change({ highlighted: node });
     },
     image: (hash: string | null) => (hash ? feed.image(hash) : null),
     timeOptions: () => ({ now: deps.now(), ...(deps.timeZone ? { timeZone: deps.timeZone } : {}) }),

@@ -66,7 +66,7 @@ impl Plan {
     }
 }
 
-/// When a request needs a plan. The default is to plan all multi-frame work (DESIGN.md "Plan card").
+/// When a request needs a plan. The owner chose three frames (DESIGN-DECISIONS, Prompt 51).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PlanSettings {
     /// A request making or changing at least this many frames is planned. A person may raise it to skip plans
@@ -78,7 +78,7 @@ pub struct PlanSettings {
 impl Default for PlanSettings {
     fn default() -> Self {
         Self {
-            min_frames: 2,
+            min_frames: 3,
             max_unplanned_changes: 20,
         }
     }

@@ -1,0 +1,235 @@
+.va-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--space-4));
+  padding: var(--space-4);
+  background: var(--chrome-sunken);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-lg);
+}
+.va-plan h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.va-plan h4 {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+}
+.va-plan__state {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--chrome-attention);
+  font-size: 12px;
+  line-height: 15px;
+}
+.va-plan__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.va-plan__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 20px;
+  font-size: 12px;
+  line-height: 15px;
+}
+.va-plan__row > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.va-plan__row .vc-iconbutton {
+  width: 12px;
+  height: 20px;
+  color: var(--chrome-secondary);
+}
+.va-plan__edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin: 0;
+  border: 0;
+}
+.va-plan label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.va-plan input,
+.va-plan textarea,
+.va-plan select {
+  min-width: 0;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  color: var(--chrome-text);
+  background: var(--chrome-panel);
+  font: inherit;
+  padding: var(--space-1);
+}
+.va-plan__parallel {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  font-size: 12px;
+}
+.va-plan__parallel output {
+  font: 12px var(--font-mono);
+}
+.va-plan__parallel .va-button {
+  height: 32px;
+  padding-inline: var(--space-3);
+}
+.va-plan__parallel select {
+  flex: 1;
+  width: 72px;
+}
+.va-plan__explanation {
+  font-size: 12px;
+  color: var(--chrome-secondary);
+  line-height: 15px;
+}
+.va-plan__actions {
+  flex-wrap: nowrap;
+}
+.va-plan__actions > :first-child {
+  flex: 1;
+}
+.va-parallel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.va-parallel__progress {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.va-parallel progress {
+  width: 100%;
+  height: 4px;
+  accent-color: var(--chrome-text);
+}
+.va-parallel__groups {
+  color: var(--chrome-secondary);
+  line-height: 18px;
+}
+.va-lane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.va-lane__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  width: 100%;
+}
+.va-lane__header > span:nth-child(2) {
+  flex: 1;
+}
+.va-lane__header small,
+.va-lane__model {
+  color: var(--chrome-secondary);
+}
+.va-lane__summary {
+  padding: var(--space-2);
+  font-size: 12px;
+  line-height: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.va-alternatives {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.va-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.va-option > :first-child {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  text-align: start;
+  min-width: 0;
+  gap: var(--space-2);
+}
+.va-option__thumbnail {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 32px;
+  flex: none;
+  background: var(--chrome-sunken);
+  border: 1px solid var(--chrome-border);
+}
+.va-option__thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.va-live-plan {
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+.va-live-plan p {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+.va-parallel__progress {
+  width: fit-content;
+}
+
+.va-turn[data-plan] {
+  gap: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.va-turn[data-plan] .va-you {
+  margin-inline: calc(-1 * var(--space-4));
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--chrome-text);
+  border-radius: 0;
+}
+.va-plan {
+  box-shadow: inset 0 0 0 1px var(--chrome-border);
+  border: 0;
+}
+
+.va-lane__header small {
+  font-size: 11px;
+  line-height: 13px;
+}
+.va-turn:has(.va-parallel) .va-you__text {
+  line-height: 22px;
+}
+.va-live-plan {
+  line-height: 14px;
+}
+.va-lane__header {
+  font-weight: 400;
+}

@@ -80,3 +80,24 @@ it("forwards segment hits through the retained Scene facade without exposing mut
   expect(target.index).toBe(1);
   expect(point).toEqual({ x: 10, y: 20 });
 });
+
+it("accepted-commit observers see copies only after acceptance and unsubscribe cleanly", () => {
+  const binding = new FakeEngineClient();
+  const client = new WasmEngineClient(binding);
+  const seen: ToolTransaction[] = [];
+  const sub = client.subscribeCommits((tx) => {
+    seen.push(tx);
+    tx.ops.length = 0;
+  });
+  expect(client.apply(transaction).status).toBe("rejected");
+  expect(seen).toHaveLength(0);
+  binding.script({ revision: 1, document: null, readOnly: false });
+  expect(client.apply(transaction).status).toBe("applied");
+  expect(seen).toHaveLength(1);
+  expect(transaction.ops).toHaveLength(1);
+  sub.dispose();
+  binding.script({ revision: 2, document: null, readOnly: false });
+  client.apply(transaction);
+  expect(seen).toHaveLength(1);
+  client.dispose();
+});

@@ -16,6 +16,8 @@ export interface EngineClient {
   readonly scene: ToolScene;
   snapshot(): EngineSnapshot;
   apply(transaction: ToolTransaction): EngineCommit;
+  /** Accepted person transactions, after the core has committed them. */
+  subscribeCommits?(listener: (transaction: ToolTransaction) => void): { dispose(): void };
   undo(actor: Actor): EngineCommit;
   redo(actor: Actor): EngineCommit;
   subscribe(listener: (snapshot: EngineSnapshot) => void): { dispose(): void };
@@ -27,6 +29,7 @@ export interface EngineClient {
 export interface EngineBindings extends EngineClient {}
 export class WasmEngineClient implements EngineClient {
   private disposed = false;
+  private commitListeners = new Set<(tx: ToolTransaction) => void>();
   private subscriptions = new Set<{ dispose(): void }>();
   get state() {
     return this.disposed ? ("disposed" as const) : ("ready" as const);
@@ -58,7 +61,10 @@ export class WasmEngineClient implements EngineClient {
       transaction.ops.length === 0
     )
       return { status: "rejected", reason: "invalid" };
-    return this.bindings.apply(clone(transaction));
+    const result = this.bindings.apply(clone(transaction));
+    if (result.status === "applied")
+      for (const listener of this.commitListeners) listener(clone(transaction));
+    return result;
   }
   undo(actor: Actor): EngineCommit {
     this.live();
@@ -69,6 +75,11 @@ export class WasmEngineClient implements EngineClient {
     this.live();
     if (this.snapshot().readOnly) return { status: "rejected", reason: "read-only" };
     return this.bindings.redo({ ...actor });
+  }
+  subscribeCommits(listener: (tx: ToolTransaction) => void) {
+    this.live();
+    this.commitListeners.add(listener);
+    return { dispose: () => void this.commitListeners.delete(listener) };
   }
   subscribe(listener: (snapshot: EngineSnapshot) => void) {
     this.live();
@@ -87,6 +98,7 @@ export class WasmEngineClient implements EngineClient {
     this.disposed = true;
     for (const subscription of this.subscriptions) subscription.dispose();
     this.subscriptions.clear();
+    this.commitListeners.clear();
     this.bindings.dispose();
   }
 }
@@ -103,6 +115,7 @@ const emptyScene: ToolScene = {
 /** Scripted snapshots/results, never a second document engine. Tests inject Rust-backed bindings separately. */
 export class FakeEngineClient implements EngineClient {
   private disposed = false;
+  private commitListeners = new Set<(tx: ToolTransaction) => void>();
   private current: EngineSnapshot;
   private listeners = new Set<(snapshot: EngineSnapshot) => void>();
   private replies: { snapshot: EngineSnapshot; operation: "apply" | "undo" | "redo" }[] = [];
@@ -149,7 +162,10 @@ export class FakeEngineClient implements EngineClient {
     )
       return { status: "rejected", reason: "invalid" };
     const result = this.commit("apply");
-    if (result.status === "applied") this.transactions.push(clone(transaction));
+    if (result.status === "applied") {
+      this.transactions.push(clone(transaction));
+      for (const l of this.commitListeners) l(clone(transaction));
+    }
     return result;
   }
   undo(actor: Actor) {
@@ -161,6 +177,11 @@ export class FakeEngineClient implements EngineClient {
     const result = this.commit("redo");
     if (result.status === "applied") this.historyActors.push({ ...actor });
     return result;
+  }
+  subscribeCommits(listener: (tx: ToolTransaction) => void) {
+    this.live();
+    this.commitListeners.add(listener);
+    return { dispose: () => void this.commitListeners.delete(listener) };
   }
   subscribe(listener: (snapshot: EngineSnapshot) => void) {
     this.live();
@@ -174,6 +195,7 @@ export class FakeEngineClient implements EngineClient {
   dispose() {
     this.disposed = true;
     this.listeners.clear();
+    this.commitListeners.clear();
     this.replies = [];
   }
 }

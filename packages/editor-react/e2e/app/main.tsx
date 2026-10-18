@@ -2,6 +2,7 @@
 // Nothing here applies operations to a document: a test scripts the snapshot the engine answers with, and checks
 // the transaction the UI sent and what the UI shows after the reply.
 import {
+  contextForSelection,
   createAgentController,
   createCommandController,
   createComposerController,
@@ -9,6 +10,7 @@ import {
   createEditorHandlers,
   createEditorSession,
   createPaintEditor,
+  createPresenceController,
   createResourceController,
   createWorkspace,
   type Mention,
@@ -18,6 +20,11 @@ import { type EngineSnapshot, FakeEngineClient } from "@vellum/engine-client";
 import { FakeDaemonClient } from "@vellum/host-api";
 import { createBrowserHost } from "@vellum/host-browser";
 import type { Document, Node } from "@vellum/types-ts";
+import {
+  COLLAB_NAMES,
+  collaborationNodes,
+  collaborationScenario,
+} from "../../fixtures/collaboration-scenarios";
 import "@vellum/ui-tokens/tokens.css";
 import { createRoot } from "react-dom/client";
 import {
@@ -45,6 +52,8 @@ import { sceneOf } from "./test-scene";
 
 const q = new URLSearchParams(location.search);
 const scenario = q.get("scenario");
+const collaborationName = q.get("collaboration");
+const collaboration = collaborationName ? collaborationScenario(collaborationName) : null;
 const resourceName = q.get("resource");
 const designName = q.get("design") as DesignScenario | null;
 const appearance = (q.get("appearance") ?? "light") as "light" | "dark" | "hc-light" | "hc-dark";
@@ -154,7 +163,15 @@ let current = resourceName
   ? resourceDocument(resourceName)
   : designName
     ? designDocument(designName)
-    : documentOf(q.get("empty") ? [] : scenario === "juniper" ? juniperNodes() : startNodes());
+    : documentOf(
+        collaborationName
+          ? collaborationNodes(collaborationName)
+          : q.get("empty")
+            ? []
+            : scenario === "juniper"
+              ? juniperNodes()
+              : startNodes(),
+      );
 /** The document with other layers on its first page: the design scenarios keep their variables and components. */
 const withChildren = (children: Node[]): Document =>
   designName
@@ -299,13 +316,14 @@ if (q.get("edit")) {
 // The Agent tab over a scripted session feed (fixtures/agent-scenarios.ts). `hold` keeps the scripted updates
 // back until a test sends them with `agentEmit`.
 const agentName = q.get("agent") as AgentScenario | null;
-const agentSetup = agentName ? agentScenario(agentName) : null;
+const agentSetup = collaboration ?? (agentName ? agentScenario(agentName) : null);
 let agentClock = AGENT_NOW;
 const agent = agentSetup
   ? createAgentController({
       feed: agentSetup.feed,
       now: () => agentClock,
       timeZone: "UTC",
+      pageName: (id) => COLLAB_NAMES[id] ?? id,
       nameOf: (id) => AGENT_LAYER_NAMES[id] ?? null,
       onZoomTo: (node) => {
         hostActions.push({ command: "agent.zoomTo", detail: { node } });
@@ -334,6 +352,7 @@ const composer =
           return {
             selection: label ? { ids, label } : null,
             page: page ? { id: page.id, name: page.name } : null,
+            context: contextForSelection(current, session.page, ids),
           };
         },
         documentMentions: (query) => {
@@ -350,6 +369,29 @@ const composer =
         },
       })
     : null;
+const presence = collaboration
+  ? createPresenceController({
+      feed: collaboration.presenceFeed,
+      engine,
+      now: () => agentClock,
+      onFollow: (v) => session.setViewport(v),
+      onOpenSession: (id) => {
+        void agent?.select(id);
+        workspace.switchTab("agent", { reveal: true });
+      },
+      onRejected: (frame, agent) =>
+        hostActions.push({ command: "history.rejected", detail: { frame, agent } }),
+      contains: (frame, node) => {
+        let item = engine.scene.get(node);
+        while (item?.parent) {
+          if (item.parent === frame) return true;
+          item = engine.scene.get(item.parent);
+        }
+        return false;
+      },
+    })
+  : null;
+if (collaborationName === "c35") session.select(["step2"]);
 const controller = createCommandController(
   createEditorHandlers({
     workspace,
@@ -362,13 +404,15 @@ const controller = createCommandController(
 const pendingAgentUpdates = [...(agentSetup?.updates ?? [])];
 const agentReady = (async () => {
   if (!agent || !agentSetup) return;
+  await presence?.load();
   await agent.load();
-  if (agentSetup.current) await agent.select(agentSetup.current);
+  const initialSession = "current" in agentSetup ? agentSetup.current : null;
+  if (initialSession) await agent.select(initialSession);
   await composer?.load();
   if (!q.has("hold")) for (const u of pendingAgentUpdates.splice(0)) agentSetup.feed.emit(u);
-  agentClock += agentSetup.elapse ?? 0;
+  agentClock += ("elapse" in agentSetup ? agentSetup.elapse : 0) ?? 0;
   render();
-  for (const key of agentSetup.expanded ?? []) agent.toggle(key);
+  for (const key of ("expanded" in agentSetup ? agentSetup.expanded : []) ?? []) agent.toggle(key);
   if (q.has("switcher")) agent.toggleSwitcher(true);
   if (q.has("undo")) agent.askUndo(agent.turns().at(-1)?.id ?? null);
   const surface = q.get("composer");
@@ -416,10 +460,15 @@ type Hooks = {
   /** What the panel asked the daemon for: undo turn, retry, stop... */
   agentRequests(): unknown[];
   agentTick(ms: number): void;
+  presenceRequests(): unknown[];
+  presencePaused(on: boolean): void;
   /** The composer's state, as JSON (to prove what it holds and what it does not). */
   composerState(): string;
   /** Requests the composer sent, with their sessions. */
-  composerSent(): unknown[];
+  composerSent(): {
+    session: string;
+    request: import("@vellum/editor-core").PromptRequest & Record<string, unknown>;
+  }[];
   /** Keys the fake keychain holds, by provider. */
   keychain(): Record<string, string>;
 };
@@ -465,12 +514,20 @@ window.__vellum = {
   },
   agentSend: (update) => agentSetup?.feed.emit(update as never),
   agentRequests: () => agentSetup?.feed.requests ?? [],
+  presenceRequests: () => collaboration?.presenceFeed.requests ?? [],
+  presencePaused(on) {
+    if (collaboration) collaboration.presenceFeed.emit({ ...collaboration.snapshot, paused: on });
+  },
   agentTick(ms) {
     agentClock += ms;
     render();
   },
   composerState: () => JSON.stringify(composer?.state ?? null),
-  composerSent: () => agentSetup?.feed.sent ?? [],
+  composerSent: () =>
+    (agentSetup?.feed.sent ?? []) as unknown as {
+      session: string;
+      request: import("@vellum/editor-core").PromptRequest & Record<string, unknown>;
+    }[],
   keychain: () => agentSetup?.feed.keys ?? {},
 };
 
@@ -479,6 +536,7 @@ function render() {
   root.render(
     <EditorWorkspace
       workspace={workspace}
+      {...(presence ? { presence } : {})}
       session={session}
       engine={engine}
       controller={controller}
@@ -546,8 +604,7 @@ function render() {
             },
           }
         : {})}
-      design={design}
-      paintEditor={paintEditor}
+      {...(collaborationName === "c35" ? {} : { design, paintEditor })}
       designHost={{
         fonts,
         onAction: (command, detail) => {

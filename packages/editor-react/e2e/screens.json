@@ -803,6 +803,123 @@
           "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
         }
       ]
+    },
+    {
+      "id": "C04-plan",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C04-{mode}-1280.png",
+      "query": "tab=agent&collaboration=c04",
+      "regions": [
+        {
+          "name": "plan card",
+          "selector": ".va-plan",
+          "design": [8, 190, 360, 524]
+        }
+      ]
+    },
+    {
+      "id": "C05-parallel",
+      "size": [1280, 800],
+      "modes": ["light", "dark", "hc-light", "hc-dark"],
+      "snapshot": "C05-{mode}-1280.png",
+      "query": "tab=agent&collaboration=c05",
+      "regions": [
+        {
+          "name": "progress",
+          "selector": ".va-parallel__progress",
+          "design": [24, 282, 150, 18]
+        },
+        {
+          "name": "lane header",
+          "selector": ".va-lane__header",
+          "design": [24, 376, 328, 16]
+        }
+      ]
+    },
+    {
+      "id": "C05-parallel-1512",
+      "size": [1512, 982],
+      "modes": ["light", "dark", "hc-light", "hc-dark"],
+      "snapshot": "C05-{mode}-1512.png",
+      "query": "tab=agent&collaboration=c05",
+      "regions": [
+        {
+          "name": "progress",
+          "selector": ".va-parallel__progress",
+          "design": [24, 282, 150, 18]
+        },
+        {
+          "name": "lane header",
+          "selector": ".va-lane__header",
+          "design": [24, 376, 328, 16]
+        }
+      ]
+    },
+    {
+      "id": "C35-collaboration",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C35-{mode}-1280.png",
+      "query": "tab=agent&collaboration=c35",
+      "regions": [
+        {
+          "name": "note",
+          "selector": ".vn-card[data-kind=note]",
+          "design": [456, 84, 282, 82]
+        },
+        {
+          "name": "context",
+          "selector": ".vn-card[data-kind=context]",
+          "design": [754, 84, 282, 150]
+        },
+        {
+          "name": "prompt header and content",
+          "selector": ".vn-card[data-kind=prompt]",
+          "design": [950, 396, 282, 105],
+          "clipHeight": 105
+        }
+      ]
+    },
+    {
+      "id": "C07-alternatives",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C07-{mode}-1280.png",
+      "query": "tab=agent&collaboration=c07",
+      "open": "Keep B",
+      "regions": [
+        {
+          "name": "canvas Keep",
+          "selector": ".vp-alternative__keep",
+          "design": [440, 648, 66, 31]
+        },
+        {
+          "name": "confirmed Keep",
+          "selector": ".va-alternatives > .va-button",
+          "design": [24, 570, 155, 31]
+        }
+      ]
+    },
+    {
+      "id": "C07-explore-alternatives",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "C07-explore-{mode}-1280.png",
+      "query": "tab=agent&collaboration=c07e",
+      "open": "Keep B",
+      "regions": [
+        {
+          "name": "canvas Keep",
+          "selector": ".vp-alternative__keep",
+          "design": [440, 648, 66, 31]
+        },
+        {
+          "name": "confirmed Keep",
+          "selector": ".va-alternatives > .va-button",
+          "design": [24, 570, 155, 31]
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

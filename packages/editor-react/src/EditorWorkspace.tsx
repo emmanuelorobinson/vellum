@@ -9,6 +9,7 @@ import {
   instanceTransaction,
   type PaintEditor,
   type Platform,
+  type PresenceController,
   type ResourceController,
   selectionLabel,
   type ToolTransaction,
@@ -20,8 +21,10 @@ import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId, Value } from
 import type { Mode } from "@vellum/ui-tokens";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentTab } from "./agent/AgentTab";
+import { CollaborationNodes } from "./agent/CollaborationNodes";
 import type { ComposerHost } from "./agent/Composer";
 import { InlinePrompt, type ScreenRect, SelectionToolbar } from "./agent/InlinePrompt";
+import { PresenceLayer } from "./agent/PresenceLayer";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
 import type { ActorView } from "./chrome/ActorMarker";
 import { BottomStrip, type Connection } from "./chrome/BottomStrip";
@@ -47,6 +50,7 @@ import "./editor.css";
 export type CommandController = ReturnType<typeof createCommandController>;
 
 export interface EditorWorkspaceProps {
+  presence?: PresenceController;
   workspace: Workspace;
   session: EditorSession;
   engine: EngineClient;
@@ -343,6 +347,20 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               ? { colour: (c: Value<string>) => props.design?.colour(c, doc) ?? (c as string) }
               : {})}
           />
+          <CollaborationNodes
+            offline={props.composerHost?.offline ?? false}
+            document={doc}
+            session={session}
+            readOnly={readOnly}
+            {...(props.agent ? { agent: props.agent } : {})}
+            {...(composer ? { composer } : {})}
+          />
+          <PresenceLayer
+            session={session}
+            actors={props.actors}
+            {...(props.presence ? { presence: props.presence } : {})}
+            {...(props.agent ? { agent: props.agent } : {})}
+          />
           {visible.documentBar ? (
             <DocumentBar
               fileName={props.fileName}
@@ -423,6 +441,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             <TopRightBar
               right={layout.topRight.right}
               agents={props.agents}
+              {...(props.presence ? { presence: props.presence } : {})}
               {...(props.onShare ? { onShare: props.onShare } : {})}
               {...(props.onPreview ? { onPreview: props.onPreview } : {})}
               {...(props.onSettings ? { onSettings: props.onSettings } : {})}

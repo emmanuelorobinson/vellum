@@ -24,6 +24,7 @@ import { Icon } from "../icons/Icon";
 import { ResourceButton, ResourceDialog } from "../resources/Dialog";
 import { Composer, type ComposerHost } from "./Composer";
 import { FirstOpen } from "./FirstOpen";
+import { ParallelTurn, PlanCard } from "./Orchestration";
 import { PermissionCard } from "./PermissionCard";
 import { TurnItems } from "./Steps";
 import "./agent.css";
@@ -111,6 +112,7 @@ export function AgentTab({
         ) : composer ? (
           <Composer
             composer={composer}
+            compact={turns.at(-1)?.state === "awaiting_plan"}
             agent={agent}
             actor={actor}
             host={composerHost}
@@ -366,7 +368,11 @@ function Turn({
   const first = actor(turn.agents[0]);
   const question = composer && !external ? composer.questionFor(turn.id) : null;
   return (
-    <article className="va-turn" aria-label={turn.prompt ? `Turn: ${turn.prompt.text}` : "Steps"}>
+    <article
+      className="va-turn"
+      data-plan={turn.orchestration.status === "proposed" ? "" : undefined}
+      aria-label={turn.prompt ? `Turn: ${turn.prompt.text}` : "Steps"}
+    >
       {turn.prompt ? (
         <div className="va-you">
           <p className="va-you__text">{turn.prompt.text}</p>
@@ -376,7 +382,7 @@ function Turn({
         </div>
       ) : null}
       {lead}
-      {external ? null : (
+      {external || turn.orchestration.status === "proposed" ? null : (
         <>
           <div className="va-header">
             {turn.agents.length > 1 ? (
@@ -384,7 +390,14 @@ function Turn({
                 {turn.agents.map((a) => (
                   <ActorMarker key={a} actor={actor(a)} size={20} outlined />
                 ))}
-                <span className="va-header__name">{turn.agents.length} agents</span>
+                <span className="va-header__name">
+                  {turn.agents.length} agents
+                  {turn.orchestration.mode === "side_by_side"
+                    ? " · Side by side"
+                    : turn.orchestration.mode?.startsWith("explore")
+                      ? ` · Explore ${turn.orchestration.mode === "explore_style" ? "Style" : "Layout"}`
+                      : ""}
+                </span>
               </>
             ) : (
               <>
@@ -397,7 +410,21 @@ function Turn({
           {turn.model ? <p className="va-model vc-mono">{turn.model}</p> : null}
         </>
       )}
-      <TurnItems items={turn.items} agent={agent} turn={turn.id} />
+      {turn.orchestration.plan && turn.id && turn.orchestration.status === "proposed" ? (
+        <PlanCard
+          key={`${turn.key}:${turn.orchestration.revision}`}
+          view={turn.orchestration}
+          turn={turn.id}
+          agent={agent}
+          pageName={agent.pageName}
+          models={composer?.state.catalog?.builtin.flatMap((p) => p.models.map((m) => m.id)) ?? []}
+        />
+      ) : null}
+      {turn.orchestration.lanes.length ? (
+        <ParallelTurn turn={turn} agent={agent} actor={actor} />
+      ) : (
+        <TurnItems items={turn.items} agent={agent} turn={turn.id} />
+      )}
       {question ? (
         <PermissionCard
           question={question}

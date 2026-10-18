@@ -33,6 +33,7 @@ import type { SessionUsage } from "./usage";
 export interface ComposerScope {
   selection: { ids: readonly string[]; label: string } | null;
   page: { id: string; name: string } | null;
+  context?: ContextChip[];
 }
 
 export type MentionKind = "file" | "frame" | "component" | "variable";
@@ -209,7 +210,16 @@ export function createComposerController(deps: ComposerDeps) {
   const chips = (): ChipView[] => {
     const d = draft();
     const auto = autoChip();
-    return [...(auto && !d.removed.includes(auto.key) ? [auto] : []), ...d.chips];
+    const context = (deps.scope().context ?? []).map((c) => ({
+      ...c,
+      key: `context:${c.value}`,
+      auto: true,
+    }));
+    return [
+      ...(auto && !d.removed.includes(auto.key) ? [auto] : []),
+      ...context.filter((c) => !d.removed.includes(c.key)),
+      ...d.chips,
+    ];
   };
   const addChip = (c: Omit<ChipView, "key" | "auto">) => {
     const k = `${c.kind}:${c.value}`;
@@ -456,7 +466,8 @@ export function createComposerController(deps: ComposerDeps) {
     removeChip(k: string) {
       const d = draft();
       const auto = autoChip();
-      if (auto?.key === k) setDraft({ removed: [...d.removed, k] });
+      if (auto?.key === k || chips().some((c) => c.key === k && c.auto))
+        setDraft({ removed: [...d.removed, k] });
       else setDraft({ chips: d.chips.filter((c) => c.key !== k) });
     },
     attach(list: ContextChip[]) {
