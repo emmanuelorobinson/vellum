@@ -37,6 +37,10 @@ jobs:
         env:
           VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
         run: node scripts/export-goldens.mjs
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Native cloud export, thumbnail and hosted PR preview workers
+        run: VELLUM_TEST_BINARY="$PWD/target/debug/vellum" pnpm --filter @vellum/api test -- src/render.integration.test.ts
       - name: Specification intact
         if: always()
         run: node scripts/spec-checksums.mjs check

@@ -14,6 +14,7 @@ name = "vellum"
 path = "src/main.rs"
 
 [dependencies]
+vellum-account-http = { path = "../adapters/account-http" }
 vellum-engine-codex = { path = "../adapters/engine-codex" }
 vellum-engine-claude-code = { path = "../adapters/engine-claude-code" }
 clap.workspace = true

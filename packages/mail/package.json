@@ -13,6 +13,10 @@
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "3.1152.0"
   }
 }

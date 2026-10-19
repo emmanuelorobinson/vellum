@@ -5,7 +5,10 @@
   "description": "Cloud wrapper package: billing and entitlements.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./postgres": "./src/postgres.ts",
+    "./polar": "./src/polar.ts",
+    "./migration.sql": "./migrations/0001.sql"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -13,6 +16,13 @@
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "8.20.0"
+  },
+  "dependencies": {
+    "@polar-sh/sdk": "1.0.2",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1"
   }
 }

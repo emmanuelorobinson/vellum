@@ -4,6 +4,7 @@
 //! is on the command line with no code here. A call goes to the daemon like any other client's, which is what
 //! lets it reach a file an editor holds; the command prints the tool's result as JSON.
 
+pub mod account;
 pub mod commands;
 pub mod git;
 pub mod prompt;

@@ -1,0 +1,18 @@
+[package]
+name = "vellum-account-http"
+description = "Bounded device authorization and cloud session transport. Never used by local features."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+serde.workspace = true
+serde_json.workspace = true
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "json"] }
+tokio = { version = "=1.53.2", features = ["rt-multi-thread", "net", "time"] }
+url = "=2.5.8"
+
+[lints]
+workspace = true

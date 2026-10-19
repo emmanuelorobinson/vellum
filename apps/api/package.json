@@ -6,10 +6,22 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "worker": "bun src/worker.ts",
+    "migrate": "bun src/migrate.ts"
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "dependencies": {
+    "hono": "4.13.13",
+    "@vellum/auth": "workspace:*",
+    "@vellum/billing": "workspace:*",
+    "@vellum/jobs": "workspace:*",
+    "@vellum/mail": "workspace:*"
   }
 }

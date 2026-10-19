@@ -5,7 +5,9 @@
   "description": "Cloud wrapper package: authentication.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./postgres": "./src/postgres.ts",
+    "./migration.sql": "./migrations/0001.sql"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -13,6 +15,13 @@
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "8.20.0"
+  },
+  "dependencies": {
+    "better-auth": "1.7.11",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1"
   }
 }

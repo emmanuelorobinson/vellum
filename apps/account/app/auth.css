@@ -1,0 +1,127 @@
+@import "@vellum/ui-tokens/tokens.css";
+@font-face {
+  font-family: Inter;
+  src: url("/fonts/InterVariable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-wght.ttf") format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font-family: var(--font-ui), sans-serif;
+}
+.account-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.account-shell header {
+  height: 52px;
+  padding: 0 var(--space-6);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--chrome-separator);
+  font-size: 13px;
+  font-weight: 600;
+}
+.account-shell main {
+  margin: auto;
+  width: min(460px, calc(100% - 48px));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px 0;
+}
+.account-shell .device-form {
+  width: min(540px, calc(100% - 48px));
+}
+h1,
+p {
+  margin: 0;
+}
+.account-shell h1 {
+  font-size: 20px;
+  font-weight: 650;
+}
+.account-shell p {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 450;
+  color: var(--chrome-secondary);
+}
+.account-shell p.scope {
+  color: var(--chrome-text);
+}
+.account-shell form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.account-shell label {
+  min-height: var(--chrome-property-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--chrome-secondary);
+}
+.account-shell label input {
+  margin-left: auto;
+  width: calc(100% - 84px);
+  height: 26px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-xs);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  padding: 0 var(--space-2);
+  font: inherit;
+}
+.account-shell button {
+  height: 32px;
+  border: 1px solid var(--chrome-text);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  padding: 0 var(--space-3);
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+}
+.account-shell .quiet {
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border-color: var(--chrome-border);
+}
+.account-shell button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.account-shell input:focus-visible,
+.account-shell button:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+.account-shell small {
+  font-size: 12px;
+  color: var(--chrome-secondary);
+}
+.account-shell .decisions {
+  display: flex;
+  gap: var(--space-2);
+}
+.account-shell label .device-code {
+  font-family: var(--font-mono), monospace;
+  font-size: 20px;
+  height: 40px;
+}

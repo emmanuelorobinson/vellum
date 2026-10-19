@@ -10,6 +10,12 @@ use vellum_ipc_local::RunDir;
 
 #[derive(Subcommand)]
 pub enum UserCommand {
+    /// Connect a cloud account using a browser device code. Local features do not need this.
+    Login(super::account::LoginArgs),
+    /// Delete this computer's cloud session and request remote revocation.
+    Logout,
+    /// Show the current cloud account without exposing its session token.
+    Whoami,
     /// Run an agent against a document. No account is needed.
     Prompt(Box<super::prompt::PromptArgs>),
     /// List the bundled model hints; installed engines choose their own models.
@@ -345,6 +351,9 @@ pub fn run(command: UserCommand, dir: &RunDir, out: &Output) -> io::Result<bool>
                 }
             }
         }
+        UserCommand::Login(args) => return super::account::login(args, out),
+        UserCommand::Logout => return super::account::logout(out),
+        UserCommand::Whoami => return super::account::whoami(out),
         UserCommand::Diff(args) => return super::git::diff(args, out),
         UserCommand::Git {
             action: super::git::GitAction::Setup,

@@ -17,12 +17,12 @@ module.exports = {
       name: "vendor-sdks-only-through-wrappers",
       severity: "error",
       comment:
-        "Apps and packages reach better-auth, Polar and AWS only through the wrapper packages (ARCHITECTURE §2.1).",
+        "Apps and packages reach auth, billing, database, queue and mail SDKs only through the wrapper packages (ARCHITECTURE §2.1).",
       from: {
         path: "^(apps|packages)/",
         pathNot: "^packages/(auth|billing|storage|mail|jobs|telemetry)/",
       },
-      to: { path: "node_modules/(better-auth|@polar-sh|@aws-sdk)/" },
+      to: { path: "node_modules/(better-auth|@polar-sh|@aws-sdk|bullmq|ioredis|drizzle-orm|pg)/" },
     },
     {
       name: "packages-do-not-import-apps",

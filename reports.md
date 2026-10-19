@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 61 needs live cloud acceptance.** Provision an HTTPS account origin, deployment secrets, an SES
+  sender/IAM identity, Polar Pro product and 2026-10 webhook, Postgres/Redis and worker mounts. Local
+  Postgres/Redis, Bun, browser and real native export/preview acceptance pass; paid checkout, mail delivery,
+  a real OS-keychain login and Windows/Linux/remote CI are unverified. Desktop/extension account controls
+  still need native device-flow wiring; the services and `vellum login` are built. See `docs/runbooks/accounts.md`.
+
 - **Prompt 60 needs remote/platform acceptance.** Local Git previews and real merge-driver fixtures pass.
   Run the artifact upload/comment workflows on GitHub (including a fork and private repo) once the CLI/Action
   are on the base/default branch, and run native Windows/Linux acceptance. Hosted previews remain the later
@@ -20,7 +26,7 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   See `docs/runbooks/cli.md` and ADR-025.
 
 - **Prompt 58 is a desktop preview, not an accepted release.** Finish Prompt 55's editable runtime, Home prompt
-  submission, thumbnail/system catalog and provider/usage/activity services; account sign-in belongs to Prompt 61.
+  submission, thumbnail/system catalog and provider/usage/activity services; native account sign-in still needs the Prompt 61 device-flow integration.
   All ten A01/A02/A04/A05/A06 full-frame goldens remain above the unchanged 1% gate. Supply a release version,
   app icon, signing/notarization identities, Windows publisher and HTTPS update feed/Ed25519 trust key; run the
   other five native targets and signed installation/upgrade lanes. OS notification delivery with a real engine
@@ -3722,3 +3728,66 @@ Final `node scripts/skia-build.mjs test -p vellum --test git_preview` (16),
 errors; native `cargo deny check` retains nine existing advisories (bans/licenses/sources pass). Neither
 unrelated fixtures nor dependencies/advisory policy were changed. Full workspace/browser/installed-engine
 suites, remote GitHub artifact/comment delivery and Windows/Linux native execution were not run. Nothing committed.
+
+## Prompt 61
+
+Built account/device auth, billing entitlements, the public API, cloud render jobs and SES mail. Every local
+feature stays signed out; deployment/vendor and native-host acceptance boundaries are recorded above and in
+`docs/runbooks/accounts.md`. No cloud service was deployed, no mail sent and no real credential/keychain changed.
+
+- Better Auth/Drizzle/Postgres with email links, hashed verification tokens, trusted origins, secure production
+  cookies, database rate limits and telemetry off. Next `/sign-in`, `/device` and auth routes. Ten-minute
+  device grants, explicit review, atomic single redemption, safe session IDs and revocation. Auth timestamps
+  preserve time zones. CLI `login`, `whoami`, `logout` uses a bounded, redirect-free HTTP adapter and the
+  existing OS-only keychain; no guessed production URL or token in JSON/output/document/session files.
+- Polar SDK 1.x/2026-10 raw signed webhooks and authenticated checkout identity. Postgres `entitlements` and
+  delivery ledger update atomically under per-subscription locks. Duplicate/stale events cannot restore a
+  revoked grant; equal-time denial wins; independent subscriptions and paid period expiry are preserved.
+  Only the configured product grants the four cloud capabilities. Local capability matrix and CLI regressions pass.
+- Hono/Bun `/v1/` identity, grants, safe sessions/revocation, checkout, webhook and owner-scoped jobs. Request
+  bounds, cookie-origin enforcement, bearer precedence (no cookie fallback) and fixed error responses.
+  Explicit locked/checksummed migrations, API/worker entrypoints and cloud/native CI lanes. Account/plan pages,
+  uploads, artifact downloads, shared links and sync remain their later prompts. Native host sign-in is unwired.
+- BullMQ/Redis plus the fake queue; canonical job identity, retry/retention configuration, ownership checks
+  at submission and Pro recheck by workers. Private bounded staging, symlink/special-file refusal, fixed
+  `vellum` argv, credential-free process environment, timeout/output limits, daemon cleanup and atomic
+  artifacts. Actual PNG thumbnails, PDF exports and Git preview manifests/PNGs passed. Workers use only
+  database/Redis/product/mount configuration, without mail or Polar access tokens. SES uses a thin port with
+  fake-send tests; no live vendor calls were made.
+- TDD: initial auth/billing/jobs/mail/API/CLI adapter cases were observed red on missing behavior. Further red
+  regressions covered bearer/cookie fallback and reordered job fields. Native export caught file-vs-folder
+  publication, macOS socket length and `/var` canonicalization; all fixed. The workspace unit fixture was
+  corrected to write the CLI's file output while keeping its ownership/cleanup/publication assertions.
+  Redis acceptance caught BullMQ 6's optional ioredis requirement; added an explicit pinned client and cleanup.
+  First native CLI runs failed because the sandbox forbids sockets; the permitted rerun passed. An auth
+  fixture needed rate-limit storage and device verification before approval, matching the installed protocol.
+- Design/reference: Pencil confirmed the read-only copy and supplied A05/A05-device and button/tokens; two
+  append-only gaps record browser consent and the desktop-vs-browser/reference-data differences. A05 full-frame
+  comparisons pass at 0.587% light/0.585% dark under the unchanged 1%/48-channel gate. No §3.2 row names P61;
+  read sibling outpost auth and openses expiry patterns, no external source ported. Used Context7 and installed
+  vendor docs/types; exact pins and pnpm-generated release-age exceptions are in the version baseline.
+  pnpm's sandboxed invocation switched stores during install; repaired the locked installation natively.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Bun 1.3.14, Rust 1.99.0; macOS ARM64; pnpm telemetry opt-outs):
+
+- Package-local `node_modules/.bin/vitest run --root <package>` for auth (3), billing (5), jobs (4), mail (2),
+  account (3). API (10) with `VELLUM_TEST_DATABASE_URL`, `VELLUM_TEST_REDIS_URL` and `VELLUM_TEST_BINARY`
+  pointed to isolated Postgres 18/Redis 8 containers and `target/debug/vellum`. Schemas and test files cleaned up.
+- `DATABASE_URL=<isolated-test-db> bun apps/api/src/migrate.ts` twice, including the final timezone-aware schema.
+  Actual Bun API loopback smoke over Postgres/Redis: health, signed-out identity/grants and device issuance.
+- `node scripts/skia-build.mjs test -p vellum --test cli --test cli_lifecycle --test cli_complete -- --include-ignored`
+  (28); `--test account_cli` (1); `cargo test -p vellum-account-http -- --include-ignored` (4 including loopback);
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1). Final scoped account/device rerun passed.
+- `NEXT_TELEMETRY_DISABLED=1 apps/account/node_modules/.bin/next build apps/account`;
+  `VELLUM_CHROME=<installed-Chrome> node apps/account/test/browser.mjs` (mailbox/failure behavior and both goldens).
+- `pnpm type-check` (33 tasks), final scoped auth/jobs/API/account tsc; workspace/all-targets Clippy with
+  `-D warnings`, rustfmt check; `bash scripts/check-deps.sh` (pure allowlist, bans/licenses/sources and
+  556-module/1,534-dependency TS cruise); clean-room/copy/token checks; scoped Biome; `actionlint` on cloud,
+  exports and CI workflows; checksum and `git diff --check`.
+
+Global Biome retains the same four unrelated fixture/import-format errors. Native `cargo deny check` retains
+its nine existing advisories (bans/licenses/sources pass); no advisory policy/version was weakened. Full
+workspace/browser/installed-engine suites, live Polar/SES, real keychain login, remote CI and non-macOS native
+execution were not run. Desktop/extension sign-in controls are not connected. Temporary test containers and
+our account preview server were removed/stopped; Docker Desktop remains running for existing containers.
+No read-only specification changed. Nothing committed.

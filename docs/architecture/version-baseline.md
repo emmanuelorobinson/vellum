@@ -339,3 +339,14 @@ No third-party version changed. The composition root now links the existing buil
 OpenAI-compatible/Responses, Anthropic, Google and keychain adapters. Clap remains 4.6.7. Its derive/global
 argument handling and Tokio's Ctrl-C subscription were checked through Context7. The IPC adapter reuses
 its existing Tokio signal/sync features; remote CLI turns are described in ADR-025.
+
+## Prompt 61 cloud ports (2026-10-19)
+
+Bun 1.3.14 was used for the API and migration smoke tests and is pinned in the cloud CI lane.
+Exact npm pins: Better Auth 1.7.11, Polar SDK 1.0.2 (2026-10 API entrypoint), Hono 4.13.13,
+BullMQ 6.3.17, ioredis 6.0.0, AWS SESv2 SDK 3.1152.0, Drizzle 0.45.4, pg 8.23.1 and @types/pg
+8.20.0. Vendor imports stay in cloud wrappers; Hono is the API composition framework. Context7 and
+installed package types/docs were checked. Polar 1.x uses async webhooks and snake_case resources;
+BullMQ 6 requires an explicit Redis client under native ESM. The pnpm installer generated nine exact
+minimumReleaseAgeExclude entries for the selected newly released Better Auth/BullMQ versions.
+Rust account HTTP reuses existing reqwest 0.13.5, Tokio 1.53.2 and url 2.5.8; no vendor version changed.

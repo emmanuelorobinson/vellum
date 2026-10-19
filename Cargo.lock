@@ -3895,6 +3895,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
+ "vellum-account-http",
  "vellum-assets-fs",
  "vellum-codec-json",
  "vellum-codec-json-dir",
@@ -3929,6 +3930,18 @@ dependencies = [
  "vellum-types",
  "vellum-watch-notify",
  "zip",
+]
+
+[[package]]
+name = "vellum-account-http"
+version = "0.0.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url",
+ "vellum-core",
 ]
 
 [[package]]
