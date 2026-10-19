@@ -124,7 +124,12 @@ function App() {
   if (!tab || !editor || (state.page && state.page !== "editor") || state.recovery)
     return <Home state={state} bridge={bridge} />;
   return (
-    <main id={`document-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`}>
+    <main
+      id={`document-${tab.id}`}
+      data-platform={state.platform}
+      role="tabpanel"
+      aria-labelledby={`tab-${tab.id}`}
+    >
       <EditorWorkspace
         workspace={editor.workspace}
         session={editor.session}
@@ -155,7 +160,14 @@ function App() {
           void bridge.request({ type: "pauseAll" });
         }}
         slots={{
-          documentBar: <DocumentTabs state={state} bridge={bridge} />,
+          documentBar: (
+            <>
+              {state.platform === "mac" && (
+                <div className="desktop-titlebar-drag" aria-hidden="true" />
+              )}
+              <DocumentTabs state={state} bridge={bridge} />
+            </>
+          ),
           agent: (
             <div className="desktop-problem" role="status">
               <p>⊘ Document engine unavailable</p>

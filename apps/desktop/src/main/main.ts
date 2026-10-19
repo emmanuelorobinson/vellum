@@ -33,7 +33,7 @@ import {
 import { EVENT_CHANNEL, REQUEST_CHANNEL } from "../shared/bridge";
 import { connections } from "./connections";
 import { type ConfirmClose, FolderWindows } from "./folders";
-import { WEB_PREFERENCES } from "./index";
+import { WEB_PREFERENCES, windowChrome } from "./index";
 import { DesktopLibrary } from "./library";
 import { type MenuAction, menuModel } from "./menus";
 import { TurnNotifications } from "./notifications";
@@ -703,6 +703,7 @@ function createWindow(folder: string | null): WindowEntry {
     show: false,
     title: brand.name,
     autoHideMenuBar: process.platform !== "darwin",
+    ...windowChrome(process.platform),
     webPreferences: {
       ...WEB_PREFERENCES,
       preload: join(__dirname, "../preload/index.cjs"),

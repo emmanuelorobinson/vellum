@@ -132,6 +132,7 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
   return (
     <main
       className="desktop-home"
+      data-platform={state.platform}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => e.preventDefault()}
     >

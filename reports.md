@@ -17,7 +17,7 @@ Open items, newest first. Remove an item when it is done and say so in the promp
 
 - **Prompt 57 desktop needs runtime integration and A03 visual acceptance.** The Electron shell opens read-only
   through Prompt 55's unavailable runtime boundary. Real rendering/editing, saves and live running-session state
-  need the shared WASM document ABI and EditorLink wire implementation. A03 tab goldens fail at 3.81%/3.60% against
+  need the shared WASM document ABI and EditorLink wire implementation. A03 tab goldens now fail at 7.78%/7.57% after the integrated-title-bar follow-up against
   the unchanged 1% limit; comparison sheets are in `target/screen-goldens/`. Native Windows/Linux and the new
   macOS CI job need their runs. See `docs/runbooks/desktop-shell.md`.
 
@@ -3570,3 +3570,37 @@ Its initial sandbox run could not lock the advisory DB; the native run confirmed
 The design-spec script retains Prompt 46's append-only line-format failure (8 pass/1 fail); new lines match.
 Full Rust/workspace/browser suites, native VS Code acceptance, real installed clients and remote CI were not run.
 No read-only specification changed. Nothing committed.
+
+### Prompt 57/58 follow-up — integrated macOS title bar
+
+Removed the separate macOS title strip with Electron's hidden title bar; retained real native traffic lights
+at (20,20), inside the existing header area. Reserved their physical-left space in editor/Home, including RTL;
+added a draggable top strip and document-bar surface with no-drag tabs/buttons/right-side actions. Windows/Linux
+retain their native frame. Sandbox/CSP/bridge permissions are unchanged. No pen.dev UI or source was copied.
+
+The unit/native regressions were observed red first (missing helper; native content 32px shorter than window).
+Pencil confirmed the read-only copy and supplied A03/tab anatomy; Context7 supplied Electron title-bar/drag
+contracts, and sibling outpost's native pattern was checked. One append-only design gap records the owner's
+integrated-header request versus A03's drawn menu/no traffic-light reservation. No reference/tolerance changed.
+
+Passed: desktop test (24 unit + 3 packaging), desktop tsc, build with daemon; final native suite
+`node_modules/.bin/playwright test --config test/playwright.config.ts --grep-invert @design` (8), including actual
+window/content equality, native button position, drag/no-drag styles, safe tab placement, tab switching/close,
+Home header actions and editor Agents menu. The same title-bar case also passes in the final packaged app with
+VELLUM_ELECTRON_EXECUTABLE selecting its binary. Final unsigned ARM64 DMG/ZIP rebuilt with the existing packaging
+command; no publishing/signing. Preview remains at `target/desktop-packages/Vellum-0.0.0-mac-arm64.dmg`.
+
+Also passed: workspace/all-targets clippy -D warnings (no Rust source changed), TS dependency cruise, copy/token
+lints, scoped Biome, `pnpm checksum`, git diff --check. cargo deny retains the existing nine advisories;
+bans/licenses/sources pass. A03 comparisons remain red at 7.78% light/7.57% dark versus the unchanged 1% gate,
+including the newly reserved native-control area absent in the reference. Current comparison sheets and window
+captures are in target/screen-goldens; Chromium screenshots omit native traffic lights, whose geometry is
+verified by the native API test. Physical mouse dragging/full-screen and non-macOS native runs were not exercised.
+All previous runtime/service/release blockers remain. Nothing committed by this follow-up.
+
+## Prompt 59 (in progress)
+
+CLI work has started. Preserving the existing Prompt 57/58 title-bar edits. The tool registry, native daemon,
+export/token adapters and engine ports are reused. No §3.2 reference row names P59; sibling outpost's native
+entrypoint was checked for reusable CLI patterns. New binary acceptance tests cover text/JSON, failure exits,
+exclusive creation, all export formats, tokens and shell Save. The initial red run is pending compilation.

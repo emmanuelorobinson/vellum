@@ -520,3 +520,54 @@ test("@electron Home sort, multi-select, remove recent and disk-backed drop", as
   });
   await expect(page.getByRole("tab", { name: /c.vellum/ })).toBeVisible();
 });
+
+test("@electron macOS integrated title bar keeps native controls, tabs and header actions usable", async () => {
+  test.skip(process.platform !== "darwin", "macOS native title-bar lane");
+  const initial = await app.firstWindow();
+  await expect(initial.getByRole("button", { name: "Open a folder", exact: true })).toBeVisible();
+  const nativeChrome = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (!window) throw Error("missing native window");
+      return {
+        outer: window.getBounds(),
+        content: window.getContentBounds(),
+        controls: window.getWindowButtonPosition(),
+      };
+    });
+  const home = await nativeChrome();
+  expect(home.content.height).toBe(home.outer.height);
+  expect(home.controls).toEqual({ x: 20, y: 20 });
+  await expect(initial.locator(".home-appbar")).toHaveCSS("-webkit-app-region", "drag");
+  await expect(initial.getByRole("button", { name: "Agents", exact: true })).toHaveCSS(
+    "-webkit-app-region",
+    "no-drag",
+  );
+  await initial.getByRole("button", { name: "Agents", exact: true }).click();
+  await expect(initial.getByRole("heading", { name: "Agents and daemon" })).toBeVisible();
+  await initial.getByRole("button", { name: "Home", exact: true }).click();
+  await dialog([join(directory, "one")]);
+  await initial.getByRole("button", { name: "Open a folder", exact: true }).click();
+  await expect.poll(() => app.windows().some((p) => p !== initial)).toBe(true);
+  const page = app.windows().find((p) => p !== initial);
+  if (!page) throw Error("missing editor window");
+  await dialog([join(directory, "one", "a.vellum"), join(directory, "one", "b.vellum")]);
+  await menu("file.open");
+  await expect(page.getByRole("tab", { name: /b.vellum/ })).toBeVisible();
+  const editor = await nativeChrome();
+  expect(editor.content.height).toBe(editor.outer.height);
+  expect(editor.controls).toEqual({ x: 20, y: 20 });
+  await expect(page.locator(".desktop-titlebar-drag")).toHaveCSS("-webkit-app-region", "drag");
+  await expect(page.locator(".desktop-docbar")).toHaveCSS("-webkit-app-region", "drag");
+  await expect(page.locator(".desktop-tabs")).toHaveCSS("-webkit-app-region", "no-drag");
+  await expect(page.locator(".vc-topright")).toHaveCSS("-webkit-app-region", "no-drag");
+  const first = page.getByRole("tab", { name: /a.vellum/ });
+  const bounds = await first.boundingBox();
+  expect(bounds?.x).toBeGreaterThanOrEqual(88);
+  await first.click();
+  await expect(first).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: "Close a.vellum", exact: true }).click();
+  await expect(first).toHaveCount(0);
+  await page.getByRole("button", { name: "Agents", exact: true }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+});

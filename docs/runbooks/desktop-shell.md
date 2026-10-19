@@ -72,3 +72,13 @@ Before implementing the shell, the session read A03 and its tab component throug
 copy, studied Electron's security/utility-process docs through Context7, and checked sibling `outpost`'s secure
 preload pattern. It reused Vellum's own VS Code stdio relay. No §3.2 reference row names Prompt 57; no external code
 was ported and no new third-party package/version was introduced.
+
+## Integrated macOS title bar
+
+The Prompt 57/58 follow-up uses `titleBarStyle: hidden` with real native traffic lights at (20,20).
+There is no additional macOS title strip. The existing editor bar reserves 88px at its physical left;
+Home uses the same safe area. The top 56px and document-bar background are draggable; tabs, close controls,
+Home navigation and the right-side actions are no-drag. Windows/Linux keep their native frame.
+The native Electron regression checks full-window content height, native button coordinates, CSS drag regions
+and real tab/header actions. Chromium screenshot captures exclude native window buttons. A03's unchanged
+reference has no native-control reservation, so its pixel comparison still fails; see reports.md.

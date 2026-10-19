@@ -210,6 +210,14 @@ button:focus-visible {
   display: flex;
   gap: var(--space-2);
 }
+[data-platform="mac"] .home-appbar {
+  padding-left: 88px;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+[data-platform="mac"] .home-appbar button {
+  -webkit-app-region: no-drag;
+}
 .home-content {
   display: flex;
   flex-direction: column;
@@ -430,4 +438,27 @@ dialog.recovery-dialog:not([open]) {
 }
 dialog.recovery-dialog::backdrop {
   background: var(--canvas-backdrop);
+}
+
+/* Native controls need a clear area at the leading edge of the existing floating bar. */
+[data-platform="mac"] .desktop-docbar {
+  padding-left: 88px;
+  -webkit-app-region: drag;
+  z-index: 2;
+}
+.desktop-titlebar-drag {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 56px;
+  -webkit-app-region: drag;
+  user-select: none;
+  z-index: 1;
+}
+[data-platform="mac"] .desktop-tabs,
+[data-platform="mac"] .desktop-docbar button,
+[data-platform="mac"] .vc-topright {
+  -webkit-app-region: no-drag;
+}
+[data-platform="mac"] .vc-topright {
+  z-index: 2;
 }
