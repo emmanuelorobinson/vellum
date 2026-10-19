@@ -79,7 +79,12 @@ mod sessions {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["path"], "/work/a/design/app.vellum");
         assert_eq!(rows[0]["client"], "TEST DATA client");
-        assert_eq!(rows[0].as_object().unwrap().len(), 5);
+        assert_eq!(rows[0].as_object().unwrap().len(), 6);
+        assert_eq!(
+            rows[0]["turn"],
+            Value::Null,
+            "external tool sessions have no inferred turn outcome"
+        );
         assert!(rows[0]["updatedAt"].is_i64());
         assert_eq!(
             rpc(

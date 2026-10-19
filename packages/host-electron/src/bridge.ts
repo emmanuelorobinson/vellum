@@ -16,6 +16,32 @@ export interface DesktopTab {
   dirty: boolean;
   running: boolean;
 }
+export interface HomeFile {
+  id: string;
+  name: string;
+  folder: string;
+  kind: "file" | "draft";
+  created: number;
+  opened: number;
+  branch: string | null;
+  running: boolean | null;
+}
+export interface HomeData {
+  files: HomeFile[];
+  folders: { id: string; label: string }[];
+}
+export type UpdateState =
+  | { kind: "unavailable" | "idle" | "checking" | "current" | "downloading" | "failed" }
+  | { kind: "available" | "ready"; version: string };
+export interface AgentSettings {
+  clients: { id: string; name: string; state: string; path: string; entry: string }[];
+  sessionsAvailable: boolean;
+}
+export interface RecoveryView {
+  id: string;
+  name: string;
+  savedAt: number;
+}
 export interface DesktopState {
   folderName: string;
   tabs: DesktopTab[];
@@ -24,6 +50,13 @@ export interface DesktopState {
   platform: "mac" | "windows" | "linux";
   daemon: boolean;
   problem: "document-runtime-unavailable" | "offline" | "failed";
+  home?: HomeData;
+  page?: "home" | "agents" | "signin" | "editor";
+  welcome?: boolean;
+  updates?: UpdateState;
+  agentSettings?: AgentSettings;
+  recovery?: RecoveryView | null;
+  notifications?: boolean;
 }
 export type DesktopRequest =
   | {
@@ -35,8 +68,21 @@ export type DesktopRequest =
         | "pauseAll"
         | "restartDaemon"
         | "daemon"
-        | "clipboardRead";
+        | "clipboardRead"
+        | "home"
+        | "agents"
+        | "signin"
+        | "editor"
+        | "newDraft"
+        | "checkUpdates"
+        | "downloadUpdate"
+        | "installUpdate";
     }
+  | { type: "homeOpen" | "folderRecent" | "draftSaveAs" | "draftDelete"; id: string }
+  | { type: "forget" | "openSelected"; ids: string[] }
+  | { type: "agentConfig"; id: string; action: "connect" | "disconnect" }
+  | { type: "recovery"; id: string; action: "save" | "saveAs" | "discard" | "cancel" }
+  | { type: "notifications"; enabled: boolean }
   | { type: "activate" | "close" | "readDocument"; tab: string }
   | { type: "menu"; category: MenuCategory }
   | { type: "external"; url: string }
@@ -68,8 +114,40 @@ export function parseRequest(value: unknown): DesktopRequest | null {
       "restartDaemon",
       "daemon",
       "clipboardRead",
+      "home",
+      "agents",
+      "signin",
+      "editor",
+      "newDraft",
+      "checkUpdates",
+      "downloadUpdate",
+      "installUpdate",
     ].includes(String(v.type))
   )
+    return v as DesktopRequest;
+  const validId = (id: unknown) => typeof id === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
+  if (
+    keys === "id,type" &&
+    ["homeOpen", "folderRecent", "draftSaveAs", "draftDelete"].includes(String(v.type)) &&
+    validId(v.id)
+  )
+    return v as DesktopRequest;
+  if (
+    keys === "ids,type" &&
+    ["forget", "openSelected"].includes(String(v.type)) &&
+    Array.isArray(v.ids) &&
+    v.ids.length <= 200 &&
+    v.ids.every(validId)
+  )
+    return v as DesktopRequest;
+  if (
+    keys === "action,id,type" &&
+    validId(v.id) &&
+    ((v.type === "agentConfig" && ["connect", "disconnect"].includes(String(v.action))) ||
+      (v.type === "recovery" && ["save", "saveAs", "discard", "cancel"].includes(String(v.action))))
+  )
+    return v as DesktopRequest;
+  if (keys === "enabled,type" && v.type === "notifications" && typeof v.enabled === "boolean")
     return v as DesktopRequest;
   if (
     keys === "tab,type" &&

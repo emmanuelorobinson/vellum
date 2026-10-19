@@ -268,7 +268,30 @@ impl McpServer {
                         SessionKind::Engine { engine } => engine,
                         SessionKind::External { client } => client,
                     };
-                    sessions.push(json!({"id":meta.id.as_str(), "path":path.to_string_lossy(), "title":meta.title, "client":client, "updatedAt":meta.updated_at.0}));
+                    let turns = log
+                        .store()
+                        .events(
+                            &meta.id,
+                            Some(vellum_core::ports::EventSeq(
+                                meta.events.saturating_sub(100),
+                            )),
+                        )
+                        .map_err(|_| (-32000, "Session state unavailable".to_owned()))?;
+                    let turn = turns.iter().rev().find_map(|event| {
+                        let vellum_core::ports::EventBody::Turn(transition) = &event.body else {
+                            return None;
+                        };
+                        use vellum_core::turns::TurnState;
+                        let kind = match transition.to {
+                            TurnState::Done => "done",
+                            TurnState::Failed => "failed",
+                            TurnState::AwaitingPermission => "permission",
+                            TurnState::Stopped => "stopped",
+                            _ => "working",
+                        };
+                        Some(json!({"seq":event.seq.0,"kind":kind}))
+                    });
+                    sessions.push(json!({"id":meta.id.as_str(), "path":path.to_string_lossy(), "title":meta.title, "client":client, "updatedAt":meta.updated_at.0,"turn":turn}));
                 }
             }
         }
@@ -284,6 +307,84 @@ impl McpServer {
         )
     }
 
+    fn host_recovery(&mut self, conn: u64, params: &Value) -> Result<Value, (i64, String)> {
+        use std::path::{Component, Path};
+        let invalid = || {
+            (
+                -32602,
+                "Recovery needs a design path in the host workspace and a supported action"
+                    .to_owned(),
+            )
+        };
+        if self.client(conn).is_none() {
+            return Err((-32002, "Initialize the host connection first".to_owned()));
+        }
+        let object = params.as_object().ok_or_else(invalid)?;
+        let path = object
+            .get("path")
+            .and_then(Value::as_str)
+            .ok_or_else(invalid)?;
+        let action = object
+            .get("action")
+            .and_then(Value::as_str)
+            .ok_or_else(invalid)?;
+        let root = self.sessions.get(&conn).and_then(|s| s.cwd.as_ref());
+        let scoped = |p: &str| {
+            let p = Path::new(p);
+            p.is_absolute()
+                && p.extension().is_some_and(|e| e == "vellum")
+                && !p
+                    .components()
+                    .any(|c| matches!(c, Component::ParentDir | Component::CurDir))
+                && root.is_some_and(|r| p.starts_with(r))
+        };
+        if !scoped(path) || object.len() != if action == "saveAs" { 3 } else { 2 } {
+            return Err(invalid());
+        }
+        match action {
+            "find" => {
+                let (copies, _) = self.docs.recoveries();
+                let saved_at = copies.iter().find(|c| c.path == path).map(|c| c.saved_at.0);
+                Ok(json!({"savedAt": saved_at}))
+            }
+            "save" => {
+                self.docs.restore(path).and_then(|_| self.docs.save(path))
+                    .map_err(|_| (-32000, "Recovery could not be saved; the backup is retained until a successful save".to_owned()))?;
+                Ok(json!({"done": true}))
+            }
+            "saveAs" => {
+                let destination = object
+                    .get("destination")
+                    .and_then(Value::as_str)
+                    .ok_or_else(invalid)?;
+                if !scoped(destination) {
+                    return Err(invalid());
+                }
+                self.docs.restore_as(path, destination).map_err(|_| {
+                    (
+                        -32000,
+                        "Recovery could not be saved as a new file; the backup is retained"
+                            .to_owned(),
+                    )
+                })?;
+                Ok(json!({"done": true}))
+            }
+            "discard" => {
+                self.docs
+                    .discard_recovery(path)
+                    .map_err(|_| (-32000, "Backup could not be discarded".to_owned()))?;
+                Ok(json!({"done": true}))
+            }
+            "closeHeadless" => {
+                if !self.docs.close_headless(path) {
+                    return Err((-32000, "A live editor holds this file".to_owned()));
+                }
+                Ok(json!({"done": true}))
+            }
+            _ => Err(invalid()),
+        }
+    }
+
     /// Answers one JSON-RPC request. `None` for a notification.
     pub fn handle(&mut self, conn: u64, request: &Value) -> Option<Value> {
         let method = request.get("method")?.as_str()?;
@@ -292,6 +393,7 @@ impl McpServer {
         let id = request.get("id")?;
         let outcome = match method {
             "vellum/hostState" => self.host_state(conn, &params),
+            "vellum/recovery" => self.host_recovery(conn, &params),
             "initialize" => self.initialize(conn, &params).map_err(|m| (-32602, m)),
             "ping" => Ok(json!({})),
             // Host control is separate from the agent tool registry. The local authenticated connection

@@ -52,4 +52,5 @@ export const guardReasons = {
 export const brand = {
   name: "Vellum",
   tagline: copy.tagline,
+  desktopAppId: "dev.vellum.desktop",
 } as const;

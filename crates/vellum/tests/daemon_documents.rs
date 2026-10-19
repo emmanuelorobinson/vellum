@@ -590,3 +590,52 @@ fn a_damaged_copy_is_listed_not_dropped() {
     assert_eq!(damaged.len(), 1);
     assert_eq!(damaged[0].key, "0123");
 }
+
+#[test]
+fn recovery_save_as_keeps_the_original_and_refuses_an_existing_destination() {
+    let doc = samples::document();
+    let mut d = Daemon::new(&doc, &[APP]);
+    let first = FakeEditor::new(&doc);
+    d.docs.open_editor(APP, editor("e1"), first.link()).unwrap();
+    first.edit(tx(
+        &alice(),
+        vec![insert_at("page00002", None, 0, node("rect", "rect000009"))],
+    ));
+    d.clock.advance(RECOVERY_INTERVAL_MS);
+    d.docs.tick();
+    first.0.borrow_mut().gone = true;
+    assert!(d.docs.restore_as(APP, APP).is_err());
+    assert_eq!(d.docs.recoveries().0.len(), 1);
+    let destination = "design/restored.vellum";
+    d.docs.restore_as(APP, destination).unwrap();
+    assert_eq!(d.on_disk(APP), doc);
+    assert!(samples::find(&d.on_disk(destination), "rect000009").is_some());
+    assert!(d.docs.recoveries().0.is_empty());
+}
+
+#[test]
+fn closing_a_headless_draft_releases_its_writer_and_never_closes_a_live_editor() {
+    let doc = samples::document();
+    let mut d = Daemon::new(&doc, &[APP]);
+    d.docs.target(APP).unwrap();
+    assert!(d.docs.close_headless(APP));
+    assert!(!d.docs.paths().contains(&APP.to_owned()));
+    let live = FakeEditor::new(&doc);
+    d.docs.open_editor(APP, editor("e1"), live.link()).unwrap();
+    assert!(!d.docs.close_headless(APP));
+    assert_eq!(d.docs.writer(APP), Some(&editor("e1")));
+}
+
+#[test]
+fn closing_a_headless_draft_refuses_to_drop_a_failed_save() {
+    let mut d = Daemon::new(&samples::document(), &[APP]);
+    d.docs.target(APP).unwrap();
+    d.fs.crash_after(0);
+    d.docs
+        .target(APP)
+        .unwrap()
+        .transact(tx(&alice(), vec![rename("rect000003", "Unsaved")]))
+        .unwrap();
+    assert!(!d.docs.close_headless(APP));
+    assert!(d.docs.paths().contains(&APP.to_owned()));
+}

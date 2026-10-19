@@ -6,21 +6,23 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "vitest run src",
+    "test": "vitest run src && node --test packaging.test.mjs",
     "build": "node build.mjs",
     "dev": "node build.mjs --with-daemon && electron dist/main/index.cjs",
-    "test:electron": "node build.mjs --with-daemon && playwright test --config test/playwright.config.ts"
+    "test:electron": "node build.mjs --with-daemon && playwright test --config test/playwright.config.ts",
+    "package:desktop": "node packaging.mjs"
   },
   "devDependencies": {
-    "electron": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@playwright/test": "catalog:",
+    "electron": "catalog:",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
     "playwright": "catalog:",
-    "esbuild": "0.28.2"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "main": "./dist/main/index.cjs",
   "dependencies": {
@@ -30,8 +32,11 @@
     "@vellum/engine-client": "workspace:*",
     "@vellum/host-api": "workspace:*",
     "@vellum/host-electron": "workspace:*",
+    "@vellum/host-vscode": "workspace:*",
     "@vellum/ui-tokens": "workspace:*",
+    "electron-updater": "6.8.9",
     "react": "catalog:",
     "react-dom": "catalog:"
-  }
+  },
+  "license": "Apache-2.0"
 }

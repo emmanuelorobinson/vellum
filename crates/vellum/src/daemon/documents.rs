@@ -772,6 +772,27 @@ impl Documents {
         self.recovery.discard(path).map_err(FileError::Fs)
     }
 
+    /// Releases a clean headless writer before moving/deleting a draft. Never drops unsaved work.
+    pub fn close_headless(&mut self, path: &str) -> bool {
+        if !matches!(
+            self.open.get(path).map(|e| &e.holder),
+            Some(Holder::Headless(_))
+        ) {
+            return !self.open.contains_key(path);
+        }
+        if self
+            .open
+            .get_mut(path)
+            .is_some_and(|entry| holder_target(&mut entry.holder).is_dirty().unwrap_or(true))
+        {
+            return false;
+        }
+        self.open.remove(path);
+        self.watcher.unwatch(path);
+        self.placeholders.remove(path);
+        true
+    }
+
     /// Saves `path` through whoever holds it.
     pub fn save(&mut self, path: &str) -> Result<(), TargetError> {
         self.drop_lost(path);
@@ -944,6 +965,20 @@ impl Documents {
         let applied = target.transact(Transaction::new(file_actor(FileReason::Recovery), ops))?;
         self.sync_headless(path)?;
         Ok(applied)
+    }
+
+    /// Restores a recovery copy into a new document through an attributed transaction.
+    pub fn restore_as(&mut self, path: &str, destination: &str) -> Result<(), TargetError> {
+        let copy = self.recovery.find(path).ok_or(TargetError::Gone)?;
+        self.create_blank(destination, &copy.document.meta.name)?;
+        let target = self.target(destination)?;
+        let current = target.snapshot()?;
+        let ops = diff(&current, &copy.document)
+            .map_err(|e| TargetError::Write(vellum_core::guard::WriteError::Invalid(e)))?;
+        target.transact(Transaction::new(file_actor(FileReason::Recovery), ops))?;
+        self.save(destination)?;
+        self.recovery.discard(path).map_err(FileError::Fs)?;
+        Ok(())
     }
 
     /// Removes `path`'s recovery copy (Discard backup).

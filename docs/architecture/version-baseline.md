@@ -325,3 +325,10 @@ The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused;
   contract consumers do not acquire DOM dependencies. Electron 44's clipboard methods are asynchronous.
 - Local Electron acceptance is macOS ARM64 only. The macOS CI lane is configured but not remotely verified;
   Windows/Linux native acceptance and signed packaging remain outstanding.
+
+## Prompt 58 desktop packaging (2026-10-19)
+
+Pinned `electron-builder` 26.15.3 and `electron-updater` 6.8.9 in apps/desktop (npm's stable versions on this
+run). Context7 includes newer v27 signed-manifest docs; these versions use an explicit application-owned
+Ed25519 release envelope and artifact-digest verification instead. Electron remains 44.7.0; no Rust dependency
+changed. See docs/runbooks/desktop-home.md for the native matrix, trust inputs, preview and acceptance limits.

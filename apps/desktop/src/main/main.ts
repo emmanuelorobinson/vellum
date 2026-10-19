@@ -1,9 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { type FSWatcher, watch } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, join, parse, resolve } from "node:path";
 import { brand } from "@vellum/config";
 import { externalUrl } from "@vellum/host-api";
 import { DaemonProcess } from "@vellum/host-api/native-relay";
+import type { AgentSettings, RecoveryView } from "@vellum/host-electron/bridge";
 import {
   type DesktopEvent,
   type DesktopReply,
@@ -12,6 +15,7 @@ import {
   type DesktopTab,
   parseRequest,
 } from "@vellum/host-electron/bridge";
+import type { ClientId } from "@vellum/host-vscode/mcp-config";
 import {
   app,
   BrowserWindow,
@@ -21,15 +25,30 @@ import {
   ipcMain,
   Menu,
   type MenuItemConstructorOptions,
+  Notification,
   nativeTheme,
   protocol,
   shell,
 } from "electron";
 import { EVENT_CHANNEL, REQUEST_CHANNEL } from "../shared/bridge";
+import { connections } from "./connections";
 import { type ConfirmClose, FolderWindows } from "./folders";
 import { WEB_PREFERENCES } from "./index";
+import { DesktopLibrary } from "./library";
 import { type MenuAction, menuModel } from "./menus";
+import { TurnNotifications } from "./notifications";
 import { APP_URL, assetPath, CSP, trustedSender } from "./security";
+import {
+  atomicMetadata,
+  metadataPath,
+  moveDraft,
+  privateDirectory,
+  readMetadata,
+  recoverDraftIndex,
+  removeDraft,
+} from "./storage";
+import { updateDriver } from "./update-driver";
+import { Updates } from "./updates";
 
 const arg = (name: string) => {
   const index = process.argv.indexOf(name);
@@ -51,9 +70,19 @@ const windows = new Map<
     relay: DaemonProcess | null;
     watchers: Map<string, FSWatcher>;
     closing: boolean;
+    page: "home" | "agents" | "signin" | "editor";
+    agentSettings?: AgentSettings;
+    recovery: (RecoveryView & { path: string }) | null;
+    noticeTimer?: ReturnType<typeof setInterval>;
   }
 >();
-const binary = join(__dirname, "../bin", process.platform === "win32" ? "vellum.exe" : "vellum");
+const binary = app.isPackaged
+  ? join(process.resourcesPath, "bin", process.platform === "win32" ? "vellum.exe" : "vellum")
+  : join(__dirname, "../bin", process.platform === "win32" ? "vellum.exe" : "vellum");
+let library: DesktopLibrary;
+let draftDirectory: string;
+let notifications = false;
+let updates = new Updates(null, app.getVersion());
 const model = new FolderWindows({
   canonical: realpath,
   folderOf: dirname,
@@ -90,6 +119,24 @@ function state(entry: WindowEntry): DesktopState {
       process.platform === "darwin" ? "mac" : process.platform === "win32" ? "windows" : "linux",
     daemon: entry.relay?.connected ?? false,
     problem: "document-runtime-unavailable",
+    home: library?.view(),
+    welcome: !entry.folder && !library?.view().files.length,
+    page: entry.page,
+    updates: updates.state,
+    agentSettings: entry.agentSettings
+      ? {
+          ...entry.agentSettings,
+          clients: entry.agentSettings.clients.map((client) =>
+            !entry.relay?.connected && client.state === "connected"
+              ? { ...client, state: "error" }
+              : client,
+          ),
+        }
+      : undefined,
+    recovery: entry.recovery
+      ? { id: entry.recovery.id, name: entry.recovery.name, savedAt: entry.recovery.savedAt }
+      : null,
+    notifications,
   };
 }
 function push(entry: WindowEntry, event?: DesktopEvent) {
@@ -133,6 +180,17 @@ function requiredFolder(entry: WindowEntry) {
   return entry.folder;
 }
 async function openFiles(entry: WindowEntry) {
+  if (!entry.folder) {
+    const result = await dialog.showOpenDialog(entry.window, {
+      properties: ["openFile", "multiSelections"],
+      filters: [{ name: brand.name, extensions: ["vellum"] }],
+    });
+    if (!result.canceled) {
+      let current = entry;
+      for (const path of result.filePaths) current = await openKnown(current, path);
+    }
+    return;
+  }
   const folder = requiredFolder(entry);
   const result = await dialog.showOpenDialog(entry.window, {
     properties: ["openFile", "multiSelections"],
@@ -142,6 +200,9 @@ async function openFiles(entry: WindowEntry) {
   if (result.canceled) return;
   for (const path of result.filePaths) {
     const tab = await model.openDocument(folder, path);
+    await library.opened(path);
+    entry.page = "editor";
+    await findRecovery(entry, path);
     if (!entry.watchers.has(tab)) {
       const canonical = model.path(folder, tab);
       const watcher = watch(dirname(canonical), (_event, filename) => {
@@ -156,6 +217,93 @@ async function openFiles(entry: WindowEntry) {
       entry.watchers.set(tab, watcher);
     }
     push(entry);
+  }
+}
+function pushAll() {
+  for (const entry of windows.values()) push(entry);
+}
+function connectionManager(entry: WindowEntry) {
+  return connections(
+    binary,
+    app.getPath("appData"),
+    entry.folder ? model.folderPath(entry.folder) : undefined,
+  );
+}
+async function showAgents(entry: WindowEntry) {
+  entry.page = "agents";
+  let clients: string[] = [];
+  let sessionsAvailable = false;
+  try {
+    const state = await entry.relay?.hostState([]);
+    clients = state?.clients ?? [];
+    sessionsAvailable = state?.sessionsAvailable ?? false;
+  } catch {
+    /* offline */
+  }
+  entry.agentSettings = {
+    clients: await connectionManager(entry).list(clients),
+    sessionsAvailable,
+  };
+  push(entry);
+}
+function commonFolder(a: string, b: string) {
+  while (
+    b !== a &&
+    !b.startsWith(
+      a.endsWith("/") || a.endsWith("\\") ? a : `${a}${process.platform === "win32" ? "\\" : "/"}`,
+    )
+  ) {
+    const parent = dirname(a);
+    if (a === parent) break;
+    a = parent;
+  }
+  if (parse(a).root !== parse(b).root) throw Error("different drives");
+  return a;
+}
+async function findRecovery(entry: WindowEntry, path: string) {
+  try {
+    const result = await entry.relay?.recovery(path, "find");
+    if (result?.savedAt !== null && result?.savedAt !== undefined)
+      entry.recovery = { id: randomUUID(), path, name: basename(path), savedAt: result.savedAt };
+  } catch {
+    /* opening still works offline */
+  }
+}
+async function openKnown(from: WindowEntry, path: string) {
+  const canonical = await realpath(path);
+  if (!canonical.endsWith(".vellum")) throw Error("invalid");
+  const entry =
+    from.folder && model.folderPath(from.folder) === dirname(canonical)
+      ? from
+      : await openFolder(from, dirname(canonical));
+  if (!entry?.folder) throw Error("invalid");
+  await model.openDocument(entry.folder, canonical);
+  await library.opened(canonical);
+  entry.page = "editor";
+  await findRecovery(entry, canonical);
+  push(entry);
+  return entry;
+}
+async function newDraft(from: WindowEntry) {
+  const id = await library.newDraft();
+  await openKnown(from, library.path(id));
+  pushAll();
+}
+async function closeKnown(path: string) {
+  const relay = new DaemonProcess(binary, dirname(path), runDir, "vellum-desktop");
+  try {
+    await relay.recovery(path, "closeHeadless");
+  } finally {
+    relay.dispose();
+  }
+  for (const entry of windows.values()) {
+    if (!entry.folder) continue;
+    for (const tab of model.state(entry.folder).tabs)
+      if (model.path(entry.folder, tab.id) === path) {
+        await closeTab(entry, tab.id);
+        if (model.state(entry.folder).tabs.some((t) => t.id === tab.id))
+          throw Error("close cancelled");
+      }
   }
 }
 async function closeTab(entry: WindowEntry, tab: string) {
@@ -180,13 +328,18 @@ async function openFolder(from?: WindowEntry, path?: string) {
   if (existing) {
     existing.window.show();
     existing.window.focus();
-    return;
+    return existing;
   }
   const entry = createWindow(folder);
   if (from && from.folder === null) from.window.close();
-  void connect(entry);
+  await connect(entry);
+  return entry;
 }
 async function newFile(entry: WindowEntry) {
+  if (!entry.folder) {
+    await newDraft(entry);
+    return;
+  }
   const folder = requiredFolder(entry);
   const result = await dialog.showSaveDialog(entry.window, {
     title: "New Design File",
@@ -204,6 +357,8 @@ async function newFile(entry: WindowEntry) {
   // Rust creates a missing document or opens an existing one. It is the only document write path.
   await entry.relay?.createDocument(path);
   await model.openDocument(folder, path);
+  await library.opened(path);
+  entry.page = "editor";
   push(entry);
 }
 async function action(entry: WindowEntry, item: MenuAction) {
@@ -214,6 +369,21 @@ async function action(entry: WindowEntry, item: MenuAction) {
       return;
     }
     switch (item.id) {
+      case "home":
+        entry.page = "home";
+        push(entry);
+        break;
+      case "agents.manage":
+        await showAgents(entry);
+        break;
+      case "account.signin":
+        entry.page = "signin";
+        push(entry);
+        break;
+      case "updates.check":
+        await updates.check();
+        push(entry);
+        break;
       case "folder.open":
         await openFolder(entry);
         break;
@@ -223,6 +393,16 @@ async function action(entry: WindowEntry, item: MenuAction) {
       case "file.new":
         await newFile(entry);
         break;
+      case "file.saveAs": {
+        const active = state(entry).active;
+        const item =
+          active &&
+          library
+            .view()
+            .files.find((f) => library.path(f.id) === model.path(requiredFolder(entry), active));
+        if (item) await request(entry, { type: "draftSaveAs", id: item.id });
+        break;
+      }
       case "file.close": {
         const tab = state(entry).active;
         if (tab) await closeTab(entry, tab);
@@ -256,6 +436,15 @@ function nativeMenu(entry: WindowEntry): MenuItemConstructorOptions[] {
     hasFolder: entry.folder !== null,
     hasDocument: s.active !== null,
     daemon: s.daemon,
+    draft:
+      !!s.active &&
+      library
+        .view()
+        .files.some(
+          (f) =>
+            f.kind === "draft" &&
+            library.path(f.id) === model.path(requiredFolder(entry), s.active as string),
+        ),
   }).map((group) => ({
     label: group.label,
     submenu: group.items.map((item) => ({
@@ -289,6 +478,157 @@ function installMenu(entry: WindowEntry) {
 }
 async function request(entry: WindowEntry, value: DesktopRequest): Promise<unknown> {
   switch (value.type) {
+    case "home":
+    case "signin":
+    case "editor":
+      entry.page = value.type;
+      push(entry);
+      return;
+    case "agents":
+      await showAgents(entry);
+      return;
+    case "newDraft":
+      await newDraft(entry);
+      return;
+    case "homeOpen":
+      await openKnown(entry, library.path(value.id));
+      return;
+    case "folderRecent":
+      await openFolder(entry, library.folderPath(value.id));
+      return;
+    case "openSelected": {
+      let current = entry;
+      const paths = value.ids.map((id) => library.path(id));
+      for (const path of paths) current = await openKnown(current, path);
+      return;
+    }
+    case "forget":
+      await library.forget(value.ids);
+      pushAll();
+      return;
+    case "draftDelete": {
+      const path = library.path(value.id);
+      if (path !== join(draftDirectory, `${value.id}.vellum`)) throw Error("invalid");
+      const answer = await dialog.showMessageBox(entry.window, {
+        type: "warning",
+        message: "Delete this draft?",
+        detail: "This permanently deletes the draft on your computer.",
+        buttons: ["Cancel", "Delete draft"],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      if (answer.response !== 1) return;
+      await closeKnown(path);
+      await library.deleteDraft(value.id, true);
+      pushAll();
+      return;
+    }
+    case "draftSaveAs": {
+      const path = library.path(value.id);
+      if (path !== join(draftDirectory, `${value.id}.vellum`)) throw Error("invalid");
+      const answer = await dialog.showSaveDialog(entry.window, {
+        title: "Save As…",
+        defaultPath: "untitled.vellum",
+        filters: [{ name: brand.name, extensions: ["vellum"] }],
+      });
+      if (answer.canceled || !answer.filePath) return;
+      await closeKnown(path);
+      await library.saveAs(
+        value.id,
+        join(await realpath(dirname(answer.filePath)), basename(answer.filePath)),
+      );
+      await openKnown(entry, library.path(value.id));
+      pushAll();
+      return;
+    }
+    case "notifications":
+      notifications = value.enabled;
+      await atomicMetadata(join(app.getPath("userData"), "preferences.json"), { notifications });
+      pushAll();
+      return;
+    case "checkUpdates":
+      await updates.check();
+      pushAll();
+      return;
+    case "downloadUpdate":
+      await updates.download();
+      pushAll();
+      return;
+    case "installUpdate": {
+      const answer = await dialog.showMessageBox(entry.window, {
+        message: "Restart and install the verified update?",
+        buttons: ["Cancel", "Restart and install"],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      if (answer.response === 1) updates.install();
+      return;
+    }
+    case "agentConfig": {
+      const manager = connectionManager(entry);
+      const rows = await manager.list([]);
+      const row = rows.find((r) => r.id === value.id);
+      if (!row) throw Error("invalid");
+      const answer = await dialog.showMessageBox(entry.window, {
+        message:
+          value.action === "connect"
+            ? `Configure ${row.name}?`
+            : `Remove the managed entry for ${row.name}?`,
+        detail: `${row.path}\n\n${row.entry}`,
+        buttons: ["Cancel", value.action === "connect" ? "Connect" : "Remove"],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      if (answer.response === 1) await manager.change(value.id as ClientId, value.action);
+      await showAgents(entry);
+      return;
+    }
+    case "recovery": {
+      const recovery = entry.recovery;
+      if (!recovery || recovery.id !== value.id || !entry.relay) throw Error("invalid");
+      if (value.action === "cancel") {
+        entry.recovery = null;
+        push(entry);
+        return;
+      }
+      if ((await realpath(recovery.path)) !== recovery.path) throw Error("invalid");
+      if (value.action === "discard") {
+        const answer = await dialog.showMessageBox(entry.window, {
+          type: "warning",
+          message: "Discard the recovery backup?",
+          detail: "Unsaved changes will be permanently removed. The original file is kept.",
+          buttons: ["Cancel", "Discard backup"],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        if (answer.response !== 1) return;
+      }
+      if (value.action === "saveAs") {
+        const answer = await dialog.showSaveDialog(entry.window, {
+          title: "Save As…",
+          defaultPath: recovery.path,
+          filters: [{ name: brand.name, extensions: ["vellum"] }],
+        });
+        if (answer.canceled || !answer.filePath) return;
+        const destination = join(
+          await realpath(dirname(answer.filePath)),
+          basename(answer.filePath),
+        );
+        if (!destination.endsWith(".vellum")) throw Error("invalid");
+        const root = commonFolder(dirname(recovery.path), dirname(destination));
+        const relay = new DaemonProcess(binary, root, runDir, "vellum-desktop");
+        try {
+          await relay.recovery(recovery.path, "saveAs", destination);
+        } finally {
+          relay.dispose();
+        }
+        entry.recovery = null;
+        await openKnown(entry, destination);
+      } else await entry.relay.recovery(recovery.path, value.action);
+      entry.recovery = null;
+      push(entry);
+      return;
+    }
     case "state":
       return state(entry);
     case "daemon":
@@ -378,12 +718,75 @@ function createWindow(folder: string | null): WindowEntry {
   const entry: WindowEntry = {
     window,
     folder,
-    relay: folder
-      ? new DaemonProcess(binary, model.folderPath(folder), runDir, "vellum-desktop")
-      : null,
+    relay: new DaemonProcess(
+      binary,
+      folder ? model.folderPath(folder) : draftDirectory,
+      runDir,
+      "vellum-desktop",
+    ),
     watchers: new Map(),
     closing: false,
+    page: "home",
+    recovery: null,
   };
+  const notices = new TurnNotifications((kind, path) => {
+    if (!Notification.isSupported()) return;
+    const notification = new Notification({
+      title: brand.name,
+      body:
+        kind === "done"
+          ? "Agent turn finished"
+          : kind === "failed"
+            ? "Agent turn failed"
+            : "An agent needs your permission",
+    });
+    notification.on("click", () => {
+      if (window.isDestroyed()) return;
+      if (entry.folder) {
+        const tab = model
+          .state(entry.folder)
+          .tabs.find((tab) => model.path(entry.folder as string, tab.id) === path);
+        if (tab) model.activate(entry.folder, tab.id);
+      }
+      entry.page = "editor";
+      window.show();
+      window.focus();
+      push(entry);
+    });
+    notification.show();
+  });
+  let polling = false;
+  const pollNotices = async () => {
+    if (polling || !entry.relay?.connected || entry.closing) return;
+    polling = true;
+    try {
+      const paths = entry.folder
+        ? model
+            .state(entry.folder)
+            .tabs.slice(0, 20)
+            .map((t) => model.path(entry.folder as string, t.id))
+        : [];
+      const state = await entry.relay.hostState(paths);
+      if (entry.page === "agents" && !window.isDestroyed()) {
+        entry.agentSettings = {
+          clients: await connectionManager(entry).list(state.clients),
+          sessionsAvailable: state.sessionsAvailable,
+        };
+        push(entry);
+      }
+      if (!window.isDestroyed())
+        notices.receive(
+          state.sessions.flatMap((r) => (r.turn ? [{ ...r.turn, id: r.id, path: r.path }] : [])),
+          notifications,
+          window.isFocused(),
+        );
+    } catch {
+      /* No stale notification is synthesized when disconnected. */
+    } finally {
+      polling = false;
+    }
+  };
+  entry.noticeTimer = setInterval(() => void pollNotices(), 2000);
   const contentsId = window.webContents.id;
   windows.set(contentsId, entry);
   entry.relay?.onConnection(() => push(entry));
@@ -417,6 +820,7 @@ function createWindow(folder: string | null): WindowEntry {
   });
   window.on("closed", () => {
     windows.delete(contentsId);
+    clearInterval(entry.noticeTimer);
     for (const watcher of entry.watchers.values()) watcher.close();
     entry.relay?.dispose();
   });
@@ -457,7 +861,7 @@ else {
     entry?.window.focus();
   });
   app.on("activate", () => {
-    if (!windows.size) createWindow(null);
+    if (library && !windows.size) void connect(createWindow(null));
   });
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
@@ -465,54 +869,138 @@ else {
   app.on("will-quit", () => {
     for (const entry of windows.values()) entry.relay?.dispose();
   });
-  void app.whenReady().then(() => {
-    protocol.handle("vellum-app", async (req) => {
-      const path = assetPath(req.url);
-      if (!path || req.method !== "GET") return new Response(null, { status: 404 });
+  void app
+    .whenReady()
+    .then(async () => {
+      const base = await privateDirectory(
+        userData ? join(app.getPath("userData"), "local") : join(homedir(), ".vellum"),
+      );
+      draftDirectory = await privateDirectory(join(base, "drafts"));
+      library = new DesktopLibrary({
+        load: async () =>
+          recoverDraftIndex(
+            await readMetadata(metadataPath(app.getPath("userData"))),
+            draftDirectory,
+          ),
+        persist: (data) => atomicMetadata(metadataPath(app.getPath("userData")), data),
+        canonical: realpath,
+        inspect: async (path) => {
+          const info = await stat(path);
+          if (!info.isFile() || info.size > 16 * 1024 * 1024) throw Error("invalid");
+          return { created: Math.trunc(info.birthtimeMs), modified: Math.trunc(info.mtimeMs) };
+        },
+        folderOf: dirname,
+        nameOf: basename,
+        draftPath: (id) => join(draftDirectory, `${id}.vellum`),
+        now: Date.now,
+        nextId: randomUUID,
+        create: async (path) => {
+          const relay = new DaemonProcess(binary, draftDirectory, runDir, "vellum-desktop");
+          try {
+            await relay.createDocument(path);
+          } finally {
+            relay.dispose();
+          }
+        },
+        move: moveDraft,
+        remove: (path) => removeDraft(path, draftDirectory),
+      });
       try {
-        const bytes = await readFile(join(__dirname, "../renderer", path));
-        const type = path.endsWith(".html")
-          ? "text/html"
-          : path.endsWith(".js")
-            ? "text/javascript"
-            : path.endsWith(".css")
-              ? "text/css"
-              : path.endsWith(".woff2")
-                ? "font/woff2"
-                : "application/octet-stream";
-        return new Response(bytes, {
-          headers: {
-            "Content-Type": type,
-            "Content-Security-Policy": CSP,
-            "X-Content-Type-Options": "nosniff",
-          },
-        });
+        await library.ready();
       } catch {
-        return new Response(null, { status: 404 });
+        await dialog.showErrorBox(
+          "Home metadata unavailable",
+          "Your files are kept. Repair or move home.json in the application profile before reopening.",
+        );
+        app.exit(1);
+        return;
       }
-    });
-    ipcMain.handle(REQUEST_CHANNEL, async (event, payload): Promise<DesktopReply> => {
       try {
-        const entry = findEntry(event);
-        const value = parseRequest(payload);
-        if (!value) return { ok: false, code: "invalid" };
-        const result = await request(entry, value);
-        return result === undefined ? { ok: true } : { ok: true, value: result };
+        notifications =
+          JSON.parse(await readFile(join(app.getPath("userData"), "preferences.json"), "utf8"))
+            .notifications === true;
       } catch {
-        return { ok: false, code: "failed" };
+        /* default off */
       }
+      updates = new Updates(await updateDriver(), app.getVersion());
+      protocol.handle("vellum-app", async (req) => {
+        const path = assetPath(req.url);
+        if (!path || req.method !== "GET") return new Response(null, { status: 404 });
+        try {
+          const bytes = await readFile(join(__dirname, "../renderer", path));
+          const type = path.endsWith(".html")
+            ? "text/html"
+            : path.endsWith(".js")
+              ? "text/javascript"
+              : path.endsWith(".css")
+                ? "text/css"
+                : path.endsWith(".woff2")
+                  ? "font/woff2"
+                  : "application/octet-stream";
+          return new Response(bytes, {
+            headers: {
+              "Content-Type": type,
+              "Content-Security-Policy": CSP,
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        } catch {
+          return new Response(null, { status: 404 });
+        }
+      });
+      ipcMain.handle(REQUEST_CHANNEL, async (event, payload): Promise<DesktopReply> => {
+        try {
+          const entry = findEntry(event);
+          const value = parseRequest(payload);
+          if (!value) return { ok: false, code: "invalid" };
+          const result = await request(entry, value);
+          return result === undefined ? { ok: true } : { ok: true, value: result };
+        } catch {
+          return { ok: false, code: "failed" };
+        }
+      });
+      ipcMain.handle(
+        "vellum:desktop:drop",
+        async (event, paths: unknown): Promise<DesktopReply> => {
+          try {
+            let entry = findEntry(event);
+            if (
+              !Array.isArray(paths) ||
+              paths.length > 20 ||
+              !paths.every(
+                (p) => typeof p === "string" && p.length <= 4096 && p.endsWith(".vellum"),
+              )
+            )
+              throw Error("invalid");
+            for (const path of paths) {
+              const next = await openKnown(entry, path);
+              if (next) entry = next;
+            }
+            return { ok: true };
+          } catch {
+            return { ok: false, code: "failed" };
+          }
+        },
+      );
+      // The renderer has no web permissions, downloads, navigation or network access.
+      const first = createWindow(null);
+      void connect(first);
+      const session = first.window.webContents.session;
+      session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+      session.setPermissionCheckHandler(() => false);
+      session.on("will-download", (event) => event.preventDefault());
+      session.webRequest.onBeforeRequest((details, callback) =>
+        callback({ cancel: assetPath(details.url) === null }),
+      );
+      nativeTheme.on("updated", () => {
+        for (const entry of windows.values()) push(entry);
+      });
+    })
+    .catch(() => {
+      dialog.showErrorBox(
+        "Desktop storage unavailable",
+        "The application could not open its private storage. Your design files are kept.",
+      );
+      app.exit(1);
     });
-    // The renderer has no web permissions, downloads, navigation or network access.
-    const first = createWindow(null);
-    const session = first.window.webContents.session;
-    session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-    session.setPermissionCheckHandler(() => false);
-    session.on("will-download", (event) => event.preventDefault());
-    session.webRequest.onBeforeRequest((details, callback) =>
-      callback({ cancel: assetPath(details.url) === null }),
-    );
-    nativeTheme.on("updated", () => {
-      for (const entry of windows.values()) push(entry);
-    });
-  });
 }

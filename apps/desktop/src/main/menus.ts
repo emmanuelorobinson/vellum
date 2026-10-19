@@ -11,8 +11,10 @@ export function menuModel(state: {
   hasFolder: boolean;
   hasDocument: boolean;
   daemon: boolean;
+  draft?: boolean;
 }): { label: MenuCategory; items: MenuAction[] }[] {
   const file: MenuAction[] = [
+    { id: "home", label: "Home", enabled: true },
     {
       id: "folder.open",
       label: "Open a folder…",
@@ -29,14 +31,14 @@ export function menuModel(state: {
       id: "file.new",
       label: "New Design File…",
       accelerator: "CommandOrControl+N",
-      enabled: state.hasFolder && state.daemon,
+      enabled: true,
     },
     { id: "file.save", label: "Save", accelerator: "CommandOrControl+S", enabled: false },
     {
       id: "file.saveAs",
       label: "Save As…",
       accelerator: "CommandOrControl+Shift+S",
-      enabled: false,
+      enabled: state.draft === true,
     },
     {
       id: "file.close",
@@ -104,6 +106,7 @@ export function menuModel(state: {
       action("arrange.bottom", "Align bottom"),
     ],
     Agents: [
+      { id: "agents.manage", label: "Manage agents…", enabled: true },
       action("agent.focus", "Focus composer", "CommandOrControl+L"),
       action("agent.stop", "Stop current session", "CommandOrControl+."),
       {
@@ -115,6 +118,8 @@ export function menuModel(state: {
       { id: "daemon.restart", label: "Restart daemon connection", enabled: state.hasFolder },
     ],
     Help: [
+      { id: "updates.check", label: "Check for Updates…", enabled: true },
+      { id: "account.signin", label: "Sign in (Pro)…", enabled: true },
       {
         id: "help.shortcuts",
         label: "Keyboard shortcuts",

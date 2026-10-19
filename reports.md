@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 58 is a desktop preview, not an accepted release.** Finish Prompt 55's editable runtime, Home prompt
+  submission, thumbnail/system catalog and provider/usage/activity services; account sign-in belongs to Prompt 61.
+  All ten A01/A02/A04/A05/A06 full-frame goldens remain above the unchanged 1% gate. Supply a release version,
+  app icon, signing/notarization identities, Windows publisher and HTTPS update feed/Ed25519 trust key; run the
+  other five native targets and signed installation/upgrade lanes. OS notification delivery with a real engine
+  and recovery of edited unsaved documents are unverified. See `docs/runbooks/desktop-home.md`.
+
 - **Prompt 57 desktop needs runtime integration and A03 visual acceptance.** The Electron shell opens read-only
   through Prompt 55's unavailable runtime boundary. Real rendering/editing, saves and live running-session state
   need the shared WASM document ABI and EditorLink wire implementation. A03 tab goldens fail at 3.81%/3.60% against
@@ -3485,3 +3492,81 @@ system launcher stalled. Global `pnpm lint` still fails on the four existing fix
 lock its database inside the sandbox; the native retry ran. `design-spec-rules.test.mjs` still has the existing
 Prompt 46 append-only line-format failure (8 pass, 1 fail). The new lines match its required format. Not run:
 full Rust/workspace/engine/browser suites, the native VS Code smoke or a remote CI job. Nothing committed.
+
+## Prompt 58
+
+Built the desktop Home/draft/recovery/release preview. **Incomplete: shared editing/runtime and visual/release
+acceptance remain blocked.** No second TypeScript document store or fabricated live content was added.
+
+- Welcome/Home: persistent recents and folders; grid/list, Name/Last opened/Created sorting, multi-select,
+  remove-from-recents without deletion, native disk-backed File drops. Drafts use core-created canonical files
+  under the private drafts folder; headless core saves transactions. Save As uses exclusive, flushed byte-copy,
+  metadata commit then source removal; delete confirms natively. Clean headless writers are released first;
+  live/dirty writers are refused. Drafts survive recents eviction and are rediscovered if a crash interrupted
+  indexing. Metadata writes are serialized and atomic. Native Save As is enabled for a draft.
+- Recovery: initialized/workspace-scoped host RPC, opaque renderer IDs, Save/Save As through attributed Rust
+  File/Recovery transactions; confirmed discard, Cancel, native modal focus/Escape. Restore As preserves the
+  original and refuses existing destinations. Previews are explicitly unavailable. Actual edited-document
+  recovery remains unverified because the shared editor cannot edit; kill-9 acceptance covers saved drafts,
+  including restart after an interrupted/missing metadata index.
+- Agents: reused Prompt 56's managed JSONC/TOML writer via host-vscode/agent-connections (extension re-exports
+  its old module). Native detection/confirmation, actual configuration paths/snippets, live connected versus
+  configured state, reconnect/removal, daemon state and Pause All. No real client config was changed. Keys,
+  weekly usage and last activity stay explicitly unavailable; account sign-in awaits Prompt 61. Home prompt
+  submission, thumbnails, branch/running metadata and the bundled design-system catalog remain unavailable.
+- Notifications: opt-in preference, native fixed-text OS notifications from recorded Done/Failed/permission
+  transitions for open files, deduplication/history/focus suppression and click-to-document. A bounded poll of
+  recorded state is not the missing live session feed; rapid intermediate transitions can be missed. Delivery
+  with a real running engine/OS notification center remains unverified. No renderer notification/raw-RPC API.
+- Packaging/updating: pinned builder 26.15.3/updater 6.8.9, full six-target format matrix, native binary validation,
+  explicit bundled assets/licenses and a fail-closed release gate. The installed Ed25519 key verifies signed
+  release metadata before updater checks, then exact downloaded sizes/SHA-512 before install; native platform
+  verification remains enabled. Downloads/installs require explicit actions; unsigned/tampered/downgrade and
+  altered-artifact cases cannot install. The signer accepts keychain/CI-injected stdin, never saves/logs keys.
+  A trusted live feed, signed OS installer/upgrade, post-install rollback and five other targets are unverified.
+- Artifacts: unsigned macOS ARM64 app, DMG and ZIP in `target/desktop-packages/` (0.0.0, debug daemon, default
+  Electron icon, no update feed). Final ZIP inspection confirms the ARM64 daemon SHA-256 matches target/debug;
+  app.asar is 4,344,841 bytes, with bundles/assets/licenses and no workspace node_modules. Nothing published.
+- TDD/iteration: library/update/signature/notification/packaging modules, host recovery and clean-headless release
+  were observed red before implementation. A later failed-save close test and draft-eviction test were observed
+  red before their fixes. Native tests found /var versus /private/var Save As canonicalization; the harness
+  needed async-menu completion, semantic combobox selectors, and a retained process handle after kill -9.
+  Visual review caught light canvas inheritance in dark recovery. The first package included redundant workspace
+  dependencies (68 MB archive); explicit filters removed them. Builder target architecture arrays overrode CLI
+  flags and produced invalid x64 previews with the ARM64 daemon: all those outputs were removed; a regression
+  test and per-invocation configuration now enforce the validated architecture. Final packaging builds ARM64 only.
+- Design/reference: design-open copied but could not locate the app named Pen; Pencil confirmed the read-only
+  copy and read A01/A02/A04/A05/A06 plus their variants/components. Five append-only DESIGN-GAPS lines; no decision
+  was undecided. No §3.2 row names P58. Read Electron/builder/updater docs through Context7 and sibling outpost's
+  updater/configuration; reused Vellum's own services, no reference source ported. v27 manifest docs did not match
+  installed v26/6.x, so explicit application-owned Ed25519 verification was added. lazy-val declares MIT/author
+  but omits a license; both upstream license URLs returned 404. Its explicit notice includes standard MIT terms.
+- Goldens: all ten full-frame comparisons remain red at the unchanged 1%/48-channel gate: A01 ~2.98%, A02
+  3.72%/15.69%, A04 ~2.75%/2.77%, A05 ~3.75%/3.77%, final A06 6.94%/19.26% (light/dark). Missing runtime
+  content, unavailable controls, navigation/status and text rendering differ. Sheets: target/screen-goldens/.
+  No reference or tolerance changed. See `docs/runbooks/desktop-home.md` for the exact boundaries/release inputs.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Electron 44.7.0 macOS ARM64; both telemetry opt-outs):
+
+- `pnpm --filter @vellum/desktop test` (23 unit + 3 packaging/signing), equivalent filters for host-vscode (23),
+  host-api (3), host-electron (4), extension (37 + 3 packaging) and config (3).
+- `node scripts/skia-build.mjs test -p vellum --test daemon_documents --test mcp --test sessions` (59);
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1); `node scripts/skia-build.mjs build -p vellum`.
+- `node apps/desktop/build.mjs --with-daemon`; from apps/desktop, `node_modules/.bin/playwright test --config
+  test/playwright.config.ts --grep-invert @design` (final 7 pass); focused `--grep 'Home sort' --repeat-each=2` (2).
+  Packaged executable selected with VELLUM_ELECTRON_EXECUTABLE, same config and
+  `--grep 'renderer cannot reach|persistent draft|without metadata'` (final 3 pass). Native runs needed escalation.
+- `node apps/desktop/packaging.mjs --platform darwin --arch arm64 --daemon target/debug/vellum
+  --development-preview` (final ARM64 DMG/ZIP); the same command with --dir; ZIP/ASAR inspection described above.
+- `pnpm type-check` (33 tasks), final desktop tsc; workspace/all-targets clippy with -D warnings; rustfmt check;
+  `bash scripts/check-deps.sh` (including bans/licenses/sources), final TS cruise (502 modules/1,430 dependencies),
+  clean-room, copy/token lints, design-check, scoped Biome, `pnpm checksum` and `git diff --check`.
+
+pnpm used the existing /private/tmp/vellum-p56-bin PATH shim. Initial dependency installation hit pnpm's
+ignored-build policy; --ignore-scripts completed it. A sandboxed retry could not resolve npm and switched stores;
+it was interrupted and the locked installation repaired with native network access. Global lint retains four
+existing fixture/import-format errors; cargo deny retains the same nine advisories (bans/licenses/sources pass).
+Its initial sandbox run could not lock the advisory DB; the native run confirmed the existing advisory failures.
+The design-spec script retains Prompt 46's append-only line-format failure (8 pass/1 fail); new lines match.
+Full Rust/workspace/browser suites, native VS Code acceptance, real installed clients and remote CI were not run.
+No read-only specification changed. Nothing committed.

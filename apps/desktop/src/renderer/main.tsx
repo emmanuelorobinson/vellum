@@ -1,4 +1,3 @@
-import { brand } from "@vellum/config";
 import {
   createCommandController,
   createEditorHandlers,
@@ -11,6 +10,7 @@ import { createElectronHost } from "@vellum/host-electron";
 import { createBridgeServices, type DesktopState } from "@vellum/host-electron/bridge";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { Home } from "./Home";
 import { DocumentTabs } from "./Tabs";
 import "@vellum/ui-tokens/tokens.css";
 import "./style.css";
@@ -75,6 +75,7 @@ function App() {
   useEffect(() => {
     const update = (state: DesktopState) => {
       document.documentElement.dataset.appearance = state.appearance;
+      document.documentElement.dataset.canvasAppearance = state.appearance;
       if (!host) {
         services = createBridgeServices(bridge, { appearance: state.appearance });
         host = createElectronHost(services);
@@ -120,21 +121,8 @@ function App() {
   if (!state) return null;
   const tab = state.tabs.find((t) => t.id === state.active);
   const editor = tab ? editors.get(tab.id) : null;
-  if (!tab || !editor)
-    return (
-      <main className="desktop-start">
-        <h1>{state.folderName || brand.name}</h1>
-        <button type="button" onClick={() => void request("openFolder")}>
-          Open a folder
-        </button>
-        {state.folderName && (
-          <button type="button" onClick={() => void request("openFiles")}>
-            Open files…
-          </button>
-        )}
-        {problem && <p role="alert">The action could not be completed.</p>}
-      </main>
-    );
+  if (!tab || !editor || (state.page && state.page !== "editor") || state.recovery)
+    return <Home state={state} bridge={bridge} />;
   return (
     <main id={`document-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`}>
       <EditorWorkspace

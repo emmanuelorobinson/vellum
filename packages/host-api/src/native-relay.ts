@@ -6,6 +6,7 @@ export interface SessionRow {
   title: string;
   client: string;
   updatedAt: number;
+  turn?: { seq: number; kind: "working" | "done" | "failed" | "permission" | "stopped" } | null;
 }
 export interface HostState {
   clients: string[];
@@ -171,6 +172,26 @@ export class DaemonProcess {
     const result = (await this.request("vellum/pauseAll", {})) as { paused?: boolean };
     if (result?.paused !== true) throw Error("pause all was not acknowledged");
   }
+  async recovery(
+    path: string,
+    action: "find" | "save" | "saveAs" | "discard" | "closeHeadless",
+    destination?: string,
+  ): Promise<{ savedAt?: number | null }> {
+    await this.connect();
+    const result = await this.request("vellum/recovery", {
+      path,
+      action,
+      ...(destination ? { destination } : {}),
+    });
+    if (!result || typeof result !== "object") throw Error("invalid recovery");
+    if (action === "find") {
+      const savedAt = (result as { savedAt?: unknown }).savedAt;
+      if (savedAt !== null && !Number.isSafeInteger(savedAt)) throw Error("invalid recovery");
+      return { savedAt: savedAt as number | null };
+    }
+    if ((result as { done?: boolean }).done !== true) throw Error("recovery not acknowledged");
+    return {};
+  }
   async hostState(paths: readonly string[]): Promise<HostState> {
     await this.connect();
     const state = await this.request("vellum/hostState", { paths });
@@ -192,7 +213,10 @@ export class DaemonProcess {
           paths.includes(r.path) &&
           typeof r.title === "string" &&
           typeof r.client === "string" &&
-          Number.isSafeInteger(r.updatedAt),
+          Number.isSafeInteger(r.updatedAt) &&
+          (!r.turn ||
+            (Number.isSafeInteger(r.turn.seq) &&
+              ["working", "done", "failed", "permission", "stopped"].includes(r.turn.kind))),
       )
     )
       throw Error("invalid host state");

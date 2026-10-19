@@ -697,3 +697,49 @@ fn host_state_is_initialized_scoped_and_not_an_agent_tool() {
         json!(["TEST DATA second"])
     );
 }
+
+#[test]
+fn host_recovery_is_initialized_scoped_metadata_and_not_an_agent_tool() {
+    let mut server = server();
+    assert_eq!(
+        rpc(
+            &mut server,
+            1,
+            1,
+            "vellum/recovery",
+            json!({"path":"/project/a.vellum","action":"find"})
+        )["error"]["code"],
+        -32002
+    );
+    server.opened(1, Some("/project".to_owned()));
+    rpc(
+        &mut server,
+        1,
+        2,
+        "initialize",
+        json!({"protocolVersion":"2025-11-25","clientInfo":{"name":"TEST DATA host"}}),
+    );
+    let reply = rpc(
+        &mut server,
+        1,
+        3,
+        "vellum/recovery",
+        json!({"path":"/project/a.vellum","action":"find"}),
+    );
+    assert_eq!(reply["result"], json!({"savedAt":null}));
+    for params in [
+        json!({"path":"/outside/a.vellum","action":"find"}),
+        json!({"path":"/project/../outside.vellum","action":"discard"}),
+        json!({"path":"/project/a.vellum","action":"find","extra":true}),
+    ] {
+        assert_eq!(
+            rpc(&mut server, 1, 4, "vellum/recovery", params)["error"]["code"],
+            -32602
+        );
+    }
+    assert!(
+        !rpc(&mut server, 1, 5, "tools/list", json!({}))
+            .to_string()
+            .contains("vellum/recovery")
+    );
+}

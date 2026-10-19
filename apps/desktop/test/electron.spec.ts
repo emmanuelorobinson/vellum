@@ -68,7 +68,7 @@ test("@electron folder windows, tabs, native menus and sidecar", async () => {
   await expect.poll(() => app.windows().length).toBe(1);
   const page = app.windows()[0];
   if (!page) throw Error("folder window missing");
-  await expect(page.getByText("one", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "one", exact: true })).toBeVisible();
   await dialog([join(directory, "one", "a.vellum"), join(directory, "one", "b.vellum")]);
   await menu("file.open");
   await expect(page.getByRole("tab", { name: /a.vellum/ })).toBeVisible();
@@ -338,3 +338,185 @@ for (const appearance of ["light", "dark"] as const)
     expect(result.height).toBe(40);
     expect(result.fraction, `A03 tabs ${appearance} difference`).toBeLessThanOrEqual(0.01);
   });
+
+test("@electron desktop Home routes, persistent draft and native Save As", async () => {
+  const first = await app.firstWindow();
+  await expect(first.getByText("Design where your code lives.", { exact: true })).toBeVisible();
+  await first.getByRole("button", { name: "Agents", exact: true }).click();
+  await expect(first.getByRole("heading", { name: "Agents and daemon" })).toBeVisible();
+  await expect(first.getByText("Usage this week · unavailable", { exact: true })).toBeVisible();
+  await first.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(first.getByRole("button", { name: "Continue with email" })).toBeDisabled();
+  await first.getByRole("button", { name: "Home", exact: true }).click();
+  await first.getByRole("button", { name: "New file", exact: true }).click();
+  await expect.poll(() => app.windows().some((p) => p !== first)).toBe(true);
+  const page = app.windows().find((p) => p !== first);
+  if (!page) throw Error("missing draft window");
+  await expect(page.getByRole("tab", { name: /\.vellum/ })).toBeVisible();
+  await menu("home");
+  await page.getByRole("tab", { name: "Drafts", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save As…", exact: true })).toBeVisible();
+  const saved = join(directory, "one", "draft.vellum");
+  await app.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, saved);
+  await page.getByRole("button", { name: "Save As…", exact: true }).click();
+  await expect.poll(() => existsSync(saved)).toBe(true);
+  expect(JSON.parse(await readFile(saved, "utf8")).meta.formatVersion).toBe(1);
+  await expect
+    .poll(
+      async () =>
+        JSON.parse(await readFile(join(directory, "profile", "home.json"), "utf8")).files[0]?.kind,
+    )
+    .toBe("file");
+});
+
+for (const unindexed of [false, true])
+  test(`@electron draft survives kill -9 ${unindexed ? "without metadata" : "with metadata"} and is offered from Home after restart`, async () => {
+    const first = await app.firstWindow();
+    await first.getByRole("button", { name: "New file", exact: true }).click();
+    await expect
+      .poll(async () => {
+        try {
+          return JSON.parse(await readFile(join(directory, "profile", "home.json"), "utf8"))
+            .files[0]?.kind;
+        } catch {
+          return null;
+        }
+      })
+      .toBe("draft");
+    const metadata = JSON.parse(await readFile(join(directory, "profile", "home.json"), "utf8"));
+    const draft = metadata.files[0].path;
+    const bytes = await readFile(draft);
+    const child = app.process();
+    child.kill("SIGKILL");
+    await expect.poll(() => child.exitCode !== null || child.signalCode !== null).toBe(true);
+    if (unindexed) await rm(join(directory, "profile", "home.json"));
+    app = await _electron.launch({
+      executablePath: process.env.VELLUM_ELECTRON_EXECUTABLE,
+      args: [
+        resolve("dist/main/index.cjs"),
+        "--user-data",
+        join(directory, "profile"),
+        "--run-dir",
+        join(directory, "run"),
+      ],
+      env: { ...process.env, TURBO_TELEMETRY_DISABLED: "1", NEXT_TELEMETRY_DISABLED: "1" },
+    });
+    const page = await app.firstWindow();
+    await page.getByRole("tab", { name: "Drafts", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Save As…", exact: true })).toBeVisible();
+    expect(await readFile(draft)).toEqual(bytes);
+    expect(metadata.files[0].kind).toBe("draft");
+  });
+
+for (const appearance of ["light", "dark"] as const)
+  for (const screen of ["A01", "A02", "A04", "A05", "A06"] as const)
+    test(`@electron @design ${screen} desktop · ${appearance}`, async () => {
+      test.skip(
+        !existsSync(resolve(`../../docs/design/snapshots/${screen}-${appearance}-1280.png`)),
+        "Needs the exported desktop design snapshot PNGs",
+      );
+      const page = await app.firstWindow();
+      await expect(page.getByRole("button", { name: "New file", exact: true })).toBeVisible();
+      await expect
+        .poll(() => page.evaluate(() => window.vellumDesktop.request({ type: "daemon" })))
+        .toEqual({ ok: true, value: true });
+      await app.evaluate(({ nativeTheme }, appearance) => {
+        nativeTheme.themeSource = appearance;
+      }, appearance);
+      await expect(page.locator("html")).toHaveAttribute("data-appearance", appearance);
+      const home = {
+        files: [
+          {
+            id: "fixture1",
+            name: "juniper.vellum",
+            folder: "~/code/juniper/design",
+            kind: "file",
+            created: 1791710400000,
+            opened: 1791715380000,
+            branch: "feat/onboarding",
+            running: false,
+          },
+        ],
+        folders: [{ id: "folder1", label: "~/code/juniper" }],
+      };
+      // TEST DATA crosses the same native state-event boundary. No fake scene or document bytes are injected.
+      await app.evaluate(
+        ({ BrowserWindow }, { screen, appearance, home }) => {
+          const window = BrowserWindow.getAllWindows()[0];
+          if (!window) throw Error("missing window");
+          window.webContents.send("vellum:desktop:event", {
+            type: "state",
+            state: {
+              folderName: "",
+              active: null,
+              tabs: [],
+              appearance,
+              platform: "mac",
+              daemon: true,
+              problem: "document-runtime-unavailable",
+              page: screen === "A04" ? "agents" : screen === "A05" ? "signin" : "home",
+              welcome: screen === "A01",
+              home: screen === "A01" ? { files: [], folders: [] } : home,
+              recovery:
+                screen === "A06"
+                  ? { id: "recovery1", name: "juniper.vellum", savedAt: 1791729120000 }
+                  : null,
+            },
+          });
+        },
+        { screen, appearance, home },
+      );
+      await expect(page.locator("html")).toHaveAttribute("data-appearance", appearance);
+      const { compareDesktop } = await import("./desktop-goldens");
+      await compareDesktop(page, screen, appearance);
+    });
+
+test("@electron Home sort, multi-select, remove recent and disk-backed drop", async () => {
+  const first = await app.firstWindow();
+  await dialog([join(directory, "one")]);
+  await first.getByRole("button", { name: "Open a folder", exact: true }).click();
+  await expect.poll(() => app.windows().some((p) => p !== first)).toBe(true);
+  const page = app.windows().find((p) => p !== first);
+  if (!page) throw Error("missing window");
+  await dialog([join(directory, "one", "b.vellum"), join(directory, "one", "a.vellum")]);
+  await menu("file.open");
+  await expect(page.getByRole("tab", { name: /a.vellum/ })).toBeVisible();
+  await menu("home");
+  await page.getByRole("combobox", { name: "Sort", exact: true }).selectOption("Name");
+  expect(await page.locator(".file-open strong").allTextContents()).toEqual([
+    "a.vellum",
+    "b.vellum",
+  ]);
+  await page.getByRole("combobox", { name: "View", exact: true }).selectOption("List");
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  await page
+    .locator(".file-open")
+    .filter({ hasText: "a.vellum" })
+    .click({ modifiers: [modifier] });
+  await page
+    .locator(".file-open")
+    .filter({ hasText: "b.vellum" })
+    .click({ modifiers: [modifier] });
+  await expect(page.getByText("2 selected", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Remove from recents", exact: true }).click();
+  await expect(page.locator(".file-open")).toHaveCount(0);
+  expect(existsSync(join(directory, "one", "a.vellum"))).toBe(true);
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.id = "test-native-drop";
+    document.body.append(input);
+  });
+  await page.locator("#test-native-drop").setInputFiles(join(directory, "one", "c.vellum"));
+  await page.locator("#test-native-drop").evaluate((element: HTMLInputElement) => {
+    const file = element.files?.[0];
+    if (!file) throw Error("missing disk-backed File");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    window.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
+    element.remove();
+  });
+  await expect(page.getByRole("tab", { name: /c.vellum/ })).toBeVisible();
+});
