@@ -32,6 +32,15 @@ pub enum UserCommand {
         #[command(subcommand)]
         action: TokenAction,
     },
+    /// Render changed frames from two committed revisions without changing the checkout.
+    Diff(super::git::DiffArgs),
+    /// Configure Git integration for the current repo.
+    Git {
+        #[command(subcommand)]
+        action: super::git::GitAction,
+    },
+    /// Git low-level merge driver: ancestor, current (overwritten), other.
+    MergeDriver(super::git::MergeArgs),
     /// Call tools interactively, attached to the editor when available.
     Shell(ShellArgs),
 }
@@ -336,6 +345,11 @@ pub fn run(command: UserCommand, dir: &RunDir, out: &Output) -> io::Result<bool>
                 }
             }
         }
+        UserCommand::Diff(args) => return super::git::diff(args, out),
+        UserCommand::Git {
+            action: super::git::GitAction::Setup,
+        } => return super::git::setup(out),
+        UserCommand::MergeDriver(args) => return super::git::merge_driver(args, out),
         UserCommand::Shell(args) => return shell(dir, out, args),
         UserCommand::Prompt(args) => return super::prompt::run(dir, out, *args),
     }

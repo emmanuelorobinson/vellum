@@ -5,6 +5,7 @@
 //! lets it reach a file an editor holds; the command prints the tool's result as JSON.
 
 pub mod commands;
+pub mod git;
 pub mod prompt;
 
 use std::io;

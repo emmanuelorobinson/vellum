@@ -1,0 +1,54 @@
+name: Vellum PR previews
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: vellum-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Build trusted base-branch code. Fetch the PR as Git data only; never check it out or run it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: pr-preview-${{ hashFiles('scripts/skia-config.json', 'patches/skia-bindings/**') }}
+          cache-all-crates: true
+      - name: Build the trusted native renderer
+        run: node scripts/skia-build.mjs build --locked -p vellum
+      - name: Fetch PR objects and find its merge base
+        id: revisions
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          VELLUM_GIT_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ && "$PR_HEAD" =~ ^[a-f0-9]{40,64}$ && "$PR_BASE" =~ ^[a-f0-9]{40,64}$ ]]
+          # The read-scoped job token lives only in this step's environment. The helper passes it directly
+          # to Git, without persisting credentials or including their bytes in command-line arguments.
+          # shellcheck disable=SC2016 # Git expands the helper's environment when it asks for credentials.
+          git -c credential.helper= -c 'credential.helper=!f() { if test "$1" = get; then printf "%s\n" "username=x-access-token" "password=$VELLUM_GIT_TOKEN"; fi; }; f' fetch --no-tags origin "refs/pull/$PR_NUMBER/head"
+          git cat-file -e "$PR_HEAD^{commit}"
+          echo "base=$(git merge-base "$PR_BASE" "$PR_HEAD")" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/pr-preview
+        with:
+          binary: ${{ github.workspace }}/target/debug/vellum
+          base: ${{ steps.revisions.outputs.base }}
+          head: ${{ github.event.pull_request.head.sha }}

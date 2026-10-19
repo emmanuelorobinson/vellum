@@ -1,0 +1,2 @@
+✓ design/app.vellum · Card (frameCard1) · modified
+✓ 1 changed frame · text/manifest.json

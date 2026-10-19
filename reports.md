@@ -8,6 +8,11 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 60 needs remote/platform acceptance.** Local Git previews and real merge-driver fixtures pass.
+  Run the artifact upload/comment workflows on GitHub (including a fork and private repo) once the CLI/Action
+  are on the base/default branch, and run native Windows/Linux acceptance. Hosted previews remain the later
+  Pro service; this Action uploads only workflow artifacts. See `docs/runbooks/git-previews.md`.
+
 - **Prompt 59 needs integration/release acceptance.** CLI headless commands are built and tested; real live-editor
   attachment still needs P55's EditorLink, and `new --system` needs P58's production catalog. Model lists currently
   expose bundled hints, not a live catalog. Run real installed-engine/keychain and Windows/Linux CLI lanes;
@@ -3657,3 +3662,63 @@ Passed (Node 24.21.0, pnpm 12.11.2, Rust 1.99.0, macOS ARM64; telemetry opt-outs
 pnpm used the existing `/private/tmp/vellum-p56-bin` shim. Global `pnpm lint` retains its four existing
 fixture/import-format errors. Native `cargo deny check` retains nine existing advisories; bans/licenses/sources
 pass. Its first sandbox run could not lock the advisory database. No advisory or unrelated fixture was changed.
+
+## Prompt 60
+
+Built native Git frame previews, merge-driver installation and a reusable PR preview Action with separate
+comment delivery. Local behavior is verified; remote/platform acceptance remains open as recorded above.
+
+- `vellum diff BASE..HEAD [file] --png -o folder`: immutable Git-object FileSystem, both file/directory
+  documents, before/after PNGs and deterministic manifest/text/JSON. Compares outermost page frames and
+  component roots, including ancestry/order, raw content and rendered pixels; transitive libraries/assets
+  select consumers. Assets/fonts come from each commit, never the checkout. Added/removed/hidden sides are
+  explicit. Unrelated unreadable documents are skipped; incomplete relevant renders fail. Safe numbered
+  output, exclusive destination, cleanup on failure, blob/dependency/frame/pixel limits. No daemon or account.
+- `vellum git setup`: preserves unrelated attributes, installs single-file and directory JSON rules and only
+  local driver config; repeat setup is a no-op. Quotes the current executable, including spaces/apostrophes.
+  `merge-driver` uses core's validated three-way merge and canonical bytes, exits 0 clean / 1 unresolved,
+  preserves both conflict versions as JSON and keeps Git's unmerged index. Invalid inputs never replace ours.
+  Exclusive flushed temp files prevent following an existing temp symlink or colliding with another writer.
+  Directory Git drivers see each JSON file separately; assembled-folder invariants still need resolution.
+- Action: trusted base renderer, read-only PR job, merge-base comparison and 14-day workflow artifacts. Private
+  fetch credentials stay in the read-scoped step environment, not argv or Git config. Default-branch
+  `workflow_run` commenter uses API metadata only, exact head/repo/open-PR checks (including forks), a marked
+  bot comment and artifact link. No privileged PR checkout, artifact execution, hosted upload or external post
+  was performed locally. The CLI/Action must exist on the base branch before that workflow can render a PR.
+- Reused the existing export scene/resource path (extracted one helper), renderer, codecs and merge core;
+  no second document store, write path or dependency/version change. No §3.2 row names P60. Read sibling
+  outpost's CI/exclusive-file patterns and Vellum's existing CLI writes. No external source was ported.
+  Checked Git/GitHub contracts through Context7 (owner's preferred docs tool). No UI frame or read-only spec
+  changed. Added `docs/runbooks/git-previews.md` and the Git fixture to the existing export CI lane.
+- TDD: initial CLI cases failed on missing subcommands and JS on a missing commenter module. Later red cases
+  exposed unrelated broken-document rendering, hidden targets, missed moves between groups and temp symlink
+  following; fixed without changing expectations. A group fixture initially omitted required dimensions and
+  was corrected before observing its actual missed-move failure. Clippy requested Option::map; corrected.
+  Native CLI regressions first failed because the sandbox forbids local sockets; permitted native rerun passed.
+  Final red cases caught a missing folder index being treated as document removal and Git attempting lazy
+  fetches; folder discovery now reports the incomplete save, and Git reads require --no-lazy-fetch. The
+  missing-object regression uses a recording remote helper, no network. Older unsupported Git fails closed.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Rust 1.99.0, Git 2.46.2, macOS ARM64; both telemetry opt-outs for pnpm):
+
+- `node scripts/skia-build.mjs test -p vellum --test git_preview --test exports --test daemon_documents`
+  (16 real Git/PNG cases, 10 exports, 30 document cases). Includes text/JSON goldens, exact RGBA expectations,
+  historical assets/libraries, unchanged checkout, added/removed/hidden frames, directory format, malformed/
+  newer files, symlinks, cleanup, real clean/conflict merges and a quoted executable path.
+- `node scripts/skia-build.mjs test -p vellum --test cli --test cli_complete -- --include-ignored`
+  (27 native CLI cases; native permission for isolated sockets/local model endpoint).
+- `node --test scripts/__tests__/pr-preview.test.mjs` (4 mocked GitHub/security cases);
+  `actionlint .github/workflows/pr-previews.yml .github/workflows/pr-preview-comment.yml .github/workflows/exports.yml`;
+  `pnpm exec biome check .github/actions/pr-preview/comment.mjs scripts/__tests__/pr-preview.test.mjs`.
+- `pnpm type-check` (33 tasks); `bash scripts/check-deps.sh` (pure-crate allowlist, bans/licenses/sources and
+  502-module/1,430-dependency TS cruise); `bash scripts/check-clean-room.sh`; `node scripts/copy-lint.mjs`;
+  `node scripts/token-lint.mjs`; `cargo fmt --all -- --check`; `node scripts/spec-checksums.mjs check`;
+  `git diff --check`.
+
+Final `node scripts/skia-build.mjs test -p vellum --test git_preview` (16),
+`node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`, rustfmt and spec checks passed.
+`node scripts/skia-build.mjs test -p vellum-testkit --test canary` passed (1). pnpm used the existing
+`/private/tmp/vellum-p56-bin` shim. Global `pnpm exec biome check .` retains the same four fixture/import-format
+errors; native `cargo deny check` retains nine existing advisories (bans/licenses/sources pass). Neither
+unrelated fixtures nor dependencies/advisory policy were changed. Full workspace/browser/installed-engine
+suites, remote GitHub artifact/comment delivery and Windows/Linux native execution were not run. Nothing committed.
