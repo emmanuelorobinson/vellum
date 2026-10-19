@@ -23,8 +23,8 @@ feature-depth = 1
 ignore = []
 
 [licenses]
-# The project licence is still open (ARCHITECTURE §15, question 11), so this list only admits licences
-# that let an Apache-2.0 or AGPL-3.0 project depend on the code. Copyleft dependencies need a reviewed entry.
+# The owner selected Apache-2.0 (Prompt 56 follow-up). Keep dependencies compatible with that choice;
+# copyleft dependencies still need a reviewed entry. Existing explicit exceptions remain in force.
 allow = [
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",

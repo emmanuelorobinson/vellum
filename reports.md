@@ -8,7 +8,7 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
-- **Prompt 56 release remains blocked.** Choose a project license (none existed), complete Prompt 55's document runtime and host session feed, and finish C02 visual acceptance. The Connect dialog/config writers, recent-files/session sidebar and VSIX tools are built; the preview is `UNLICENSED`. Only macOS ARM64 is packaged locally; other targets and real installed clients need their lanes.
+- **Prompt 56 release remains blocked.** Complete Prompt 55's document runtime and host session feed, and finish C02 visual acceptance. The owner chose Apache-2.0; the project license and licensed extension preview are included. Only macOS ARM64 is packaged locally; other targets and real installed clients need their lanes.
 
 - **Prompt 55 is incomplete: the VS Code host opens read-only.** The compiled WASM module has no document-operation/scene ABI, and the daemon has no wire implementation of `EditorLink`. The host, lifecycle boundary, commands and relay are built, but real editing, document rendering, writer attachment, hot exit and external-checkout Ops still require those integrations. Runtime-boundary tests use scripted core replies; the VS Code lane is explicitly a host smoke, not acceptance. See `docs/runbooks/vscode-host.md`.
 
@@ -394,8 +394,6 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   check found the file in `scripts/gentest/src/`.
 - **Revisit TypeScript 7** (Prompt 2). The repo is on 5.9.3 because dependency-cruiser 18.5.0 cannot read 7. The
   dependency check now fails if dependency-cruiser cruises zero modules.
-- **Decide the licence** (Prompt 1). ARCHITECTURE open question 11. There is no LICENSE file and no `license`
-  field until you do. The licence list in `deny.toml` follows from the decision, so update it then.
 
 ## Prompt 1: monorepo scaffold
 
@@ -3408,3 +3406,20 @@ Existing failures remain: global lint's four fixture/import-format errors; cargo
 Other full-workspace/engine/browser suites were not rerun. Native configuration schemas/custom install locations
 and all platforms need real-client validation; user-data profiles without a workspace use manual setup. Nothing
 committed. No read-only specification file was changed.
+
+### Prompt 56 follow-up — license selected
+
+The owner selected Apache-2.0 on 2026-10-19, resolving the Prompt 1 license decision. Added the official
+Apache-2.0 text in root `LICENSE`, declared it in the root and extension manifests, and included it in every
+extension build. Updated the dependency-policy comment without changing its allowlist or exceptions. The
+UNLICENSED preview and missing-license blocker above describe the earlier build and are superseded here.
+The original packaging test was observed red on missing LICENSE before this change.
+
+Passed: `pnpm --filter @vellum/extension test` (37 unit + 3 packaging), `cargo deny check licenses`,
+scoped Biome, `pnpm checksum`, and `git diff --check`. Rebuilt the same macOS ARM64 preview using
+`node apps/extension/packaging.mjs package darwin-arm64 target/debug/vellum
+target/vsix/vellum-0.0.0-darwin-arm64-preview.vsix` without a missing-license bypass. ZIP inspection
+confirmed the Apache-2.0 manifest, exact official license text (vsce normalizes its filename to
+`extension/LICENSE.txt`), dependency notices, target and unchanged daemon hash. The first inspection
+looked for `extension/LICENSE`; corrected the inspection path to vsce's emitted name.
+No publishing was requested or performed. Existing runtime, session-feed and C02 visual blockers remain.

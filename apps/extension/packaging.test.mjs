@@ -44,3 +44,12 @@ test("packaging does not publish and publishing uses the exact reviewed VSIX", (
   assert.deepEqual(publishArgs("open-vsx", "/tmp/test.vsix"), ["publish", "/tmp/test.vsix"]);
   assert.throws(() => publishArgs("anything", "/tmp/test.vsix"));
 });
+
+test("the chosen project license is declared with its full license text", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const license = await readFile(new URL("../../LICENSE", import.meta.url), "utf8");
+  assert.match(license, /Apache License\s+Version 2\.0, January 2004/);
+  const manifest = JSON.parse(await readFile(new URL("package.json", import.meta.url), "utf8"));
+  assert.equal(manifest.license, "Apache-2.0");
+  assert.match(license, /END OF TERMS AND CONDITIONS/);
+});

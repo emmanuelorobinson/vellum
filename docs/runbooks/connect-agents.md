@@ -115,11 +115,13 @@ node apps/extension/packaging.mjs package darwin-arm64 \
   target/aarch64-apple-darwin/release/vellum target/vsix/vellum-darwin-arm64.vsix
 ```
 
-**Release is blocked:** no project license file exists and the manifest is `UNLICENSED`; Prompt 55's editor
-runtime is incomplete. The publisher namespace, release version, signed binaries and release acceptance need
-the owner. To make a private development preview, append `--development-preview`; this explicitly skips only
-vsce's missing-license-file requirement. It retains the UNLICENSED manifest and normal package secret scanning.
-The local preview uses the debug daemon, not a release build. Other native targets were not built here.
+The owner selected **Apache-2.0**. Root `LICENSE` is copied into every extension build and the manifest declares
+`Apache-2.0`; packaging now succeeds without a missing-license bypass. Bundled dependencies retain their own
+license texts and attribution notices.
+
+**Release remains blocked:** Prompt 55's editor runtime and C02 visual acceptance are incomplete. The publisher
+namespace, release version, signed binaries and release acceptance still need the owner. The local preview uses
+the debug daemon, not a release build. Other native targets were not built here.
 
 Once these release decisions and checks are complete, publish the reviewed artifact explicitly:
 

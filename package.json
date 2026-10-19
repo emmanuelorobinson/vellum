@@ -2,6 +2,7 @@
   "name": "vellum-monorepo",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Vellum: design where your code lives. Monorepo root (Cargo workspace + pnpm workspaces + Turborepo).",
   "type": "module",
   "packageManager": "pnpm@12.11.2",

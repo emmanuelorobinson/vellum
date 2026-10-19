@@ -104,6 +104,7 @@ await writeFile(
 );
 for (const [source, destination] of [
   ["README.md", "README.md"],
+  ["../../LICENSE", "LICENSE"],
   ["../../THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"],
 ])
   await copyFile(resolve(root, source), resolve(output, destination));
