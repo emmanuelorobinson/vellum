@@ -22,8 +22,8 @@ Load `apps/extension/dist/package` as the VS Code extension development director
 unscoped VS Code manifest, the CommonJS host, static JS/CSS, a copy of the TEST DATA welcome fixture,
 and, with `--with-daemon`, the native daemon for the current platform. The build replaces copied
 executables by rename; overwriting an existing executable inode caused macOS to kill it on launch.
-`build.mjs` alone builds the host and UI, without requiring a native daemon. Distribution, platform
-selection, signed binaries and Marketplace/Open VSX packaging belong to Prompt 56.
+`build.mjs` alone builds the host and UI, without requiring a native daemon. Prompt 56 adds platform validation, private preview VSIX packaging and explicit publishing commands;
+see `docs/runbooks/connect-agents.md`. Signed release binaries and public publishing remain blocked.
 
 The extension uses `host-vscode` for native file, clipboard, theme and daemon-discovery services. It
 launches the bundled `vellum mcp` bridge; that bridge starts/reuses the authenticated private daemon.
@@ -93,3 +93,6 @@ webviews, reports edits for dirty/undo, and implements save/revert/backup throug
 Vellum keeps that shared-document and ready-handshake pattern. Its data must come from the Rust core,
 not the sample's JavaScript edit replay or webview serialization. The sample's broad resource policy
 is replaced with local resource roots and a restricted typed bridge. No source was ported.
+
+Prompt 56 adds Connect Agents, the Activity Bar views and native host metadata; it does not resolve the
+document-runtime limitations above. Its test home/config overrides keep real client configuration untouched.

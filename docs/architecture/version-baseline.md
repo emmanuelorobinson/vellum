@@ -300,3 +300,16 @@ The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused;
   tool for the extension's CommonJS host and static webview bundles. React, VS Code types and the
   renderer retain their existing catalog versions. The workspace package remains scoped; the generated
   VS Code manifest has an unscoped extension name, as the extension host requires.
+
+## Prompt 56 client setup and packaging tooling
+
+- `jsonc-parser` 3.3.1 (MIT) and `smol-toml` 1.4.2 (BSD-3-Clause) are confined to the native
+  `host-vscode` adapter. JSONC edits preserve other entries/comments; TOML is parsed for validation
+  and only an exact managed block is removed. The extension bundle selects the parser's ESM entry,
+  because bundling its UMD dynamic requires failed in the real extension host.
+- `@vscode/vsce` 3.6.0 (MIT) and `ovsx` 0.10.5 (EPL-2.0) are pinned development tools. Their
+  CLI help and VS Code's current publishing/MCP API docs were checked through Context7 and the
+  installed packages. They are not bundled into the extension. Lifecycle scripts remained disabled
+  during installation; ordinary packaging does not need their optional native credential helpers.
+- Client paths/schemas are a documented baseline, not a claim that every installed client was tested.
+  See `docs/runbooks/connect-agents.md`; no installed client was launched or reconfigured by this prompt.

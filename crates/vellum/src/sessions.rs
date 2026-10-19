@@ -113,6 +113,16 @@ impl SessionLog {
         &*self.store
     }
 
+    /// Metadata for the native host sidebar. Uses the same repository key as recording.
+    pub fn metadata(
+        &self,
+        path: &Path,
+    ) -> Result<Vec<vellum_core::ports::SessionMeta>, StoreError> {
+        let key = doc_key(path, &*self.is_repo)
+            .map_err(|_| StoreError::Io("Invalid document path".to_owned()))?;
+        self.store.sessions(&key)
+    }
+
     pub fn pricing(&self) -> &Pricing {
         &self.pricing
     }

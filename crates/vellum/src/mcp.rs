@@ -218,6 +218,72 @@ impl McpServer {
         })
     }
 
+    // Host metadata only: never document contents, event bodies, credentials or discovery data.
+    fn host_state(&self, conn: u64, params: &Value) -> Result<Value, (i64, String)> {
+        use std::path::{Component, Path};
+        use vellum_core::ports::SessionKind;
+        let invalid = || {
+            (
+                -32602,
+                "Host state needs at most 20 design paths inside the host workspace".to_owned(),
+            )
+        };
+        if self.client(conn).is_none() {
+            return Err((-32002, "Initialize the host connection first".to_owned()));
+        }
+        let object = params.as_object().ok_or_else(invalid)?;
+        if object.len() != 1 {
+            return Err(invalid());
+        }
+        let paths = object
+            .get("paths")
+            .and_then(Value::as_array)
+            .ok_or_else(invalid)?;
+        if paths.len() > 20 {
+            return Err(invalid());
+        }
+        let cwd = self.sessions.get(&conn).and_then(|s| s.cwd.as_ref());
+        let mut sessions = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        for value in paths {
+            let path = Path::new(value.as_str().ok_or_else(invalid)?);
+            if !path.is_absolute()
+                || path.extension().is_none_or(|e| e != "vellum")
+                || path
+                    .components()
+                    .any(|c| matches!(c, Component::ParentDir | Component::CurDir))
+                || cwd.is_none_or(|root| !path.starts_with(root))
+            {
+                return Err(invalid());
+            }
+            if let Some(log) = &self.log {
+                for meta in log
+                    .metadata(path)
+                    .map_err(|_| (-32000, "Sessions unavailable".to_owned()))?
+                {
+                    if !seen.insert(meta.id.clone()) {
+                        continue;
+                    }
+                    let client = match meta.kind {
+                        SessionKind::Engine { engine } => engine,
+                        SessionKind::External { client } => client,
+                    };
+                    sessions.push(json!({"id":meta.id.as_str(), "path":path.to_string_lossy(), "title":meta.title, "client":client, "updatedAt":meta.updated_at.0}));
+                }
+            }
+        }
+        sessions.sort_by_key(|s| std::cmp::Reverse(s["updatedAt"].as_i64().unwrap_or(0)));
+        sessions.truncate(100);
+        let clients: std::collections::BTreeSet<_> = self
+            .sessions
+            .values()
+            .filter_map(|s| s.client.as_ref().map(|c| c.name.as_str()))
+            .collect();
+        Ok(
+            json!({"clients":clients,"toolCount":self.registry.tools().count(),"sessions":sessions,"sessionsAvailable":self.log.is_some()}),
+        )
+    }
+
     /// Answers one JSON-RPC request. `None` for a notification.
     pub fn handle(&mut self, conn: u64, request: &Value) -> Option<Value> {
         let method = request.get("method")?.as_str()?;
@@ -225,6 +291,7 @@ impl McpServer {
         // No id, no answer: whatever it was, it is a notification.
         let id = request.get("id")?;
         let outcome = match method {
+            "vellum/hostState" => self.host_state(conn, &params),
             "initialize" => self.initialize(conn, &params).map_err(|m| (-32602, m)),
             "ping" => Ok(json!({})),
             // Host control is separate from the agent tool registry. The local authenticated connection

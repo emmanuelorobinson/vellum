@@ -198,6 +198,7 @@ export interface EditorWorkspaceProps {
   onPreview?: () => void;
   onSettings?: () => void;
   onPauseAll?: () => void;
+  onConnectAgents?: () => void;
   /** The host's own actions for chrome that needs it (insert image, command palette, inline prompt). */
   onAction?: (command: string) => void;
 }
@@ -848,6 +849,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                   ? { onSettings: () => settings.open() }
                   : {})}
               {...(props.onPauseAll ? { onPauseAll: props.onPauseAll } : {})}
+              {...(props.onConnectAgents ? { onConnectAgents: props.onConnectAgents } : {})}
             />
           ) : null}
           {layout.right.mode !== "hidden" && (props.design || props.slots?.right) ? (

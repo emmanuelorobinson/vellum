@@ -5,17 +5,21 @@
   "description": "Host implementation for the VS Code extension.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./mcp-config": "./src/mcp-config.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@vellum/host-api": "workspace:*"
+    "@vellum/host-api": "workspace:*",
+    "jsonc-parser": "3.3.1",
+    "smol-toml": "1.4.2"
   }
 }

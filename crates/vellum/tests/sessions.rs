@@ -53,6 +53,45 @@ mod sessions {
         DocKey::new("/work/a", path).unwrap()
     }
 
+    #[test]
+    fn host_sidebar_reads_recorded_metadata_without_conversation_or_document_content() {
+        let mut server = server();
+        rpc(
+            &mut server,
+            1,
+            "initialize",
+            json!({"protocolVersion":"2025-11-25", "clientInfo":{"name":"TEST DATA client"}}),
+        );
+        call(
+            &mut server,
+            "open_document",
+            json!({"path":"design/app.vellum"}),
+        );
+        let reply = rpc(
+            &mut server,
+            9,
+            "vellum/hostState",
+            json!({"paths":["/work/a/design/app.vellum"]}),
+        );
+        let result = &reply["result"];
+        assert_eq!(result["sessionsAvailable"], true);
+        let rows = result["sessions"].as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["path"], "/work/a/design/app.vellum");
+        assert_eq!(rows[0]["client"], "TEST DATA client");
+        assert_eq!(rows[0].as_object().unwrap().len(), 5);
+        assert!(rows[0]["updatedAt"].is_i64());
+        assert_eq!(
+            rpc(
+                &mut server,
+                10,
+                "vellum/hostState",
+                json!({"paths":["/work/another/private.vellum"]})
+            )["error"]["code"],
+            -32602
+        );
+    }
+
     fn steps(store: &dyn SessionStore, id: &SessionId) -> Vec<StepRecord> {
         store
             .events(id, None)

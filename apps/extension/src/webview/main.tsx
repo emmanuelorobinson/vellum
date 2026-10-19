@@ -125,6 +125,7 @@ function render() {
         ),
       }}
       onPauseAll={() => send("pauseAll")}
+      onConnectAgents={() => send("connectAgents")}
     />,
   );
 }

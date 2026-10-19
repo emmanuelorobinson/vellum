@@ -8,6 +8,8 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 56 release remains blocked.** Choose a project license (none existed), complete Prompt 55's document runtime and host session feed, and finish C02 visual acceptance. The Connect dialog/config writers, recent-files/session sidebar and VSIX tools are built; the preview is `UNLICENSED`. Only macOS ARM64 is packaged locally; other targets and real installed clients need their lanes.
+
 - **Prompt 55 is incomplete: the VS Code host opens read-only.** The compiled WASM module has no document-operation/scene ABI, and the daemon has no wire implementation of `EditorLink`. The host, lifecycle boundary, commands and relay are built, but real editing, document rendering, writer attachment, hot exit and external-checkout Ops still require those integrations. Runtime-boundary tests use scripted core replies; the VS Code lane is explicitly a host smoke, not acceptance. See `docs/runbooks/vscode-host.md`.
 
 - **Wire Prompt 54's shell into a host, decide its copy, and finish its pixel acceptance.** (1) Nothing serves the new
@@ -3351,3 +3353,58 @@ source and `SKIA_GN_ARGS` from `scripts/skia-config.json` finished with **197 pa
 only the existing ADR-000 status, append-only DESIGN-GAPS line format and REFERENCE-INDEX failures remain.
 The final isolated VS Code smoke, extension source/test type check, scoped Biome and specification checksum
 also pass after the last changes.
+
+## Prompt 56
+
+Built Connect Agents for all ten clients, the Activity Bar sidebar and private preview VSIX tooling.
+**Release/visual acceptance remains incomplete.** Prompt 55's document runtime is unchanged; session rows open
+files but cannot navigate the unserved Agent feed. No project license existed, so the preview is UNLICENSED
+and publishing refuses the development version. The owner was asked for a license; no choice was received.
+
+- Native client detection does not execute clients. JSONC edits and parsed/managed TOML preserve other entries;
+  duplicate keys, malformed data, foreign/modified entries, symlink targets and invalid UTF-8 are refused.
+  The dialog shows the actual entry/schema and path, offers per-client manual snippets/Copy, separates Configured
+  from a live connection and derives tool count from the daemon. Native messages cannot select paths/raw RPC.
+  A stable global-storage daemon path survives extension directory updates; no real client config was changed.
+- Sidebar: twenty persisted recent designs, recorded sessions for those files in the first workspace root,
+  activity ordering, refresh and explicit unavailable/offline states. New initialized/scoped `vellum/hostState`
+  returns bounded metadata without conversations/document bytes and stays outside the agent tool list.
+- Packaging: pinned vsce/ovsx, six validated Mach-O/ELF/PE target mappings, static bundles, asset/port notices and
+  complete bundled dependency licenses. Inspected the macOS ARM64 preview's target, manifest and daemon hash.
+  Artifact: `target/vsix/vellum-0.0.0-darwin-arm64-preview.vsix` (40.38 MB, debug daemon). No publishing/signing,
+  other native target builds or real installed-client acceptance. See `docs/runbooks/connect-agents.md`.
+- TDD: writer, Connect/Sidebar/UI modules and daemon host-state contract were observed red before implementation.
+  Later native I/O, message-boundary and metadata checks passed. One test initially edited OpenCode's map name
+  instead of its command argument; corrected the test input. Browser tests caught the standalone portal mount;
+  real VS Code caught UMD dynamic requires, fixed by bundling the parser's ESM entry. Overriding application HOME
+  interrupted the smoke; final tests isolate client paths/profile/daemon while retaining normal application HOME.
+  pnpm's initial build-policy interruption was repaired with `install --ignore-scripts --frozen-lockfile`.
+- Design: Pencil confirmed the read-only copy and read only C02; two append-only DESIGN-GAPS lines. Light/dark
+  C02 full-dialog comparisons fail at 6.06%/6.22% against the unchanged 1% limit (symbols, manual selector/path,
+  actual snippet/state, Close and typography). Functional browser acceptance passes twice, including small-window
+  scrolling. No reference or tolerance changed. Sheets: `target/screen-goldens/C02-*-compare.png`.
+- Reference study (R19): read the pinned MCP sample's native definition-provider/emitter/stdio setup; kept native
+  ownership and stdio, used cross-client config edits and workspace mcp.json for Copilot instead of fetching remote
+  definitions. Checked sibling auto-themer's command/disposable pattern; no reusable writer found, no source ported.
+
+Passed (Node 24.21.0, pnpm 12.11.2, both telemetry opt-outs; pnpm used a temporary PATH shim to its pinned JS
+entrypoint because the system launcher stalled):
+
+- `pnpm --filter @vellum/extension test` (37 unit + 2 packaging), `pnpm --filter @vellum/host-vscode test` (23),
+  `pnpm --filter @vellum/editor-react test` (308); `pnpm type-check` (33 tasks).
+- `node scripts/skia-build.mjs test -p vellum --test mcp --test sessions` (28);
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1);
+  `node scripts/skia-build.mjs build -p vellum`; workspace/all-targets clippy with `-D warnings`; rustfmt check.
+- `playwright test --config e2e/playwright.config.ts e2e/connect.spec.ts --grep 'interaction|small' --repeat-each=2`
+  (6); isolated `VELLUM_VSCODE_EXECUTABLE=... node apps/extension/test/run.mjs` (VS Code 1.143.0 Insiders:
+  existing host smoke plus a rendered Connect dialog under CSP and both sidebar views).
+- `node apps/extension/packaging.mjs package darwin-arm64 target/debug/vellum
+  target/vsix/vellum-0.0.0-darwin-arm64-preview.vsix --development-preview`; ZIP inspection as above.
+- `bash scripts/check-deps.sh`; `bash scripts/check-clean-room.sh`; copy/token lints; scoped Biome (no errors);
+  `pnpm design:check`; `pnpm checksum`; `git diff --check`.
+
+Existing failures remain: global lint's four fixture/import-format errors; cargo-deny's nine advisories
+(bans/licenses/sources pass); selected script checks 21 pass/1 fail on Prompt 46's existing DESIGN-GAPS format.
+Other full-workspace/engine/browser suites were not rerun. Native configuration schemas/custom install locations
+and all platforms need real-client validation; user-data profiles without a workspace use manual setup. Nothing
+committed. No read-only specification file was changed.

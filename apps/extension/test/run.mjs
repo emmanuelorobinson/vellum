@@ -22,6 +22,7 @@ const sandbox = await mkdtemp(
   resolve(process.platform === "darwin" ? "/private/tmp" : tmpdir(), "vellum-vsc-"),
 );
 const runDir = resolve(sandbox, "run");
+await mkdir(resolve(sandbox, "home"), { recursive: true });
 await mkdir(resolve(sandbox, "user-data/User"), { recursive: true });
 await writeFile(
   resolve(sandbox, "user-data/User/settings.json"),
@@ -29,7 +30,14 @@ await writeFile(
 );
 try {
   await runTests({
-    extensionTestsEnv: { VELLUM_RUN_DIR: runDir },
+    extensionTestsEnv: {
+      VELLUM_RUN_DIR: runDir,
+      VELLUM_CLIENT_HOME: resolve(sandbox, "home"),
+      CODEX_HOME: resolve(sandbox, "home/.codex"),
+      XDG_CONFIG_HOME: resolve(sandbox, "home/.config"),
+      APPDATA: resolve(sandbox, "home/AppData"),
+      CLAUDE_CONFIG_DIR: resolve(sandbox, "home/.claude"),
+    },
     extensionDevelopmentPath: resolve(root, "dist/package"),
     extensionTestsPath: resolve(root, "dist/test/suite.cjs"),
     ...(process.env.VELLUM_VSCODE_EXECUTABLE

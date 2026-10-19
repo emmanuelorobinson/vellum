@@ -6,23 +6,27 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run src && node --test packaging.test.mjs",
     "build": "node build.mjs",
-    "test:vscode": "node build.mjs --with-daemon && node test/run.mjs"
+    "test:vscode": "node build.mjs --with-daemon && node test/run.mjs",
+    "package:vsix": "node packaging.mjs package",
+    "publish:vsix": "node packaging.mjs publish"
   },
   "main": "./dist/extension.cjs",
   "engines": {
     "vscode": "^1.140.0"
   },
   "devDependencies": {
-    "@types/vscode": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/vscode": "catalog:",
+    "@vscode/test-electron": "2.5.2",
+    "@vscode/vsce": "3.6.0",
     "esbuild": "0.28.2",
-    "@vscode/test-electron": "2.5.2"
+    "ovsx": "0.10.5",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "displayName": "Vellum",
   "publisher": "vellum",
@@ -33,15 +37,17 @@
     "workspace"
   ],
   "activationEvents": [
-    "onCustomEditor:vellum.design"
+    "onCustomEditor:vellum.design",
+    "onView:vellum.recent",
+    "onView:vellum.sessions"
   ],
   "dependencies": {
     "@vellum/config": "workspace:*",
-    "@vellum/host-api": "workspace:*",
-    "@vellum/host-vscode": "workspace:*",
     "@vellum/editor-core": "workspace:*",
     "@vellum/editor-react": "workspace:*",
     "@vellum/engine-client": "workspace:*",
+    "@vellum/host-api": "workspace:*",
+    "@vellum/host-vscode": "workspace:*",
     "@vellum/types-ts": "workspace:*",
     "@vellum/ui-tokens": "workspace:*",
     "react": "catalog:",
@@ -83,6 +89,17 @@
         "command": "vellum.pauseAllAgents",
         "title": "Pause All Agents",
         "category": "Vellum"
+      },
+      {
+        "command": "vellum.connectAgents",
+        "title": "Connect Agents",
+        "category": "Vellum"
+      },
+      {
+        "command": "vellum.refreshSidebar",
+        "title": "Refresh Sidebar",
+        "category": "Vellum",
+        "icon": "$(refresh)"
       }
     ],
     "configuration": {
@@ -94,6 +111,47 @@
           "description": "Match editor colours for chrome surfaces and text."
         }
       }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vellum",
+          "title": "Vellum",
+          "icon": "media/canvas.svg"
+        }
+      ]
+    },
+    "views": {
+      "vellum": [
+        {
+          "id": "vellum.recent",
+          "name": "Recent designs"
+        },
+        {
+          "id": "vellum.sessions",
+          "name": "Agent sessions"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "vellum.recent",
+        "contents": "[New Design File](command:vellum.newDesign)\\n[Open Welcome File](command:vellum.openWelcome)\\n[Connect Agents](command:vellum.connectAgents)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vellum.refreshSidebar",
+          "when": "view == vellum.sessions",
+          "group": "navigation"
+        },
+        {
+          "command": "vellum.connectAgents",
+          "when": "view == vellum.recent",
+          "group": "navigation"
+        }
+      ]
     }
   },
   "capabilities": {
@@ -102,5 +160,11 @@
       "description": "Vellum starts a bundled local daemon."
     },
     "virtualWorkspaces": false
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emmanuelorobinson/vellum.git",
+    "directory": "apps/extension"
   }
 }

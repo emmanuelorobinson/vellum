@@ -1,0 +1,5 @@
+{
+  // TEST DATA: preserve this setting and server
+  "setting": "keep",
+  "mcp": { "other-server": { "command": "other", "args": [] } }
+}

@@ -1,0 +1,5 @@
+# TEST DATA: preserve all text
+model = "example-model"
+[mcp_servers.other-server]
+command = "other"
+args = []

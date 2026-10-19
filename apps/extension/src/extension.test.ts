@@ -29,12 +29,24 @@ vi.mock("vscode", () => ({
     dispose() {}
   },
 }));
+vi.mock("./sidebar", () => ({
+  DesignSidebar: class {
+    refresh = vi.fn();
+    dispose() {}
+  },
+}));
+vi.mock("./connect-view", () => ({
+  ConnectView: class {
+    open = vi.fn();
+    dispose() {}
+  },
+}));
 
 import type { ExtensionContext } from "vscode";
 import { activate, deactivate } from "./extension";
 
 describe("extension activation", () => {
-  it("registers the provider with shared documents and exactly the four Prompt 55 commands", () => {
+  it("registers the shared provider, existing commands and Prompt 56 entry points", () => {
     const context = {
       extensionPath: "/extension",
       globalStorageUri: { fsPath: "/storage" },
@@ -49,8 +61,10 @@ describe("extension activation", () => {
       "vellum.toggleView",
       "vellum.openWelcome",
       "vellum.pauseAllAgents",
+      "vellum.connectAgents",
+      "vellum.refreshSidebar",
     ]);
-    expect(context.subscriptions).toHaveLength(8);
+    expect(context.subscriptions).toHaveLength(12);
     for (const subscription of context.subscriptions) subscription.dispose();
     expect(deactivate()).toBeUndefined();
   });

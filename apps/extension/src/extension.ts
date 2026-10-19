@@ -1,16 +1,22 @@
+import { chmod, mkdir, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { brand } from "@vellum/config";
 import { PortError } from "@vellum/host-api";
 import { createVscodeHost } from "@vellum/host-vscode";
 import * as vscode from "vscode";
+import { executable, exists, readConfig, writeConfig } from "./config-files";
+import { AgentConnections } from "./connect";
+import { ConnectView } from "./connect-view";
 import { files } from "./files";
 import { DesignEditorProvider, VIEW_TYPE } from "./provider";
 import { DaemonProcess } from "./relay";
 import { appearance } from "./security";
+import { DesignSidebar } from "./sidebar";
 
 /** All native capabilities stay in the extension host. Webviews receive only typed, scoped messages. */
 export function activate(context: vscode.ExtensionContext): {
-  readonly status: { editors: number; ready: number };
+  readonly status: { editors: number; ready: number; connectionsReady: boolean };
 } {
   const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? context.extensionPath;
   const daemon = new DaemonProcess(
@@ -74,6 +80,39 @@ export function activate(context: vscode.ExtensionContext): {
     read: (uri) => host.readFile(uri),
     writeAtomic: (uri, bytes) => host.writeFile(uri, bytes),
   });
+  const stableBinary = join(
+    context.globalStorageUri.fsPath,
+    "bin",
+    process.platform === "win32" ? "vellum.exe" : "vellum",
+  );
+  const home = process.env.VELLUM_CLIENT_HOME ?? homedir();
+  const connections = new AgentConnections({
+    home,
+    platform: process.platform,
+    configHome: process.env.XDG_CONFIG_HOME ?? join(home, ".config"),
+    appData:
+      process.env.APPDATA ??
+      (process.platform === "darwin"
+        ? join(home, "Library/Application Support")
+        : join(home, ".config")),
+    codexHome: process.env.CODEX_HOME,
+    claudeConfig: process.env.CLAUDE_CONFIG_DIR
+      ? join(process.env.CLAUDE_CONFIG_DIR, ".claude.json")
+      : undefined,
+    workspace: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+    binary: stableBinary,
+    read: readConfig,
+    write: writeConfig,
+    exists,
+    executable: async (name) =>
+      name === "code"
+        ? !!vscode.extensions.getExtension("github.copilot-chat") ||
+          (await executable("code")) ||
+          (await executable("code-insiders"))
+        : executable(name),
+  });
+  const connectView = new ConnectView(context, connections, daemon);
+  const sidebar = new DesignSidebar(context, daemon, provider, cwd);
   const command = (id: string, action: () => Promise<unknown>) =>
     vscode.commands.registerCommand(id, async () => {
       try {
@@ -89,6 +128,8 @@ export function activate(context: vscode.ExtensionContext): {
     host,
     daemon,
     provider,
+    connectView,
+    sidebar,
     vscode.window.registerCustomEditorProvider(VIEW_TYPE, provider, {
       supportsMultipleEditorsPerDocument: true,
     }),
@@ -134,10 +175,25 @@ export function activate(context: vscode.ExtensionContext): {
       await daemon.pauseAll();
       return true;
     }),
+    command("vellum.connectAgents", async () => {
+      // A stable path survives extension version-directory changes. No config file is changed here.
+      const binary = join(
+        context.extensionPath,
+        "bin",
+        process.platform === "win32" ? "vellum.exe" : "vellum",
+      );
+      const bytes = await readFile(binary);
+      await mkdir(join(context.globalStorageUri.fsPath, "bin"), { recursive: true, mode: 0o700 });
+      await files.writeAtomic(vscode.Uri.file(stableBinary).toString(), bytes);
+      if (process.platform !== "win32") await chmod(stableBinary, 0o700);
+      connectView.open();
+      return true;
+    }),
+    command("vellum.refreshSidebar", async () => sidebar.refresh()),
   );
   return {
     get status() {
-      return provider.status;
+      return { ...provider.status, connectionsReady: connectView.ready };
     },
   };
 }

@@ -1,5 +1,12 @@
 /** Stdio to private IPC. The bundled Rust bridge owns authentication, safe run-dir checks and daemon startup. */
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import type { SessionRow } from "./sidebar-model";
+export interface HostState {
+  clients: string[];
+  toolCount: number;
+  sessions: SessionRow[];
+  sessionsAvailable: boolean;
+}
 export class RpcFrames {
   private buffered = Buffer.alloc(0);
   constructor(private readonly limit = 16 * 1024 * 1024) {}
@@ -144,6 +151,33 @@ export class DaemonProcess {
     await this.connect();
     const result = (await this.request("vellum/pauseAll", {})) as { paused?: boolean };
     if (result?.paused !== true) throw Error("pause all was not acknowledged");
+  }
+  async hostState(paths: readonly string[]): Promise<HostState> {
+    await this.connect();
+    const state = await this.request("vellum/hostState", { paths });
+    if (!state || typeof state !== "object") throw Error("invalid host state");
+    const s = state as HostState;
+    if (
+      !Array.isArray(s.clients) ||
+      !s.clients.every((c) => typeof c === "string") ||
+      !Number.isSafeInteger(s.toolCount) ||
+      s.toolCount < 0 ||
+      typeof s.sessionsAvailable !== "boolean" ||
+      !Array.isArray(s.sessions) ||
+      s.sessions.length > 100 ||
+      !s.sessions.every(
+        (r) =>
+          r &&
+          typeof r.id === "string" &&
+          typeof r.path === "string" &&
+          paths.includes(r.path) &&
+          typeof r.title === "string" &&
+          typeof r.client === "string" &&
+          Number.isSafeInteger(r.updatedAt),
+      )
+    )
+      throw Error("invalid host state");
+    return s;
   }
   disconnect() {
     this.ready = false;

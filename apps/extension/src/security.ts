@@ -13,7 +13,10 @@ export function appearance(kind: number): Appearance {
 }
 export type WebviewMessage =
   | { type: "ready" }
-  | { type: "command"; command: "save" | "openAsText" | "pauseAll" | "restartDaemon" };
+  | {
+      type: "command";
+      command: "save" | "openAsText" | "pauseAll" | "restartDaemon" | "connectAgents";
+    };
 export function parseMessage(value: unknown): WebviewMessage | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
@@ -22,7 +25,7 @@ export function parseMessage(value: unknown): WebviewMessage | null {
   if (
     keys === "command,type" &&
     v.type === "command" &&
-    ["save", "openAsText", "pauseAll", "restartDaemon"].includes(String(v.command))
+    ["save", "openAsText", "pauseAll", "restartDaemon", "connectAgents"].includes(String(v.command))
   )
     return v as WebviewMessage;
   return null;

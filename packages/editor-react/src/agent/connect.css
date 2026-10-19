@@ -1,0 +1,83 @@
+.vc-connect-dialog {
+  box-sizing: border-box;
+  top: 84px;
+  gap: 16px;
+  max-height: calc(100% - 100px);
+}
+.vc-connect-dialog * {
+  box-sizing: border-box;
+}
+.vc-connect-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.vc-connect-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vc-connect-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vc-connect-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.vc-connect-state,
+.vc-connect-coverage {
+  font-size: 11px;
+  font-weight: 450;
+  color: var(--chrome-secondary);
+}
+.vc-connect-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+}
+.vc-connect-manual label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vc-connect-manual select {
+  min-width: 0;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+.vc-connect-dialog pre,
+.vc-connect-dialog code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    450 11px / 1.45 var(--font-mono),
+    monospace;
+}
+.vc-connect-dialog pre {
+  margin: 0;
+}
+.vc-connect-written {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vc-connect-error {
+  color: var(--chrome-error);
+}
+@media (max-width: 650px) {
+  .vc-connect-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

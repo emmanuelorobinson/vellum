@@ -17,6 +17,7 @@ export interface TopRightProps {
   onSettings?: () => void;
   /** Pause all agents; absent while nothing can pause them. */
   onPauseAll?: () => void;
+  onConnectAgents?: () => void;
 }
 
 export function TopRightBar(p: TopRightProps) {
@@ -87,6 +88,11 @@ export function TopRightBar(p: TopRightProps) {
                 ))
               )}
               <Menu.Separator className="vc-menu__separator" />
+              {p.onConnectAgents ? (
+                <Menu.Item className="vc-menu__item" onClick={p.onConnectAgents}>
+                  Connect agents…
+                </Menu.Item>
+              ) : null}
               <Menu.Item
                 className="vc-menu__item"
                 disabled={

@@ -48,6 +48,8 @@ export class DesignEditorProvider
   private resources = new Map<CustomDocument, vscode.Disposable[]>();
   private active: CustomDocument | undefined;
   private readyPanels = new Set<vscode.WebviewPanel>();
+  private opened = new vscode.EventEmitter<vscode.Uri>();
+  readonly onDidOpenDocument = this.opened.event;
   get status() {
     return { editors: this.panels.size, ready: this.readyPanels.size };
   }
@@ -79,6 +81,7 @@ export class DesignEditorProvider
     }
     const document = new CustomDocument(uri, lifecycle);
     this.documents.add(document);
+    this.opened.fire(uri);
     const subscription = lifecycle.subscribe(() => {
       if (lifecycle.dirty) this.changes.fire({ document });
       void this.broadcast(document);
@@ -150,6 +153,9 @@ export class DesignEditorProvider
           case "restartDaemon":
             await this.daemon.connect();
             await this.send(panel, document);
+            break;
+          case "connectAgents":
+            await vscode.commands.executeCommand("vellum.connectAgents");
             break;
         }
       } catch {
@@ -239,5 +245,6 @@ export class DesignEditorProvider
     for (const panel of this.panels.keys()) panel.dispose();
     this.panels.clear();
     this.changes.dispose();
+    this.opened.dispose();
   }
 }

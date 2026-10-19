@@ -653,3 +653,47 @@ fn host_pause_all_requires_initialize_and_pauses_every_open_document() {
     assert_eq!(write["result"]["isError"], true);
     assert!(text(&write).contains("paused"));
 }
+
+#[test]
+fn host_state_is_initialized_scoped_and_not_an_agent_tool() {
+    let mut server = server();
+    let state = |server: &mut McpServer, params| rpc(server, 1, 12, "vellum/hostState", params);
+    assert_eq!(
+        state(&mut server, json!({"paths":[]}))["error"]["code"],
+        -32002
+    );
+    rpc(
+        &mut server,
+        1,
+        1,
+        "initialize",
+        json!({"protocolVersion":"2025-11-25", "clientInfo":{"name":"TEST DATA client"}}),
+    );
+    let result = state(&mut server, json!({"paths":[]}));
+    assert_eq!(result["result"]["clients"], json!(["TEST DATA client"]));
+    assert!(result["result"]["toolCount"].as_u64().unwrap() > 18);
+    assert_eq!(result["result"]["sessions"], json!([]));
+    assert_eq!(result["result"]["sessionsAvailable"], false);
+    assert_eq!(
+        state(&mut server, json!({"paths":[], "extra":true}))["error"]["code"],
+        -32602
+    );
+    assert_eq!(
+        state(&mut server, json!({"paths":["/outside/private.vellum"]}))["error"]["code"],
+        -32602
+    );
+    let list = rpc(&mut server, 1, 13, "tools/list", json!({}));
+    assert!(!list.to_string().contains("hostState"));
+    server.closed(1);
+    rpc(
+        &mut server,
+        2,
+        1,
+        "initialize",
+        json!({"protocolVersion":"2025-11-25", "clientInfo":{"name":"TEST DATA second"}}),
+    );
+    assert_eq!(
+        rpc(&mut server, 2, 14, "vellum/hostState", json!({"paths":[]}))["result"]["clients"],
+        json!(["TEST DATA second"])
+    );
+}
