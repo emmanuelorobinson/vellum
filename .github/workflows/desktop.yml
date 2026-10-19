@@ -1,0 +1,42 @@
+name: Desktop shell
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+jobs:
+  electron:
+    name: Electron shell and renderer isolation (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install pinned Electron runtime
+        run: node apps/desktop/node_modules/electron/install.js
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Native sidecar (no GPU renderer required for shell tests)
+        run: cargo build -p vellum --no-default-features
+      - run: pnpm --filter @vellum/desktop test
+      - run: pnpm --filter @vellum/host-electron test
+      - run: pnpm --filter @vellum/desktop test:electron
+      - name: Specification unchanged
+        if: always()
+        run: pnpm checksum
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-shell-results
+          path: |
+            target/desktop-test-results/
+            target/screen-goldens/A03-*

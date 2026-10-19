@@ -6,12 +6,32 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run src",
+    "build": "node build.mjs",
+    "dev": "node build.mjs --with-daemon && electron dist/main/index.cjs",
+    "test:electron": "node build.mjs --with-daemon && playwright test --config test/playwright.config.ts"
   },
   "devDependencies": {
     "electron": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@playwright/test": "catalog:",
+    "playwright": "catalog:",
+    "esbuild": "0.28.2"
   },
-  "main": "./dist/main/index.js"
+  "main": "./dist/main/index.cjs",
+  "dependencies": {
+    "@vellum/config": "workspace:*",
+    "@vellum/editor-core": "workspace:*",
+    "@vellum/editor-react": "workspace:*",
+    "@vellum/engine-client": "workspace:*",
+    "@vellum/host-api": "workspace:*",
+    "@vellum/host-electron": "workspace:*",
+    "@vellum/ui-tokens": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  }
 }

@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 57 desktop needs runtime integration and A03 visual acceptance.** The Electron shell opens read-only
+  through Prompt 55's unavailable runtime boundary. Real rendering/editing, saves and live running-session state
+  need the shared WASM document ABI and EditorLink wire implementation. A03 tab goldens fail at 3.81%/3.60% against
+  the unchanged 1% limit; comparison sheets are in `target/screen-goldens/`. Native Windows/Linux and the new
+  macOS CI job need their runs. See `docs/runbooks/desktop-shell.md`.
+
 - **Prompt 56 release remains blocked.** Complete Prompt 55's document runtime and host session feed, and finish C02 visual acceptance. The owner chose Apache-2.0; the project license and licensed extension preview are included. Only macOS ARM64 is packaged locally; other targets and real installed clients need their lanes.
 
 - **Prompt 55 is incomplete: the VS Code host opens read-only.** The compiled WASM module has no document-operation/scene ABI, and the daemon has no wire implementation of `EditorLink`. The host, lifecycle boundary, commands and relay are built, but real editing, document rendering, writer attachment, hot exit and external-checkout Ops still require those integrations. Runtime-boundary tests use scripted core replies; the VS Code lane is explicitly a host smoke, not acceptance. See `docs/runbooks/vscode-host.md`.
@@ -3423,3 +3429,59 @@ confirmed the Apache-2.0 manifest, exact official license text (vsce normalizes 
 `extension/LICENSE.txt`), dependency notices, target and unchanged daemon hash. The first inspection
 looked for `extension/LICENSE`; corrected the inspection path to vsce's emitted name.
 No publishing was requested or performed. Existing runtime, session-feed and C02 visual blockers remain.
+
+## Prompt 57
+
+Built the Electron desktop shell, with the shared editor opening read-only. **Runtime integration and A03 visual
+acceptance remain incomplete.** No Rust document ABI, EditorLink wire protocol or alternate document store was added.
+
+- `apps/desktop`: canonical folder windows, deduplicated/scoped tabs with retained per-document workspace state,
+  keyboard navigation, close confirmation boundary, native File/Edit/View/Object/Arrange/Agents/Help menus and the
+  Windows/Linux document-bar menu. Working actions include native file/folder picking, core-backed New Design File,
+  close, panels, zoom, About, reconnect and acknowledged Pause All. Unserved edit/save/session actions are disabled.
+  Dirty/running lifecycle tests use an injected runtime; production cannot edit or report live running sessions.
+- Sandboxed/context-isolated preload, no Node integration, exact static-asset protocol and response-header CSP,
+  denied network/navigation/popups/web permissions/downloads, registered-window/main-frame/action validation and
+  document IDs scoped to a window. Host services relay reads/invalidation, text clipboard, system appearance and
+  an opaque daemon endpoint; writes reject read-only. No socket, native path, raw RPC or credential API is exposed.
+- Moved the existing VS Code native relay into `@vellum/host-api/native-relay`, preserving the extension re-export;
+  added connection notifications. Main spawns the native Rust stdio bridge without a shell. It authenticates and
+  starts/reuses the user-only daemon. Disposal kills only the host bridge, not the shared daemon. Browser bridge
+  exports are separate from the headless Host factory. No third-party package/version or Rust source changed.
+- TDD: folder/security/bridge/menu tests were observed red before their modules existed; connection-notification,
+  Windows-path and theme-currentness tests were observed red before their fixes. Real Electron exposed cancelled
+  asynchronous app quit and tab-focus loss; both are fixed. Other harness fixes: wait for the focused window's menu,
+  CSS-pixel screenshots on Retina, and the current async Electron clipboard API. An early native teardown left one
+  isolated daemon, which was stopped through its verified run directory. Final runs clean up their own daemons.
+- Design/reference: Pencil confirmed the read-only copy and read A03 plus its tab component; two append-only gaps.
+  No §3.2 row names P57. Read Electron security/contextBridge/utilityProcess and Playwright docs through Context7;
+  checked sibling outpost's preload pattern and reused Vellum's own relay. Nothing external ported. Added the macOS
+  Electron CI lane, version-baseline note and `docs/runbooks/desktop-shell.md`; no remote CI run is claimed.
+- A03 tab comparisons (808×40) fail at **3.81% light / 3.60% dark**, at the unchanged 1%/48-channel gate. Comparison
+  sheets show text-rendering and neutral running-marker differences. The visual dirty/working states are TEST DATA
+  sent through the native event boundary. The full editor screen has no document canvas/session feed; no full-screen
+  acceptance claimed. Native Windows/Linux, signed packaging and a real dirty/live document remain unverified.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Electron 44.7.0 macOS ARM64, both telemetry opt-outs):
+
+- `pnpm --filter @vellum/desktop test` (12), `pnpm --filter @vellum/host-electron test` (4),
+  `pnpm --filter @vellum/host-api test` (3), `pnpm --filter @vellum/contracts test` (14),
+  `pnpm --filter @vellum/extension test` (37 + 3 packaging), `pnpm --filter @vellum/editor-react test` (308).
+- `node apps/desktop/build.mjs --with-daemon`; from `apps/desktop`,
+  `node_modules/.bin/playwright test --config test/playwright.config.ts --grep-invert @design --repeat-each=2`
+  (6 pass: real windows/menus, Rust file creation, daemon acknowledgement, renderer isolation, cross-window and
+  unregistered-renderer denial, symlink replacement/revocation, focus and shutdown). Native runs required escalation
+  after macOS aborted sandboxed launches; the first approval timed out and the permitted retry succeeded.
+- `node apps/extension/build.mjs --with-daemon`; `pnpm type-check` (33 tasks);
+  `node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`; `cargo fmt --all -- --check`;
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1).
+- `bash scripts/check-deps.sh`; `bash scripts/check-clean-room.sh`; `node scripts/token-lint.mjs`;
+  `node scripts/copy-lint.mjs`; `node scripts/ui-icons-gen.mjs --check`; `node scripts/design-check.mjs`;
+  scoped Biome; `pnpm checksum` / `node scripts/spec-checksums.mjs check`; `git diff --check`.
+
+pnpm commands above used `/private/tmp/vellum-p56-bin`'s existing PATH shim to the pinned JS entrypoint because the
+system launcher stalled. Global `pnpm lint` still fails on the four existing fixture/import-format errors;
+`cargo deny check` still fails on the existing advisories (bans/licenses/sources pass). The initial deny run could not
+lock its database inside the sandbox; the native retry ran. `design-spec-rules.test.mjs` still has the existing
+Prompt 46 append-only line-format failure (8 pass, 1 fail). The new lines match its required format. Not run:
+full Rust/workspace/engine/browser suites, the native VS Code smoke or a remote CI job. Nothing committed.

@@ -1,0 +1,149 @@
+@font-face {
+  font-family: Inter;
+  src: url("../../../../crates/adapters/text-parley/fonts/InterVariable.ttf") format("truetype");
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../../../../packages/ui-tokens/fonts/JetBrainsMono-wght.ttf") format("truetype");
+  font-weight: 100 800;
+}
+html,
+body,
+#root,
+#root > main {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  background: var(--canvas-backdrop);
+  color: var(--chrome-text);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 12px;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: -2px;
+}
+.desktop-start {
+  padding: var(--space-6);
+}
+.desktop-start button,
+.desktop-problem button {
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-panel);
+  padding: var(--space-2) var(--space-3);
+  margin-inline-end: var(--space-2);
+}
+.desktop-problem {
+  padding: var(--space-4);
+}
+.desktop-docbar {
+  box-shadow:
+    0 0 0 0.5px var(--chrome-border),
+    inset 0 0 0 0.5px var(--chrome-border);
+  left: 8px;
+  top: 8px;
+  height: 40px;
+  width: min(808px, calc(100% - 240px));
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-lg);
+  gap: var(--space-2);
+}
+.desktop-tabs {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.desktop-tab {
+  display: flex;
+  align-items: center;
+  min-width: 120px;
+  flex: 1;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-panel);
+}
+.desktop-tab[data-selected="true"] {
+  background: var(--chrome-sunken);
+}
+.desktop-tab__select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  border: 0;
+  background: transparent;
+  padding: var(--space-1) var(--space-2);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.desktop-tab__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.desktop-tab__state {
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.desktop-tab__state[data-dirty="true"] {
+  color: var(--chrome-attention);
+}
+.desktop-tab__close {
+  opacity: 0;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--chrome-secondary);
+}
+.desktop-tab:hover .desktop-tab__close,
+.desktop-tab:focus-within .desktop-tab__close {
+  opacity: 1;
+}
+.desktop-tab__close:hover {
+  background: var(--chrome-hover);
+}
+.desktop-tab__running {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-xs);
+  background: var(--chrome-secondary);
+  flex: none;
+}
+.desktop-menu {
+  border: 0;
+  background: transparent;
+  padding: var(--space-1);
+}
+.desktop-menu-popover {
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+.desktop-menu-popover button {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: 0;
+  background: transparent;
+  padding: var(--space-2);
+}
+@media (max-width: 1040px) {
+  .desktop-docbar {
+    width: calc(100% - 240px);
+  }
+}

@@ -186,6 +186,8 @@ export interface EditorWorkspaceProps {
    * replaces the whole right panel when no design controller is given.
    */
   slots?: {
+    /** Host-owned document tabs, sharing the floating document bar's position. */
+    documentBar?: ReactNode;
     agent?: ReactNode;
     history?: ReactNode;
     right?: ReactNode;
@@ -727,14 +729,16 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             {...(props.presence ? { presence: props.presence } : {})}
             {...(props.agent ? { agent: props.agent } : {})}
           />
-          {visible.documentBar ? (
-            <DocumentBar
-              fileName={props.fileName}
-              saveState={props.saveState}
-              width={layout.documentBar.width}
-              commands={controller.commands.list()}
-            />
-          ) : null}
+          {visible.documentBar
+            ? (props.slots?.documentBar ?? (
+                <DocumentBar
+                  fileName={props.fileName}
+                  saveState={props.saveState}
+                  width={layout.documentBar.width}
+                  commands={controller.commands.list()}
+                />
+              ))
+            : null}
           <PanelFrame
             layout={layout.agent}
             tab={state.tab}

@@ -34,6 +34,8 @@ afterEach(() => {
 describe("native daemon process", () => {
   it("starts the bundled bridge once, initializes and relays only the typed action", async () => {
     const s = setup();
+    const connections: boolean[] = [];
+    const unsubscribe = s.relay.onConnection((connected) => connections.push(connected));
     const a = s.relay.connect();
     const b = s.relay.connect();
     expect(a).toBe(b);
@@ -51,6 +53,8 @@ describe("native daemon process", () => {
     s.reply(2, { paused: true });
     await pause;
     s.relay.dispose();
+    expect(connections).toEqual([true, false]);
+    unsubscribe();
     expect(s.child.kill).toHaveBeenCalledOnce();
     expect(s.relay.connected).toBe(false);
   });

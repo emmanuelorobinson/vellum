@@ -5,7 +5,8 @@
   "description": "The Host interface.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./native-relay": "./src/native-relay.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -13,7 +14,8 @@
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
   },
   "dependencies": {
     "@vellum/types-ts": "workspace:*"

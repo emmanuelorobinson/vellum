@@ -313,3 +313,15 @@ The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused;
   during installation; ordinary packaging does not need their optional native credential helpers.
 - Client paths/schemas are a documented baseline, not a claim that every installed client was tested.
   See `docs/runbooks/connect-agents.md`; no installed client was launched or reconfigured by this prompt.
+
+## Prompt 57 desktop host
+
+- Electron 44.7.0 remains the catalog pin; its macOS ARM64 runtime was downloaded and used with Playwright
+  1.64.1, Node 24.21.0 and pnpm 12.11.2. No new third-party package or version was introduced.
+- Electron security, contextBridge, native-process and utilityProcess documentation and Playwright's Electron
+  APIs were read through Context7. The Rust sidecar uses a shell-free native spawn, not a JavaScript utility fork.
+- `@vellum/host-api/native-relay` now contains the shared native stdio bridge; browser imports of the Host API
+  do not import Node I/O. `@vellum/host-electron/bridge` is a separate browser bridge entrypoint so headless Host
+  contract consumers do not acquire DOM dependencies. Electron 44's clipboard methods are asynchronous.
+- Local Electron acceptance is macOS ARM64 only. The macOS CI lane is configured but not remotely verified;
+  Windows/Linux native acceptance and signed packaging remain outstanding.
