@@ -1,8 +1,11 @@
 //! Native boundary for private IPC and process lifecycle. No document mutation happens here.
 mod client;
+mod interrupt;
 mod private;
 mod server;
 mod transport;
+
+pub use interrupt::{InterruptGuard, on_interrupt};
 
 pub use client::{bridge, ensure_daemon, exchange, status, stop};
 pub use private::RunDir;

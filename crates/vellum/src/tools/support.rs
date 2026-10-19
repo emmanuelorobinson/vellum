@@ -71,7 +71,7 @@ impl Transform for NoNull {
 impl ToolCtx<'_> {
     /// The key a document path goes by. With a known working directory that is the absolute path inside it, so
     /// two clients naming the same file reach the same document; without one the path is used as given.
-    pub(super) fn resolve(&self, path: &str) -> Result<String, ToolError> {
+    pub(crate) fn resolve(&self, path: &str) -> Result<String, ToolError> {
         if Path::new(path)
             .extension()
             .is_none_or(|ext| ext != "vellum")

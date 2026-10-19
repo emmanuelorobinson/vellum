@@ -39,6 +39,13 @@ vellum-text-parley = { path = "../adapters/text-parley", optional = true }
 vellum-render-skia = { path = "../adapters/render-skia", optional = true }
 vellum-index-rstar = { path = "../adapters/index-rstar", optional = true }
 vellum-script-quickjs = { path = "../adapters/script-quickjs", optional = true }
+vellum-engine-builtin = { path = "../adapters/engine-builtin" }
+vellum-model-http = { path = "../adapters/model-http" }
+vellum-llm-openai-compat = { path = "../adapters/llm-openai-compat" }
+vellum-llm-openai-responses = { path = "../adapters/llm-openai-responses" }
+vellum-llm-anthropic = { path = "../adapters/llm-anthropic" }
+vellum-llm-google = { path = "../adapters/llm-google" }
+vellum-secrets-keyring = { path = "../adapters/secrets-keyring" }
 getrandom = "=0.4.3"
 serde.workspace = true
 serde_json.workspace = true

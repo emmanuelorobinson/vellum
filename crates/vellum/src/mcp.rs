@@ -8,6 +8,8 @@
 //! Requests are answered one at a time on the thread that owns the documents. Each connection has a
 //! [`Session`] (its client, its working directory); the documents are shared by all of them.
 
+mod cli;
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -58,6 +60,7 @@ pub struct McpServer {
     default_cwd: Option<PathBuf>,
     /// Where each connection's tool calls are recorded as an external session; none in a daemon without one.
     log: Option<SessionLog>,
+    cli_runs: BTreeMap<u64, cli::Run>,
 }
 
 impl McpServer {
@@ -69,6 +72,7 @@ impl McpServer {
             sessions: BTreeMap::new(),
             default_cwd: None,
             log: None,
+            cli_runs: BTreeMap::new(),
         }
     }
 
@@ -199,12 +203,24 @@ impl McpServer {
                     .join(", ")
             ));
         }
+        if self.cli_runs.get(&conn).is_some_and(|r| r.is_ended())
+            && self
+                .registry
+                .get(name)
+                .is_some_and(|tool| !tool.read_only())
+        {
+            return Ok(tool_error(&ToolError::new(
+                crate::tools::ErrorKind::Refused,
+                "This CLI turn has ended; start a new turn before changing the document",
+            )));
+        }
         // Whatever changed on disk since the last call is applied first, so a read sees the file as it is.
         self.docs.poll();
         self.session(conn);
         let session = self.sessions.get_mut(&conn).expect("just made");
         let mut ctx = ToolCtx::new(&mut self.docs, session);
         let result = self.registry.call(&mut ctx, name, arguments);
+        let step = session.steps().last().cloned();
         if let Some(log) = &self.log
             && let Err(error) = log.record_steps(&mut self.docs, session)
         {
@@ -212,10 +228,15 @@ impl McpServer {
             // event contents.
             eprintln!("vellum: could not record the session: {error}");
         }
-        Ok(match result {
+        let mut result = match result {
             Ok(value) => tool_result(value),
             Err(error) => tool_error(&error),
-        })
+        };
+        if self.cli_runs.contains_key(&conn) {
+            result["_meta"] = json!({"vellum/step": step});
+            self.cli_fill(conn);
+        }
+        Ok(result)
     }
 
     // Host metadata only: never document contents, event bodies, credentials or discovery data.
@@ -385,6 +406,54 @@ impl McpServer {
         }
     }
 
+    /// Native CLI lifecycle actions stay outside the agent tool registry. Resolve through the same
+    /// session scope and document target as tool calls; no direct document-store access.
+    fn cli_action(&mut self, conn: u64, params: &Value) -> Result<Value, (i64, String)> {
+        if self.client(conn).is_none() {
+            return Err((-32002, "Initialize the CLI connection first".into()));
+        }
+        let action = params["action"]
+            .as_str()
+            .ok_or((-32602, "Missing CLI action".into()))?;
+        if !matches!(action, "save" | "new") {
+            return self.cli_turn_action(conn, params);
+        }
+        let file = params["document"]
+            .as_str()
+            .ok_or((-32602, "Missing document".into()))?;
+        self.session(conn);
+        let session = self.sessions.get_mut(&conn).expect("session");
+        let ctx = ToolCtx::new(&mut self.docs, session);
+        let path = ctx.resolve(file).map_err(|e| (-32602, e.to_string()))?;
+        match action {
+            "save" => {
+                self.docs.save(&path).map_err(|e| (-32000, e.to_string()))?;
+                Ok(json!({"saved":true,"document":path}))
+            }
+            "new" => {
+                if self
+                    .docs
+                    .exists(&path)
+                    .map_err(|e| (-32000, e.to_string()))?
+                {
+                    return Err((
+                        -32000,
+                        "The destination already exists; choose another file".into(),
+                    ));
+                }
+                let name = std::path::Path::new(&path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Design");
+                self.docs
+                    .create_blank(&path, name)
+                    .map_err(|e| (-32000, e.to_string()))?;
+                Ok(json!({"created":true,"document":path}))
+            }
+            _ => Err((-32602, "Unknown CLI action".into())),
+        }
+    }
+
     /// Answers one JSON-RPC request. `None` for a notification.
     pub fn handle(&mut self, conn: u64, request: &Value) -> Option<Value> {
         let method = request.get("method")?.as_str()?;
@@ -392,6 +461,7 @@ impl McpServer {
         // No id, no answer: whatever it was, it is a notification.
         let id = request.get("id")?;
         let outcome = match method {
+            "vellum/cli" => self.cli_action(conn, &params),
             "vellum/hostState" => self.host_state(conn, &params),
             "vellum/recovery" => self.host_recovery(conn, &params),
             "initialize" => self.initialize(conn, &params).map_err(|m| (-32602, m)),
@@ -465,6 +535,7 @@ impl RpcHandler for McpServer {
     }
 
     fn closed(&mut self, conn: u64) {
+        self.cli_disconnected(conn);
         self.sessions.remove(&conn);
     }
 }

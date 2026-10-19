@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 59 needs integration/release acceptance.** CLI headless commands are built and tested; real live-editor
+  attachment still needs P55's EditorLink, and `new --system` needs P58's production catalog. Model lists currently
+  expose bundled hints, not a live catalog. Run real installed-engine/keychain and Windows/Linux CLI lanes;
+  remote CI has not been exercised. Explicit parallel modes work; model-requested helper spawning is unexposed.
+  See `docs/runbooks/cli.md` and ADR-025.
+
 - **Prompt 58 is a desktop preview, not an accepted release.** Finish Prompt 55's editable runtime, Home prompt
   submission, thumbnail/system catalog and provider/usage/activity services; account sign-in belongs to Prompt 61.
   All ten A01/A02/A04/A05/A06 full-frame goldens remain above the unchanged 1% gate. Supply a release version,
@@ -3598,9 +3604,56 @@ captures are in target/screen-goldens; Chromium screenshots omit native traffic 
 verified by the native API test. Physical mouse dragging/full-screen and non-macOS native runs were not exercised.
 All previous runtime/service/release blockers remain. Nothing committed by this follow-up.
 
-## Prompt 59 (in progress)
+## Prompt 59
 
-CLI work has started. Preserving the existing Prompt 57/58 title-bar edits. The tool registry, native daemon,
-export/token adapters and engine ports are reused. No §3.2 reference row names P59; sibling outpost's native
-entrypoint was checked for reusable CLI patterns. New binary acceptance tests cover text/JSON, failure exits,
-exclusive creation, all export formats, tokens and shell Save. The initial red run is pending compilation.
+Built the native CLI and interactive shell over the existing daemon targets. Headless acceptance is covered;
+full editor/catalog/native-platform acceptance remains open (see Needs a person and `docs/runbooks/cli.md`).
+
+- Commands: prompt with engine/model/effort, text/image attachments, repo, usage JSON, previews, failed-call limit,
+  export/scale and verbose events; every task-file row runs even after a malformed row or runtime failure.
+  Version/status, create-without-replacement, seven export formats and token import/export; scoped shell,
+  JavaScript object-literal decoding in the bounded sandbox, active-document Save, output copies and EOF saves.
+  JSON results/errors (NDJSON for streams), exit 0/1/2, status symbols and no ANSI colour/spinners. Old tool JSON
+  shape and MCP stdout are preserved. Preview PNGs live under the private run directory.
+- Engines run in the CLI, with persistent stdio connections to the authoritative registry/target. No second
+  document store or write path. Native lifecycle RPC is initialized/scoped and outside the model tool list.
+  Engine sessions log turns/steps/messages/usage. Split uses existing plan resolution and core partitioning;
+  Side by side/Explore use core instructions and daemon reservations. Agents have distinct generated hue labels,
+  one shared turn/session, Guard leases and cleanup. ADR-025 records the native protocol.
+- Ctrl-C and daemon Pause/Stop interrupt stalled providers; owner disconnect stops all lanes, even if recording
+  fails. Completed edits stay. The new owner-disconnect and Pause All regressions were observed red before fixes.
+  CI reads credentials through the existing read-only environment adapter; normal reads use the keychain. A model
+  echo of the test key is redacted from output, usage, the document and session DB. No real key/account was used.
+- TDD: initial seven cases failed on missing commands. Later red cases caught exact-name lookup (missing IDs are
+  data), invalid test-font dependencies, missing preview targets, malformed-row short circuit, JSON usage errors,
+  shell-output preflight, cancellation, owner teardown and active-file Save. Render fixtures were made self-contained;
+  no expectation/tolerance was weakened. Native socket tests require escalation; sandbox attempts failed to bind.
+- Boundaries/deviations: models reports bundled hints with `complete:false`, not a live catalog. `new --system`
+  refuses the unavailable Prompt 58 catalog. Explicit CLI parallel dispatch authorizes building its plan; there is
+  no separate plan-review prompt or model-requested helper spawning. Real editor attachment still needs P55's
+  EditorLink wire implementation. Real installed engines, keychain and Windows/Linux runs remain unverified.
+- Reference study: no §3.2 row names P59. Read sibling outpost's native entrypoint and reused Vellum's registry,
+  export/token adapters, installed-engine bridge, secret stores and core parallel functions. No external source
+  ported. Clap and Tokio signal APIs were checked through Context7; no vendor package/version changed. CLI output
+  follows DESIGN.md's terminal section; no UI frame was built or read-only design/specification changed.
+- Added CI usage/security/budget guidance and the `native-cli` acceptance step in the existing export lane.
+  Remote CI and full workspace/browser/installed-engine suites were not run. Nothing committed by this session.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Rust 1.99.0, macOS ARM64; telemetry opt-outs for pnpm):
+
+- `node scripts/skia-build.mjs test -p vellum --test cli_complete -- --ignored` (15 native CLI acceptance cases).
+- `node scripts/skia-build.mjs test -p vellum --test cli_lifecycle --test cli --test mcp --test sessions
+  --test parallel --test orchestration --test exports` (79); earlier `--test daemon_documents` (30).
+- `node scripts/skia-build.mjs test -p vellum --test engine -- --ignored` (3 loopback integrations);
+  `node scripts/skia-build.mjs test -p vellum --lib` (18);
+  `node scripts/skia-build.mjs test -p vellum-ipc-local --lib` (7);
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1).
+- `pnpm type-check` (33 tasks); workspace/all-targets Clippy with `-D warnings`, followed by scoped
+  `node scripts/skia-build.mjs clippy -p vellum -p vellum-ipc-local -p vellum-types --all-targets -- -D warnings`;
+  `cargo fmt --all -- --check`.
+- `bash scripts/check-deps.sh` (including bans/licenses/sources and 502-module TypeScript cruise);
+  `bash scripts/check-clean-room.sh`; copy/token lints; `pnpm checksum`; `git diff --check`.
+
+pnpm used the existing `/private/tmp/vellum-p56-bin` shim. Global `pnpm lint` retains its four existing
+fixture/import-format errors. Native `cargo deny check` retains nine existing advisories; bans/licenses/sources
+pass. Its first sandbox run could not lock the advisory database. No advisory or unrelated fixture was changed.

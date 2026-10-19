@@ -28,6 +28,8 @@ jobs:
           chrome-version: 155.0.8059.39
           install-dependencies: true
       - run: node scripts/skia-build.mjs test --locked -p vellum --test exports -p vellum-export-html -p vellum-export-raster
+      - name: Native CLI, local model and export acceptance (no account)
+        run: node scripts/skia-build.mjs test --locked -p vellum --test cli_complete -- --ignored
       - run: node scripts/skia-build.mjs run --locked -p vellum --example export-goldens -- --check
       - name: Compare HTML exports to native goldens
         env:

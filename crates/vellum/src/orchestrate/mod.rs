@@ -58,7 +58,7 @@ pub use parallel::{Area, LaneResult, LaneSpec, ParallelOutcome};
 /// The tool only engines run by Vellum get: proposing a plan.
 pub const PROPOSE_PLAN: &str = "propose_plan";
 
-const PROPOSE_DESCRIPTION: &str = "Before building a request that makes or changes more than one frame, or takes \
+pub(crate) const PROPOSE_DESCRIPTION: &str = "Before building a request that makes or changes more than one frame, or takes \
     more than about 20 changes, propose a plan: each frame with its page, a one-line intent and, for a new frame, \
     its size. A plan the person reviews first is answered with `proposed`: then end your turn with one sentence \
     on what you plan, and build only when told. A small one is answered with `not_needed`: build it at once.";
@@ -657,7 +657,7 @@ fn no_page(doc: &Document, named: &str) -> ToolError {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
-struct ProposeInput {
+pub(crate) struct ProposeInput {
     /// A short title: what the plan makes ("Onboarding · 4 screens").
     title: String,
     /// The frames to create or change, in the order you will build them.
@@ -684,7 +684,7 @@ struct ProposedItem {
 }
 
 /// The plan an engine proposed, with pages resolved against the document.
-fn resolve(doc: &Document, input: ProposeInput) -> Result<Plan, ToolError> {
+pub(crate) fn resolve(doc: &Document, input: ProposeInput) -> Result<Plan, ToolError> {
     let mut items = vec![];
     for (n, proposed) in input.items.into_iter().enumerate() {
         let at = |field: &str| format!("items[{n}].{field}");

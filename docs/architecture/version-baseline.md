@@ -332,3 +332,10 @@ Pinned `electron-builder` 26.15.3 and `electron-updater` 6.8.9 in apps/desktop (
 run). Context7 includes newer v27 signed-manifest docs; these versions use an explicit application-owned
 Ed25519 release envelope and artifact-digest verification instead. Electron remains 44.7.0; no Rust dependency
 changed. See docs/runbooks/desktop-home.md for the native matrix, trust inputs, preview and acceptance limits.
+
+## Prompt 59 native CLI (2026-10-19)
+
+No third-party version changed. The composition root now links the existing builtin engine, model HTTP,
+OpenAI-compatible/Responses, Anthropic, Google and keychain adapters. Clap remains 4.6.7. Its derive/global
+argument handling and Tokio's Ctrl-C subscription were checked through Context7. The IPC adapter reuses
+its existing Tokio signal/sync features; remote CLI turns are described in ADR-025.

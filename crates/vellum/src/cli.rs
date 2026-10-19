@@ -4,6 +4,9 @@
 //! is on the command line with no code here. A call goes to the daemon like any other client's, which is what
 //! lets it reach a file an editor holds; the command prints the tool's result as JSON.
 
+pub mod commands;
+pub mod prompt;
+
 use std::io;
 use std::path::Path;
 use std::process::ExitCode;
@@ -170,6 +173,8 @@ fn decode_base64(text: &str) -> Option<Vec<u8>> {
 
 /// Runs `vellum tool <args>`.
 pub fn run(dir: &RunDir, executable: &Path, args: Vec<String>) -> io::Result<ExitCode> {
+    let json = args.iter().any(|a| a == "--json");
+    let output = commands::Output { json };
     let registry = Registry::standard();
     let matches = match command(&registry)
         .try_get_matches_from(std::iter::once("tool".to_owned()).chain(args))
@@ -177,7 +182,15 @@ pub fn run(dir: &RunDir, executable: &Path, args: Vec<String>) -> io::Result<Exi
         Ok(matches) => matches,
         Err(error) => {
             // Help goes to stdout with success; a usage error to stderr with code 2.
-            error.print()?;
+            if json {
+                if error.exit_code() == 0 {
+                    println!("{}", json!({"ok":true,"help":error.to_string()}));
+                } else {
+                    output.error("tool", &error.to_string());
+                }
+            } else {
+                error.print()?;
+            }
             return Ok(ExitCode::from(u8::try_from(error.exit_code()).unwrap_or(2)));
         }
     };
@@ -186,7 +199,7 @@ pub fn run(dir: &RunDir, executable: &Path, args: Vec<String>) -> io::Result<Exi
     let arguments = match input(tool, sub) {
         Ok(arguments) => arguments,
         Err(message) => {
-            eprintln!("vellum: {message}");
+            output.error("tool", &message);
             return Ok(ExitCode::from(2));
         }
     };
@@ -206,11 +219,11 @@ pub fn run(dir: &RunDir, executable: &Path, args: Vec<String>) -> io::Result<Exi
         .get(1)
         .ok_or_else(|| io::Error::other("the daemon sent no reply"))?;
     if let Some(error) = reply.get("error") {
-        eprintln!(
-            "vellum: {}",
+        output.error(
+            "tool",
             error["message"]
                 .as_str()
-                .unwrap_or("the daemon refused the call")
+                .unwrap_or("the daemon refused the call"),
         );
         return Ok(ExitCode::FAILURE);
     }
