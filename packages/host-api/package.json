@@ -6,7 +6,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./native-relay": "./src/native-relay.ts"
+    "./native-relay": "./src/native-relay.ts",
+    "./native-account": "./src/native-account.ts",
+    "./account-state": "./src/account-state.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

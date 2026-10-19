@@ -1,7 +1,17 @@
 // TEST DATA. Tagged electron lane: real native binary, GUI session and built desktop bundle required.
 
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  copyFile,
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -346,7 +356,8 @@ test("@electron desktop Home routes, persistent draft and native Save As", async
   await expect(first.getByRole("heading", { name: "Agents and daemon" })).toBeVisible();
   await expect(first.getByText("Usage this week · unavailable", { exact: true })).toBeVisible();
   await first.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(first.getByRole("button", { name: "Continue with email" })).toBeDisabled();
+  await expect(first.getByRole("button", { name: "Continue in browser" })).toBeEnabled();
+  await expect(first.getByRole("button", { name: "Check account" })).toBeEnabled();
   await first.getByRole("button", { name: "Home", exact: true }).click();
   await first.getByRole("button", { name: "New file", exact: true }).click();
   await expect.poll(() => app.windows().some((p) => p !== first)).toBe(true);
@@ -411,7 +422,7 @@ for (const unindexed of [false, true])
   });
 
 for (const appearance of ["light", "dark"] as const)
-  for (const screen of ["A01", "A02", "A04", "A05", "A06"] as const)
+  for (const screen of ["A01", "A02", "A04", "A05", "A05-device", "A06"] as const)
     test(`@electron @design ${screen} desktop · ${appearance}`, async () => {
       test.skip(
         !existsSync(resolve(`../../docs/design/snapshots/${screen}-${appearance}-1280.png`)),
@@ -456,7 +467,15 @@ for (const appearance of ["light", "dark"] as const)
               platform: "mac",
               daemon: true,
               problem: "document-runtime-unavailable",
-              page: screen === "A04" ? "agents" : screen === "A05" ? "signin" : "home",
+              page: screen === "A04" ? "agents" : screen.startsWith("A05") ? "signin" : "home",
+              account:
+                screen === "A05-device"
+                  ? {
+                      kind: "waiting",
+                      userCode: "JPNR–8K4Q",
+                      verificationUrl: "https://account.example/device?user_code=JPNR-8K4Q",
+                    }
+                  : { kind: "idle" },
               welcome: screen === "A01",
               home: screen === "A01" ? { files: [], folders: [] } : home,
               recovery:
@@ -570,4 +589,67 @@ test("@electron macOS integrated title bar keeps native controls, tabs and heade
   await expect(first).toHaveCount(0);
   await page.getByRole("button", { name: "Agents", exact: true }).click();
   await expect(page.getByRole("menu")).toBeVisible();
+});
+
+test("@electron account device flow, browser approval, cancellation and offline sign-out", async () => {
+  test.skip(
+    process.platform === "win32",
+    "POSIX executable fixture; Windows uses its native CLI lane",
+  );
+  // TEST DATA: copy the built app and substitute only its bundled CLI; never touch a real keychain.
+  await app.close();
+  const bundle = join(directory, "account fixture");
+  await cp(resolve("dist"), bundle, { recursive: true });
+  const binary = join(bundle, "bin", "vellum");
+  const approved = join(directory, "approved");
+  await writeFile(
+    binary,
+    `#!${process.execPath}\n
+    const fs = require('node:fs');
+    const command = process.argv[2];
+    const send = (record) => console.log(JSON.stringify({ok:true,command,...record}));
+    if (command === 'login') {
+      send({state:'waiting',user_code:'ABCD-2345',verification_url:'https://account.example/device?user_code=ABCD-2345',expires_in:600});
+      const timer = setInterval(() => {
+        if (fs.existsSync(${JSON.stringify(approved)})) { clearInterval(timer); send({signed_in:true}); }
+      }, 30);
+    } else if (command === 'logout') send({signed_in:false,remote_revoked:false});
+    else if (command === 'whoami') send({user:{id:'fixture',email:'fixture@example.test',name:'Fixture'}});
+    else process.exit(1);
+  `,
+  );
+  await chmod(binary, 0o700);
+  app = await _electron.launch({
+    args: [join(bundle, "main/index.cjs"), "--user-data", join(directory, "account-profile")],
+    env: { ...process.env, TURBO_TELEMETRY_DISABLED: "1", NEXT_TELEMETRY_DISABLED: "1" },
+  });
+  const page = await app.firstWindow();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Continue in browser" }).click();
+  await expect(page.locator(".signin-page").getByRole("status")).toHaveText(
+    "◇ Waiting for approval",
+  );
+  await expect(page.getByText("ABCD-2345", { exact: true })).toBeVisible();
+  await app.evaluate(({ shell }) => {
+    (globalThis as unknown as { accountUrls: string[] }).accountUrls = [];
+    shell.openExternal = async (url) => {
+      (globalThis as unknown as { accountUrls: string[] }).accountUrls.push(url);
+    };
+  });
+  await page.getByRole("button", { name: "Open approval page" }).click();
+  expect(
+    await app.evaluate(() => (globalThis as unknown as { accountUrls: string[] }).accountUrls),
+  ).toEqual(["https://account.example/device?user_code=ABCD-2345"]);
+  await page.getByRole("button", { name: "Cancel sign-in" }).click();
+  await expect(page.getByRole("button", { name: "Continue in browser" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue in browser" }).click();
+  await expect(page.getByText("ABCD-2345", { exact: true })).toBeVisible();
+  await writeFile(approved, "approved");
+  await expect(page.locator(".signin-page").getByRole("status")).toHaveText("✓ Signed in");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page.locator(".signin-page").getByRole("status")).toHaveText(
+    "✓ Signed out on this computer; remote session revocation unconfirmed",
+  );
+  await page.getByRole("button", { name: "Check account" }).click();
+  await expect(page.locator(".signin-page").getByRole("status")).toHaveText("✓ Signed in");
 });

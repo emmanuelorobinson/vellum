@@ -59,7 +59,29 @@ and expiry; Ctrl-C ends the request. `--json` emits waiting/completion records, 
 tokens. All credential persistence uses the existing OS-only SecretStore. Local sessions/documents and
 runtime metadata never receive the account token. Logout deletes it locally even offline and reports
 whether server revocation was confirmed. Sessions can also be listed/revoked through the API. Desktop
-and extension account controls still need native host integration; their local features remain signed out.
+and extension account controls use the same bundled native CLI; local features never start account requests.
+
+## Native hosts
+
+Desktop **Sign in → Continue in browser** starts device login. Compare the displayed code, select
+**Open approval page**, and approve in the browser. **Cancel sign-in** terminates native polling;
+**Check account** explicitly refreshes status, and **Sign out** deletes the local credential even
+when server revocation cannot be confirmed. Sign out remains available after a failed status check.
+The extension supplies **Vellum: Sign In (Pro)**, **Check Account**, and **Sign Out** commands;
+its cancellable notification shows the code and offers **Open approval page**.
+
+Set `VELLUM_ACCOUNT_URL` in the native host environment for the first login, or first use
+`vellum login --account-url …` to save the origin with the session in the OS keychain. There is no
+hardcoded production origin. The desktop and CLI share the same keychain service; a remote extension
+uses the extension host computer's native CLI/keychain, which must be available there.
+
+Constructing either host never reads account credentials or contacts the service. Only account actions
+spawn the fixed bundled executable with bounded NDJSON output and a timeout. The renderer sees public
+status/code/approval URL only; it cannot supply account URLs, tokens, argv or keychain operations. Native
+process cancellation/disposal kills polling and waits for process closure; sign-out waits for login to
+stop before deleting the keychain entry. No account state is saved in host metadata or workspace settings.
+A05 desktop comparisons still exceed the unchanged 1% gate; native device flow behavior is tested using
+an isolated executable fixture, not a real keychain or paid cloud account.
 
 ## Public endpoints
 

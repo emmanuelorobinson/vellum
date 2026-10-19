@@ -404,6 +404,18 @@ button:focus-visible {
   flex-direction: column;
   gap: 20px;
 }
+/* A05-device: dimensions and code typography read from the design's device variant. */
+.signin-page[data-device="true"] > div {
+  width: min(540px, calc(100vw - 48px));
+}
+.signin-page .device-code {
+  font-size: 32px;
+  letter-spacing: 3px;
+  overflow-wrap: anywhere;
+}
+.signin-page .device-url {
+  overflow-wrap: anywhere;
+}
 .signin-page label {
   display: flex;
   justify-content: space-between;

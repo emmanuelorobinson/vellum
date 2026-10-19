@@ -11,8 +11,9 @@ Open items, newest first. Remove an item when it is done and say so in the promp
 - **Prompt 61 needs live cloud acceptance.** Provision an HTTPS account origin, deployment secrets, an SES
   sender/IAM identity, Polar Pro product and 2026-10 webhook, Postgres/Redis and worker mounts. Local
   Postgres/Redis, Bun, browser and real native export/preview acceptance pass; paid checkout, mail delivery,
-  a real OS-keychain login and Windows/Linux/remote CI are unverified. Desktop/extension account controls
-  still need native device-flow wiring; the services and `vellum login` are built. See `docs/runbooks/accounts.md`.
+  a real OS-keychain login and Windows/Linux/remote CI are unverified. Desktop/extension device login is
+  wired; native acceptance uses a fake CLI. Desktop A05 (3.98%) and A05-device (2.09%/2.10%) exceed the
+  unchanged 1% visual gate. See `docs/runbooks/accounts.md` and `target/screen-goldens/`.
 
 - **Prompt 60 needs remote/platform acceptance.** Local Git previews and real merge-driver fixtures pass.
   Run the artifact upload/comment workflows on GitHub (including a fork and private repo) once the CLI/Action
@@ -26,7 +27,8 @@ Open items, newest first. Remove an item when it is done and say so in the promp
   See `docs/runbooks/cli.md` and ADR-025.
 
 - **Prompt 58 is a desktop preview, not an accepted release.** Finish Prompt 55's editable runtime, Home prompt
-  submission, thumbnail/system catalog and provider/usage/activity services; native account sign-in still needs the Prompt 61 device-flow integration.
+  submission, thumbnail/system catalog and provider/usage/activity services. Native account controls now
+  use Prompt 61's device flow; real keychain/service acceptance remains open.
   All ten A01/A02/A04/A05/A06 full-frame goldens remain above the unchanged 1% gate. Supply a release version,
   app icon, signing/notarization identities, Windows publisher and HTTPS update feed/Ed25519 trust key; run the
   other five native targets and signed installation/upgrade lanes. OS notification delivery with a real engine
@@ -3791,3 +3793,58 @@ workspace/browser/installed-engine suites, live Polar/SES, real keychain login, 
 execution were not run. Desktop/extension sign-in controls are not connected. Temporary test containers and
 our account preview server were removed/stopped; Docker Desktop remains running for existing containers.
 No read-only specification changed. Nothing committed.
+
+
+## Prompt 61 follow-up — native account integration
+
+The cloud/CLI implementation was already present. Connected desktop sign-in and extension account commands
+through the bundled `vellum` CLI and its existing OS-only keychain service. No new auth store, vendor package,
+version or cloud deployment. Local features do not construct account requests or read account credentials.
+
+- Shared lazy native controller: bounded NDJSON, fixed executable/argv, ignored stderr, sanitized errors,
+  timeout/cancellation/disposal, public status/code/URL projection only. Validates device URLs and identity
+  shape; waits for child closure before sign-out, rejects failed/truncated output, ignores stale callbacks.
+  Renderer actions cannot supply a URL, token, argv or keychain operation. No account metadata is persisted.
+- Desktop: Continue in browser, code comparison, native approval-page opening, cancel, Check account and
+  Sign out (including after offline/expired checks); explicit unconfirmed remote revocation. Extension:
+  Sign In (Pro), Check Account, Sign Out, cancellable progress and stale-safe approval notifications.
+  First login uses the native host's VELLUM_ACCOUNT_URL or an origin saved by CLI login in the keychain.
+- TDD: missing controller and extension registration were red first. Further red regressions caught duplicate
+  logout cancellation and malformed identity acceptance. Real child fixtures cover fragmented output, bounded
+  output, cancellation and missing executables without keychains/network. Native Electron uses a copied app
+  and fake executable for approval/cancel/completion/status/offline sign-out; no real browser page opened.
+- Pencil confirmed the read-only copy and supplied A05/device structure, variables and screenshots despite
+  design-open's OS application-name failure. Device width/code typography follow measured values. One
+  append-only gap records browser device flow versus the in-app email form/CLI copy. A05 remains red at
+  3.9817% light/3.9799% dark; A05-device at 2.0851%/2.0971%, unchanged 1%/48-channel gate. Comparison images
+  are in target/screen-goldens. No reference or tolerance changed; visual acceptance remains open.
+- No §3.2 reference row names P61. Read sibling outpost's sign-in lifecycle pattern; reused this repo's native
+  account CLI/keychain. No external code ported. Context7 supplied Node subprocess and VS Code progress APIs.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Rust 1.99.0, macOS ARM64; both pnpm telemetry opt-outs):
+
+- Package-local `node_modules/.bin/vitest run --root <package> src`: host-api (14), host-electron (5),
+  extension (40), desktop (24). Cloud wrappers: auth (3), billing (5), jobs (4), mail (2), account (3),
+  API (6 passed/4 integration cases skipped: no Postgres/Redis/native environment configured this session).
+- `node apps/desktop/build.mjs --with-daemon`; `node apps/extension/build.mjs --with-daemon`;
+  `node --test apps/desktop/packaging.test.mjs apps/extension/packaging.test.mjs` (6).
+- From apps/desktop: `node_modules/.bin/playwright test --config test/playwright.config.ts --grep-invert @design`
+  (9 native behavior cases); new account case also passed separately after device styling. Initial sandbox
+  launch aborted; permitted native runs passed. Concurrent final GUI runs timed out before firstWindow and
+  were interrupted; a serial full behavior run passed. A later extra account repeat also stalled and was
+  interrupted; repeat-run flakiness is unresolved. An initial locator was scoped to the account section after matching
+  the unrelated updater status. No assertion was weakened.
+- `node scripts/skia-build.mjs test -p vellum --test account_cli` (1);
+  `cargo test -p vellum-account-http -- --include-ignored` (4, including native loopback);
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1).
+- `pnpm type-check` (33 tasks, existing /private/tmp/vellum-p56-bin PATH shim), final scoped tsc;
+  `node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`; rustfmt;
+  `bash scripts/check-deps.sh` (pure allowlist, bans/licenses/sources; 564 modules/1,548 TS dependencies);
+  clean-room, copy/token lints, scoped Biome, checksum and git diff --check.
+
+Global Biome retains four unrelated fixture/import-format errors. Native cargo deny check retains nine
+existing advisories; its sandbox attempt could not lock the advisory DB. No dependency or advisory policy
+changed. The initial unscoped host Vitest invocations also collected Node/Playwright files; rerunning the
+package's src scope passed. Full workspace suites, native VS Code account acceptance, real keychain/service
+login, live Polar/SES, deployment, remote CI and non-macOS execution were not run. No read-only specification
+changed. Nothing committed.

@@ -1,4 +1,5 @@
 import { externalUrl, type HostServices, PortError, type ThemeInfo } from "@vellum/host-api";
+import type { AccountState } from "@vellum/host-api/account-state";
 
 export const MENU_CATEGORIES = [
   "File",
@@ -57,6 +58,7 @@ export interface DesktopState {
   agentSettings?: AgentSettings;
   recovery?: RecoveryView | null;
   notifications?: boolean;
+  account?: AccountState;
 }
 export type DesktopRequest =
   | {
@@ -71,6 +73,11 @@ export type DesktopRequest =
         | "clipboardRead"
         | "home"
         | "agents"
+        | "accountLogin"
+        | "accountCancel"
+        | "accountRefresh"
+        | "accountLogout"
+        | "accountOpen"
         | "signin"
         | "editor"
         | "newDraft"
@@ -116,6 +123,11 @@ export function parseRequest(value: unknown): DesktopRequest | null {
       "clipboardRead",
       "home",
       "agents",
+      "accountLogin",
+      "accountCancel",
+      "accountRefresh",
+      "accountLogout",
+      "accountOpen",
       "signin",
       "editor",
       "newDraft",

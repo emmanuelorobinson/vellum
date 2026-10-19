@@ -63,8 +63,11 @@ describe("extension activation", () => {
       "vellum.pauseAllAgents",
       "vellum.connectAgents",
       "vellum.refreshSidebar",
+      "vellum.signIn",
+      "vellum.accountStatus",
+      "vellum.signOut",
     ]);
-    expect(context.subscriptions).toHaveLength(12);
+    expect(context.subscriptions).toHaveLength(16);
     for (const subscription of context.subscriptions) subscription.dispose();
     expect(deactivate()).toBeUndefined();
   });

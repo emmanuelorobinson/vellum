@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import { brand } from "@vellum/config";
 import { externalUrl } from "@vellum/host-api";
+import { accountRunner, NativeAccount } from "@vellum/host-api/native-account";
 import { DaemonProcess } from "@vellum/host-api/native-relay";
 import type { AgentSettings, RecoveryView } from "@vellum/host-electron/bridge";
 import {
@@ -79,6 +80,7 @@ const windows = new Map<
 const binary = app.isPackaged
   ? join(process.resourcesPath, "bin", process.platform === "win32" ? "vellum.exe" : "vellum")
   : join(__dirname, "../bin", process.platform === "win32" ? "vellum.exe" : "vellum");
+const account = new NativeAccount(accountRunner(binary), () => pushAll());
 let library: DesktopLibrary;
 let draftDirectory: string;
 let notifications = false;
@@ -137,6 +139,7 @@ function state(entry: WindowEntry): DesktopState {
       ? { id: entry.recovery.id, name: entry.recovery.name, savedAt: entry.recovery.savedAt }
       : null,
     notifications,
+    account: account.state,
   };
 }
 function push(entry: WindowEntry, event?: DesktopEvent) {
@@ -484,6 +487,24 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
       entry.page = value.type;
       push(entry);
       return;
+    case "accountLogin":
+      void account.login();
+      return;
+    case "accountCancel":
+      await account.cancel();
+      return;
+    case "accountRefresh":
+      void account.refresh();
+      return;
+    case "accountLogout":
+      void account.logout();
+      return;
+    case "accountOpen": {
+      const current = account.state;
+      if (current.kind !== "waiting") throw Error("invalid");
+      await shell.openExternal(current.verificationUrl);
+      return;
+    }
     case "agents":
       await showAgents(entry);
       return;
@@ -821,6 +842,7 @@ function createWindow(folder: string | null): WindowEntry {
   });
   window.on("closed", () => {
     windows.delete(contentsId);
+    if (!windows.size) void account.cancel();
     clearInterval(entry.noticeTimer);
     for (const watcher of entry.watchers.values()) watcher.close();
     entry.relay?.dispose();
@@ -868,6 +890,7 @@ else {
     if (process.platform !== "darwin") app.quit();
   });
   app.on("will-quit", () => {
+    account.dispose();
     for (const entry of windows.values()) entry.relay?.dispose();
   });
   void app

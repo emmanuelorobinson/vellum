@@ -58,3 +58,19 @@ describe("contextBridge Host services", () => {
     expect(services.theme()).toEqual({ appearance: "light" });
   });
 });
+
+it("accepts only fixed account actions, never renderer URLs, tokens or command arguments", async () => {
+  const { parseRequest } = await import("./bridge");
+  for (const type of [
+    "accountLogin",
+    "accountCancel",
+    "accountRefresh",
+    "accountLogout",
+    "accountOpen",
+  ]) {
+    expect(parseRequest({ type })).toEqual({ type });
+    expect(parseRequest({ type, token: "canary" })).toBeNull();
+    expect(parseRequest({ type, url: "https://untrusted.example" })).toBeNull();
+    expect(parseRequest({ type, args: ["--account-url", "https://untrusted.example"] })).toBeNull();
+  }
+});

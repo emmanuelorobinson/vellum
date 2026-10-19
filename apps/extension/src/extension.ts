@@ -5,6 +5,7 @@ import { brand } from "@vellum/config";
 import { PortError } from "@vellum/host-api";
 import { createVscodeHost } from "@vellum/host-vscode";
 import * as vscode from "vscode";
+import { accountCommands } from "./account";
 import { executable, exists, readConfig, writeConfig } from "./config-files";
 import { AgentConnections } from "./connect";
 import { ConnectView } from "./connect-view";
@@ -190,6 +191,9 @@ export function activate(context: vscode.ExtensionContext): {
       return true;
     }),
     command("vellum.refreshSidebar", async () => sidebar.refresh()),
+    ...accountCommands(
+      join(context.extensionPath, "bin", process.platform === "win32" ? "vellum.exe" : "vellum"),
+    ),
   );
   return {
     get status() {

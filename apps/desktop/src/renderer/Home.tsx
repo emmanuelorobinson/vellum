@@ -45,6 +45,7 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
   );
   const page = state.page ?? "home";
   const updates = state.updates;
+  const account = state.account ?? { kind: "idle" };
   const files = (state.home?.files ?? [])
     .filter((f) => tab === "Recents" || (tab === "Drafts" && f.kind === "draft"))
     .sort((a, b) =>
@@ -205,18 +206,62 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
           <p>Notifications follow recorded agent turns in open files.</p>
         </section>
       ) : page === "signin" ? (
-        <section className="signin-page">
+        <section className="signin-page" data-device={account.kind === "waiting"}>
           <div>
-            <h1>Sign in to {brand.name}</h1>
-            <p>Enable share links and cloud sync for files you choose.</p>
-            <p>{copy.syncScopeA05}</p>
-            <label>
-              Email <input type="email" disabled />
-            </label>
-            <button className="primary" type="button" disabled>
-              Continue with email
-            </button>
-            <p>⊘ Account sign-in is unavailable in this build.</p>
+            <h1>
+              {account.kind === "waiting" ? "Approve in your browser" : `Sign in to ${brand.name}`}
+            </h1>
+            {account.kind !== "waiting" && (
+              <>
+                <p>Enable share links and cloud sync for files you choose.</p>
+                <p>{copy.syncScopeA05}</p>
+              </>
+            )}
+            {account.kind === "waiting" ? (
+              <>
+                <p>Compare this code with the approval page before connecting this app.</p>
+                <p className="mono device-code">{account.userCode}</p>
+                <p className="mono device-url">{account.verificationUrl.split("?")[0]}</p>
+                <div className="home-actions">
+                  {button("Open approval page", { type: "accountOpen" }, true)}
+                  {button("Cancel sign-in", { type: "accountCancel" })}
+                </div>
+                <p role="status">◇ Waiting for approval</p>
+              </>
+            ) : account.kind === "busy" ? (
+              <>
+                <p role="status">◇ Contacting your account service…</p>
+                {button("Cancel", { type: "accountCancel" })}
+              </>
+            ) : (
+              <>
+                {account.kind === "signed-in" ? (
+                  <p role="status">✓ Signed in</p>
+                ) : (
+                  <>
+                    {button("Continue in browser", { type: "accountLogin" }, true)}
+                    {account.kind === "failed" && (
+                      <p role="alert">
+                        ⊘ Account request unavailable. Try again when your account service is
+                        available.
+                      </p>
+                    )}
+                    {account.kind === "signed-out" && (
+                      <p role="status">
+                        ✓ Signed out
+                        {account.remoteRevoked === false
+                          ? " on this computer; remote session revocation unconfirmed"
+                          : ""}
+                      </p>
+                    )}
+                  </>
+                )}
+                <div className="home-actions">
+                  {button("Check account", { type: "accountRefresh" })}
+                  {button("Sign out", { type: "accountLogout" })}
+                </div>
+              </>
+            )}
             <small>Local editing and agents work without an account.</small>
           </div>
         </section>
