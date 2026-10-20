@@ -36,6 +36,11 @@ impl SyncEndpoint for Endpoint {
                     updates: vec![],
                 },
                 SyncRequest::Push { .. } => SyncReply::Ack,
+                SyncRequest::Comment { .. }
+                | SyncRequest::Presence { .. }
+                | SyncRequest::Sharing { .. } => SyncReply::Error {
+                    code: "invalid_update".into(),
+                },
             },
         }
     }

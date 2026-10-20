@@ -20,6 +20,9 @@ use crate::resolver::variables::{
 /// Every problem in `doc`, as plain sentences naming the ids involved. Empty for a valid document.
 pub fn check_document(doc: &Document) -> Vec<String> {
     let mut problems = Vec::new();
+    if !crate::comments::valid(&doc.comments) {
+        problems.push("invalid comment threads".into());
+    }
 
     let mut seen = BTreeSet::new();
     for id in all_ids(doc) {

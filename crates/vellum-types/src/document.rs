@@ -43,6 +43,9 @@ pub struct Document {
     /// Components by id.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub components: BTreeMap<ComponentId, Component>,
+    /// Comment threads by stable id. They survive deleted anchors and canonical snapshot recovery.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub comments: BTreeMap<crate::NodeId, crate::comments::CommentThread>,
     /// The pages, in order.
     pub pages: Vec<Page>,
 }
@@ -96,6 +99,7 @@ impl Document {
             styles: BTreeMap::new(),
             fonts: BTreeMap::new(),
             components: BTreeMap::new(),
+            comments: BTreeMap::new(),
             pages: Vec::new(),
         }
     }

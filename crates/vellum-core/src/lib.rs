@@ -9,6 +9,7 @@
 //! `vellum-types` and `serde_json`. `scripts/check-deps.sh` enforces that.
 
 pub mod base64;
+pub mod comments;
 pub mod diff;
 pub mod display_list;
 pub mod doc_api;

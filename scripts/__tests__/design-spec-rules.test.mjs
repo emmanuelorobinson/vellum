@@ -77,7 +77,11 @@ test("snapshots are PNG files", () => {
 });
 
 test("DESIGN-DECISIONS.md is Appendix G, each choice UNDECIDED or one of its options with a date and who decided", () => {
-  const text = read("docs", "design", "DESIGN-DECISIONS.md");
+  const sections = read("docs", "design", "DESIGN-DECISIONS.md").split(
+    "\n## Approved v1.1 choices\n",
+  );
+  assert.equal(sections.length, 2);
+  const [text, v11] = sections;
   const guide = read("docs", "implementation", "vellum-implementation-guide.md");
   const appendix = guide.slice(guide.indexOf("# Appendix G"));
   const open = appendix.indexOf("```markdown") + "```markdown\n".length;
@@ -102,7 +106,21 @@ test("DESIGN-DECISIONS.md is Appendix G, each choice UNDECIDED or one of its opt
   );
   const rows = text.split("\n").filter(isRow).map(cells);
   assert.equal(rows.length, 10);
-  for (const [decision, options, choice, date, by] of rows) {
+  const added = v11.split("\n").filter(isRow).map(cells);
+  assert.deepEqual(
+    added.map(([decision]) => decision),
+    [
+      "Comments entry and placement",
+      "Comment authorship and resolution",
+      "Live collaboration and snapshot scope",
+      "Multiplayer actor marks and hues",
+      "Stale presence and following",
+      "Role loss and room reset recovery",
+      "Sharing management",
+    ],
+  );
+  assert.match(v11, /owner approved the supplied Prompt 64 handoff defaults in chat/i);
+  for (const [decision, options, choice, date, by] of [...rows, ...added]) {
     if (choice === "UNDECIDED") {
       assert.deepEqual([date, by], ["", ""], decision);
       continue;

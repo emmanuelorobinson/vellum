@@ -16,6 +16,15 @@ struct Args {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Private native host bridge; the capability stays in the OS keychain.
+    Client {
+        #[arg(long)]
+        endpoint: String,
+        #[arg(long)]
+        room: String,
+        #[arg(long)]
+        key: String,
+    },
     Serve {
         #[arg(long)]
         listen: SocketAddr,
@@ -43,6 +52,8 @@ enum Command {
         expires_ms: i64,
         #[arg(long)]
         owner: Option<String>,
+        #[arg(long)]
+        manage: bool,
     },
     Revoke {
         #[arg(long)]
@@ -97,6 +108,18 @@ fn now() -> i64 {
         .unwrap_or(0)
 }
 fn run(args: Args) -> Result<(), Error> {
+    if let Command::Client {
+        endpoint,
+        room,
+        key: name,
+    } = &args.command
+    {
+        return vellum_sync_ws::bridge_stdio(
+            endpoint,
+            &RoomId::new(room.clone()).map_err(|_| Error::InvalidUpdate)?,
+            &key(name)?,
+        );
+    }
     if matches!(args.command, Command::Schema) {
         println!(
             "{}",
@@ -113,7 +136,13 @@ fn run(args: Args) -> Result<(), Error> {
             .collect();
         Database::Cloud(Arc::new(
             vellum_sync_postgres::PostgresLog::connect(&env("DATABASE_URL")?)?
-                .require_cloud_sync(products)?,
+                .require_cloud_sync(products)?
+                .require_team_collaboration(
+                    env("VELLUM_TEAM_PRODUCTS")?
+                        .split(',')
+                        .map(str::to_owned)
+                        .collect(),
+                )?,
         ))
     } else {
         Database::Local(Arc::new(vellum_sync_sqlite::SqliteLog::open(
@@ -128,6 +157,7 @@ fn run(args: Args) -> Result<(), Error> {
             role,
             expires_ms,
             owner,
+            manage,
         } => {
             let room = RoomId::new(room).map_err(|_| Error::InvalidUpdate)?;
             let secret = key(&name)?;
@@ -145,13 +175,24 @@ fn run(args: Args) -> Result<(), Error> {
                 _ => return Err(Error::InvalidUpdate),
             };
             let grant = Grant { actor, role };
+            if manage && (!grant.actor.is_person() || grant.role != Role::Editor) {
+                return Err(Error::InvalidUpdate);
+            }
             match database {
-                Database::Local(l) => l.grant(&secret, &room, &grant, expires_ms)?,
+                Database::Local(l) => {
+                    l.grant(&secret, &room, &grant, expires_ms)?;
+                    if manage {
+                        l.set_owner(&room, &grant.actor)?;
+                    }
+                }
                 Database::Cloud(l) => {
                     let owner = owner
                         .filter(|o| !o.is_empty())
                         .ok_or(Error::InvalidUpdate)?;
                     l.grant(&secret, &room, &grant, expires_ms, Some(&owner))?;
+                    if manage {
+                        l.set_owner(&room, &grant.actor)?;
+                    }
                 }
             }
             println!("Grant saved");
@@ -184,6 +225,7 @@ fn run(args: Args) -> Result<(), Error> {
                 database.access(),
             ));
             match command {
+                Command::Client { .. } => unreachable!("client returns before storage setup"),
                 Command::Seed { room, file } => {
                     use std::io::Read;
                     let mut bytes = Vec::new();

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "source_sha256": "d82995c9acb7ad7ef070e7b3a3b734ee1eed7c965516cd2ab161d82fd6f7feb2",
+  "source_sha256": "e36561ab2150d7055da17d734e2807eaa1bf6e71c8936ec90fc48a8791768c2e",
   "exporter": "pen.dev MCP (execute)",
   "frames": [
     {
@@ -7451,6 +7451,4157 @@
         "1x": "C01-style-dark-1280.png",
         "2x": "C01-style-dark-1280@2x.png"
       }
+    },
+    {
+      "frame_id": "Cyhbm",
+      "name": "Component / Collaboration / Participant · person",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Participant · person",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 0,
+        "y": -36000,
+        "width": 300,
+        "height": 44
+      },
+      "components": []
+    },
+    {
+      "frame_id": "SlzNh",
+      "name": "Component / Collaboration / Participant · agent",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Participant · agent",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 0,
+        "y": -35940,
+        "width": 300,
+        "height": 44
+      },
+      "components": []
+    },
+    {
+      "frame_id": "cKo1N",
+      "name": "Component / Collaboration / Participant stack",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Participant stack",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 0,
+        "y": -35870,
+        "width": 128,
+        "height": 22
+      },
+      "components": []
+    },
+    {
+      "frame_id": "a3CF5L",
+      "name": "Component / Collaboration / Participant menu",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Participant menu",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 0,
+        "y": -35830,
+        "width": 340,
+        "height": 529
+      },
+      "components": [
+        "Component / Collaboration / Participant · agent",
+        "Component / Collaboration / Participant · person"
+      ]
+    },
+    {
+      "frame_id": "Oi2pD",
+      "name": "Component / Collaboration / Follow indicator",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Follow indicator",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 0,
+        "y": -35460,
+        "width": 318,
+        "height": 38
+      },
+      "components": []
+    },
+    {
+      "frame_id": "C8y7xq",
+      "name": "Component / Collaboration / Cursor · person",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Cursor · person",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 420,
+        "y": -36000,
+        "width": 117,
+        "height": 40
+      },
+      "components": []
+    },
+    {
+      "frame_id": "o9Lqz",
+      "name": "Component / Collaboration / Cursor · agent",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Cursor · agent",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 420,
+        "y": -35890,
+        "width": 125,
+        "height": 40
+      },
+      "components": []
+    },
+    {
+      "frame_id": "b3Yszg",
+      "name": "Component / Collaboration / Selection label",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Selection label",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 420,
+        "y": -35780,
+        "width": 110,
+        "height": 23
+      },
+      "components": []
+    },
+    {
+      "frame_id": "a1FEY",
+      "name": "Component / Collaboration / Role badge",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Role badge",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 420,
+        "y": -35700,
+        "width": 65,
+        "height": 21
+      },
+      "components": []
+    },
+    {
+      "frame_id": "L58DwB",
+      "name": "Component / Collaboration / Sync banner",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Sync banner",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 420,
+        "y": -35630,
+        "width": 640,
+        "height": 54
+      },
+      "components": []
+    },
+    {
+      "frame_id": "aGK1p",
+      "name": "Component / Collaboration / Presence bar",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Presence bar",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 420,
+        "y": -35300,
+        "width": 328,
+        "height": 40
+      },
+      "components": [
+        "Component / Collaboration / Participant stack"
+      ]
+    },
+    {
+      "frame_id": "RaiFz",
+      "name": "Component / Comments / Pin · open",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Pin · open",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 840,
+        "y": -36000,
+        "width": 26,
+        "height": 26
+      },
+      "components": []
+    },
+    {
+      "frame_id": "VDhE8",
+      "name": "Component / Comments / Pin · active",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Pin · active",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 880,
+        "y": -36000,
+        "width": 30,
+        "height": 30
+      },
+      "components": []
+    },
+    {
+      "frame_id": "R7CSe",
+      "name": "Component / Comments / Pin · resolved",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Pin · resolved",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 920,
+        "y": -36000,
+        "width": 24,
+        "height": 24
+      },
+      "components": []
+    },
+    {
+      "frame_id": "DYE45",
+      "name": "Component / Comments / Pin · focused",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Pin · focused",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 960,
+        "y": -36010,
+        "width": 38,
+        "height": 38
+      },
+      "components": []
+    },
+    {
+      "frame_id": "OyGH8",
+      "name": "Component / Comments / Reply",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Reply",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 840,
+        "y": -35860,
+        "width": 300,
+        "height": 73
+      },
+      "components": []
+    },
+    {
+      "frame_id": "TdFOn",
+      "name": "Component / Comments / Composer",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Composer",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 840,
+        "y": -35460,
+        "width": 320,
+        "height": 86
+      },
+      "components": []
+    },
+    {
+      "frame_id": "lr04c",
+      "name": "Component / Comments / Anchor chip",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Anchor chip",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 840,
+        "y": -34860,
+        "width": 201,
+        "height": 21
+      },
+      "components": []
+    },
+    {
+      "frame_id": "Rkha4",
+      "name": "Component / Comments / Thread list row",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Thread list row",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 840,
+        "y": -34780,
+        "width": 320,
+        "height": 97
+      },
+      "components": []
+    },
+    {
+      "frame_id": "JIv8e",
+      "name": "Component / Comments / Thread",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Thread",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1180,
+        "y": -36000,
+        "width": 336,
+        "height": 357
+      },
+      "components": [
+        "Component / Comments / Composer",
+        "Component / Comments / Reply"
+      ]
+    },
+    {
+      "frame_id": "s37i1V",
+      "name": "Component / Sharing / Role row",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Sharing / Role row",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1180,
+        "y": -35300,
+        "width": 340,
+        "height": 71
+      },
+      "components": []
+    },
+    {
+      "frame_id": "bwhey",
+      "name": "Component / Sharing / Role picker",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Sharing / Role picker",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1180,
+        "y": -35000,
+        "width": 360,
+        "height": 256
+      },
+      "components": [
+        "Component / Sharing / Role row"
+      ]
+    },
+    {
+      "frame_id": "VPi2a",
+      "name": "Component / Sharing / Invitation row",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Sharing / Invitation row",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1180,
+        "y": -34300,
+        "width": 420,
+        "height": 47
+      },
+      "components": []
+    },
+    {
+      "frame_id": "toiNs",
+      "name": "Component / Sharing / Member row",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Sharing / Member row",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1180,
+        "y": -33900,
+        "width": 420,
+        "height": 49
+      },
+      "components": []
+    },
+    {
+      "frame_id": "aOgy3",
+      "name": "C39 · Live multiplayer · light",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 115244,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-light-1280.png",
+        "2x": "C39-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "X2sxn",
+      "name": "C39-menu · Participant menu · light",
+      "kind": "screen",
+      "screen_id": "C39-menu",
+      "title": "Participant menu",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 116204,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Participant menu",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-menu-light-1280.png",
+        "2x": "C39-menu-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "YzujH",
+      "name": "C39-follow · Following Alex · light",
+      "kind": "screen",
+      "screen_id": "C39-follow",
+      "title": "Following Alex",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 117164,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Follow indicator",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-follow-light-1280.png",
+        "2x": "C39-follow-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "dHmfe",
+      "name": "C39-reconnect · Sync reconnecting · light",
+      "kind": "screen",
+      "screen_id": "C39-reconnect",
+      "title": "Sync reconnecting",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 118124,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-reconnect-light-1280.png",
+        "2x": "C39-reconnect-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "RX4uq",
+      "name": "C39-offline · Sync disconnected · light",
+      "kind": "screen",
+      "screen_id": "C39-offline",
+      "title": "Sync disconnected",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 119084,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-offline-light-1280.png",
+        "2x": "C39-offline-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "xDcwN",
+      "name": "C39-lease · Editing inside a lease · light",
+      "kind": "screen",
+      "screen_id": "C39-lease",
+      "title": "Editing inside a lease",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 120044,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes",
+        "Component / Lease / You’re editing here too"
+      ],
+      "snapshots": {
+        "1x": "C39-lease-light-1280.png",
+        "2x": "C39-lease-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "L6DvG",
+      "name": "C39 · Live multiplayer · 1512 · light",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "light",
+      "width": 1512,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 121244,
+        "width": 1512,
+        "height": 982
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-light-1512.png",
+        "2x": "C39-light-1512@2x.png"
+      }
+    },
+    {
+      "frame_id": "IfhOd",
+      "name": "C39 · Live multiplayer · dark",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 115244,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-dark-1280.png",
+        "2x": "C39-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "lDhaP",
+      "name": "C39 · Live multiplayer · hc-light",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 115244,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-hc-light-1280.png",
+        "2x": "C39-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ZnzBu",
+      "name": "C39 · Live multiplayer · hc-dark",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 115244,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-hc-dark-1280.png",
+        "2x": "C39-hc-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "icMqS",
+      "name": "C39 · Live multiplayer · 1512 · dark",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "dark",
+      "width": 1512,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 121244,
+        "width": 1512,
+        "height": 982
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-dark-1512.png",
+        "2x": "C39-dark-1512@2x.png"
+      }
+    },
+    {
+      "frame_id": "P9Yomw",
+      "name": "C39 · Live multiplayer · 1512 · hc-light",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "hc-light",
+      "width": 1512,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 121244,
+        "width": 1512,
+        "height": 982
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-hc-light-1512.png",
+        "2x": "C39-hc-light-1512@2x.png"
+      }
+    },
+    {
+      "frame_id": "DDuMq",
+      "name": "C39 · Live multiplayer · 1512 · hc-dark",
+      "kind": "screen",
+      "screen_id": "C39",
+      "title": "Live multiplayer",
+      "theme": "hc-dark",
+      "width": 1512,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 121244,
+        "width": 1512,
+        "height": 982
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-hc-dark-1512.png",
+        "2x": "C39-hc-dark-1512@2x.png"
+      }
+    },
+    {
+      "frame_id": "haVRa",
+      "name": "C39-menu · Participant menu · dark",
+      "kind": "screen",
+      "screen_id": "C39-menu",
+      "title": "Participant menu",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 116204,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Participant menu",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-menu-dark-1280.png",
+        "2x": "C39-menu-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "dWdrs",
+      "name": "C39-follow · Following Alex · dark",
+      "kind": "screen",
+      "screen_id": "C39-follow",
+      "title": "Following Alex",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 117164,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Follow indicator",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-follow-dark-1280.png",
+        "2x": "C39-follow-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "b3SRMM",
+      "name": "C39-reconnect · Sync reconnecting · dark",
+      "kind": "screen",
+      "screen_id": "C39-reconnect",
+      "title": "Sync reconnecting",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 118124,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-reconnect-dark-1280.png",
+        "2x": "C39-reconnect-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "mGGPo",
+      "name": "C39-offline · Sync disconnected · dark",
+      "kind": "screen",
+      "screen_id": "C39-offline",
+      "title": "Sync disconnected",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 119084,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-offline-dark-1280.png",
+        "2x": "C39-offline-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Uqr7V",
+      "name": "C39-lease · Editing inside a lease · dark",
+      "kind": "screen",
+      "screen_id": "C39-lease",
+      "title": "Editing inside a lease",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 120044,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes",
+        "Component / Lease / You’re editing here too"
+      ],
+      "snapshots": {
+        "1x": "C39-lease-dark-1280.png",
+        "2x": "C39-lease-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "sNeXS",
+      "name": "Component / Comments / Thread list row · compact",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Comments / Thread list row · compact",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1600,
+        "y": -34400,
+        "width": 320,
+        "height": 43
+      },
+      "components": []
+    },
+    {
+      "frame_id": "tTogt",
+      "name": "Component / Collaboration / Role banner",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Role banner",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1600,
+        "y": -34200,
+        "width": 420,
+        "height": 48
+      },
+      "components": []
+    },
+    {
+      "frame_id": "k1BvC",
+      "name": "C40 · Comments · light",
+      "kind": "screen",
+      "screen_id": "C40",
+      "title": "Comments",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 123000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-light-1280.png",
+        "2x": "C40-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Q8jM1",
+      "name": "C40-viewer · Comments · Viewer · light",
+      "kind": "screen",
+      "screen_id": "C40-viewer",
+      "title": "Comments · Viewer",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 125880,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-viewer-light-1280.png",
+        "2x": "C40-viewer-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "u5RyA",
+      "name": "C40-editor · Comments · Editor · light",
+      "kind": "screen",
+      "screen_id": "C40-editor",
+      "title": "Comments · Editor",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 123960,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-editor-light-1280.png",
+        "2x": "C40-editor-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "XjYnW",
+      "name": "C40-commenter · Comments · Commenter · light",
+      "kind": "screen",
+      "screen_id": "C40-commenter",
+      "title": "Comments · Commenter",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 124920,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-commenter-light-1280.png",
+        "2x": "C40-commenter-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ing1j",
+      "name": "C40-lost · Comments · Permission lost · light",
+      "kind": "screen",
+      "screen_id": "C40-lost",
+      "title": "Comments · Permission lost",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 126840,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-lost-light-1280.png",
+        "2x": "C40-lost-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Pusd4",
+      "name": "C40-posting · Comments · Posting · light",
+      "kind": "screen",
+      "screen_id": "C40-posting",
+      "title": "Comments · Posting",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 127800,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-posting-light-1280.png",
+        "2x": "C40-posting-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ImiZO",
+      "name": "C40-failed · Comments · Post failed · light",
+      "kind": "screen",
+      "screen_id": "C40-failed",
+      "title": "Comments · Post failed",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 129720,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-failed-light-1280.png",
+        "2x": "C40-failed-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "v9fPT",
+      "name": "C40-resolved · Comments · Resolved · light",
+      "kind": "screen",
+      "screen_id": "C40-resolved",
+      "title": "Comments · Resolved",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 130680,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Pin · resolved",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-resolved-light-1280.png",
+        "2x": "C40-resolved-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "sfjMm",
+      "name": "C40-new · Comments · New comment · light",
+      "kind": "screen",
+      "screen_id": "C40-new",
+      "title": "Comments · New comment",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 128760,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-new-light-1280.png",
+        "2x": "C40-new-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "A3wVf",
+      "name": "C40-empty · Comments · Empty · light",
+      "kind": "screen",
+      "screen_id": "C40-empty",
+      "title": "Comments · Empty",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 131640,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-empty-light-1280.png",
+        "2x": "C40-empty-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "A7F4p",
+      "name": "C40-missing · Comments · Anchor unavailable · light",
+      "kind": "screen",
+      "screen_id": "C40-missing",
+      "title": "Comments · Anchor unavailable",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 132600,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-missing-light-1280.png",
+        "2x": "C40-missing-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "y0NFV",
+      "name": "C40-960 · Comments · 960 · light",
+      "kind": "screen",
+      "screen_id": "C40-960",
+      "title": "Comments",
+      "theme": "light",
+      "width": 960,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 135500,
+        "width": 960,
+        "height": 640
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply"
+      ],
+      "snapshots": {
+        "1x": "C40-960-light-960.png",
+        "2x": "C40-960-light-960@2x.png"
+      }
+    },
+    {
+      "frame_id": "sq2rh",
+      "name": "C40-760 · Comments · 760 · light",
+      "kind": "screen",
+      "screen_id": "C40-760",
+      "title": "Comments",
+      "theme": "light",
+      "width": 760,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 136300,
+        "width": 760,
+        "height": 640
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply"
+      ],
+      "snapshots": {
+        "1x": "C40-760-light-760.png",
+        "2x": "C40-760-light-760@2x.png"
+      }
+    },
+    {
+      "frame_id": "c4kxpd",
+      "name": "C40 · Comments · dark",
+      "kind": "screen",
+      "screen_id": "C40",
+      "title": "Comments",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 123000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-dark-1280.png",
+        "2x": "C40-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ffL1i",
+      "name": "C40-editor · Comments · Editor · dark",
+      "kind": "screen",
+      "screen_id": "C40-editor",
+      "title": "Comments · Editor",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 123960,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-editor-dark-1280.png",
+        "2x": "C40-editor-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "KbDez",
+      "name": "C40-commenter · Comments · Commenter · dark",
+      "kind": "screen",
+      "screen_id": "C40-commenter",
+      "title": "Comments · Commenter",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 124920,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-commenter-dark-1280.png",
+        "2x": "C40-commenter-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Tz9rP",
+      "name": "C40-viewer · Comments · Viewer · dark",
+      "kind": "screen",
+      "screen_id": "C40-viewer",
+      "title": "Comments · Viewer",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 125880,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-viewer-dark-1280.png",
+        "2x": "C40-viewer-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "wgo0T",
+      "name": "C40-lost · Comments · Permission lost · dark",
+      "kind": "screen",
+      "screen_id": "C40-lost",
+      "title": "Comments · Permission lost",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 126840,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-lost-dark-1280.png",
+        "2x": "C40-lost-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "lAJS6",
+      "name": "C40-new · Comments · New comment · dark",
+      "kind": "screen",
+      "screen_id": "C40-new",
+      "title": "Comments · New comment",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 127800,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-new-dark-1280.png",
+        "2x": "C40-new-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "wDGDC",
+      "name": "C40-posting · Comments · Posting · dark",
+      "kind": "screen",
+      "screen_id": "C40-posting",
+      "title": "Comments · Posting",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 128760,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-posting-dark-1280.png",
+        "2x": "C40-posting-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "jCmTP",
+      "name": "C40-failed · Comments · Post failed · dark",
+      "kind": "screen",
+      "screen_id": "C40-failed",
+      "title": "Comments · Post failed",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 129720,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-failed-dark-1280.png",
+        "2x": "C40-failed-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "HIUBP",
+      "name": "C40-resolved · Comments · Resolved · dark",
+      "kind": "screen",
+      "screen_id": "C40-resolved",
+      "title": "Comments · Resolved",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 130680,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Pin · resolved",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-resolved-dark-1280.png",
+        "2x": "C40-resolved-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "SOh4B",
+      "name": "C40-empty · Comments · Empty · dark",
+      "kind": "screen",
+      "screen_id": "C40-empty",
+      "title": "Comments · Empty",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 131640,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-empty-dark-1280.png",
+        "2x": "C40-empty-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "DX90b",
+      "name": "C40-missing · Comments · Anchor unavailable · dark",
+      "kind": "screen",
+      "screen_id": "C40-missing",
+      "title": "Comments · Anchor unavailable",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 132600,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-missing-dark-1280.png",
+        "2x": "C40-missing-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "xJBmD",
+      "name": "C40 · Comments · hc-light",
+      "kind": "screen",
+      "screen_id": "C40",
+      "title": "Comments",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 133500,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-hc-light-1280.png",
+        "2x": "C40-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Pe4bN",
+      "name": "C40 · Comments · hc-dark",
+      "kind": "screen",
+      "screen_id": "C40",
+      "title": "Comments",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 133500,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-hc-dark-1280.png",
+        "2x": "C40-hc-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "lT1Uf",
+      "name": "C40-lost · Comments · Permission lost · hc-light",
+      "kind": "screen",
+      "screen_id": "C40-lost",
+      "title": "Comments · Permission lost",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 134460,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-lost-hc-light-1280.png",
+        "2x": "C40-lost-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ZmEKr",
+      "name": "C40-lost · Comments · Permission lost · hc-dark",
+      "kind": "screen",
+      "screen_id": "C40-lost",
+      "title": "Comments · Permission lost",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 134460,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Role banner",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply",
+        "Component / Comments / Thread list row · compact",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C40-lost-hc-dark-1280.png",
+        "2x": "C40-lost-hc-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "O4brFb",
+      "name": "C40-960 · Comments · 960 · dark",
+      "kind": "screen",
+      "screen_id": "C40-960",
+      "title": "Comments",
+      "theme": "dark",
+      "width": 960,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 135500,
+        "width": 960,
+        "height": 640
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply"
+      ],
+      "snapshots": {
+        "1x": "C40-960-dark-960.png",
+        "2x": "C40-960-dark-960@2x.png"
+      }
+    },
+    {
+      "frame_id": "VaB8U",
+      "name": "C40-760 · Comments · 760 · dark",
+      "kind": "screen",
+      "screen_id": "C40-760",
+      "title": "Comments",
+      "theme": "dark",
+      "width": 760,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 136300,
+        "width": 760,
+        "height": 640
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Reply"
+      ],
+      "snapshots": {
+        "1x": "C40-760-dark-760.png",
+        "2x": "C40-760-dark-760@2x.png"
+      }
+    },
+    {
+      "frame_id": "BzHBL",
+      "name": "Component / Collaboration / Dialog",
+      "kind": "component",
+      "screen_id": null,
+      "title": "Component / Collaboration / Dialog",
+      "theme": null,
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 1600,
+        "y": -33400,
+        "width": 480,
+        "height": 149
+      },
+      "components": []
+    },
+    {
+      "frame_id": "A9KW2w",
+      "name": "C41-connect · Connecting · light",
+      "kind": "screen",
+      "screen_id": "C41-connect",
+      "title": "Connecting",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 137400,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-connect-light-1280.png",
+        "2x": "C41-connect-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Cyivq",
+      "name": "C41-connected · Connected · light",
+      "kind": "screen",
+      "screen_id": "C41-connected",
+      "title": "Connected",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 138360,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-connected-light-1280.png",
+        "2x": "C41-connected-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "V5wMmf",
+      "name": "C41-lost · Connection lost · light",
+      "kind": "screen",
+      "screen_id": "C41-lost",
+      "title": "Connection lost",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 139320,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-lost-light-1280.png",
+        "2x": "C41-lost-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "jzHn0",
+      "name": "C41-reconnect · Reconnecting · unsent edits · light",
+      "kind": "screen",
+      "screen_id": "C41-reconnect",
+      "title": "Reconnecting · unsent edits",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 140280,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-reconnect-light-1280.png",
+        "2x": "C41-reconnect-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "EJe5S",
+      "name": "C41-recovered · Changes accepted · light",
+      "kind": "screen",
+      "screen_id": "C41-recovered",
+      "title": "Changes accepted",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 141240,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-recovered-light-1280.png",
+        "2x": "C41-recovered-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "xnYgB",
+      "name": "C41-downgraded · Role changed to Commenter · light",
+      "kind": "screen",
+      "screen_id": "C41-downgraded",
+      "title": "Role changed to Commenter",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 144120,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-downgraded-light-1280.png",
+        "2x": "C41-downgraded-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "sGUdW",
+      "name": "C41-denied · Access denied · light",
+      "kind": "screen",
+      "screen_id": "C41-denied",
+      "title": "Access denied",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 142200,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-denied-light-1280.png",
+        "2x": "C41-denied-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "LkKQd",
+      "name": "C41-revoked · Access revoked · light",
+      "kind": "screen",
+      "screen_id": "C41-revoked",
+      "title": "Access revoked",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 143160,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-revoked-light-1280.png",
+        "2x": "C41-revoked-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "OIcde",
+      "name": "C41-version · Incompatible sync version · light",
+      "kind": "screen",
+      "screen_id": "C41-version",
+      "title": "Incompatible sync version",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 145080,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-version-light-1280.png",
+        "2x": "C41-version-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "TuEhK",
+      "name": "C41-reset · Room reset · light",
+      "kind": "screen",
+      "screen_id": "C41-reset",
+      "title": "Room reset",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 146040,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-reset-light-1280.png",
+        "2x": "C41-reset-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "tzQKp",
+      "name": "C39-person-offline · Alex disconnected · light",
+      "kind": "screen",
+      "screen_id": "C39-person-offline",
+      "title": "Alex disconnected",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 133480,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Participant menu",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-person-offline-light-1280.png",
+        "2x": "C39-person-offline-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ItziH",
+      "name": "C39-person-offline · Alex disconnected · dark",
+      "kind": "screen",
+      "screen_id": "C39-person-offline",
+      "title": "Alex disconnected",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 133480,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Participant menu",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-person-offline-dark-1280.png",
+        "2x": "C39-person-offline-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "r65o7",
+      "name": "C41-connect · Connecting · dark",
+      "kind": "screen",
+      "screen_id": "C41-connect",
+      "title": "Connecting",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 137400,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-connect-dark-1280.png",
+        "2x": "C41-connect-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "r0qKR2",
+      "name": "C41-connected · Connected · dark",
+      "kind": "screen",
+      "screen_id": "C41-connected",
+      "title": "Connected",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 138360,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-connected-dark-1280.png",
+        "2x": "C41-connected-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "T6kRd",
+      "name": "C41-lost · Connection lost · dark",
+      "kind": "screen",
+      "screen_id": "C41-lost",
+      "title": "Connection lost",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 139320,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-lost-dark-1280.png",
+        "2x": "C41-lost-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "vCfSL",
+      "name": "C41-reconnect · Reconnecting · unsent edits · dark",
+      "kind": "screen",
+      "screen_id": "C41-reconnect",
+      "title": "Reconnecting · unsent edits",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 140280,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-reconnect-dark-1280.png",
+        "2x": "C41-reconnect-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "TXToe",
+      "name": "C41-recovered · Changes accepted · dark",
+      "kind": "screen",
+      "screen_id": "C41-recovered",
+      "title": "Changes accepted",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 141240,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-recovered-dark-1280.png",
+        "2x": "C41-recovered-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "yw2FG",
+      "name": "C41-denied · Access denied · dark",
+      "kind": "screen",
+      "screen_id": "C41-denied",
+      "title": "Access denied",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 142200,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-denied-dark-1280.png",
+        "2x": "C41-denied-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "g4Q0u",
+      "name": "C41-revoked · Access revoked · dark",
+      "kind": "screen",
+      "screen_id": "C41-revoked",
+      "title": "Access revoked",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 143160,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-revoked-dark-1280.png",
+        "2x": "C41-revoked-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "sdmw7",
+      "name": "C41-downgraded · Role changed to Commenter · dark",
+      "kind": "screen",
+      "screen_id": "C41-downgraded",
+      "title": "Role changed to Commenter",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 144120,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-downgraded-dark-1280.png",
+        "2x": "C41-downgraded-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "hqfEd",
+      "name": "C41-version · Incompatible sync version · dark",
+      "kind": "screen",
+      "screen_id": "C41-version",
+      "title": "Incompatible sync version",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 145080,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-version-dark-1280.png",
+        "2x": "C41-version-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "iJ5Zj",
+      "name": "C41-reset · Room reset · dark",
+      "kind": "screen",
+      "screen_id": "C41-reset",
+      "title": "Room reset",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 146040,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-reset-dark-1280.png",
+        "2x": "C41-reset-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "MKbqc",
+      "name": "C41-lost · Connection lost · hc-light",
+      "kind": "screen",
+      "screen_id": "C41-lost",
+      "title": "Connection lost",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 147000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-lost-hc-light-1280.png",
+        "2x": "C41-lost-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "d09Snq",
+      "name": "C41-lost · Connection lost · hc-dark",
+      "kind": "screen",
+      "screen_id": "C41-lost",
+      "title": "Connection lost",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 147000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-lost-hc-dark-1280.png",
+        "2x": "C41-lost-hc-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "X6lOj",
+      "name": "C41-revoked · Access revoked · hc-light",
+      "kind": "screen",
+      "screen_id": "C41-revoked",
+      "title": "Access revoked",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 147960,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-revoked-hc-light-1280.png",
+        "2x": "C41-revoked-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "CzUKT",
+      "name": "C41-revoked · Access revoked · hc-dark",
+      "kind": "screen",
+      "screen_id": "C41-revoked",
+      "title": "Access revoked",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 147960,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-revoked-hc-dark-1280.png",
+        "2x": "C41-revoked-hc-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "cd5Gj",
+      "name": "C41-downgraded · Role changed to Commenter · hc-light",
+      "kind": "screen",
+      "screen_id": "C41-downgraded",
+      "title": "Role changed to Commenter",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 5120,
+        "y": 148920,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-downgraded-hc-light-1280.png",
+        "2x": "C41-downgraded-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "BkFN3",
+      "name": "C41-downgraded · Role changed to Commenter · hc-dark",
+      "kind": "screen",
+      "screen_id": "C41-downgraded",
+      "title": "Role changed to Commenter",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 6800,
+        "y": 148920,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-downgraded-hc-dark-1280.png",
+        "2x": "C41-downgraded-hc-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "nstua",
+      "name": "W02-v11-not-shared · Share dialog · v1.1 · Not shared · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-not-shared",
+      "title": "Share dialog · v1.1 · Not shared",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 150000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-not-shared-light-1280.png",
+        "2x": "W02-v11-not-shared-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "V1CtDP",
+      "name": "W02-v11-checking · Share dialog · v1.1 · Checking dependencies · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-checking",
+      "title": "Share dialog · v1.1 · Checking dependencies",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 150960,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-checking-light-1280.png",
+        "2x": "W02-v11-checking-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "RFExS",
+      "name": "W02-v11-uploading · Share dialog · v1.1 · Uploading · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-uploading",
+      "title": "Share dialog · v1.1 · Uploading",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 151920,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-uploading-light-1280.png",
+        "2x": "W02-v11-uploading-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "iyFix",
+      "name": "W02-v11-shared · Share dialog · v1.1 · Shared · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-shared",
+      "title": "Share dialog · v1.1 · Shared",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 152880,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-shared-light-1280.png",
+        "2x": "W02-v11-shared-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Pq1N6",
+      "name": "W02-v11-changed · Share dialog · v1.1 · Changed since shared · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-changed",
+      "title": "Share dialog · v1.1 · Changed since shared",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 153840,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-changed-light-1280.png",
+        "2x": "W02-v11-changed-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "sIh9a",
+      "name": "W02-v11-failed · Share dialog · v1.1 · Upload failed · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-failed",
+      "title": "Share dialog · v1.1 · Upload failed",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 154800,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-failed-light-1280.png",
+        "2x": "W02-v11-failed-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "qGO6a",
+      "name": "W02-v11-live-off · Share dialog · v1.1 · Live off · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-live-off",
+      "title": "Share dialog · v1.1 · Live off",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 155760,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-live-off-light-1280.png",
+        "2x": "W02-v11-live-off-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "m0d0cc",
+      "name": "W02-v11-live-on · Share dialog · v1.1 · Live on · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-live-on",
+      "title": "Share dialog · v1.1 · Live on",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 156720,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-live-on-light-1280.png",
+        "2x": "W02-v11-live-on-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "g7fwdn",
+      "name": "W02-v11-role-picker · Share dialog · v1.1 · Role picker · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-role-picker",
+      "title": "Share dialog · v1.1 · Role picker",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 157680,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar",
+        "Component / Sharing / Role picker"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-role-picker-light-1280.png",
+        "2x": "W02-v11-role-picker-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "dIFS5",
+      "name": "W02-v11-invite-pending · Share dialog · v1.1 · Invitation pending · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-invite-pending",
+      "title": "Share dialog · v1.1 · Invitation pending",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 158640,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-invite-pending-light-1280.png",
+        "2x": "W02-v11-invite-pending-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "eYKWw",
+      "name": "W02-v11-invite-accepted · Share dialog · v1.1 · Invitation accepted · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-invite-accepted",
+      "title": "Share dialog · v1.1 · Invitation accepted",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 159600,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-invite-accepted-light-1280.png",
+        "2x": "W02-v11-invite-accepted-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "E75vF",
+      "name": "W02-v11-role-changed · Share dialog · v1.1 · Role changed · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-role-changed",
+      "title": "Share dialog · v1.1 · Role changed",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 160560,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-role-changed-light-1280.png",
+        "2x": "W02-v11-role-changed-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Q3l3zr",
+      "name": "W02-v11-invite-failed · Share dialog · v1.1 · Invitation failed · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-invite-failed",
+      "title": "Share dialog · v1.1 · Invitation failed",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 162480,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-invite-failed-light-1280.png",
+        "2x": "W02-v11-invite-failed-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Y7F58t",
+      "name": "W02-v11-team · Share dialog · v1.1 · Team required · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-team",
+      "title": "Share dialog · v1.1 · Team required",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 163440,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-team-light-1280.png",
+        "2x": "W02-v11-team-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "eLRxh",
+      "name": "W02-v11-selfhost · Share dialog · v1.1 · Self-hosted · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-selfhost",
+      "title": "Share dialog · v1.1 · Self-hosted",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 164400,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-selfhost-light-1280.png",
+        "2x": "W02-v11-selfhost-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "wys1C",
+      "name": "W02-v11-revoked · Share dialog · v1.1 · Access revoked · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-revoked",
+      "title": "Share dialog · v1.1 · Access revoked",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 168240,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-revoked-light-1280.png",
+        "2x": "W02-v11-revoked-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "zA8Gw",
+      "name": "W02-v11-remove · Share dialog · v1.1 · Remove collaborator · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-remove",
+      "title": "Share dialog · v1.1 · Remove collaborator",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 161520,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-remove-light-1280.png",
+        "2x": "W02-v11-remove-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "rWaeR",
+      "name": "W02-v11-recipient-viewer · Share dialog · v1.1 · Recipient Viewer · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-recipient-viewer",
+      "title": "Share dialog · v1.1 · Recipient Viewer",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 165360,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-recipient-viewer-light-1280.png",
+        "2x": "W02-v11-recipient-viewer-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "npkM6",
+      "name": "W02-v11-recipient-commenter · Share dialog · v1.1 · Recipient Commenter · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-recipient-commenter",
+      "title": "Share dialog · v1.1 · Recipient Commenter",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 166320,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-recipient-commenter-light-1280.png",
+        "2x": "W02-v11-recipient-commenter-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "s8xAv",
+      "name": "W02-v11-recipient-editor · Share dialog · v1.1 · Recipient Editor · light",
+      "kind": "screen",
+      "screen_id": "W02-v11-recipient-editor",
+      "title": "Share dialog · v1.1 · Recipient Editor",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 1760,
+        "y": 167280,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-recipient-editor-light-1280.png",
+        "2x": "W02-v11-recipient-editor-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "WmCDM",
+      "name": "W02-v11-not-shared · Share dialog · v1.1 · Not shared · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-not-shared",
+      "title": "Share dialog · v1.1 · Not shared",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 150000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-not-shared-dark-1280.png",
+        "2x": "W02-v11-not-shared-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "mCgfQ",
+      "name": "W02-v11-checking · Share dialog · v1.1 · Checking dependencies · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-checking",
+      "title": "Share dialog · v1.1 · Checking dependencies",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 150960,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-checking-dark-1280.png",
+        "2x": "W02-v11-checking-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "wJ7P7",
+      "name": "W02-v11-uploading · Share dialog · v1.1 · Uploading · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-uploading",
+      "title": "Share dialog · v1.1 · Uploading",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 151920,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-uploading-dark-1280.png",
+        "2x": "W02-v11-uploading-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "LVpoL",
+      "name": "W02-v11-shared · Share dialog · v1.1 · Shared · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-shared",
+      "title": "Share dialog · v1.1 · Shared",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 152880,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-shared-dark-1280.png",
+        "2x": "W02-v11-shared-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "o3gDX",
+      "name": "W02-v11-changed · Share dialog · v1.1 · Changed since shared · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-changed",
+      "title": "Share dialog · v1.1 · Changed since shared",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 153840,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-changed-dark-1280.png",
+        "2x": "W02-v11-changed-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "xMmGJ",
+      "name": "W02-v11-failed · Share dialog · v1.1 · Upload failed · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-failed",
+      "title": "Share dialog · v1.1 · Upload failed",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 154800,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-failed-dark-1280.png",
+        "2x": "W02-v11-failed-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Gq3BJ",
+      "name": "W02-v11-live-off · Share dialog · v1.1 · Live off · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-live-off",
+      "title": "Share dialog · v1.1 · Live off",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 155760,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-live-off-dark-1280.png",
+        "2x": "W02-v11-live-off-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ibsI0",
+      "name": "W02-v11-live-on · Share dialog · v1.1 · Live on · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-live-on",
+      "title": "Share dialog · v1.1 · Live on",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 156720,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-live-on-dark-1280.png",
+        "2x": "W02-v11-live-on-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "hWhQI",
+      "name": "W02-v11-role-picker · Share dialog · v1.1 · Role picker · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-role-picker",
+      "title": "Share dialog · v1.1 · Role picker",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 157680,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar",
+        "Component / Sharing / Role picker"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-role-picker-dark-1280.png",
+        "2x": "W02-v11-role-picker-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "SwVBc",
+      "name": "W02-v11-invite-pending · Share dialog · v1.1 · Invitation pending · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-invite-pending",
+      "title": "Share dialog · v1.1 · Invitation pending",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 158640,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-invite-pending-dark-1280.png",
+        "2x": "W02-v11-invite-pending-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "Ckv66",
+      "name": "W02-v11-invite-accepted · Share dialog · v1.1 · Invitation accepted · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-invite-accepted",
+      "title": "Share dialog · v1.1 · Invitation accepted",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 159600,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-invite-accepted-dark-1280.png",
+        "2x": "W02-v11-invite-accepted-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "G9aLQ",
+      "name": "W02-v11-role-changed · Share dialog · v1.1 · Role changed · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-role-changed",
+      "title": "Share dialog · v1.1 · Role changed",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 160560,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-role-changed-dark-1280.png",
+        "2x": "W02-v11-role-changed-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "LoLqZ",
+      "name": "W02-v11-remove · Share dialog · v1.1 · Remove collaborator · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-remove",
+      "title": "Share dialog · v1.1 · Remove collaborator",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 161520,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-remove-dark-1280.png",
+        "2x": "W02-v11-remove-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "GWqur",
+      "name": "W02-v11-invite-failed · Share dialog · v1.1 · Invitation failed · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-invite-failed",
+      "title": "Share dialog · v1.1 · Invitation failed",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 162480,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-invite-failed-dark-1280.png",
+        "2x": "W02-v11-invite-failed-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "PECZj",
+      "name": "W02-v11-team · Share dialog · v1.1 · Team required · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-team",
+      "title": "Share dialog · v1.1 · Team required",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 163440,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-team-dark-1280.png",
+        "2x": "W02-v11-team-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "ee3t2",
+      "name": "W02-v11-selfhost · Share dialog · v1.1 · Self-hosted · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-selfhost",
+      "title": "Share dialog · v1.1 · Self-hosted",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 164400,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-selfhost-dark-1280.png",
+        "2x": "W02-v11-selfhost-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "a7xlZ",
+      "name": "W02-v11-revoked · Share dialog · v1.1 · Access revoked · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-revoked",
+      "title": "Share dialog · v1.1 · Access revoked",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 168240,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Ready",
+        "Component / Button / Default",
+        "Component / Collaboration / Presence bar"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-revoked-dark-1280.png",
+        "2x": "W02-v11-revoked-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "VTijM",
+      "name": "W02-v11-recipient-viewer · Share dialog · v1.1 · Recipient Viewer · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-recipient-viewer",
+      "title": "Share dialog · v1.1 · Recipient Viewer",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 165360,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-recipient-viewer-dark-1280.png",
+        "2x": "W02-v11-recipient-viewer-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "mcO6E",
+      "name": "W02-v11-recipient-commenter · Share dialog · v1.1 · Recipient Commenter · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-recipient-commenter",
+      "title": "Share dialog · v1.1 · Recipient Commenter",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 166320,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-recipient-commenter-dark-1280.png",
+        "2x": "W02-v11-recipient-commenter-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "q4CwCw",
+      "name": "W02-v11-recipient-editor · Share dialog · v1.1 · Recipient Editor · dark",
+      "kind": "screen",
+      "screen_id": "W02-v11-recipient-editor",
+      "title": "Share dialog · v1.1 · Recipient Editor",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 3440,
+        "y": 167280,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "W02-v11-recipient-editor-dark-1280.png",
+        "2x": "W02-v11-recipient-editor-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "sQD3v",
+      "name": "Components · Collaboration and Comments · light",
+      "kind": "components",
+      "screen_id": null,
+      "title": "Collaboration and Comments",
+      "theme": "light",
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 0,
+        "y": -30000,
+        "width": 2400,
+        "height": 2078
+      },
+      "components": [
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Follow indicator",
+        "Component / Collaboration / Participant menu",
+        "Component / Collaboration / Participant stack",
+        "Component / Collaboration / Participant · agent",
+        "Component / Collaboration / Participant · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Anchor chip",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Pin · resolved",
+        "Component / Comments / Thread",
+        "Component / Comments / Thread list row · compact",
+        "Component / Sharing / Invitation row",
+        "Component / Sharing / Member row",
+        "Component / Sharing / Role picker"
+      ]
+    },
+    {
+      "frame_id": "FM8Rv",
+      "name": "Components · Collaboration and Comments · dark",
+      "kind": "components",
+      "screen_id": null,
+      "title": "Collaboration and Comments",
+      "theme": "dark",
+      "width": null,
+      "page": null,
+      "bounds": {
+        "x": 2500,
+        "y": -30000,
+        "width": 2400,
+        "height": 2078
+      },
+      "components": [
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Dialog",
+        "Component / Collaboration / Follow indicator",
+        "Component / Collaboration / Participant menu",
+        "Component / Collaboration / Participant stack",
+        "Component / Collaboration / Participant · agent",
+        "Component / Collaboration / Participant · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Role badge",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Anchor chip",
+        "Component / Comments / Composer",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · focused",
+        "Component / Comments / Pin · open",
+        "Component / Comments / Pin · resolved",
+        "Component / Comments / Thread",
+        "Component / Comments / Thread list row · compact",
+        "Component / Sharing / Invitation row",
+        "Component / Sharing / Member row",
+        "Component / Sharing / Role picker"
+      ]
+    },
+    {
+      "frame_id": "HYLAB",
+      "name": "C39-return · Returned to your own view · light",
+      "kind": "screen",
+      "screen_id": "C39-return",
+      "title": "Returned to your own view",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 8600,
+        "y": 121244,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-return-light-1280.png",
+        "2x": "C39-return-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "tuUbQ",
+      "name": "C39-return · Returned to your own view · dark",
+      "kind": "screen",
+      "screen_id": "C39-return",
+      "title": "Returned to your own view",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 10300,
+        "y": 121244,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C39-return-dark-1280.png",
+        "2x": "C39-return-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "qY2QV",
+      "name": "C41 · Collaboration connection · light",
+      "kind": "screen",
+      "screen_id": "C41",
+      "title": "Collaboration connection",
+      "theme": "light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 8600,
+        "y": 123000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-light-1280.png",
+        "2x": "C41-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "TApPs",
+      "name": "C41 · Collaboration connection · dark",
+      "kind": "screen",
+      "screen_id": "C41",
+      "title": "Collaboration connection",
+      "theme": "dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 10300,
+        "y": 123000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-dark-1280.png",
+        "2x": "C41-dark-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "CGxpA",
+      "name": "C41 · Collaboration connection · hc-light",
+      "kind": "screen",
+      "screen_id": "C41",
+      "title": "Collaboration connection",
+      "theme": "hc-light",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 8600,
+        "y": 124000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-hc-light-1280.png",
+        "2x": "C41-hc-light-1280@2x.png"
+      }
+    },
+    {
+      "frame_id": "p4VLI",
+      "name": "C41 · Collaboration connection · hc-dark",
+      "kind": "screen",
+      "screen_id": "C41",
+      "title": "Collaboration connection",
+      "theme": "hc-dark",
+      "width": 1280,
+      "page": null,
+      "bounds": {
+        "x": 10300,
+        "y": 124000,
+        "width": 1280,
+        "height": 800
+      },
+      "components": [
+        "Component / Agent Panel / Building",
+        "Component / Collaboration / Cursor · agent",
+        "Component / Collaboration / Cursor · person",
+        "Component / Collaboration / Presence bar",
+        "Component / Collaboration / Selection label",
+        "Component / Collaboration / Sync banner",
+        "Component / Comments / Pin · active",
+        "Component / Comments / Pin · open",
+        "Component / Lease / Working · 14 changes"
+      ],
+      "snapshots": {
+        "1x": "C41-hc-dark-1280.png",
+        "2x": "C41-hc-dark-1280@2x.png"
+      }
     }
   ],
   "components": [
@@ -8461,6 +12612,114 @@
     {
       "id": "N4TB2J",
       "name": "Component / Provider / Status rows"
+    },
+    {
+      "id": "Cyhbm",
+      "name": "Component / Collaboration / Participant · person"
+    },
+    {
+      "id": "SlzNh",
+      "name": "Component / Collaboration / Participant · agent"
+    },
+    {
+      "id": "cKo1N",
+      "name": "Component / Collaboration / Participant stack"
+    },
+    {
+      "id": "a3CF5L",
+      "name": "Component / Collaboration / Participant menu"
+    },
+    {
+      "id": "Oi2pD",
+      "name": "Component / Collaboration / Follow indicator"
+    },
+    {
+      "id": "C8y7xq",
+      "name": "Component / Collaboration / Cursor · person"
+    },
+    {
+      "id": "o9Lqz",
+      "name": "Component / Collaboration / Cursor · agent"
+    },
+    {
+      "id": "b3Yszg",
+      "name": "Component / Collaboration / Selection label"
+    },
+    {
+      "id": "a1FEY",
+      "name": "Component / Collaboration / Role badge"
+    },
+    {
+      "id": "L58DwB",
+      "name": "Component / Collaboration / Sync banner"
+    },
+    {
+      "id": "aGK1p",
+      "name": "Component / Collaboration / Presence bar"
+    },
+    {
+      "id": "RaiFz",
+      "name": "Component / Comments / Pin · open"
+    },
+    {
+      "id": "VDhE8",
+      "name": "Component / Comments / Pin · active"
+    },
+    {
+      "id": "R7CSe",
+      "name": "Component / Comments / Pin · resolved"
+    },
+    {
+      "id": "DYE45",
+      "name": "Component / Comments / Pin · focused"
+    },
+    {
+      "id": "OyGH8",
+      "name": "Component / Comments / Reply"
+    },
+    {
+      "id": "TdFOn",
+      "name": "Component / Comments / Composer"
+    },
+    {
+      "id": "lr04c",
+      "name": "Component / Comments / Anchor chip"
+    },
+    {
+      "id": "Rkha4",
+      "name": "Component / Comments / Thread list row"
+    },
+    {
+      "id": "JIv8e",
+      "name": "Component / Comments / Thread"
+    },
+    {
+      "id": "s37i1V",
+      "name": "Component / Sharing / Role row"
+    },
+    {
+      "id": "bwhey",
+      "name": "Component / Sharing / Role picker"
+    },
+    {
+      "id": "VPi2a",
+      "name": "Component / Sharing / Invitation row"
+    },
+    {
+      "id": "toiNs",
+      "name": "Component / Sharing / Member row"
+    },
+    {
+      "id": "sNeXS",
+      "name": "Component / Comments / Thread list row · compact"
+    },
+    {
+      "id": "tTogt",
+      "name": "Component / Collaboration / Role banner"
+    },
+    {
+      "id": "BzHBL",
+      "name": "Component / Collaboration / Dialog"
     }
   ],
   "variables": {
@@ -8536,7 +12795,8 @@
       "motion/placeholder",
       "motion/step-ring",
       "chrome/elevation-color",
-      "chrome/elevation-blur"
+      "chrome/elevation-blur",
+      "chrome/scrim"
     ]
   }
 }

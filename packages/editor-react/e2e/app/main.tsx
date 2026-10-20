@@ -43,6 +43,7 @@ import {
   collaborationNodes,
   collaborationScenario,
 } from "../../fixtures/collaboration-scenarios";
+import { liveDocument, liveScenario } from "../../fixtures/live-scenarios";
 import "@vellum/ui-tokens/tokens.css";
 import { createRoot } from "react-dom/client";
 import {
@@ -66,6 +67,7 @@ import {
 } from "../../fixtures/resource-scenarios";
 import { EDGE_RESET, type EdgeScenario, edgeSetup } from "../../fixtures/shell-scenarios";
 import { type EdgeProps, EditorWorkspace } from "../../src/EditorWorkspace";
+import { ShareDialog } from "../../src/share/ShareDialog";
 import "./fonts.css";
 import { authoringDocument, authoringHost } from "../../fixtures/authoring-scenarios";
 import {
@@ -213,6 +215,7 @@ let current = authoringName
                   ? juniperNodes()
                   : startNodes(),
         );
+if (q.has("live")) current = liveDocument(current);
 /** The document with other layers on its first page: the design scenarios keep their variables and components. */
 const withChildren = (children: Node[]): Document =>
   designName
@@ -458,6 +461,7 @@ const presence = collaboration
     })
   : null;
 if (collaborationName === "c35") session.select(["step2"]);
+const live = q.has("live") ? liveScenario(engine, session, q.get("live")!) : null;
 const handoffHost = new JuniperHandoff();
 const ledger = ledgerName
   ? (() => {
@@ -672,6 +676,9 @@ type Hooks = {
   preferencesSaved(): unknown[];
   palette(): unknown;
   edgeUi(): unknown;
+  liveRole(role: import("@vellum/types-ts").Role): void;
+  liveConnection(state: import("@vellum/editor-core").CollaborationLink["state"]): void;
+  liveRequests(): unknown[];
 };
 declare global {
   interface Window {
@@ -760,122 +767,158 @@ window.__vellum = {
   preferencesSaved: () => preferencesHost.saved,
   palette: () => (palette ? { ...palette.state, results: palette.results() } : null),
   edgeUi: () => edgeUi.state,
+  liveRole: (role) => live?.role(role),
+  liveConnection: (state) => live?.connection(state),
+  liveRequests: () => live?.requests ?? [],
 };
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
+let liveShareOpen = q.get("live") === "share" || q.get("live") === "selfhost";
 function render() {
   root.render(
-    <EditorWorkspace
-      workspace={workspace}
-      {...(presence ? { presence } : {})}
-      session={session}
-      engine={engine}
-      controller={controller}
-      device={device}
-      host={"browser"}
-      platform={navigator.platform.startsWith("Mac") ? "mac" : "linux"}
-      appearance={appearance}
-      fileName="juniper.vellum"
-      saveState={(q.get("save") as "saved" | "saving" | "unsaved" | null) ?? "saved"}
-      branch="feat/onboarding"
-      connection={connection}
-      agents={[{ id: "teal", kind: "agent", name: "Teal", hue: "teal" }]}
-      actors={{ teal: { id: "teal", kind: "agent", name: "Teal", hue: "teal" }, ...AGENT_ACTORS }}
-      onShare={() => {}}
-      onPreview={() => {}}
-      {...(settings ? {} : { onSettings: () => {} })}
-      onAction={(command) => {
-        if (shellOn) hostActions.push({ command });
-      }}
-      basicRenderer={!!edgeConf?.basicRenderer}
-      {...(shellOn
-        ? {
-            shell: {
-              ...(palette ? { palette } : {}),
-              ...(settings ? { settings } : {}),
-              settingsHost: {
-                providerKeySet: true,
-                stockProviders: [{ id: "pixabay", name: "Pixabay" }],
-                changeProviderKey: () => hostActions.push({ command: "stock.key" }),
+    <>
+      <EditorWorkspace
+        workspace={workspace}
+        {...(presence ? { presence } : {})}
+        {...(live ? { collaboration: live.controller } : {})}
+        session={session}
+        engine={engine}
+        controller={controller}
+        device={device}
+        host={"browser"}
+        platform={navigator.platform.startsWith("Mac") ? "mac" : "linux"}
+        appearance={appearance}
+        fileName="juniper.vellum"
+        saveState={(q.get("save") as "saved" | "saving" | "unsaved" | null) ?? "saved"}
+        branch="feat/onboarding"
+        connection={connection}
+        agents={[{ id: "teal", kind: "agent", name: "Teal", hue: "teal" }]}
+        actors={{ teal: { id: "teal", kind: "agent", name: "Teal", hue: "teal" }, ...AGENT_ACTORS }}
+        onShare={() => {
+          if (live) {
+            liveShareOpen = true;
+            render();
+          }
+        }}
+        onPreview={() => {}}
+        {...(settings ? {} : { onSettings: () => {} })}
+        onAction={(command) => {
+          if (shellOn) hostActions.push({ command });
+        }}
+        basicRenderer={!!edgeConf?.basicRenderer}
+        {...(shellOn
+          ? {
+              shell: {
+                ...(palette ? { palette } : {}),
+                ...(settings ? { settings } : {}),
+                settingsHost: {
+                  providerKeySet: true,
+                  stockProviders: [{ id: "pixabay", name: "Pixabay" }],
+                  changeProviderKey: () => hostActions.push({ command: "stock.key" }),
+                },
               },
-            },
-          }
-        : {})}
-      {...(edgeProps ? { edge: edgeProps } : {})}
-      recent={recent}
-      componentRoots={new Set(scenario === "juniper" ? ["habit"] : [])}
-      now={() => clock}
-      nextNodeId={() => `a${++counter}`}
-      assets={{
-        libraries: edgeConf?.empty
-          ? []
-          : [{ alias: "Juniper Core", state: "synced", components: 8 }],
-        iconSets: [
-          { id: "lucide", label: "Lucide" },
-          { id: "material", label: "Material Symbols" },
-          { id: "phosphor", label: "Phosphor" },
-          { id: "feather", label: "Feather" },
-        ],
-        projectIconFolder: { path: "design/icons" },
-        visualStyles: [
-          { id: "minimal", name: "Minimal" },
-          { id: "editorial", name: "Editorial" },
-          { id: "technical", name: "Technical" },
-        ],
-        designSystems:
-          scenario === "juniper"
-            ? [
-                { id: "starter-minimal", name: "Starter Minimal" },
-                { id: "starter-editorial", name: "Starter Editorial" },
-                { id: "starter-technical", name: "Starter Technical" },
-              ]
-            : [{ id: "starter-minimal", name: "Starter Minimal" }],
-        onAction: () => {},
-      }}
-      {...(resourceName || edgeConf?.fonts ? { resources } : {})}
-      {...(authoring ? { authoring } : {})}
-      {...(ledger
-        ? {
-            ledger: {
-              history: ledger.history,
-              conflicts: ledger.conflicts,
-              inspect: ledger.inspect,
-              tokens: ledger.tokens,
-              exporter: ledger.exporter,
-              timeZone: ledger.timeZone,
-            },
-          }
-        : {})}
-      {...(agent ? { agent } : {})}
-      {...(composer && !q.has("slot")
-        ? {
-            composer,
-            composerHost: {
-              ...COMPOSER_HOST,
-              timeZone: "UTC",
-              onConnectAgents: () => hostActions.push({ command: "agents.connect" }),
-              attach: async () => {
-                hostActions.push({ command: "composer.attach" });
-                return [{ kind: "attachment" as const, label: "hero.png", value: "attachment:1" }];
+            }
+          : {})}
+        {...(edgeProps ? { edge: edgeProps } : {})}
+        recent={recent}
+        componentRoots={new Set(scenario === "juniper" ? ["habit"] : [])}
+        now={() => clock}
+        nextNodeId={() => `a${++counter}`}
+        assets={{
+          libraries: edgeConf?.empty
+            ? []
+            : [{ alias: "Juniper Core", state: "synced", components: 8 }],
+          iconSets: [
+            { id: "lucide", label: "Lucide" },
+            { id: "material", label: "Material Symbols" },
+            { id: "phosphor", label: "Phosphor" },
+            { id: "feather", label: "Feather" },
+          ],
+          projectIconFolder: { path: "design/icons" },
+          visualStyles: [
+            { id: "minimal", name: "Minimal" },
+            { id: "editorial", name: "Editorial" },
+            { id: "technical", name: "Technical" },
+          ],
+          designSystems:
+            scenario === "juniper"
+              ? [
+                  { id: "starter-minimal", name: "Starter Minimal" },
+                  { id: "starter-editorial", name: "Starter Editorial" },
+                  { id: "starter-technical", name: "Starter Technical" },
+                ]
+              : [{ id: "starter-minimal", name: "Starter Minimal" }],
+          onAction: () => {},
+        }}
+        {...(resourceName || edgeConf?.fonts ? { resources } : {})}
+        {...(authoring ? { authoring } : {})}
+        {...(ledger
+          ? {
+              ledger: {
+                history: ledger.history,
+                conflicts: ledger.conflicts,
+                inspect: ledger.inspect,
+                tokens: ledger.tokens,
+                exporter: ledger.exporter,
+                timeZone: ledger.timeZone,
               },
-              ...(connection.mode === "offline"
-                ? {
-                    offline: true,
-                    onRestart: () => hostActions.push({ command: "daemon.restart" }),
-                  }
-                : {}),
-            },
-          }
-        : {})}
-      {...(collaborationName === "c35" ? {} : { design, paintEditor })}
-      designHost={{
-        fonts,
-        onAction: (command, detail) => {
-          hostActions.push({ command, detail });
-        },
-      }}
-      slots={{ agent: <div data-testid="agent-slot" /> }}
-    />,
+            }
+          : {})}
+        {...(agent ? { agent } : {})}
+        {...(composer && !q.has("slot")
+          ? {
+              composer,
+              composerHost: {
+                ...COMPOSER_HOST,
+                timeZone: "UTC",
+                onConnectAgents: () => hostActions.push({ command: "agents.connect" }),
+                attach: async () => {
+                  hostActions.push({ command: "composer.attach" });
+                  return [
+                    { kind: "attachment" as const, label: "hero.png", value: "attachment:1" },
+                  ];
+                },
+                ...(connection.mode === "offline"
+                  ? {
+                      offline: true,
+                      onRestart: () => hostActions.push({ command: "daemon.restart" }),
+                    }
+                  : {}),
+              },
+            }
+          : {})}
+        {...(collaborationName === "c35" ? {} : { design, paintEditor })}
+        designHost={{
+          fonts,
+          onAction: (command, detail) => {
+            hostActions.push({ command, detail });
+          },
+        }}
+        slots={{ agent: <div data-testid="agent-slot" /> }}
+      />
+      {liveShareOpen && live && (
+        <div data-appearance={appearance}>
+          <ShareDialog
+            name="juniper.vellum"
+            collaboration={live.controller}
+            onClose={() => {
+              liveShareOpen = false;
+              render();
+            }}
+            port={{
+              request: async () => ({
+                state: "shared",
+                id: "TEST-DATA-shared-snapshot",
+                url: "https://share.vellum.design/share/TEST-DATA-shared-snapshot",
+                snapshot: { at: 1791729120000, incomplete: false },
+              }),
+              copy: async () => {},
+              open: async () => {},
+            }}
+          />
+        </div>
+      )}
+    </>,
   );
 }
 render();

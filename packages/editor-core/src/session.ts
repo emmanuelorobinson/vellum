@@ -51,6 +51,7 @@ export function createEditorSession(deps: SessionDeps) {
   let page = deps.page;
   let state: ToolState = initialToolState();
   let notice: SessionNotice | null = null;
+  let roleReadOnly = false;
   let hovered: NodeIdPath | null = null;
   let snapOptions: Omit<SnapOptions, "zoom"> = deps.snap ?? DEFAULT_SNAP;
   const listeners = new Set<() => void>();
@@ -66,7 +67,7 @@ export function createEditorSession(deps: SessionDeps) {
     };
     return {
       device,
-      readOnly: snapshot.readOnly,
+      readOnly: snapshot.readOnly || roleReadOnly,
       nextNodeId: deps.nextNodeId,
       scene: engine.scene,
       placement: place,
@@ -112,6 +113,12 @@ export function createEditorSession(deps: SessionDeps) {
     get device(): DeviceId {
       return device;
     },
+    setRoleReadOnly(value: boolean) {
+      if (roleReadOnly === value) return;
+      roleReadOnly = value;
+      if (value) state = transitionTool(state, { type: "cancel" }, context()).state;
+      notify();
+    },
     /** Another page: the selection belongs to the old one, so it is cleared. */
     setPage(id: PageId) {
       if (id === page) return;
@@ -124,6 +131,7 @@ export function createEditorSession(deps: SessionDeps) {
      * and a refusal is reported the same way a tool's is.
      */
     commit(transaction: ToolTransaction): EngineCommit {
+      if (roleReadOnly) return { status: "rejected", reason: "read-only" };
       const commit = engine.apply(transaction);
       if (commit.status === "rejected") notice = { kind: "rejected", reason: commit.reason };
       else notice = null;
@@ -225,9 +233,11 @@ export function createEditorSession(deps: SessionDeps) {
       return engine.scene.get(id)?.bounds ?? null;
     },
     undo() {
+      if (roleReadOnly) return { status: "rejected", reason: "read-only" } as const;
       return engine.undo({ kind: "person", device });
     },
     redo() {
+      if (roleReadOnly) return { status: "rejected", reason: "read-only" } as const;
       return engine.redo({ kind: "person", device });
     },
     dispose() {

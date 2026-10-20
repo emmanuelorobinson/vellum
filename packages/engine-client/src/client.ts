@@ -11,7 +11,13 @@ export interface EngineSnapshot {
 export type EngineCommit =
   | { status: "applied"; revision: number }
   | { status: "rejected"; reason: "read-only" | "invalid" | "unavailable" };
+/** The same Rust DocStore as apply/undo/scene. Remote imports are atomic and never echo as local updates. */
+export interface EngineSyncBindings {
+  apply(state: { type: "state"; snapshot: number[] | null; updates: number[][] }): Promise<void>;
+  subscribeLocal(listener: (update: Uint8Array) => void): { dispose(): void };
+}
 export interface EngineClient {
+  readonly sync?: EngineSyncBindings | undefined;
   readonly state: "ready" | "disposed";
   readonly scene: ToolScene;
   snapshot(): EngineSnapshot;
@@ -28,6 +34,10 @@ export interface EngineClient {
  */
 export interface EngineBindings extends EngineClient {}
 export class WasmEngineClient implements EngineClient {
+  get sync(): EngineSyncBindings | undefined {
+    this.live();
+    return this.bindings.sync;
+  }
   private disposed = false;
   private commitListeners = new Set<(tx: ToolTransaction) => void>();
   private subscriptions = new Set<{ dispose(): void }>();

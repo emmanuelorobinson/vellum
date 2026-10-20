@@ -61,6 +61,8 @@ enum Step {
         themes: BTreeMap<String, Vec<String>>,
         styles: BTreeMap<StyleId, Style>,
         fonts: BTreeMap<AssetId, FontFace>,
+        #[serde(default)]
+        comments: BTreeMap<NodeId, vellum_types::comments::CommentThread>,
     },
 }
 
@@ -116,6 +118,7 @@ impl From<&Edit> for Step {
                     themes,
                     styles,
                     fonts,
+                    comments,
                 } = *shell;
                 Self::SetShell {
                     meta,
@@ -123,6 +126,7 @@ impl From<&Edit> for Step {
                     themes,
                     styles,
                     fonts,
+                    comments,
                 }
             }
         }
@@ -164,6 +168,7 @@ impl Step {
                 themes,
                 styles,
                 fonts,
+                comments,
             } => Edit::SetShell {
                 shell: Box::new(Shell {
                     meta,
@@ -171,6 +176,7 @@ impl Step {
                     themes,
                     styles,
                     fonts,
+                    comments,
                 }),
             },
         })

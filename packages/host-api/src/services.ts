@@ -133,7 +133,14 @@ export class FakeDaemonClient implements DaemonClient {
   }
 }
 export interface SyncClient {
-  readonly state: "offline";
+  readonly state:
+    | "offline"
+    | "connecting"
+    | "ready"
+    | "needs-review"
+    | "incompatible"
+    | "forbidden"
+    | "disposed";
   connect(): Promise<void>;
   send(update: Uint8Array): Promise<void>;
   subscribe(listener: (update: Uint8Array) => void): Disposable;

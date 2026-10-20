@@ -1,9 +1,6 @@
 //! Sync persistence uses optimistic room revisions. Snapshots are immutable canonical `.vellum` bytes.
 use super::{SecretString, SyncPayload};
-use vellum_types::{
-    Actor,
-    sync::{ClientFrame, Grant, RoomId, RoomLog, ServerFrame},
-};
+use vellum_types::sync::{ClientFrame, Grant, RoomId, RoomLog, ServerFrame};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
@@ -56,6 +53,23 @@ pub trait SnapshotStore: Send + Sync {
     fn get(&self, key: &str) -> Result<Vec<u8>, Error>;
 }
 pub trait AccessControl: Send + Sync {
+    fn authorize_collaboration(
+        &self,
+        credential: &SecretString,
+        room: &RoomId,
+        now_ms: i64,
+    ) -> Result<Grant, Error> {
+        self.authorize(credential, room, now_ms)
+    }
+    fn manage(
+        &self,
+        _credential: &SecretString,
+        _room: &RoomId,
+        _command: vellum_types::sync::SharingCommand,
+        _now_ms: i64,
+    ) -> Result<vellum_types::sync::SharingState, Error> {
+        Err(Error::Forbidden)
+    }
     /// Rechecked on every read/write. Tokens are never stored with document content.
     fn authorize(
         &self,
@@ -64,18 +78,21 @@ pub trait AccessControl: Send + Sync {
         now_ms: i64,
     ) -> Result<Grant, Error>;
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PresenceEntry {
-    pub connection: String,
-    pub actor: Actor,
-    pub expires_ms: i64,
-}
+pub use vellum_types::sync::Participant as PresenceEntry;
 pub trait Presence: Send + Sync {
     fn touch(&self, room: &RoomId, entry: &PresenceEntry, now_ms: i64) -> Result<(), Error>;
     fn list(&self, room: &RoomId, now_ms: i64) -> Result<Vec<PresenceEntry>, Error>;
     fn remove(&self, room: &RoomId, connection: &str) -> Result<(), Error>;
 }
 pub trait SyncEndpoint: Send + Sync {
+    fn authorize_collaboration(
+        &self,
+        credential: &SecretString,
+        room: &RoomId,
+        now_ms: i64,
+    ) -> Result<Grant, Error> {
+        self.authorize(credential, room, now_ms)
+    }
     fn handle(
         &self,
         credential: &SecretString,

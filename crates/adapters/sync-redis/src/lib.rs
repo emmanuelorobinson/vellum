@@ -61,7 +61,7 @@ impl Presence for RedisPresence {
         if entry.expires_ms <= now_ms || entry.expires_ms > now_ms.saturating_add(30_000) {
             return Err(Error::InvalidUpdate);
         }
-        let actor = serde_json::to_string(&entry.actor).map_err(|_| Error::InvalidUpdate)?;
+        let actor = serde_json::to_string(entry).map_err(|_| Error::InvalidUpdate)?;
         let (leases, actors) = keys(room);
         let mut connection = self.0.lock().map_err(|_| Error::Unavailable)?;
         let result: i64 = redis::cmd("EVAL")
@@ -99,12 +99,18 @@ impl Presence for RedisPresence {
         let mut entries = triples
             .iter()
             .map(|triple| {
+                if let Ok(mut entry) = serde_json::from_str::<PresenceEntry>(&triple[1]) {
+                    entry.connection = triple[0].clone();
+                    entry.expires_ms = triple[2].parse().map_err(|_| Error::Unavailable)?;
+                    return Ok(entry);
+                }
                 let actor: Actor =
                     serde_json::from_str(&triple[1]).map_err(|_| Error::Unavailable)?;
                 Ok(PresenceEntry {
                     connection: triple[0].clone(),
                     actor,
                     expires_ms: triple[2].parse().map_err(|_| Error::Unavailable)?,
+                    state: None,
                 })
             })
             .collect::<Result<Vec<_>, Error>>()?;

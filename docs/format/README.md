@@ -10,6 +10,7 @@ A `.vellum` file.
 
 | Property | Type | Required | Description |
 |---|---|---|---|
+| `comments` | map from string to [CommentThread](#commentthread) | no | Comment threads by stable id. They survive deleted anchors and canonical snapshot recovery. |
 | `components` | map from string to [Component](#component) | no | Components by id. |
 | `fonts` | map from string to [FontFace](#fontface) | no | Custom fonts, keyed by the asset that holds each font file. |
 | `imports` | map from string to string | no | The libraries this document uses: alias → relative path of a `*.lib.vellum` file. |
@@ -20,6 +21,48 @@ A `.vellum` file.
 | `variables` | map from string to [Variable](#variable) | no | Variables by id. |
 
 ## Definitions
+
+### Actor
+
+Who made a change.
+
+#### `person`
+
+A person, at a device.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `device` | [DeviceId](#deviceid) | yes | The device. |
+
+#### `agent`
+
+An agent.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `agent` | [AgentId](#agentid) | yes | Which one. |
+
+#### `file`
+
+The file itself: it changed on disk, was merged or restored.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `reason` | [FileReason](#filereason) | yes | Why. |
+
+#### `system`
+
+A part of Vellum acting on nobody's behalf.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `subsystem` | [Subsystem](#subsystem) | yes | Which part. |
+
+### AgentId
+
+An agent: a built-in one ("Teal") or an external client ("Claude Code").
+
+Type: string
 
 ### AliasEntry
 
@@ -61,6 +104,27 @@ case; read in either case.
 
 Type: string
 
+### CommentMessage
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `atMs` | integer | yes |  |
+| `author` | [Actor](#actor) | yes | Who made a change. |
+| `text` | string | yes |  |
+
+### CommentThread
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `anchor` | [NodeId](#nodeid) | no |  |
+| `author` | [Actor](#actor) | yes | Who made a change. |
+| `createdMs` | integer | yes |  |
+| `messages` | map from string to [CommentMessage](#commentmessage) | yes |  |
+| `page` | [PageId](#pageid) | no |  |
+| `point` | [Point](#point) | yes | A point or an offset, in model coordinates. |
+| `resolved` | boolean | yes |  |
+| `resolvedBy` | [Actor](#actor) | no |  |
+
 ### Component
 
 A component, listed in the document's `components` by id.
@@ -86,6 +150,12 @@ One of:
 
 - [Value](#value). Every corner.
 - array of [Value](#value). Top-left, top-right, bottom-right, bottom-left.
+
+### DeviceId
+
+A person's device. A person is known by the device they edit from; there are no accounts locally.
+
+Type: string
 
 ### DocumentKind
 
@@ -163,6 +233,14 @@ A runtime shader that can sample the layer's own rendering.
 | `src` | string | yes | The shader file, relative to the document. |
 | `uniforms` | map from string to [Value3](#value3) | no | Values for the shader's uniforms, by name. |
 | `visible` | boolean | no | False hides the effect without removing it. |
+
+### FileReason
+
+Why the file itself changed a document (`Actor::File`).
+
+- "external-change". The file changed on disk: a checkout, an editor or an agent writing the file directly.
+- "merge". A three-way merge (the merge driver).
+- "recovery". A recovery copy was restored.
 
 ### FillRule
 
@@ -1139,6 +1217,14 @@ Effects for any layer.
 A text or effect style's id.
 
 Type: string
+
+### Subsystem
+
+The part of Vellum that made a change on nobody's behalf (`Actor::System`).
+
+- "importer". An importer (SVG, image, clipboard) building nodes.
+- "migration". A format migration.
+- "sync". Updates merged in from another copy of the document.
 
 ### TextAlign
 

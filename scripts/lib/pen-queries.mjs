@@ -62,7 +62,7 @@ export function buildInventory({ raw, sourceSha256, exporter }) {
     const frame = {
       frame_id: frameId,
       name,
-      kind: parsed.ok ? parsed.kind : "unrecognised",
+      kind: parsed.ok ? parsed.kind : names.get(frameId) === name ? "component" : "unrecognised",
       screen_id: parsed.ok ? parsed.id : null,
       title: parsed.ok ? parsed.title : name,
       theme: parsed.ok ? parsed.theme : null,
@@ -71,7 +71,7 @@ export function buildInventory({ raw, sourceSha256, exporter }) {
       bounds: { x, y, width, height },
       components: [...new Set(refs.map((id) => names.get(id)).filter(Boolean))].sort(),
     };
-    if (!parsed.ok) frame.reason = parsed.reason;
+    if (!parsed.ok && frame.kind !== "component") frame.reason = parsed.reason;
     if (parsed.ok && SNAPSHOT_KINDS.includes(parsed.kind)) frame.snapshots = snapshotFiles(parsed);
     return frame;
   });
@@ -95,13 +95,62 @@ export function buildInventory({ raw, sourceSha256, exporter }) {
 export const TOKENS_BEGIN = "@@vellum-tokens-begin";
 export const TOKENS_END = "@@vellum-tokens-end";
 
+// A foreground can be backed by an earlier sibling (for example an initial over a disc).
+// Only opaque, unrotated, covering simple shapes qualify; all other pairs keep the ancestor check.
+export function tokenBackdrop(node, ctx, paints, variables) {
+  let child = ctx;
+  for (let parent = ctx.parentCtx; parent; child = parent, parent = parent.parentCtx) {
+    if (parent.node.enabled === false) return null;
+    const siblings =
+      parent.node.id === ctx.parentCtx?.node.id ? (paints.get(parent.node.id) ?? []) : [];
+    for (let i = siblings.length - 1; i >= 0; i--) {
+      const paint = siblings[i];
+      const b = paint.bounds,
+        t = child.bounds;
+      if (
+        paint.rotation ||
+        !b ||
+        !t ||
+        b.x > t.x ||
+        b.y > t.y ||
+        b.x + b.width < t.x + t.width ||
+        b.y + b.height < t.y + t.height
+      )
+        continue;
+      if (
+        paint.type === "ellipse" &&
+        (node.type !== "text" ||
+          typeof node.content !== "string" ||
+          [...node.content].length !== 1 ||
+          node.textAlign !== "center" ||
+          node.fontSize > b.height)
+      )
+        continue;
+      const value = paint.fill?.startsWith("$")
+        ? variables?.[paint.fill.slice(1)]?.value
+        : paint.fill;
+      const values = Array.isArray(value) ? value.map((v) => v.value) : [value];
+      if (
+        values.length &&
+        values.every((v) => typeof v === "string" && /^#[0-9a-f]{6}(?:ff)?$/i.test(v))
+      )
+        return paint.fill;
+    }
+    if (typeof parent.node.fill === "string") return parent.node.fill;
+  }
+  return null;
+}
+
 export const TOKENS_QUERY = [
   `Print(${JSON.stringify(TOKENS_BEGIN)})`,
   `v=GetVariables()`,
   `Print("@T",JSON.stringify(v.themes||{}))`,
   `Object.keys(v.variables).sort().forEach(k=>Print("@V",JSON.stringify([k,v.variables[k]])))`,
   `pairs={}`,
-  `Get((n,c)=>{if((n.type!=="text"&&n.type!=="icon")||typeof n.fill!=="string"||!n.fill.startsWith("$")||n.enabled===false)return;let bg=null;for(let p=c.parentCtx;p;p=p.parentCtx){if(p.node.enabled===false)return;if(bg===null&&typeof p.node.fill==="string")bg=p.node.fill}const k=JSON.stringify([n.type,n.fill.slice(1),bg]);pairs[k]=(pairs[k]||0)+1},{resolveInstances:true})`,
+  `backdrop=${tokenBackdrop.toString()}`,
+  `paints=new Map()`,
+  `parents=[]`,
+  `Get((n,c)=>{if(n.enabled===false){c.skipChildren();return}const row={node:{id:n.id,fill:n.fill,enabled:n.enabled},bounds:c.bounds,parentCtx:parents[c.depth-1]};parents[c.depth]=row;if((n.type==="text"||n.type==="icon")&&typeof n.fill==="string"&&n.fill.startsWith("$")){const bg=backdrop(n,row,paints,v.variables);const k=JSON.stringify([n.type,n.fill.slice(1),bg]);pairs[k]=(pairs[k]||0)+1}if(row.parentCtx&&["frame","rectangle","ellipse"].includes(n.type)&&typeof n.fill==="string"){const k=row.parentCtx.node.id;const a=paints.get(k)||[];a.push({type:n.type,fill:n.fill,rotation:n.rotation,bounds:row.bounds});paints.set(k,a)}},{resolveInstances:true})`,
   `Object.keys(pairs).sort().forEach(k=>Print("@P",JSON.stringify([...JSON.parse(k),pairs[k]])))`,
   `Print(${JSON.stringify(TOKENS_END)})`,
 ].join(";\n");

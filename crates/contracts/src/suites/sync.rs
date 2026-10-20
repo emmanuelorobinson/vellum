@@ -56,6 +56,7 @@ pub fn presence(store: &dyn Presence, room: &RoomId) {
         connection: "test-connection".into(),
         actor,
         expires_ms: 2000,
+        state: None,
     };
     store.touch(room, &entry, 1000).unwrap();
     store.touch(room, &entry, 1000).unwrap();

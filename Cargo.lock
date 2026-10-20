@@ -4338,6 +4338,9 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.9.5",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-pki-types",
  "sha1",
  "thiserror 2.0.21",
 ]
@@ -4503,6 +4506,7 @@ dependencies = [
  "vellum-script-quickjs",
  "vellum-secrets-keyring",
  "vellum-sessions-sqlite",
+ "vellum-sync-ws",
  "vellum-testkit",
  "vellum-text-parley",
  "vellum-types",

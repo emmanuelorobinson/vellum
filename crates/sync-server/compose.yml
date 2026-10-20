@@ -1,0 +1,15 @@
+services:
+  sync:
+    build:
+      context: ../..
+      dockerfile: crates/sync-server/Dockerfile
+    image: vellum-sync:local
+    ports: ["127.0.0.1:7310:7310"]
+    volumes: ["${VELLUM_SYNC_DATA:?Set VELLUM_SYNC_DATA to a provisioned private directory}:/data"]
+    user: "${VELLUM_SYNC_UID:-10001}:${VELLUM_SYNC_GID:-10001}"
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    stop_grace_period: 15s

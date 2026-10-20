@@ -1,6 +1,9 @@
 "use client";
+import type { CollaborationController } from "@vellum/editor-core";
 import type { SharePort, ShareRequest, ShareState } from "@vellum/host-api";
 import { useEffect, useRef, useState } from "react";
+import { LiveShareSection } from "../collaboration/Collaboration";
+import { Icon } from "../icons/Icon";
 import "./share.css";
 export function ShareDialogBody({
   name,
@@ -9,6 +12,7 @@ export function ShareDialogBody({
   close,
   openViewer,
   busy = false,
+  canManage = true,
 }: {
   name: string;
   state: ShareState;
@@ -16,6 +20,7 @@ export function ShareDialogBody({
   close: () => void;
   openViewer?: () => void;
   busy?: boolean;
+  canManage?: boolean;
 }) {
   const time = s.snapshot
     ? new Intl.DateTimeFormat("en-GB", {
@@ -94,7 +99,7 @@ export function ShareDialogBody({
       <div className="vs-actions">
         {s.state === "not-shared" && (
           <button
-            disabled={busy}
+            disabled={busy || !canManage}
             type="button"
             data-primary=""
             onClick={() => act({ action: "create" })}
@@ -105,7 +110,7 @@ export function ShareDialogBody({
         {s.state === "checking" && (
           <>
             <button
-              disabled={busy}
+              disabled={busy || !canManage}
               type="button"
               data-primary=""
               onClick={() => act({ action: "check" })}
@@ -113,7 +118,7 @@ export function ShareDialogBody({
               Restore and try again
             </button>
             <button
-              disabled={busy}
+              disabled={busy || !canManage}
               type="button"
               onClick={() =>
                 act({ action: "create", shareAnyway: true, ...(s.id ? { id: s.id } : {}) })
@@ -125,7 +130,7 @@ export function ShareDialogBody({
         )}
         {s.state === "failed" && (
           <button
-            disabled={busy}
+            disabled={busy || !canManage}
             type="button"
             data-primary=""
             onClick={() => act({ action: "retry" })}
@@ -135,7 +140,7 @@ export function ShareDialogBody({
         )}
         {s.state === "changed" && (
           <button
-            disabled={busy}
+            disabled={busy || !canManage}
             type="button"
             data-primary=""
             onClick={() => act({ action: "create", id: s.id })}
@@ -159,7 +164,11 @@ export function ShareDialogBody({
           </button>
         )}
         {s.state === "shared" && (
-          <button disabled={busy} type="button" onClick={() => act({ action: "delete", id: s.id })}>
+          <button
+            disabled={busy || !canManage}
+            type="button"
+            onClick={() => act({ action: "delete", id: s.id })}
+          >
             Delete share link
           </button>
         )}
@@ -185,10 +194,12 @@ export function ShareDialog({
   name,
   port,
   onClose,
+  collaboration,
 }: {
   name: string;
   port: SharePort;
   onClose: () => void;
+  collaboration?: CollaborationController;
 }) {
   const [state, setState] = useState<ShareState>({ state: "not-shared" });
   const [confirm, setConfirm] = useState(false);
@@ -267,7 +278,17 @@ export function ShareDialog({
     }
   };
   return (
-    <dialog className="vs-dialog" ref={ref} aria-labelledby="share-title" onCancel={onClose}>
+    <dialog
+      className={collaboration ? "vs-dialog vs-dialog--live" : "vs-dialog"}
+      ref={ref}
+      aria-labelledby="share-title"
+      onCancel={onClose}
+    >
+      {collaboration && (
+        <button type="button" className="vs-close" aria-label="Close sharing" onClick={onClose}>
+          ×
+        </button>
+      )}
       {confirm ? (
         <>
           <h2>Delete share link?</h2>
@@ -285,6 +306,66 @@ export function ShareDialog({
             </button>
           </div>
         </>
+      ) : collaboration && state.state === "shared" ? (
+        <>
+          <header className="vs-live-header">
+            <h2 id="share-title">Share {name}</h2>
+            <p>Snapshot and live collaboration are separate.</p>
+          </header>
+          <section className="vs-live-snapshot">
+            <header>
+              <Icon name="link" size={14} />
+              <strong>Snapshot link</strong>
+              <span>✓ Shared</span>
+            </header>
+            <p>
+              A copy of this file, its images, fonts, scripts and libraries. Update it explicitly
+              when you want people to see new changes.
+            </p>
+            <div className="vs-live-row">
+              <a className="vs-url" href={state.url} target="_blank" rel="noreferrer">
+                {state.url}
+              </a>
+              <button type="button" disabled={busy} onClick={() => void act({ action: "status" })}>
+                Copy
+              </button>
+            </div>
+            <div className="vs-live-row">
+              <p>
+                Snapshot from{" "}
+                {state.snapshot
+                  ? new Intl.DateTimeFormat("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                      timeZone: "UTC",
+                    }).format(state.snapshot.at)
+                  : "the last upload"}
+              </p>
+              <button
+                type="button"
+                disabled={busy || !collaboration.state.sharing?.owner}
+                onClick={() => void act({ action: "create", id: state.id })}
+              >
+                Update snapshot
+              </button>
+              <button
+                type="button"
+                data-destructive=""
+                disabled={busy || !collaboration.state.sharing?.owner}
+                onClick={() => void act({ action: "delete", id: state.id })}
+              >
+                Delete snapshot link
+              </button>
+            </div>
+            <p>
+              Delete snapshot link removes the public copy only. It does not change live access or
+              remove collaborators.
+            </p>
+          </section>
+        </>
       ) : (
         <ShareDialogBody
           name={name}
@@ -292,12 +373,23 @@ export function ShareDialog({
           act={(r) => void act(r)}
           close={onClose}
           busy={busy}
+          canManage={!collaboration || collaboration.state.sharing?.owner === true}
           openViewer={() => {
             if (state.url) void port.open(state.url).catch(() => setNotice("Viewer unavailable"));
           }}
         />
       )}
       {notice && <p role="status">{notice}</p>}
+      {collaboration && !confirm ? <LiveShareSection controller={collaboration} /> : null}
+      {collaboration && !confirm && (
+        <footer className="vs-live-footer">
+          <Icon name="info" size={12} />
+          <p>Live access and the snapshot link are managed separately.</p>
+          <button type="button" onClick={onClose}>
+            Done
+          </button>
+        </footer>
+      )}
     </dialog>
   );
 }

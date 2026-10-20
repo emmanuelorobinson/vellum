@@ -99,6 +99,12 @@ export function checkDesign({
   const seen = new Map();
   for (const frame of inventory.frames) {
     const parsed = parseFrameName(frame.name);
+    // Reusable definitions may live directly on the canvas; their registered id/name is the evidence.
+    if (
+      !parsed.ok &&
+      inventory.components?.some((c) => c.id === frame.frame_id && c.name === frame.name)
+    )
+      continue;
     if (!parsed.ok) {
       fail(`frame name "${frame.name}" is not valid: ${parsed.reason}`, `frame-name:${frame.name}`);
       continue;

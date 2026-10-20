@@ -129,6 +129,7 @@ pub fn merge(base: &Document, ours: &Document, theirs: &Document) -> Result<Merg
         ),
         styles: m.map("styles", &base.styles, &ours.styles, &theirs.styles),
         fonts: m.map("fonts", &base.fonts, &ours.fonts, &theirs.fonts),
+        comments: m.map("comments", &base.comments, &ours.comments, &theirs.comments),
         components: BTreeMap::new(),
         pages: Vec::new(),
     };

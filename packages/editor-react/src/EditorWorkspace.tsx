@@ -4,6 +4,7 @@ import {
   type AuthoringController,
   agentNotice,
   type BindingContext,
+  type CollaborationController,
   type ComposerController,
   type ConflictController,
   composerLine,
@@ -62,6 +63,7 @@ import { ToolRail } from "./chrome/ToolRail";
 import { TipProvider } from "./chrome/Tooltip";
 import { TopRightBar } from "./chrome/TopRightBar";
 import { ZoomPill } from "./chrome/ZoomPill";
+import { CollaborationLayer, CollaborationToolbar } from "./collaboration/Collaboration";
 import type { DesignHost } from "./design/context";
 import { DesignTab } from "./design/DesignTab";
 import { useEngineSnapshot, useStore, useWorkspace } from "./hooks";
@@ -122,6 +124,8 @@ export interface EdgeProps {
 }
 
 export interface EditorWorkspaceProps {
+  /** Only supplied for a document whose live collaboration was explicitly enabled. */
+  collaboration?: CollaborationController;
   /** The command palette (⌘/), layer context menu and Editor settings. */
   shell?: {
     palette?: PaletteController;
@@ -220,6 +224,12 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const { state, layout } = useWorkspace(workspace);
   const snapshot = useEngineSnapshot(engine);
   useStore(session.subscribe);
+  useStore(props.collaboration?.subscribe ?? NO_STORE);
+  const collaborationReadOnly = !!props.collaboration && !props.collaboration.canEdit();
+  useEffect(() => {
+    session.setRoleReadOnly(collaborationReadOnly);
+    return () => session.setRoleReadOnly(false);
+  }, [session, collaborationReadOnly]);
   useStore(controller.commands.subscribe.bind(controller.commands));
   useStore(props.composer?.subscribe ?? NO_STORE);
   const shell = props.shell;
@@ -308,7 +318,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     );
   };
 
-  const readOnly = snapshot.readOnly || !!edge?.newerFormat;
+  const readOnly = snapshot.readOnly || !!edge?.newerFormat || collaborationReadOnly;
   const selectedLibrary = props.design?.single()?.item.node;
   const missingLibrary =
     selectedLibrary?.type === "instance" &&
@@ -660,8 +670,66 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
           : undefined
       }
       onContextMenu={onContextMenu}
+      onPointerDownCapture={(e) => {
+        const c = props.collaboration;
+        if (!c?.state.placing || focusOf(e.target) !== "canvas" || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        c.newComment(
+          null,
+          world({ x: e.clientX - rect.left, y: e.clientY - rect.top }, session.state.viewport),
+        );
+      }}
+      onPointerMove={(e) => {
+        if (!props.collaboration || focusOf(e.target) !== "canvas") return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        props.collaboration.publishView({
+          page: session.page,
+          cursor: world(
+            { x: e.clientX - rect.left, y: e.clientY - rect.top },
+            session.state.viewport,
+          ),
+          viewport: session.state.viewport,
+          selection: [...session.state.selection],
+        });
+      }}
       onKeyDown={(e) => {
         if (e.defaultPrevented) return;
+        if (props.collaboration && e.key === "Escape") {
+          if (props.collaboration.state.placing) {
+            props.collaboration.placeComment(false);
+            e.preventDefault();
+            return;
+          }
+          if (props.collaboration.state.panel) {
+            props.collaboration.close();
+            e.preventDefault();
+            return;
+          }
+          if (props.collaboration.state.following) {
+            props.collaboration.follow(null);
+            e.preventDefault();
+            return;
+          }
+        }
+        if (
+          props.collaboration &&
+          e.key.toLowerCase() === "c" &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          focusOf(e.target) === "canvas" &&
+          props.collaboration.canComment()
+        ) {
+          const id = session.state.selection[0] ?? null;
+          const bounds = id ? session.sceneBounds(id) : null;
+          if (id && bounds)
+            props.collaboration.newComment(id, { x: bounds.x + bounds.width, y: bounds.y });
+          else props.collaboration.placeComment(true);
+          e.preventDefault();
+          return;
+        }
         // Escape while dragging a mesh point or crop corner puts it back and nothing else.
         if (e.key === "Escape" && props.paintEditor?.cancel()) {
           e.preventDefault();
@@ -729,6 +797,9 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             {...(props.presence ? { presence: props.presence } : {})}
             {...(props.agent ? { agent: props.agent } : {})}
           />
+          {props.collaboration ? (
+            <CollaborationLayer controller={props.collaboration} session={session} />
+          ) : null}
           {visible.documentBar
             ? (props.slots?.documentBar ?? (
                 <DocumentBar
@@ -840,7 +911,14 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               shortcut={shortcut}
             />
           ) : null}
-          {visible.topRight ? (
+          {visible.topRight && props.collaboration ? (
+            <CollaborationToolbar
+              controller={props.collaboration}
+              {...(props.presence ? { presence: props.presence } : {})}
+              {...(props.onShare ? { onShare: props.onShare } : {})}
+              {...(props.onSettings ? { onSettings: props.onSettings } : {})}
+            />
+          ) : visible.topRight ? (
             <TopRightBar
               right={layout.topRight.right}
               agents={props.agents}

@@ -33,7 +33,7 @@ export interface Place {
 }
 /** In-process requests corresponding to vellum_core::ops::Op, NOT a wire format or a DocStore. */
 export type DocumentShell = Required<
-  Pick<Document, "meta" | "imports" | "themes" | "styles" | "fonts">
+  Pick<Document, "meta" | "imports" | "themes" | "styles" | "fonts" | "comments">
 >;
 export type ToolOp =
   | { type: "convertScript"; id: NodeId }

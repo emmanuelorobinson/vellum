@@ -377,6 +377,7 @@ impl Backend {
                         shell.themes.clone(),
                     );
                     (written.styles, written.fonts) = (shell.styles.clone(), shell.fonts.clone());
+                    written.comments = shell.comments.clone();
                     self.doc
                         .get_map(SHELL)
                         .insert("shell", json_string(&written))

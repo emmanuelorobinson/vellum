@@ -3,6 +3,7 @@ export const PACKAGE_NAME = "@vellum/editor-core";
 export * from "./agent";
 export * from "./assets";
 export * from "./authoring";
+export * from "./collaboration";
 export { createCommandController } from "./command-controller";
 export * from "./design";
 export { union, world } from "./geometry";

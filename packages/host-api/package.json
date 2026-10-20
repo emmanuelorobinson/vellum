@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./native-relay": "./src/native-relay.ts",
     "./native-account": "./src/native-account.ts",
+    "./native-sync": "./src/native-sync.ts",
     "./account-state": "./src/account-state.ts"
   },
   "scripts": {

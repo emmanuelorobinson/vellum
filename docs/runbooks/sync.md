@@ -26,7 +26,8 @@ vellum-sync-server --data /private/service/sync serve --listen 127.0.0.1:7310 --
 Actor JSON uses `kind: "person"` with a device ULID, or `kind: "agent"` with an agent ULID, from the
 shared Actor type. The illustrative actor/id/expiry above are placeholders, not usable fixture identities. Roles are `viewer`, `commenter`
 and `editor`. Only editor capabilities can submit document updates or request administrative compaction.
-P64 adds comment operations and rendered presence; commenter currently has document read access.
+Prompt 64 adds comment operations, rendered presence and owner-managed roles. Use `--manage` on the
+person Editor grant that owns the room. See [multiplayer.md](multiplayer.md) for the role matrix and image.
 The private directory holds `sync.sqlite`/WAL and immutable `<sha256>.vellum` snapshots. Back up both.
 The service makes the directory private on Unix. Use a private ACL on Windows. Do not share the data
 directory with other writers or replace files while serving.
@@ -36,6 +37,8 @@ directory with other writers or replace files while serving.
 Add `--cloud` before the subcommand. Configure `DATABASE_URL` to a private Postgres connection or a
 local TLS tunnel, `VELLUM_SYNC_REDIS_URL`, `VELLUM_SYNC_PRODUCTS` (comma-separated entitled product ids),
 `VELLUM_SYNC_S3_ENDPOINT` (HTTPS R2/S3 origin), and `VELLUM_SYNC_S3_BUCKET` (private pre-existing bucket).
+Prompt 64 also requires `VELLUM_TEAM_PRODUCTS` for hosted comments/presence; include those products
+in the sync product allowlist too. Self-host mode has no entitlement requirement.
 Put storage credentials in OS keychain entries `sync-storage-access` and `sync-storage-secret`.
 No AWS metadata discovery, public bucket, signed public URL or public snapshot endpoint is used.
 Postgres/Redis connections are intended for a private service network; terminate encryption at the
@@ -77,7 +80,9 @@ model validation), 64 cached rooms, 2 MiB per incoming
 update, 32 MiB per canonical document, and 256 updates/8 MiB per room tail. Input frames, output buffers, dependency changes, decoded model depth and node count are bounded.
 WebSocket sends/idle time, SQL statement/lock time and Redis/S3 I/O have explicit bounds. Clients answer
 WebSocket pings; inactive/dead clients are closed. Connection membership expires after 30 seconds and
-is removed on disconnect. It is server membership, not a P64 cursor/comment UI.
+is removed on disconnect. Opt-in v1.1 clients publish bounded presence state and receive attributed
+membership/role frames. Comments and owner management use generated `comment`/`sharing` requests;
+they never enter the replaceable presence channel.
 
 Before reaching a tail limit, coordinate a maintenance boundary with writers, retain their unsent edits,
 then run:

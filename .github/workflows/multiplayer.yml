@@ -1,0 +1,84 @@
+name: Multiplayer parity
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: test-only
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: multiplayer-parity
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - run: pnpm install --frozen-lockfile
+      - name: Start private object fixture
+        run: |
+          docker run -d --rm --name vellum-parity-s3 -p 127.0.0.1:9000:9000 -e RUSTFS_ACCESS_KEY=test-only-access -e RUSTFS_SECRET_KEY=test-only-secret rustfs/rustfs:1.0.1-preview.14 /data
+          ready=0
+          for _attempt in $(seq 1 30); do
+            if curl --silent --output /dev/null http://127.0.0.1:9000/; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          node --input-type=module - <<'NODE'
+          import sdk from './packages/storage/node_modules/@aws-sdk/client-s3/dist-cjs/index.js';
+          const client=new sdk.S3Client({endpoint:'http://127.0.0.1:9000',region:'us-east-1',forcePathStyle:true,credentials:{accessKeyId:'test-only-access',secretAccessKey:'test-only-secret'}});
+          await client.send(new sdk.CreateBucketCommand({Bucket:'vellum-sync-test'}));
+          NODE
+      - name: Same four-actor scenario on local and cloud storage
+        env:
+          VELLUM_TEST_DATABASE_URL: postgres://postgres:test-only@127.0.0.1:5432/postgres
+          VELLUM_TEST_REDIS_URL: redis://127.0.0.1:6379
+          VELLUM_TEST_S3_ENDPOINT: http://127.0.0.1:9000
+          VELLUM_TEST_S3_BUCKET: vellum-sync-test
+          VELLUM_TEST_S3_ACCESS: test-only-access
+          VELLUM_TEST_S3_SECRET: test-only-secret
+        run: |
+          cargo test --locked -p vellum-sync-server --test multiplayer -- --include-ignored
+          cargo test --locked -p vellum-sync-postgres --test contract --test sharing -- --include-ignored
+      - name: Build self-host image and run the identical scenario
+        run: |
+          docker build -f crates/sync-server/Dockerfile -t vellum-sync:parity .
+          VELLUM_TEST_SYNC_IMAGE=vellum-sync:parity cargo test --locked -p vellum-sync-server --test image -- --include-ignored
+      - name: Deterministic editor/client and policy tests
+        run: |
+          pnpm --filter @vellum/host-api test
+          pnpm --filter @vellum/editor-core test
+          pnpm --filter @vellum/editor-react exec vitest run --project unit src/collaboration.test.tsx src/share
+          cargo test --locked -p vellum-core --test comments
+          cargo test --locked -p vellum-sync-server --test comments
+          cargo test --locked -p vellum-sync-sqlite --test sharing
+          node --test scripts/__tests__/token-backdrop.test.mjs scripts/__tests__/design-check.test.mjs
+      - name: Specification and dependency guards
+        if: always()
+        run: |
+          node scripts/types-gen.mjs --check
+          node scripts/spec-checksums.mjs check
+          node scripts/design-check.mjs
+      - name: Stop object fixture
+        if: always()
+        run: docker rm -f vellum-parity-s3 || true

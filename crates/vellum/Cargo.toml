@@ -19,6 +19,7 @@ vellum-engine-codex = { path = "../adapters/engine-codex" }
 vellum-engine-claude-code = { path = "../adapters/engine-claude-code" }
 clap.workspace = true
 vellum-ipc-local = { path = "../adapters/ipc-local" }
+vellum-sync-ws = { path = "../adapters/sync-ws", features = ["client"] }
 vellum-types = { path = "../vellum-types" }
 vellum-core = { path = "../vellum-core" }
 vellum-codec-json-dir = { path = "../adapters/codec-json-dir" }

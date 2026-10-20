@@ -1576,6 +1576,90 @@
           "why": "Text row: Inter glyph anti-aliasing differs between pen.dev and Chromium."
         }
       ]
+    },
+    {
+      "id": "C39",
+      "size": [1280, 800],
+      "modes": ["light", "dark", "hc-light", "hc-dark"],
+      "snapshot": "C39-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=1&tab=agent&agent=c03&live=presence",
+      "regions": [
+        {
+          "name": "presence and sharing",
+          "selector": ".vm-toolbar",
+          "design": [944, 8, 328, 40]
+        }
+      ]
+    },
+    {
+      "id": "C40",
+      "size": [1280, 800],
+      "modes": ["light", "dark", "hc-light", "hc-dark"],
+      "snapshot": "C40-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=1&tab=agent&agent=c03&live=comments",
+      "regions": [
+        {
+          "name": "comments",
+          "selector": ".vm-comments",
+          "design": [912, 56, 360, 736]
+        }
+      ]
+    },
+    {
+      "id": "C41",
+      "size": [1280, 800],
+      "modes": ["light", "dark", "hc-light", "hc-dark"],
+      "snapshot": "C41-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=1&tab=agent&agent=c03&live=presence",
+      "regions": [
+        {
+          "name": "connection banner",
+          "selector": ".vm-sync",
+          "design": [528, 56, 640, 54]
+        }
+      ]
+    },
+    {
+      "id": "W02-v11",
+      "size": [1280, 800],
+      "modes": ["light", "dark"],
+      "snapshot": "W02-v11-live-on-{mode}-1280.png",
+      "query": "scenario=juniper&zoom=1&tab=agent&agent=c03&live=share",
+      "regions": [
+        {
+          "name": "live sharing",
+          "selector": ".vm-sharing",
+          "design": [452, 300, 708, 431]
+        }
+      ]
+    },
+    {
+      "id": "C40-960",
+      "size": [960, 640],
+      "modes": ["light", "dark"],
+      "snapshot": "C40-960-{mode}-960.png",
+      "query": "scenario=juniper&zoom=1&tab=agent&agent=c03&live=comments",
+      "regions": [
+        {
+          "name": "comments narrow",
+          "selector": ".vm-comments",
+          "design": [592, 56, 360, 576]
+        }
+      ]
+    },
+    {
+      "id": "C40-760",
+      "size": [760, 640],
+      "modes": ["light", "dark"],
+      "snapshot": "C40-760-{mode}-760.png",
+      "query": "scenario=juniper&zoom=1&tab=agent&agent=c03&live=comments",
+      "regions": [
+        {
+          "name": "comments narrow",
+          "selector": ".vm-comments",
+          "design": [392, 56, 360, 576]
+        }
+      ]
     }
   ],
   "_tolerance": "The editor and the design layout are equal to the pixel (sizes are checked). Text is rasterised by two engines, so text-dense regions differ at glyph edges whatever the weight (tried 400 and 450). `fraction` is the measured worst case over the modes plus one point; regions with none use the 1% decision. Needs the owner's confirmation (reports.md)."

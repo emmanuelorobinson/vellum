@@ -69,6 +69,7 @@ export function shellOf(doc: Document): DocumentShell {
     themes: { ...doc.themes },
     styles: { ...doc.styles },
     fonts: { ...doc.fonts },
+    comments: { ...doc.comments },
   };
 }
 export function documentNodes(doc: Document): Node[] {

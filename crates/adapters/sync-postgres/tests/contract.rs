@@ -81,6 +81,15 @@ fn cloud_owner_entitlement_is_checked_on_every_request() {
     log.grant(&secret, &room, &grant, 2000, Some(&owner))
         .unwrap();
     assert_eq!(log.authorize(&secret, &room, 999), Ok(grant));
+    assert_eq!(
+        log.authorize_collaboration(&secret, &room, 999),
+        Err(Error::Forbidden),
+        "Pro sync alone does not enable Team comments or presence"
+    );
+    let log = log
+        .require_team_collaboration(vec!["test-product".into()])
+        .unwrap();
+    assert!(log.authorize_collaboration(&secret, &room, 999).is_ok());
     assert_eq!(log.authorize(&secret, &room, 1000), Err(Error::Forbidden));
     sql.execute(
         "UPDATE entitlements SET active=false WHERE user_id=$1",

@@ -18,6 +18,15 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Native editor sync bridge. --key names an OS-keychain entry, never a credential value.
+    Sync {
+        #[arg(long)]
+        endpoint: String,
+        #[arg(long)]
+        room: String,
+        #[arg(long)]
+        key: String,
+    },
     #[command(flatten)]
     User(vellum::cli::commands::UserCommand),
     /// Serve MCP over stdio, bridged to the local daemon socket.
@@ -49,6 +58,23 @@ enum DaemonAction {
     Stop,
 }
 fn execute(cli: Cli) -> std::io::Result<ExitCode> {
+    if let Command::Sync {
+        endpoint,
+        room,
+        key,
+    } = &cli.command
+    {
+        use vellum_core::ports::SecretStore;
+        let room = vellum_types::sync::RoomId::new(room.clone())
+            .map_err(|_| std::io::Error::other("Invalid sync room"))?;
+        let credential = vellum_secrets_keyring::Keychain::new(brand::KEYCHAIN_SERVICE)
+            .get(key)
+            .map_err(|_| std::io::Error::other("Sync key unavailable"))?
+            .ok_or_else(|| std::io::Error::other("Sync key unavailable"))?;
+        vellum_sync_ws::bridge_stdio(endpoint, &room, &credential)
+            .map_err(|_| std::io::Error::other("Sync unavailable"))?;
+        return Ok(ExitCode::SUCCESS);
+    }
     let dir = match cli.run_dir {
         Some(path) => RunDir::new(path)?,
         None => RunDir::for_user()?,
@@ -61,6 +87,7 @@ fn execute(cli: Cli) -> std::io::Result<ExitCode> {
         .unwrap_or_else(|| dir.path().to_path_buf());
     let out = vellum::cli::commands::Output { json: cli.json };
     match cli.command {
+        Command::Sync { .. } => unreachable!("sync returns before daemon setup"),
         Command::User(command) => vellum::cli::commands::run(command, &dir, &out).map(|ok| {
             if ok {
                 ExitCode::SUCCESS

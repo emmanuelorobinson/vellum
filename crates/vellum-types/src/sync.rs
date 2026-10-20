@@ -70,7 +70,7 @@ pub struct Grant {
     pub role: Role,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(deny_unknown_fields)]
 #[ts(export)]
 pub struct ClientFrame {
@@ -79,15 +79,18 @@ pub struct ClientFrame {
     pub epoch: u64,
     pub request: SyncRequest,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 #[ts(export)]
 pub enum SyncRequest {
     Pull { after: u64 },
     Push { bytes: Vec<u8> },
+    Comment { op: crate::comments::CommentRequest },
+    Presence { state: PresenceState },
+    Sharing { command: SharingCommand },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(deny_unknown_fields)]
 #[ts(export)]
 pub struct ServerFrame {
@@ -97,7 +100,7 @@ pub struct ServerFrame {
     pub revision: u64,
     pub body: SyncReply,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 #[ts(export)]
 pub enum SyncReply {
@@ -106,6 +109,13 @@ pub enum SyncReply {
         updates: Vec<Vec<u8>>,
     },
     Ack,
+    Collaboration {
+        grant: Grant,
+        participants: Vec<Participant>,
+    },
+    Sharing {
+        state: SharingState,
+    },
     Error {
         code: String,
     },
@@ -131,6 +141,84 @@ pub struct LoggedUpdate {
 
 pub fn client_schema() -> serde_json::Value {
     serde_json::to_value(schemars::schema_for!(ClientFrame)).expect("schema serializes")
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export)]
+pub struct PresenceState {
+    pub name: String,
+    pub page: Option<crate::PageId>,
+    pub cursor: Option<crate::Point>,
+    pub viewport: Option<PresenceViewport>,
+    pub selection: Vec<crate::NodeId>,
+    pub activity: String,
+    pub hue: Option<String>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export)]
+pub struct PresenceViewport {
+    pub x: f64,
+    pub y: f64,
+    pub zoom: f64,
+}
+impl PresenceState {
+    pub fn valid(&self) -> bool {
+        !self.name.trim().is_empty()
+            && self.name.len() <= 128
+            && self.activity.len() <= 256
+            && !self.name.contains('\0')
+            && !self.activity.contains('\0')
+            && self.selection.len() <= 128
+            && self
+                .cursor
+                .as_ref()
+                .is_none_or(|p| p.x.is_finite() && p.y.is_finite())
+            && self.viewport.as_ref().is_none_or(|p| {
+                p.x.is_finite()
+                    && p.y.is_finite()
+                    && p.zoom.is_finite()
+                    && p.zoom > 0.0
+                    && p.zoom <= 256.0
+            })
+            && self.hue.as_ref().is_none_or(|h| {
+                matches!(
+                    h.as_str(),
+                    "teal" | "saffron" | "green" | "orange" | "rose" | "magenta" | "lime" | "sand"
+                )
+            })
+    }
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(deny_unknown_fields)]
+#[ts(export)]
+pub struct Participant {
+    pub connection: String,
+    pub actor: Actor,
+    pub expires_ms: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<PresenceState>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+#[ts(export)]
+pub enum SharingCommand {
+    Read,
+    SetLive { enabled: bool },
+    SetRole { actor: Actor, role: Role },
+    Remove { actor: Actor },
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(deny_unknown_fields)]
+#[ts(export)]
+pub struct SharingState {
+    pub owner_actor: Actor,
+    pub owner: bool,
+    pub enabled: bool,
+    pub can_live: bool,
+    pub members: Vec<Grant>,
 }
 pub fn server_schema() -> serde_json::Value {
     serde_json::to_value(schemars::schema_for!(ServerFrame)).expect("schema serializes")

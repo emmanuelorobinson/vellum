@@ -183,6 +183,9 @@ impl SyncService {
             candidate
                 .import_authenticated(payload, &grant.actor)
                 .map_err(|_| Error::InvalidUpdate)?;
+            if candidate.snapshot().comments != self.refresh(&mut room, &log)?.snapshot().comments {
+                return Err(Error::Forbidden);
+            }
             if candidate.cursor() == before {
                 return Ok(log.revision);
             }
@@ -205,6 +208,108 @@ impl SyncService {
                 }
                 Err(Error::Conflict) => continue,
                 Err(error) => return Err(error),
+            }
+        }
+        Err(Error::Conflict)
+    }
+    /// Apply comment policy before committing through the one core Op path and durable CAS.
+    pub fn comment(
+        &self,
+        credential: &SecretString,
+        id: &RoomId,
+        epoch: u64,
+        request: vellum_types::comments::CommentRequest,
+        now_ms: i64,
+    ) -> Result<u64, Error> {
+        use vellum_types::comments::CommentRequest;
+        for _ in 0..3 {
+            let grant = self
+                .access
+                .authorize_collaboration(credential, id, now_ms)?;
+            if grant.role == Role::Viewer || !grant.actor.is_person() {
+                return Err(Error::Forbidden);
+            }
+            let log = self.load(id)?;
+            if epoch != log.epoch {
+                return Err(Error::ResetRequired);
+            }
+            let cached = self.room(id)?;
+            let mut room = cached.lock().map_err(|_| Error::Unavailable)?;
+            let mut candidate = self
+                .refresh(&mut room, &log)?
+                .fork()
+                .map_err(|_| Error::Unavailable)?;
+            let doc = candidate.snapshot();
+            let duplicate = match &request {
+                CommentRequest::Create {
+                    thread,
+                    message,
+                    anchor,
+                    page,
+                    point,
+                    text,
+                } => doc.comments.get(thread).is_some_and(|t| {
+                    t.author == grant.actor
+                        && t.anchor == *anchor
+                        && t.page == *page
+                        && t.point == *point
+                        && t.messages
+                            .get(message)
+                            .is_some_and(|m| m.author == grant.actor && m.text == *text)
+                }),
+                CommentRequest::Reply {
+                    thread,
+                    message,
+                    text,
+                } => doc
+                    .comments
+                    .get(thread)
+                    .and_then(|t| t.messages.get(message))
+                    .is_some_and(|m| m.author == grant.actor && m.text == *text),
+                CommentRequest::Resolve { thread, resolved } => {
+                    doc.comments.get(thread).is_some_and(|t| {
+                        t.resolved == *resolved
+                            && (t.author == grant.actor || grant.role == Role::Editor)
+                    })
+                }
+            };
+            if duplicate {
+                return Ok(log.revision);
+            }
+            let tx = vellum_core::comments::transaction(
+                &doc,
+                grant.actor,
+                grant.role,
+                request.clone(),
+                now_ms,
+            )
+            .map_err(|e| {
+                if e == vellum_core::comments::CommentError::Forbidden {
+                    Error::Forbidden
+                } else {
+                    Error::InvalidUpdate
+                }
+            })?;
+            let before = candidate.cursor();
+            vellum_core::ops::apply(&mut candidate, &mut NoCommentIds, tx)
+                .map_err(|_| Error::InvalidUpdate)?;
+            canonical_bytes(&candidate.snapshot())?;
+            let accepted = candidate.export_updates(&before);
+            if accepted.bytes.len() > MAX_UPDATE_BYTES
+                || log.updates.len() >= MAX_TAIL
+                || log.updates.iter().map(|u| u.bytes.len()).sum::<usize>() + accepted.bytes.len()
+                    > MAX_TAIL_BYTES
+            {
+                return Err(Error::Limit);
+            }
+            match self.log.append(id, log.revision, epoch, &accepted.bytes) {
+                Ok(revision) => {
+                    room.store = Some(candidate);
+                    room.revision = revision;
+                    return Ok(revision);
+                }
+                Err(Error::Conflict) => continue,
+                Err(e) => return Err(e),
             }
         }
         Err(Error::Conflict)
@@ -237,6 +342,15 @@ impl SyncService {
     }
 }
 impl SyncEndpoint for SyncService {
+    fn authorize_collaboration(
+        &self,
+        credential: &SecretString,
+        room: &RoomId,
+        now_ms: i64,
+    ) -> Result<Grant, Error> {
+        self.access
+            .authorize_collaboration(credential, room, now_ms)
+    }
     fn authorize(
         &self,
         credential: &SecretString,
@@ -256,6 +370,14 @@ impl SyncEndpoint for SyncService {
             Err(Error::UpgradeRequired)
         } else {
             match frame.request {
+                SyncRequest::Sharing { command } => self
+                    .access
+                    .manage(credential, room, command, now_ms)
+                    .map(|state| (frame.epoch, 0, SyncReply::Sharing { state })),
+                SyncRequest::Comment { op } => self
+                    .comment(credential, room, frame.epoch, op, now_ms)
+                    .map(|r| (frame.epoch, r, SyncReply::Ack)),
+                SyncRequest::Presence { .. } => Err(Error::InvalidUpdate),
                 SyncRequest::Pull { after } => self
                     .pull(credential, room, frame.epoch, after, now_ms)
                     .map(|p| {
@@ -301,6 +423,12 @@ impl SyncEndpoint for SyncService {
     }
 }
 
+struct NoCommentIds;
+impl vellum_core::ports::IdGen for NoCommentIds {
+    fn node_id(&mut self) -> vellum_types::NodeId {
+        unreachable!("comment transactions supply their ids")
+    }
+}
 // Every admitted state must be recoverable from the canonical format, not only native updates.
 fn canonical_bytes(document: &Document) -> Result<Vec<u8>, Error> {
     let codec = vellum_codec_json::JsonCodec::new();

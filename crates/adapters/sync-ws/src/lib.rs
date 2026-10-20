@@ -21,6 +21,10 @@ use tokio::sync::{Semaphore, oneshot};
 use vellum_core::ports::{SecretString, sync::*};
 use vellum_types::sync::*;
 const MAX_WIRE: usize = MAX_UPDATE_BYTES * 4 + 4096;
+#[cfg(feature = "client")]
+mod client;
+#[cfg(feature = "client")]
+pub use client::bridge_stdio;
 #[derive(Clone)]
 struct App {
     endpoint: Arc<dyn SyncEndpoint>,
@@ -31,10 +35,13 @@ struct App {
     workers: Arc<Semaphore>,
     next: Arc<AtomicU64>,
 }
+type ServerResources = (Arc<dyn SyncEndpoint>, Option<Arc<dyn Presence>>);
 pub struct Server {
     address: SocketAddr,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<std::thread::JoinHandle<()>>,
+    // Synchronous adapter destructors must run after the I/O runtime has stopped.
+    keep_alive: Option<ServerResources>,
 }
 impl Server {
     /// Starting a service requires an explicit address. This never runs from the local daemon.
@@ -59,6 +66,7 @@ impl Server {
             .enable_all()
             .build()
             .map_err(|_| Error::Unavailable)?;
+        let keep_alive = Some((endpoint.clone(), presence.clone()));
         let app = App {
             endpoint,
             presence,
@@ -89,6 +97,7 @@ impl Server {
             address,
             stop: Some(stop),
             thread: Some(thread),
+            keep_alive,
         })
     }
     pub fn address(&self) -> SocketAddr {
@@ -104,6 +113,7 @@ impl Server {
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();
         }
+        self.keep_alive.take();
     }
 }
 impl Drop for Server {
@@ -236,6 +246,8 @@ async fn session(mut socket: WebSocket, app: App, key: SecretString, room: RoomI
     let mut last_seen = tokio::time::Instant::now();
     let mut last_ping = tokio::time::Instant::now();
     let mut last_presence = tokio::time::Instant::now() - Duration::from_secs(10);
+    let mut presence_state: Option<PresenceState> = None;
+    let mut last_collaboration = None;
     loop {
         let incoming =
             tokio::select! { message = socket.recv() => Some(message), _ = tick.tick() => None };
@@ -290,6 +302,15 @@ async fn session(mut socket: WebSocket, app: App, key: SecretString, room: RoomI
                 }
             }
         };
+        if let SyncRequest::Presence { state } = &frame.request {
+            if !state.valid() {
+                let _ = send(&mut socket, &rejected(Error::InvalidUpdate)).await;
+                continue;
+            }
+            presence_state = Some(state.clone());
+            last_presence = tokio::time::Instant::now() - Duration::from_secs(10);
+            continue;
+        }
         let is_pull = matches!(frame.request, SyncRequest::Pull { .. });
         let Ok(reply) = dispatch(&app, &key, &room, frame).await else {
             break;
@@ -311,31 +332,67 @@ async fn session(mut socket: WebSocket, app: App, key: SecretString, room: RoomI
             revision = reply.revision;
             initialized = true;
         }
-        if last_presence.elapsed() > Duration::from_secs(5) {
-            if let Some(presence) = app.presence.clone() {
-                let endpoint = app.endpoint.clone();
-                let key = key.clone();
-                let id = room.clone();
-                let connection = connection.clone();
-                let result = tokio::task::spawn_blocking(move || {
-                    let now = now();
-                    let grant = endpoint.authorize(&key, &id, now)?;
+        if (last_presence.elapsed() > Duration::from_secs(5) || presence_state.is_some())
+            && let Some(presence) = app.presence.clone()
+        {
+            let endpoint = app.endpoint.clone();
+            let key = key.clone();
+            let id = room.clone();
+            let connection = connection.clone();
+            let state = presence_state.clone();
+            let touch = last_presence.elapsed() > Duration::from_secs(5);
+            let result = tokio::task::spawn_blocking(move || {
+                let now = now();
+                let grant = if state.is_some() {
+                    endpoint.authorize_collaboration(&key, &id, now)?
+                } else {
+                    endpoint.authorize(&key, &id, now)?
+                };
+                if touch {
                     presence.touch(
                         &id,
                         &PresenceEntry {
                             connection,
-                            actor: grant.actor,
+                            actor: grant.actor.clone(),
                             expires_ms: now.saturating_add(30_000),
+                            state,
                         },
                         now,
+                    )?;
+                }
+                Ok::<_, Error>((grant, presence.list(&id, now)?))
+            })
+            .await;
+            let Ok(Ok((grant, participants))) = result else {
+                break;
+            };
+            if presence_state.is_some() {
+                let body = SyncReply::Collaboration {
+                    grant,
+                    participants,
+                };
+                if last_collaboration.as_ref() != Some(&body) {
+                    if send(
+                        &mut socket,
+                        &ServerFrame {
+                            v: SYNC_VERSION,
+                            adapter: SYNC_ADAPTER.into(),
+                            epoch,
+                            revision,
+                            body: body.clone(),
+                        },
                     )
-                })
-                .await;
-                if !matches!(result, Ok(Ok(()))) {
-                    break;
+                    .await
+                    .is_err()
+                    {
+                        break;
+                    }
+                    last_collaboration = Some(body);
                 }
             }
-            last_presence = tokio::time::Instant::now();
+            if touch {
+                last_presence = tokio::time::Instant::now();
+            }
         }
     }
     if let Some(presence) = app.presence {

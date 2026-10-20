@@ -8,6 +8,14 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 64 needs host integration and design acceptance.** Finish Prompt 55's shared document ABI/
+  EditorLink and attach the new sync bindings in the native editors; their installed runtime remains read-only.
+  Account capability issuance/email invitations and persistent native outbox/rebase integration are not built.
+  Two people plus two agents pass on self-host, cloud adapters and the rebuilt image; four browser behavior
+  tests pass. All 18 goldens exceed the unchanged 1% gate; exported inverse-text contrast fails 12 checks.
+  Review `target/screen-goldens/`, the three new contrast gaps and `docs/runbooks/multiplayer.md`.
+  Real keychain/WSS/R2, remote CI and Windows/Linux editor acceptance remain unverified.
+
 - **Prompt 63 needs deployment/client acceptance.** Provision WSS, private Postgres/Redis/R2, product ids,
   keychain capability/storage credentials and room grants; run live R2, real keychain administration,
   remote CI and native Linux/Windows lanes. Local Postgres/Redis/S3-compatible and actual WebSocket tests
@@ -4049,3 +4057,86 @@ specification was weakened. Full workspace/GUI/GPU suites, large-room load/adver
 real keychain administration, remote CI and native Linux/Windows were not run. All three temporary test
 containers were removed; pre-existing containers stayed running. CLI test servers and temporary data were
 cleaned up. Build/diagnostic artifacts remain under target and /private/tmp. Nothing committed.
+
+## Prompt 64
+
+Implementation is present; this prompt is **not fully accepted**. Native live editing still needs Prompt 55's
+shared Rust document runtime and EditorLink. The new EngineSyncBindings boundary is optional and honest
+about that absence. No installed host is claimed to edit or sync a document through an unavailable ABI.
+
+Built:
+
+- Credential-free RoomSyncClient, native-only NativeSyncWire and bundled `vellum sync` keychain bridge.
+  Shared engine import precedes cursor persistence; local accepted updates enter a bounded outbox; failed
+  imports, resets and role loss retain work. Persistence/rebase/local-copy are host ports, not simulated
+  filesystem implementations. Without persistence, the UI says pending edits are held in this session.
+- Canonical attributed comments, implemented as core Op transactions with injected time and ids; people-only
+  authorship, bounded text/threads, reply/resolve/reopen policy, missing anchors, idempotent retry, and canonical
+  compaction recovery. Raw update uploads cannot bypass comment policy. The optional field extends unreleased
+  v1 and is omitted when empty; existing canonical fixtures retain their bytes. Comments currently use SetShell.
+- Expiring cursor/camera/selection presence and current role frames; separate people/agent marks, last-seen
+  state, follow/return, contextual comments, C placement/Escape/focus, drafts retained after role loss, and
+  explicit connection/reset/access states. Existing local agent controls remain scoped to local agents.
+- Owner-managed live switch, Viewer/Commenter/Editor changes and removal, rechecked on existing sockets;
+  independent snapshot/live controls and Team comment/presence entitlement. Self-host has no account requirement.
+  The real adapter hides email invitations until an account capability issuer/delivery flow exists.
+- Non-root Docker image and read-only compose setup; one shared real-WebSocket scenario for SQLite/disk,
+  Postgres/Redis/S3-compatible storage and the image, with two people, two agents, edits, presence and comments.
+  A cloud shutdown test exposed synchronous storage destructors inside Tokio; retained resources now outlive
+  the I/O runtime. Added parity CI, ADR-028 and the multiplayer runbook. No remote workflow or deployment run.
+
+Design: the owner supplied a replacement vellum.pen and approved its handoff defaults and replacement of
+both source and read-only cache. Read the fresh `.design-cache/prompt64/vellum.readonly.pen` through Pencil
+without mutations/saves; regenerated inventory, 1x/2x snapshots and tokens. The specification checksum was
+intentionally updated for that supplied file only; PRODUCT.md and DESIGN.md hashes are unchanged. There
+are 122 added screens, 374 total screens, 748 PNGs and 464 inventory roots. Registered reusable roots are
+recognized without accepting arbitrary non-screen roots. Added seven dated v1.1 decisions while preserving
+Appendix G's ten original choices. The exporter handles covering marker discs using bounded preorder reads.
+
+Reference note: read sibling outpost's epoch/reset/catch-up bridge. Vellum keeps explicit resets and pending
+work, persists only applied cursors and leaves credentials in the native process. No reference code ported.
+Used the native-data-fetching and Postgres best-practice skills; no Supabase service or remote data accessed.
+
+TDD: initial policy/client/controller/design-tool tests failed before implementation; the added C placement
+check failed with `placeComment is not a function` before that behavior was built. The icon generator's
+check failed after registering the two needed icons, then regeneration restored it. Tests were not weakened
+or tolerances raised. The v1.1 decision-table check extends the original strict Appendix G validation.
+
+Passed commands (Node 24/pnpm 12 via `/private/tmp/vellum-p56-bin`; telemetry disabled):
+
+- `pnpm exec turbo run type-check test` (64 tasks); focused host tests additionally cover synchronous local
+  replay after restore and failed outbox persistence after ack (21 host tests).
+- `CARGO_TARGET_DIR=target/prompt63-verification cargo test --offline -p vellum-sync-server -p vellum-sync-sqlite -p vellum-sync-postgres -p vellum-sync-redis -p vellum-core -p vellum-doc-loro -p vellum-sync-ws --lib --tests`
+  (399 passed; 13 tagged tests ignored by default).
+- With disposable local service URLs: `cargo test --offline -p vellum-sync-server --test multiplayer -- --include-ignored`
+  (local/cloud both pass), `cargo test --offline -p vellum-sync-postgres --test contract --test sharing -- --include-ignored`
+  (4 pass), and `cargo test --offline -p vellum-sync-ws --test transport -- --include-ignored` (2 pass).
+- `docker build -f crates/sync-server/Dockerfile -t vellum-sync:p64 .`; `VELLUM_TEST_SYNC_IMAGE=vellum-sync:p64 cargo test --offline -p vellum-sync-server --test image -- --include-ignored` (rebuilt final image passes).
+- `cargo test --offline -p vellum --test sync_cli` (cached local Skia source); focused adapter/core/type Clippy,
+  Redis Clippy and `cargo clippy --offline -p vellum --all-targets -- -D warnings`; `cargo fmt --all --check`.
+- `pnpm --filter @vellum/editor-react test:e2e multiplayer.spec.ts` (4 behavior tests); scoped Biome;
+  `node --test scripts/__tests__/design-check.test.mjs scripts/__tests__/token-backdrop.test.mjs` (26 tests).
+- `node scripts/types-gen.mjs --check` (146 types), `node scripts/gen-format.mjs --check` (3 files, cached Skia),
+  `node scripts/ui-icons-gen.mjs --check` (85 icons), `node scripts/design-check.mjs` (11 recorded warnings),
+  `node scripts/copy-lint.mjs`, `bash scripts/check-deps.sh`, `bash scripts/check-clean-room.sh`,
+  `actionlint .github/workflows/multiplayer.yml`, `node scripts/spec-checksums.mjs check`, `git diff --check`.
+
+Failed or not verified:
+
+- All 18 C39/C40/C41/W02-v11/narrow comparisons fail at the unchanged 1% threshold (4.62–13.03%; comparison sheets in
+  `target/screen-goldens/`). These are failures, not accepted visual coverage. Four interaction tests pass.
+- `node scripts/token-lint.mjs`: 3 exported inverse-text/background combinations fail in all 4 appearances
+  (12 checks); no contrast exception added. `node scripts/design-tokens.mjs --check`: 17 existing unapproved
+  DESIGN.md/token differences remain. The new approved scrim is recorded separately.
+- Global Biome: 4 existing errors (import order and fixture formatting); scoped changed files pass with warnings.
+  `cargo deny check`: 11 advisories on existing locked versions; bans/licences/sources pass. No dependency
+  version was changed. Existing advisories remain release blockers rather than being allowlisted.
+- Full script suite with cached Skia: 206 pass, 5 fail, 6 skipped. Failures: prior ADR-000 Proposed-state
+  assertion, historical append-only gap-line formatting, reference-index state, the contrast check above,
+  and the existing postject prerelease pin. The new decision checks pass. An earlier run without the cached
+  Skia environment also failed 3 format-generation checks; the direct forced-source checks and rerun pass.
+- Native outbox/rebase, actual shared-editor engine attachment, account invitations, live keychain/WSS/R2,
+  remote CI and Windows/Linux native editing remain unverified or unimplemented as described above.
+
+Stopped the local browser fixture and removed only the three disposable Prompt 64 service containers.
+The rebuilt image and local comparison/design caches remain available for review.

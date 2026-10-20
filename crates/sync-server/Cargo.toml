@@ -17,7 +17,7 @@ vellum-sync-sqlite = { path = "../adapters/sync-sqlite" }
 vellum-sync-disk = { path = "../adapters/sync-disk" }
 vellum-sync-postgres = { path = "../adapters/sync-postgres" }
 vellum-sync-redis = { path = "../adapters/sync-redis" }
-vellum-sync-ws = { path = "../adapters/sync-ws" }
+vellum-sync-ws = { path = "../adapters/sync-ws", features = ["client"] }
 vellum-assets-s3 = { path = "../adapters/assets-s3" }
 vellum-secrets-keyring = { path = "../adapters/secrets-keyring" }
 clap.workspace = true

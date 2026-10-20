@@ -115,6 +115,22 @@ test("an unrecognised frame name is an error", () => {
   assert.ok(messages(run(inv)).some((m) => m.startsWith('frame name "Frame 12"')));
 });
 
+test("a registered top-level reusable component is not mistaken for a screen", () => {
+  const inv = fixtureInventory();
+  inv.frames.push({
+    frame_id: "reusable-test",
+    name: "Component / Comments / Thread",
+    bounds: { x: 0, y: 0, width: 336, height: 320 },
+  });
+  assert.ok(
+    messages(run(inv)).some((m) => m.includes('frame name "Component / Comments / Thread"')),
+  );
+  inv.components.push({ id: "reusable-test", name: "Component / Comments / Thread" });
+  assert.ok(
+    !messages(run(inv)).some((m) => m.includes('frame name "Component / Comments / Thread"')),
+  );
+});
+
 test("a renamed component fails: the Component library entry has no match", () => {
   const inv = fixtureInventory();
   inv.components[0].name = "Component / Panel Thing / Building";

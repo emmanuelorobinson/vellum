@@ -4,6 +4,13 @@
   "description": "A `.vellum` file.",
   "type": "object",
   "properties": {
+    "comments": {
+      "description": "Comment threads by stable id. They survive deleted anchors and canonical snapshot recovery.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/CommentThread"
+      }
+    },
     "components": {
       "description": "Components by id.",
       "type": "object",
@@ -67,6 +74,87 @@
     "pages"
   ],
   "$defs": {
+    "Actor": {
+      "description": "Who made a change.",
+      "oneOf": [
+        {
+          "description": "A person, at a device.",
+          "type": "object",
+          "properties": {
+            "device": {
+              "description": "The device.",
+              "$ref": "#/$defs/DeviceId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "person"
+            }
+          },
+          "required": [
+            "kind",
+            "device"
+          ]
+        },
+        {
+          "description": "An agent.",
+          "type": "object",
+          "properties": {
+            "agent": {
+              "description": "Which one.",
+              "$ref": "#/$defs/AgentId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "agent"
+            }
+          },
+          "required": [
+            "kind",
+            "agent"
+          ]
+        },
+        {
+          "description": "The file itself: it changed on disk, was merged or restored.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "file"
+            },
+            "reason": {
+              "description": "Why.",
+              "$ref": "#/$defs/FileReason"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ]
+        },
+        {
+          "description": "A part of Vellum acting on nobody's behalf.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "system"
+            },
+            "subsystem": {
+              "description": "Which part.",
+              "$ref": "#/$defs/Subsystem"
+            }
+          },
+          "required": [
+            "kind",
+            "subsystem"
+          ]
+        }
+      ]
+    },
+    "AgentId": {
+      "description": "An agent: a built-in one (\"Teal\") or an external client (\"Claude Code\").",
+      "type": "string"
+    },
     "AliasEntry": {
       "description": "An alias to another variable's value and the theme axis values it applies under.",
       "type": "object",
@@ -139,6 +227,89 @@
       "description": "An sRGB colour with alpha. Printed as `#RRGGBB` when opaque and `#RRGGBBAA` otherwise, in upper\ncase; read in either case.",
       "type": "string"
     },
+    "CommentMessage": {
+      "type": "object",
+      "properties": {
+        "atMs": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "author": {
+          "$ref": "#/$defs/Actor"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "author",
+        "atMs",
+        "text"
+      ]
+    },
+    "CommentThread": {
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NodeId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "author": {
+          "$ref": "#/$defs/Actor"
+        },
+        "createdMs": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "messages": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/CommentMessage"
+          }
+        },
+        "page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "point": {
+          "$ref": "#/$defs/Point"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "resolvedBy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Actor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "author",
+        "point",
+        "createdMs",
+        "resolved",
+        "messages"
+      ]
+    },
     "Component": {
       "description": "A component, listed in the document's `components` by id.",
       "type": "object",
@@ -193,6 +364,10 @@
           "minItems": 4
         }
       ]
+    },
+    "DeviceId": {
+      "description": "A person's device. A person is known by the device they edit from; there are no accounts locally.",
+      "type": "string"
     },
     "DocumentKind": {
       "description": "Whether a file is a document or a library other documents import (`*.lib.vellum`).",
@@ -402,6 +577,26 @@
             "type",
             "src"
           ]
+        }
+      ]
+    },
+    "FileReason": {
+      "description": "Why the file itself changed a document (`Actor::File`).",
+      "oneOf": [
+        {
+          "description": "The file changed on disk: a checkout, an editor or an agent writing the file directly.",
+          "type": "string",
+          "const": "external-change"
+        },
+        {
+          "description": "A three-way merge (the merge driver).",
+          "type": "string",
+          "const": "merge"
+        },
+        {
+          "description": "A recovery copy was restored.",
+          "type": "string",
+          "const": "recovery"
         }
       ]
     },
@@ -3995,6 +4190,26 @@
     "StyleId": {
       "description": "A text or effect style's id.",
       "type": "string"
+    },
+    "Subsystem": {
+      "description": "The part of Vellum that made a change on nobody's behalf (`Actor::System`).",
+      "oneOf": [
+        {
+          "description": "An importer (SVG, image, clipboard) building nodes.",
+          "type": "string",
+          "const": "importer"
+        },
+        {
+          "description": "A format migration.",
+          "type": "string",
+          "const": "migration"
+        },
+        {
+          "description": "Updates merged in from another copy of the document.",
+          "type": "string",
+          "const": "sync"
+        }
+      ]
     },
     "TextAlign": {
       "description": "Horizontal text alignment.",

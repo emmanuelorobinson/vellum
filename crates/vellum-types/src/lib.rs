@@ -13,6 +13,7 @@
 mod bindings;
 pub mod brand;
 mod color;
+pub mod comments;
 mod component;
 pub mod daemon;
 mod defaults;

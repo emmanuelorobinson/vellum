@@ -43,6 +43,8 @@ pub struct Shell {
     pub styles: BTreeMap<StyleId, Style>,
     /// Custom fonts.
     pub fonts: BTreeMap<AssetId, FontFace>,
+    /// Portable collaboration threads, changed through attributed transactions too.
+    pub comments: BTreeMap<NodeId, vellum_types::comments::CommentThread>,
 }
 
 impl Shell {
@@ -54,6 +56,7 @@ impl Shell {
             themes: doc.themes.clone(),
             styles: doc.styles.clone(),
             fonts: doc.fonts.clone(),
+            comments: doc.comments.clone(),
         }
     }
 
@@ -65,6 +68,7 @@ impl Shell {
             themes: std::mem::replace(&mut doc.themes, self.themes),
             styles: std::mem::replace(&mut doc.styles, self.styles),
             fonts: std::mem::replace(&mut doc.fonts, self.fonts),
+            comments: std::mem::replace(&mut doc.comments, self.comments),
         }
     }
 }
