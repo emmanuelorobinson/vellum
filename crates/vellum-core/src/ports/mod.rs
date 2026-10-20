@@ -28,6 +28,7 @@ mod sessions;
 mod shader;
 mod spatial;
 mod spec;
+pub mod sync;
 mod target;
 mod text;
 mod tokens;

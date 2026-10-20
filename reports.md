@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 63 needs deployment/client acceptance.** Provision WSS, private Postgres/Redis/R2, product ids,
+  keychain capability/storage credentials and room grants; run live R2, real keychain administration,
+  remote CI and native Linux/Windows lanes. Local Postgres/Redis/S3-compatible and actual WebSocket tests
+  pass. Account capability issuance and editor/daemon sync-client integration are not built by this backend
+  prompt. Compaction requires a coordinated epoch reset and explicit rebase of retained unsent edits;
+  native undo/history caches reset. See `docs/runbooks/sync.md` and ADR-027.
+
 - **Prompt 62 needs deployment/platform and visual acceptance.** Configure the private R2 bucket, account/API
   origin and lifecycle policy; run live R2/Polar, real-keychain upload/retry and installed protocol registration
   on macOS/Windows/Linux. Native fixture import, WASM pixels, ZIP bytes and revocation pass locally. All 14
@@ -3976,3 +3983,69 @@ keychain upload, installed-protocol registration, remote CI and Windows/Linux we
 approval-review usage limit interrupted a screenshot attempt; the authorized comparison ran after reset.
 All 14 W02/W03 design comparisons failed the unchanged gate; reports/comparison sheets remain in target.
 Temporary API/account/viewer/gallery servers were stopped. Nothing committed.
+
+## Prompt 63
+
+Built the optional Rust sync service, its versioned protocol/CLI, per-document rooms and all requested
+storage alternatives. Local acceptance passes; no service was deployed and no real keychain entry changed.
+
+- Updates merge on disposable Loro replicas, validate every new Origin against the capability's actor,
+  pass core diff/Op planning and canonical encode/decode checks, then persist with a revision CAS before
+  acknowledgement/broadcast. Duplicates are idempotent; missing dependencies, invalid models, viewer/
+  commenter writes, expired/revoked grants and mismatched protocol/adapter versions fail explicitly.
+  Separate servers deliver from the durable log. SQL grants store only credential digests; cloud mode
+  rechecks the owner's current entitlement. Account capability issuance and host sync clients remain unwired.
+- Pure ports in core, re-exported by sync-server, avoid adapter-to-composition-root cycles (ADR-027).
+  Shared contracts, deterministic fakes and deliberately broken implementations cover the ports. Added
+  Postgres/Redis/private R2-S3 and SQLite/private disk/memory adapters, native fixture-client containment,
+  bounded transport/workers, private atomic snapshots, CI and the sync runbook. Dependency pins and
+  wrapper rules are recorded; no advisory policy changed.
+- Compaction publishes canonical `.vellum` before atomically advancing epoch/revision and pruning the
+  tail. No native snapshot cache is required. Old clients must retain/rebase unsent edits; native undo/
+  history caches reset. Snapshot-only recovery uses a new room id. Concurrent semantic conflicts are
+  rejected rather than persisting an invalid design. Superseded/orphan snapshots need operator cleanup.
+- TDD regressions fixed: duplicate empty diffs, forged earlier Origins, malformed native content, pending
+  dependencies, failed persistence/publication, concurrent startup DDL, Redis actor replacement, stale
+  staging files, viewer rejection closing reads, and newer unknown wire shapes getting only an EOF.
+  The existing codec can encode typed trees deeper than its decoder reads; sync now rejects these before
+  admission/publication. The fixture initially overflowed the small test stack; native validation and
+  the deliberate deep fixture use bounded 16 MiB stacks. Local codec/ops depth policy is unchanged.
+- R4 reference: Loro's encoding docs describe causal/version-vector updates and pending ranges; its shallow
+  concurrency note shows why pre-root forks cannot always merge. Kept within-epoch causal exchange, chose
+  explicit canonical epoch resets for vendor-independent recovery. Read sibling outpost's epoch/catch-up
+  pattern; no external source ported. Used Context7 and installed SDK/Turbo docs. No UI/design frames changed.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Rust 1.99.0, macOS ARM64; pnpm telemetry opt-outs):
+
+Rust commands below used `CARGO_TARGET_DIR=target/prompt63-verification` to avoid Zed's concurrent checker.
+
+- `cargo test --offline -p vellum-types -p vellum-core -p vellum-contracts -p vellum-doc-loro -p vellum-sync-server -p vellum-sync-memory -p vellum-sync-sqlite -p vellum-sync-disk -p vellum-sync-postgres -p vellum-sync-redis -p vellum-sync-ws -p vellum-assets-s3 --lib --tests`
+  (747 passed, eight expected skips at the broad run). Later shared fake/access suites and affected package
+  rerun passed; final `cargo test --offline -p vellum-sync-server --test rooms` passed nine cases, including
+  48 generated convergence histories with 2–6 clients, partitions, CRUD/moves and snapshot-only recovery.
+- `cargo test --offline -p vellum-sync-server --test network --test cloud_network -p vellum-sync-postgres --test contract -p vellum-sync-redis --test contract -p vellum-assets-s3 --test snapshots -p vellum-sync-ws --test transport -- --include-ignored`
+  (nine native passes). VELLUM_TEST_DATABASE/REDIS/S3 configuration pointed to disposable Postgres 18,
+  Redis 8 and a private RustFS bucket with dummy credentials. Includes actual composed storage over WS.
+  Final self-contained `--test network`/`--test transport` rerun passed after the nesting-boundary fix.
+- `cargo clippy --offline -p vellum-types -p vellum-core -p vellum-contracts -p vellum-doc-loro -p vellum-sync-server -p vellum-sync-memory -p vellum-sync-sqlite -p vellum-sync-disk -p vellum-sync-postgres -p vellum-sync-redis -p vellum-sync-ws -p vellum-assets-s3 --all-targets -- -D warnings`;
+  `cargo build --offline -p vellum-sync-server`; `cargo test --offline -p vellum-testkit --test canary` (one).
+  Scoped sync/Loro adapter doctests passed serially in the isolated target.
+- `VELLUM_TEST_SYNC_BINARY=<built-production-binary> node --test scripts/__tests__/sync-cli.test.mjs`
+  (schema, private SQLite/disk seed, required --listen, actual HTTP health and graceful SIGTERM; no keychain).
+  `node --test scripts/__tests__/repo-layout.test.mjs scripts/__tests__/sync-cli.test.mjs`
+  (eight passed; native case explicitly skipped without its flag). Registered that flag in Turbo passthrough.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/types-gen.mjs --check` (138 types);
+  `FORCE_SKIA_BUILD=1 SKIA_SOURCE_DIR=<cached-synchronized-source> node scripts/gen-format.mjs --check` (three).
+  The first isolated format check attempted Skia registry synchronization and failed; cached-source retry passed.
+  An earlier overlapping shared-target doctest lost a build artifact; serial isolated doctests passed.
+- `pnpm type-check` (33 tasks, existing /private/tmp/vellum-p56-bin PATH shim); `cargo fmt --all -- --check`;
+  `bash scripts/check-deps.sh` (pure allowlist, bans/licenses/sources, 606 modules/1,631 TS dependencies);
+  `bash scripts/check-clean-room.sh`; `node scripts/copy-lint.mjs`; `node scripts/token-lint.mjs`;
+  scoped Biome on the new JS/config; `actionlint .github/workflows/sync.yml`; checksum and git diff --check.
+
+Global Biome retains four unrelated fixture/import-format errors; `cargo deny check` retains the nine
+existing advisories (bans/licenses/sources pass). No fixture, tolerance, advisory rule or read-only
+specification was weakened. Full workspace/GUI/GPU suites, large-room load/adversarial testing, live R2,
+real keychain administration, remote CI and native Linux/Windows were not run. All three temporary test
+containers were removed; pre-existing containers stayed running. CLI test servers and temporary data were
+cleaned up. Build/diagnostic artifacts remain under target and /private/tmp. Nothing committed.

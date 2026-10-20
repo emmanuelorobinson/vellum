@@ -1,0 +1,17 @@
+[package]
+name = "vellum-sync-postgres"
+description = "Postgres sync update log and capability grants."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+vellum-types = { path = "../../vellum-types" }
+postgres = "=0.19.14"
+sha2 = "=0.11.1"
+serde_json.workspace = true
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+[lints]
+workspace = true

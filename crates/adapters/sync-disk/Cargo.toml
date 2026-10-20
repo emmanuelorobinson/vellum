@@ -1,0 +1,15 @@
+[package]
+name = "vellum-sync-disk"
+description = "Immutable canonical sync snapshots on private local disk."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+vellum-types = { path = "../../vellum-types" }
+sha2 = "=0.11.1"
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+[lints]
+workspace = true

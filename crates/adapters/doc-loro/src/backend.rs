@@ -24,7 +24,7 @@ use loro::{
 use serde_json::{Map, Value as Json};
 use vellum_core::ops::{Edit, Parent};
 use vellum_core::ports::SyncError;
-use vellum_types::{Component, ComponentId, Document, Node, NodeId, Origin, Page, PageId};
+use vellum_types::{Actor, Component, ComponentId, Document, Node, NodeId, Origin, Page, PageId};
 
 /// Genesis peers have this bit set; a store's own peer must not.
 pub(crate) const GENESIS_BIT: u64 = 1 << 63;
@@ -513,10 +513,31 @@ impl Backend {
             .expect("export updates")
     }
 
-    /// Imports updates and returns the origin of the newest change they carried, if any arrived.
-    pub fn import(&mut self, bytes: &[u8]) -> Result<Option<Origin>, SyncError> {
-        let meta = LoroDoc::decode_import_blob_meta(bytes, true)
-            .map_err(|e| SyncError::Malformed(e.to_string()))?;
+    pub fn fork(&self) -> Result<Self, SyncError> {
+        let bytes = self.doc.export(ExportMode::Snapshot).map_err(|_| bad())?;
+        let doc = LoroDoc::from_snapshot(&bytes).map_err(|_| bad())?;
+        doc.set_peer_id(self.doc.peer_id()).map_err(|_| bad())?;
+        let tree = doc.get_tree(TREE);
+        tree.enable_fractional_index(0);
+        let mut fork = Self {
+            doc,
+            tree,
+            nodes: HashMap::new(),
+            ids: HashMap::new(),
+            roots: HashMap::new(),
+            genesis: self.genesis,
+        };
+        fork.index();
+        Ok(fork)
+    }
+
+    /// Validate on a disposable replica. A rejected import cannot leave pending operations behind.
+    pub fn import_checked(
+        &mut self,
+        bytes: &[u8],
+        actor: Option<&Actor>,
+    ) -> Result<(Option<Origin>, Document), SyncError> {
+        let meta = LoroDoc::decode_import_blob_meta(bytes, true).map_err(|_| bad())?;
         if meta
             .partial_end_vv
             .iter()
@@ -524,17 +545,201 @@ impl Backend {
         {
             return Err(SyncError::DifferentDocument);
         }
-        let status = self
-            .doc
-            .import(bytes)
-            .map_err(|e| SyncError::Malformed(e.to_string()))?;
-        let newest = status
-            .success
+        if actor.is_some()
+            && (!matches!(meta.mode, loro::EncodedBlobMode::Updates) || meta.change_num > 10_000)
+        {
+            return Err(bad());
+        }
+        let known = self.doc.oplog_vv();
+        let unknown: u64 = meta
+            .partial_end_vv
             .iter()
-            .filter(|(_, (start, end))| end > start)
-            .filter_map(|(peer, (_, end))| self.doc.get_change(loro::ID::new(*peer, end - 1)))
-            .filter(|change| change.message.is_some())
-            .max_by_key(|change| (change.lamport, change.id.peer));
-        Ok(newest.and_then(|change| serde_json::from_str(change.message.as_deref()?).ok()))
+            .map(|(peer, end)| {
+                u64::try_from(end.saturating_sub(known.get(peer).copied().unwrap_or(0)))
+                    .unwrap_or(0)
+            })
+            .sum();
+        if actor.is_some() && unknown > 200_000 {
+            return Err(bad());
+        }
+        let mut candidate = self.fork()?;
+        let before = candidate.doc.oplog_vv();
+        let status = candidate.doc.import(bytes).map_err(|_| bad())?;
+        if status.pending.is_some_and(|p| !p.is_empty()) {
+            return Err(bad());
+        }
+        let mut newest = None;
+        let mut newest_key = (0, 0);
+        let mut count = 0;
+        for (peer, (start, end)) in status.success.iter() {
+            let mut cursor = (*start).max(before.get(peer).copied().unwrap_or(0));
+            if peer & GENESIS_BIT != 0 && cursor < *end {
+                return Err(bad());
+            }
+            while cursor < *end {
+                count += 1;
+                if count > 10_000 {
+                    return Err(bad());
+                }
+                let change = candidate
+                    .doc
+                    .get_change(loro::ID::new(*peer, cursor))
+                    .ok_or_else(bad)?;
+                let origin: Origin =
+                    serde_json::from_str(change.message.as_deref().ok_or_else(bad)?)
+                        .map_err(|_| bad())?;
+                if actor.is_some_and(|a| a != &origin.actor) {
+                    return Err(bad());
+                }
+                let key = (change.lamport, change.id.peer);
+                if key >= newest_key {
+                    newest_key = key;
+                    newest = Some(origin);
+                }
+                cursor = change
+                    .id
+                    .counter
+                    .checked_add(i32::try_from(change.len).map_err(|_| bad())?)
+                    .ok_or_else(bad)?;
+            }
+        }
+        let after = candidate.try_read()?;
+        if !vellum_core::ops::check_document(&after).is_empty() {
+            return Err(bad());
+        }
+        // Replication is admitted only if the core can lower it to validated Ops.
+        let ops = vellum_core::diff::diff(&self.read(), &after).map_err(|_| bad())?;
+        let origin = newest.clone().unwrap_or_else(|| {
+            Origin::new(Actor::System {
+                subsystem: vellum_types::Subsystem::Sync,
+            })
+        });
+        if !ops.is_empty() {
+            let plan = vellum_core::ops::plan(
+                &self.read(),
+                &vellum_core::ops::Transaction { origin, ops },
+                &mut NoIds,
+            )
+            .map_err(|_| bad())?;
+            if plan.document != after {
+                return Err(bad());
+            }
+        }
+        candidate.index();
+        *self = candidate;
+        Ok((newest, after))
+    }
+
+    fn try_node(&self, id: TreeID, depth: usize, count: &mut usize) -> Result<Node, SyncError> {
+        *count += 1;
+        if depth > 128 || *count > 100_000 {
+            return Err(bad());
+        }
+        let mut object = Map::new();
+        for (key, value) in checked_map(&self.meta(id))? {
+            if key == "children" {
+                return Err(bad());
+            }
+            object.insert(key, serde_json::from_str(&value).map_err(|_| bad())?);
+        }
+        let mut node: Node = serde_json::from_value(Json::Object(object)).map_err(|_| bad())?;
+        let kids = self.tree.children(id).unwrap_or_default();
+        if let Some(slot) = node.children_mut() {
+            *slot = kids
+                .into_iter()
+                .map(|c| self.try_node(c, depth + 1, count))
+                .collect::<Result<_, _>>()?;
+        } else if !kids.is_empty() {
+            return Err(bad());
+        }
+        Ok(node)
+    }
+    fn try_read(&self) -> Result<Document, SyncError> {
+        let LoroValue::Map(roots) = self.doc.get_value() else {
+            return Err(bad());
+        };
+        if roots
+            .keys()
+            .any(|k| ![TREE, SHELL, VARIABLES].contains(&k.as_str()))
+        {
+            return Err(bad());
+        }
+        let shell = checked_map(&self.doc.get_map(SHELL))?;
+        if shell.len() != 1 {
+            return Err(bad());
+        }
+        let mut document: Document =
+            serde_json::from_str(shell.get("shell").ok_or_else(bad)?).map_err(|_| bad())?;
+        if !document.pages.is_empty()
+            || !document.components.is_empty()
+            || !document.variables.is_empty()
+        {
+            return Err(bad());
+        }
+        let mut count = 0;
+        for root in self.tree.children(TreeParentId::Root).unwrap_or_default() {
+            let meta = checked_map(&self.meta(root))?;
+            let kids = self.tree.children(root).unwrap_or_default();
+            if let Some(page) = meta.get("page") {
+                if meta.len() != 1 {
+                    return Err(bad());
+                }
+                let mut page: Page = serde_json::from_str(page).map_err(|_| bad())?;
+                if !page.children.is_empty() {
+                    return Err(bad());
+                }
+                page.children = kids
+                    .into_iter()
+                    .map(|id| self.try_node(id, 0, &mut count))
+                    .collect::<Result<_, _>>()?;
+                document.pages.push(page);
+            } else {
+                if meta.len() != 2 || kids.len() != 1 {
+                    return Err(bad());
+                }
+                let id = ComponentId::new(meta.get("component").ok_or_else(bad)?.clone())
+                    .map_err(|_| bad())?;
+                let mut props: Json =
+                    serde_json::from_str(meta.get("props").ok_or_else(bad)?).map_err(|_| bad())?;
+                let object = props.as_object_mut().ok_or_else(bad)?;
+                if object.contains_key("root") {
+                    return Err(bad());
+                }
+                object.insert(
+                    "root".into(),
+                    serde_json::to_value(self.try_node(kids[0], 0, &mut count)?)
+                        .map_err(|_| bad())?,
+                );
+                let component = serde_json::from_value(props).map_err(|_| bad())?;
+                if document.components.insert(id, component).is_some() {
+                    return Err(bad());
+                }
+            }
+        }
+        for (id, value) in checked_map(&self.doc.get_map(VARIABLES))? {
+            let id = vellum_types::VariableId::new(id).map_err(|_| bad())?;
+            document
+                .variables
+                .insert(id, serde_json::from_str(&value).map_err(|_| bad())?);
+        }
+        Ok(document)
+    }
+}
+fn bad() -> SyncError {
+    SyncError::Malformed("Invalid or incomplete sync update".into())
+}
+fn checked_map(map: &LoroMap) -> Result<BTreeMap<String, String>, SyncError> {
+    let LoroValue::Map(entries) = map.get_value() else {
+        return Err(bad());
+    };
+    entries
+        .iter()
+        .map(|(key, value)| Ok((key.to_string(), string(value).ok_or_else(bad)?.to_owned())))
+        .collect()
+}
+struct NoIds;
+impl vellum_core::ports::IdGen for NoIds {
+    fn node_id(&mut self) -> NodeId {
+        unreachable!("document diff does not mint ids")
     }
 }

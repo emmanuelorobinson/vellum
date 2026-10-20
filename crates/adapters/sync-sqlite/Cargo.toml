@@ -1,0 +1,17 @@
+[package]
+name = "vellum-sync-sqlite"
+description = "SQLite sync update log and capability grants."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+vellum-types = { path = "../../vellum-types" }
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
+sha2 = "=0.11.1"
+serde_json.workspace = true
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+[lints]
+workspace = true

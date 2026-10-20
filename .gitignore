@@ -44,3 +44,6 @@ playwright-report/
 apps/account/public/engine/
 apps/web/public/engine/
 apps/web/public/fonts/
+
+# Optional sync service data (canonical snapshots, SQL/WAL, no credentials).
+.sync-data/

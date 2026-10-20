@@ -82,6 +82,56 @@ fn edits_made_at_the_same_time_converge() {
 }
 
 #[test]
+fn authenticated_import_checks_all_origins_and_is_atomic() {
+    let mut client = LoroDocStore::new(&document(), 1);
+    write(
+        &mut client,
+        tx(&bob(), vec![rename("rect000001", "TEST DATA: forged")]),
+    );
+    write(
+        &mut client,
+        tx(&alice(), vec![rename("rect000002", "TEST DATA: allowed")]),
+    );
+    let mut server = LoroDocStore::new(&document(), 9);
+    let before = server.cursor();
+    assert!(
+        server
+            .import_authenticated(&client.export_updates(&SyncCursor::empty()), &alice())
+            .is_err()
+    );
+    assert_eq!(server.cursor(), before);
+    assert_eq!(server.snapshot(), document());
+}
+
+#[test]
+fn native_updates_cannot_write_invalid_document_content_or_panic() {
+    use loro::{ExportMode, LoroDoc};
+    let store = LoroDocStore::new(&document(), 1);
+    let native = LoroDoc::new();
+    native
+        .import(&store.export_updates(&SyncCursor::empty()).bytes)
+        .unwrap();
+    native.set_peer_id(12).unwrap();
+    native
+        .get_map("document")
+        .insert("shell", "invalid json")
+        .unwrap();
+    native.set_next_commit_message(
+        &serde_json::to_string(&vellum_types::Origin::new(alice())).unwrap(),
+    );
+    native.commit();
+    let malicious = vellum_core::ports::SyncPayload {
+        adapter: "loro-1".into(),
+        bytes: native.export(ExportMode::all_updates()).unwrap(),
+    };
+    let mut server = LoroDocStore::new(&document(), 9);
+    let before = server.cursor();
+    assert!(server.import_authenticated(&malicious, &alice()).is_err());
+    assert_eq!(server.cursor(), before);
+    assert_eq!(server.read_back(), document());
+}
+
+#[test]
 fn a_move_and_a_delete_at_the_same_time_converge() {
     let mut left = LoroDocStore::new(&document(), 1);
     let mut right = LoroDocStore::new(&document(), 2);
@@ -215,4 +265,34 @@ fn the_snapshot_is_what_the_codec_decodes() {
             "{name}: Loro's state does not read back as the document"
         );
     }
+}
+
+#[test]
+fn missing_dependencies_are_rejected_without_parked_changes() {
+    let mut client = LoroDocStore::new(&document(), 1);
+    write(
+        &mut client,
+        tx(&alice(), vec![rename("rect000001", "TEST DATA: first")]),
+    );
+    let cursor = client.cursor();
+    write(
+        &mut client,
+        tx(
+            &alice(),
+            vec![rename("rect000002", "TEST DATA: depends on first")],
+        ),
+    );
+    let mut server = LoroDocStore::new(&document(), 9);
+    let before = server.cursor();
+    assert!(
+        server
+            .import_authenticated(&client.export_updates(&cursor), &alice())
+            .is_err()
+    );
+    assert_eq!(server.cursor(), before);
+    assert_eq!(server.snapshot(), document());
+    server
+        .import_authenticated(&client.export_updates(&SyncCursor::empty()), &alice())
+        .unwrap();
+    assert_eq!(server.snapshot(), client.snapshot());
 }

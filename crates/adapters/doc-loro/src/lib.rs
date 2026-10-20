@@ -21,7 +21,7 @@ use backend::Backend;
 /// The Cargo package name, used by diagnostics.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
-const ADAPTER_ID: &str = "loro-1";
+const ADAPTER_ID: &str = vellum_types::sync::SYNC_ADAPTER;
 
 /// A document held in Loro.
 #[derive(Debug)]
@@ -46,6 +46,44 @@ impl LoroDocStore {
     /// [`DocStore::snapshot`]; for checks and diagnostics.
     pub fn read_back(&self) -> Document {
         self.backend.read()
+    }
+
+    /// Disposable replica retaining CRDT identity, without minting a new writer id.
+    pub fn fork(&self) -> Result<Self, SyncError> {
+        Ok(Self {
+            backend: self.backend.fork()?,
+            doc: self.doc.clone(),
+            history: self.history.clone(),
+        })
+    }
+    /// Network ingress: every new change must carry this authenticated actor's Origin.
+    pub fn import_authenticated(
+        &mut self,
+        payload: &SyncPayload,
+        actor: &Actor,
+    ) -> Result<ChangeSet, SyncError> {
+        self.import_checked(payload, Some(actor))
+    }
+    fn import_checked(
+        &mut self,
+        payload: &SyncPayload,
+        actor: Option<&Actor>,
+    ) -> Result<ChangeSet, SyncError> {
+        if payload.adapter != ADAPTER_ID {
+            return Err(SyncError::AdapterMismatch {
+                expected: ADAPTER_ID.into(),
+                found: payload.adapter.clone(),
+            });
+        }
+        let (origin, after) = self.backend.import_checked(&payload.bytes, actor)?;
+        let origin = origin.unwrap_or_else(|| {
+            Origin::new(Actor::System {
+                subsystem: Subsystem::Sync,
+            })
+        });
+        let changes = self.history.record_remote(&self.doc, &after, origin);
+        self.doc = after;
+        Ok(changes)
     }
 
     fn written(&mut self, step: Option<Step>) -> Option<ChangeSet> {
@@ -104,21 +142,6 @@ impl DocStore for LoroDocStore {
     }
 
     fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError> {
-        if payload.adapter != ADAPTER_ID {
-            return Err(SyncError::AdapterMismatch {
-                expected: ADAPTER_ID.into(),
-                found: payload.adapter.clone(),
-            });
-        }
-        let origin = self.backend.import(&payload.bytes)?.unwrap_or_else(|| {
-            Origin::new(Actor::System {
-                subsystem: Subsystem::Sync,
-            })
-        });
-        let after = self.backend.read();
-        self.backend.index();
-        let changes = self.history.record_remote(&self.doc, &after, origin);
-        self.doc = after;
-        Ok(changes)
+        self.import_checked(payload, None)
     }
 }

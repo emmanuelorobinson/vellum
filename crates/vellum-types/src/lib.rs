@@ -27,6 +27,7 @@ mod origin;
 mod paint;
 mod stroke;
 mod style;
+pub mod sync;
 mod text;
 mod value;
 mod variable;

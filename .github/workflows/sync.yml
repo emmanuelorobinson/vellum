@@ -1,0 +1,54 @@
+name: Sync server
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: test-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd 'redis-cli ping' --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: sync-server
+      - name: Deterministic room, convergence, disk and SQLite contracts
+        run: cargo test --locked -p vellum-types -p vellum-core -p vellum-contracts -p vellum-sync-server -p vellum-doc-loro -p vellum-sync-memory -p vellum-sync-sqlite -p vellum-sync-disk -p vellum-sync-postgres -p vellum-sync-redis -p vellum-sync-ws -p vellum-assets-s3
+      - name: Native WebSocket and private SQL/Redis contracts
+        env:
+          VELLUM_TEST_DATABASE_URL: postgres://postgres:test-only@127.0.0.1:5432/postgres
+          VELLUM_TEST_REDIS_URL: redis://127.0.0.1:6379
+        run: cargo test --locked -p vellum-sync-server --test network -p vellum-sync-postgres --test contract -p vellum-sync-redis --test contract -p vellum-sync-ws --test transport -- --include-ignored
+      - name: Focused Clippy
+        run: cargo clippy --locked -p vellum-types -p vellum-core -p vellum-contracts -p vellum-sync-server -p vellum-doc-loro -p vellum-sync-memory -p vellum-sync-sqlite -p vellum-sync-disk -p vellum-sync-postgres -p vellum-sync-redis -p vellum-sync-ws -p vellum-assets-s3 --all-targets -- -D warnings
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Production CLI lifecycle (no keychain or account)
+        run: |
+          cargo build --locked -p vellum-sync-server
+          VELLUM_TEST_SYNC_BINARY="$PWD/target/debug/vellum-sync-server" node --test scripts/__tests__/sync-cli.test.mjs
+      - name: Generated bindings and unchanged specification
+        if: always()
+        run: |
+          node scripts/types-gen.mjs --check
+          node scripts/spec-checksums.mjs check

@@ -22,7 +22,7 @@
     },
     "//#test:scripts": {
       "cache": false,
-      "passThroughEnv": ["VELLUM_LANES", "VELLUM_CHROME"]
+      "passThroughEnv": ["VELLUM_LANES", "VELLUM_CHROME", "VELLUM_TEST_SYNC_BINARY"]
     },
     "build": {
       "dependsOn": ["^build"],

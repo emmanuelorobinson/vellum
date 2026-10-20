@@ -47,3 +47,4 @@ pub use target::InMemoryTarget;
 pub use text::FixedMetricText;
 pub use tokens::{MemorySpec, MemoryTokens};
 pub use watch::ManualWatcher;
+pub mod sync;

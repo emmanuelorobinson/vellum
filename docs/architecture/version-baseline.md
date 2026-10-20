@@ -359,3 +359,23 @@ boundary. The existing reqwest/Tokio adapter also carries the bounded snapshot p
 version changed. Viewer rendering uses the existing shared WASM/Skia ABI. Next route-handler and Turbo
 2.11.7 task-order contracts were checked through Context7 and the installed Turbo docs; graph acceptance
 verifies that both viewer hosts wait for the root WASM build. See ADR-026 and `docs/runbooks/sharing.md`.
+
+## Prompt 63: sync backend (2026-10-20)
+
+Registry versions verified with `cargo search`/`cargo info`; resolved in Cargo.lock. No pure-crate
+allowlist changes. Adapter boundaries and canonical compaction epochs are in ADR-027.
+
+| Dependency | Exact version | Wrapper | Purpose |
+|---|---|---|---|
+| axum | 0.8.9 | vellum-sync-ws | authenticated bounded WebSocket service |
+| tokio | 1.53.2 (existing pin) | sync transport and S3 | I/O workers and isolated blocking work |
+| postgres | 0.19.14 | vellum-sync-postgres | transactional update log and capability/entitlement reads |
+| redis | 1.7.1, default features disabled | vellum-sync-redis | expiring connection membership |
+| object_store | 0.14.2, aws only | vellum-assets-s3 | private immutable canonical snapshots over R2/S3 |
+| rusqlite | 0.40.2 (existing pin), bundled | vellum-sync-sqlite | self-host update log and hashed grants |
+| sha2 | 0.11.1 (existing pin) | sync disk/SQL and S3 adapters | snapshot integrity and credential digests |
+| tungstenite | 0.29.0, test dependency | vellum-sync-ws test client feature | actual loopback WebSocket acceptance |
+
+Self-host composition uses SQLite, private disk and memory presence without a billing/account service.
+Cloud composition uses Postgres/Redis/private R2 and the existing entitlement vocabulary. No external
+reference code ported, no cloud service deployed. Current advisory failures remain recorded in reports.md.

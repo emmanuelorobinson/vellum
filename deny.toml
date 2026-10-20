@@ -55,10 +55,15 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 deny = [
-  { crate = "tokio", wrappers = ["vellum-ipc-local", "vellum-model-http", "vellum-account-http", "vellum-engine-claude-code", "vellum-engine-codex", "reqwest", "hyper", "hyper-util", "hyper-rustls", "tower", "tokio-rustls", "wasm-bindgen-futures"], reason = "native runtimes stay in IPC, model/account HTTP and installed engine adapters (ADR-003, ADR-023, ADR-007)" },
-  { crate = "reqwest", wrappers = ["vellum-model-http", "vellum-account-http"], reason = "model and account HTTP stay in their bounded transport adapters (ADR-023, Prompt 61)" },
+  { crate = "tokio", wrappers = ["vellum-ipc-local", "vellum-model-http", "vellum-account-http", "vellum-engine-claude-code", "vellum-engine-codex", "reqwest", "hyper", "hyper-util", "hyper-rustls", "tower", "tokio-rustls", "wasm-bindgen-futures", "vellum-sync-ws", "vellum-assets-s3", "axum", "tokio-tungstenite", "tokio-util", "tokio-postgres", "postgres", "object_store", "h2"], reason = "ADR-027 sync adapters; native runtimes stay in IPC, model/account HTTP and installed engine adapters (ADR-003, ADR-023, ADR-007)" },
+  { crate = "reqwest", wrappers = ["vellum-model-http", "vellum-account-http", "object_store"], reason = "model and account HTTP stay in their bounded transport adapters (ADR-023, Prompt 61)" },
   { crate = "secret-service", wrappers = ["zbus-secret-service-keyring-store"], reason = "keyring Linux backend only (ADR-023)" },
   # A vendor crate is reached only through the adapter that wraps it (guide §8, §13).
+  { crate = "axum", wrappers = ["vellum-sync-ws"], reason = "ADR-027 sync transport only" },
+  { crate = "postgres", wrappers = ["vellum-sync-postgres"], reason = "ADR-027 sync persistence only" },
+  { crate = "redis", wrappers = ["vellum-sync-redis"], reason = "ADR-027 ephemeral sync membership only" },
+  { crate = "tungstenite", wrappers = ["vellum-sync-ws", "tokio-tungstenite"], reason = "ADR-027 WebSocket protocol stays inside the transport adapter, including native acceptance clients" },
+  { crate = "object_store", wrappers = ["vellum-assets-s3"], reason = "ADR-027 private S3 snapshot adapter only" },
   { crate = "loro", wrappers = ["vellum-doc-loro"], reason = "Loro sits behind DocStore (Invariant 5)" },
   { crate = "taffy", wrappers = ["vellum-layout-taffy"], reason = "layout goes through the LayoutEngine port" },
   { crate = "parley", wrappers = ["vellum-text-parley"], reason = "text goes through the TextEngine port" },
@@ -66,9 +71,9 @@ deny = [
   { crate = "zip", wrappers = ["vellum-export-raster", "vellum"], reason = "deterministic export bundles; composition-root dev tests inspect archives" },
   { crate = "skia-safe", wrappers = ["vellum-render-skia"], reason = "drawing goes through the Renderer port" },
   { crate = "rquickjs", wrappers = ["vellum-script-quickjs"], reason = "scripts run only in ScriptRuntime (Invariant 8)" },
-  { crate = "rusqlite", wrappers = ["vellum-sessions-sqlite"], reason = "sessions go through the SessionStore port" },
+  { crate = "rusqlite", wrappers = ["vellum-sessions-sqlite", "vellum-sync-sqlite"], reason = "ADR-027 sync log and sessions go through the SessionStore port" },
   { crate = "keyring", wrappers = ["vellum-secrets-keyring"], reason = "keys live in the OS keychain only (Invariant 10)" },
-  { crate = "sha2", wrappers = ["vellum-assets-fs", "vellum-sessions-sqlite", "secret-service"], reason = "asset hashing, session picture names and Secret Service encryption only (ADR-018, ADR-023, ADR-006)" },
+  { crate = "sha2", wrappers = ["vellum-assets-fs", "vellum-sessions-sqlite", "secret-service", "vellum-sync-sqlite", "vellum-sync-postgres", "vellum-sync-disk", "vellum-assets-s3", "postgres-protocol"], reason = "ADR-027 snapshot integrity, capability digests and Postgres protocol; asset/session hashes and Secret Service (ADR-018, ADR-023, ADR-006)" },
   { crate = "notify", wrappers = ["vellum-watch-notify"], reason = "file events go through the FileWatcher port (ADR-020)" },
   { crate = "wuff", wrappers = ["vellum-text-parley"], reason = "web fonts are unpacked inside the text adapter (ADR-018)" },
 ]
