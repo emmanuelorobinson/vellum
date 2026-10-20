@@ -2,3 +2,4 @@
 export const PACKAGE_NAME = "@vellum/host-api";
 export * from "./host";
 export * from "./services";
+export * from "./share";

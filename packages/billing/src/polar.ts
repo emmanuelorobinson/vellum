@@ -17,6 +17,14 @@ export function polarBilling(options: {
     environment: options.sandbox ? "sandbox" : "production",
   });
   return {
+    async createPortal(userId) {
+      try {
+        const session = await client.customerSessions.create({ external_customer_id: userId });
+        return session.customer_portal_url;
+      } catch {
+        throw new Error("Billing unavailable");
+      }
+    },
     async createCheckout(userId) {
       try {
         const checkout = await client.checkouts.create({

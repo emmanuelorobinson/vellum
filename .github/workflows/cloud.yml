@@ -47,8 +47,19 @@ jobs:
         env:
           VELLUM_TEST_DATABASE_URL: postgres://postgres:test-only@127.0.0.1:5432/postgres
           VELLUM_TEST_REDIS_URL: redis://127.0.0.1:6379
-        run: pnpm --filter @vellum/auth --filter @vellum/billing --filter @vellum/jobs --filter @vellum/mail --filter @vellum/api --filter @vellum/account test
-      - run: pnpm --filter @vellum/account build
+        run: pnpm --filter @vellum/auth --filter @vellum/billing --filter @vellum/jobs --filter @vellum/mail --filter @vellum/storage --filter @vellum/host-browser --filter @vellum/api --filter @vellum/account test
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.6
+          actions-cache-folder: emsdk-cache
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: cloud-viewer-${{ hashFiles('scripts/skia-config.json', 'patches/skia-bindings/**') }}
+          cache-all-crates: true
+      - run: pnpm wasm:build
+      - run: pnpm --filter @vellum/account --filter @vellum/web build
       - name: Specification intact
         if: always()
         run: pnpm checksum

@@ -278,3 +278,63 @@ impl AccountClient {
         Ok(())
     }
 }
+
+impl AccountClient {
+    /// Snapshot protocol only. The daemon owns credentials; the renderer receives public progress only.
+    pub fn share(
+        &self,
+        method: &str,
+        path: &str,
+        body: &[u8],
+        token: &SecretString,
+    ) -> Result<Value, &'static str> {
+        if !path.starts_with("v1/shares")
+            || path.len() > 512
+            || path.contains("..")
+            || !path
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"/_-".contains(&b))
+            || body.len() > 512 * 1024
+        {
+            return Err("Invalid share request");
+        }
+        self.runtime.block_on(async {
+            let url = self.origin.0.join(path).map_err(|_| "Share unavailable")?;
+            let method = reqwest::Method::from_bytes(method.as_bytes())
+                .map_err(|_| "Invalid share request")?;
+            let mut response = self
+                .client
+                .request(method, url)
+                .bearer_auth(token.expose())
+                .header(
+                    "content-type",
+                    if path.contains("/parts/") {
+                        "application/octet-stream"
+                    } else {
+                        "application/json"
+                    },
+                )
+                .body(body.to_vec())
+                .send()
+                .await
+                .map_err(|_| "Upload interrupted; retry to resume")?;
+            let status = response.status();
+            if !status.is_success() {
+                return Err(match status.as_u16() {
+                    401 => "Sign in required",
+                    403 => "Pro required",
+                    404 => "Share unavailable",
+                    _ => "Share changed or upload interrupted; retry",
+                });
+            }
+            let mut bytes = Vec::new();
+            while let Some(chunk) = response.chunk().await.map_err(|_| "Share unavailable")? {
+                if bytes.len() + chunk.len() > 256 * 1024 {
+                    return Err("Invalid share response");
+                }
+                bytes.extend_from_slice(&chunk);
+            }
+            serde_json::from_slice(&bytes).map_err(|_| "Invalid share response")
+        })
+    }
+}

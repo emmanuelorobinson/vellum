@@ -40,3 +40,7 @@ storybook-static
 # Playwright output (editor browser tests)
 test-results/
 playwright-report/
+# Built shared viewer renderer, staged by scripts/web-assets.mjs.
+apps/account/public/engine/
+apps/web/public/engine/
+apps/web/public/fonts/

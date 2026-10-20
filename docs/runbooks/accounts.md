@@ -12,6 +12,8 @@ the deployment secret manager; do not commit environment files or place provider
 Both the Next account app and Hono API use the same account origin, authentication secret and Postgres.
 Proxy `/v1/*` to Hono and all remaining paths to Next on that HTTPS origin. Only the explicitly started
 cloud API listens on TCP; its default bind is loopback. The local daemon is unchanged.
+`VELLUM_ACCOUNT_URL` must be an origin without a path, query, fragment or credentials; the auth wrapper
+rejects nested paths so the browser, device protocol and CLI use the same routes.
 
 | Process | Configuration |
 | --- | --- |
@@ -96,7 +98,10 @@ an isolated executable fixture, not a real keychain or paid cloud account.
 | `POST /v1/jobs`, `GET /v1/jobs/:id` | Pro job submission and owner-only status/artifact ID |
 
 Requests have a 1 MiB body limit. Cookie mutations require the account origin. Bearer requests never
-fall back to cookies. Unexpected errors return fixed text; there is no request-body or credential logging.
+fall back to cookies, including `/api/auth/*` and server-side auth calls: an explicit Authorization header
+selects that credential even if it is empty, malformed or revoked. Invalid native credentials cannot sign
+out, claim a device code or act as a separate browser session. Unexpected errors return fixed text;
+there is no request-body or credential logging.
 
 ## Worker staging
 
@@ -127,7 +132,9 @@ or hosted share link yet. Stage/queue/retention capacity should be sized for dep
 Ordinary wrapper/account/API unit tests mock vendor boundaries. `apps/api/src/cloud.integration.test.ts`
 is tagged `@cloud`: set `VELLUM_TEST_DATABASE_URL` to an isolated Postgres DB and
 `VELLUM_TEST_REDIS_URL` to isolated Redis. It creates/drops private schemas, tests real Drizzle device
-redemption/revocation and concurrent billing updates, and consumes real Redis jobs.
+redemption/revocation, credential precedence and concurrent billing updates, and consumes real Redis jobs.
+Auth unit contracts also cover explicit approval/denial, claiming-account ownership, client binding,
+polling slowdown and expiry without waiting on the clock.
 `render.integration.test.ts` is tagged `@native`: set `VELLUM_TEST_BINARY` to a scene-enabled native
 `vellum` binary and allow local sockets. It verifies real PNG, PDF and staged Git preview artifacts.
 Both suites explicitly skip absent prerequisites. Cloud CI runs DB/Redis; the export lane runs native jobs.

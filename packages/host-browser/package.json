@@ -5,7 +5,9 @@
   "description": "Host implementation for the browser.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./snapshot": "./src/snapshot.ts",
+    "./cloud-proxy": "./src/cloud-proxy.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

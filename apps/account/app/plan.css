@@ -1,0 +1,138 @@
+.vp-shell {
+  min-height: 100dvh;
+  position: relative;
+}
+.vp-shell header {
+  height: 52px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--chrome-separator);
+  font-size: 13px;
+  font-weight: 600;
+}
+.vp-shell main {
+  padding: 40px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.vp-shell h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+.vp-shell h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.vp-shell p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--chrome-secondary);
+}
+.vp-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.vp-plans section {
+  padding: 20px 0;
+  border-top: 1px solid var(--chrome-separator);
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 12px;
+}
+.vp-management {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+}
+.vp-management section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: start;
+}
+.vp-management h2 {
+  font-size: 15px;
+}
+.vp-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  min-height: 44px;
+}
+.vp-row span:first-child,
+.vp-row a {
+  margin-inline-end: auto;
+  color: var(--chrome-text);
+}
+.vp-row small {
+  display: block;
+  font-size: 11px;
+  color: var(--chrome-secondary);
+  margin-top: 4px;
+}
+.vp-shell button,
+.vp-confirm button {
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--chrome-border);
+  color: var(--chrome-text);
+  background: var(--chrome-panel);
+  cursor: pointer;
+}
+.vp-shell button[data-primary] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.vp-shell button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.vp-shell footer {
+  display: flex;
+  gap: 8px;
+  align-self: flex-end;
+  margin-top: 120px;
+}
+.vp-confirm {
+  position: fixed;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(500px, 90vw);
+  background: var(--chrome-raised);
+  border: 1px solid var(--chrome-border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vp-shell :focus-visible,
+.vp-confirm :focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .vp-shell main {
+    padding: 24px;
+  }
+  .vp-plans,
+  .vp-management {
+    grid-template-columns: 1fr;
+  }
+  .vp-shell footer {
+    margin-top: 24px;
+  }
+}

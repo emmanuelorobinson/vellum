@@ -42,6 +42,7 @@ export interface EntitlementStore {
   grants(userId: string, now: number, products: readonly string[]): Promise<Entitlement[]>;
 }
 export interface BillingProvider {
+  createPortal?(userId: string): Promise<string>;
   createCheckout(userId: string): Promise<string>;
   parseWebhook(
     body: string,
@@ -49,6 +50,7 @@ export interface BillingProvider {
   ): SubscriptionUpdate | null | Promise<SubscriptionUpdate | null>;
 }
 export interface Billing {
+  createPortal?(userId: string): Promise<string>;
   createCheckout(userId: string): Promise<string>;
   getEntitlements(userId: string): Promise<Entitlement[]>;
   acceptWebhook(body: string, headers: Record<string, string>): Promise<void>;
@@ -60,6 +62,10 @@ export function createBilling(options: {
   clock: () => number;
 }): Billing {
   return {
+    createPortal: (userId) =>
+      options.provider.createPortal
+        ? options.provider.createPortal(userId)
+        : Promise.reject(new Error("Billing portal unavailable")),
     createCheckout: (userId) => options.provider.createCheckout(userId),
     getEntitlements: (userId) => options.store.grants(userId, options.clock(), options.products),
     async acceptWebhook(body, headers) {

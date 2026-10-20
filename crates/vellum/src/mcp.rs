@@ -9,6 +9,7 @@
 //! [`Session`] (its client, its working directory); the documents are shared by all of them.
 
 mod cli;
+mod share;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -61,6 +62,7 @@ pub struct McpServer {
     /// Where each connection's tool calls are recorded as an external session; none in a daemon without one.
     log: Option<SessionLog>,
     cli_runs: BTreeMap<u64, cli::Run>,
+    shares: Option<crate::daemon::share::Uploads>,
 }
 
 impl McpServer {
@@ -73,6 +75,7 @@ impl McpServer {
             default_cwd: None,
             log: None,
             cli_runs: BTreeMap::new(),
+            shares: None,
         }
     }
 
@@ -461,6 +464,7 @@ impl McpServer {
         // No id, no answer: whatever it was, it is a notification.
         let id = request.get("id")?;
         let outcome = match method {
+            "vellum/share" => self.share_action(conn, &params),
             "vellum/cli" => self.cli_action(conn, &params),
             "vellum/hostState" => self.host_state(conn, &params),
             "vellum/recovery" => self.host_recovery(conn, &params),

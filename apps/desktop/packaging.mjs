@@ -46,6 +46,7 @@ export function builderConfig({
   }
   return {
     appId: brand.desktopAppId,
+    protocols: [{ name: brand.name, schemes: [brand.desktopProtocol] }],
     productName,
     executableName: "vellum-desktop",
     directories: { app: "dist/package", output: "../../target/desktop-packages" },

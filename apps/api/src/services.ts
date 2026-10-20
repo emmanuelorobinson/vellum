@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { createAuth } from "@vellum/auth";
 import { Pool, postgresAuth } from "@vellum/auth/postgres";
 import { createBilling } from "@vellum/billing";
@@ -5,6 +6,8 @@ import { polarBilling } from "@vellum/billing/polar";
 import { postgresEntitlements } from "@vellum/billing/postgres";
 import { bullQueue } from "@vellum/jobs/bullmq";
 import { sesMailer } from "@vellum/mail";
+import { ShareService } from "@vellum/storage";
+import { r2Objects } from "@vellum/storage/r2";
 import { required } from "./config";
 export function services(env: NodeJS.ProcessEnv) {
   const read = (name: string) => required(env, name);
@@ -40,6 +43,16 @@ export function services(env: NodeJS.ProcessEnv) {
   });
   const jobs = bullQueue({ url: read("REDIS_URL") });
   return {
+    shares: new ShareService({
+      objects: r2Objects({
+        endpoint: read("R2_ENDPOINT"),
+        bucket: read("R2_BUCKET"),
+        accessKeyId: read("R2_ACCESS_KEY_ID"),
+        secretAccessKey: read("R2_SECRET_ACCESS_KEY"),
+      }),
+      clock: Date.now,
+      newId: () => randomBytes(32).toString("base64url"),
+    }),
     auth,
     billing,
     jobs,

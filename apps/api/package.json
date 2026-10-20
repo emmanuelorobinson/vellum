@@ -22,6 +22,7 @@
     "@vellum/auth": "workspace:*",
     "@vellum/billing": "workspace:*",
     "@vellum/jobs": "workspace:*",
-    "@vellum/mail": "workspace:*"
+    "@vellum/mail": "workspace:*",
+    "@vellum/storage": "workspace:*"
   }
 }

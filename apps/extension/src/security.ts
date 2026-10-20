@@ -1,4 +1,5 @@
 import type { Appearance } from "@vellum/host-api";
+import { type ShareRequest, shareRequest } from "@vellum/host-api";
 export function appearance(kind: number): Appearance {
   switch (kind) {
     case 1:
@@ -12,6 +13,9 @@ export function appearance(kind: number): Appearance {
   }
 }
 export type WebviewMessage =
+  | { type: "share"; requestId: number; request: ShareRequest }
+  | { type: "shareCopy" }
+  | { type: "shareOpen" }
   | { type: "ready" }
   | {
       type: "command";
@@ -21,6 +25,16 @@ export function parseMessage(value: unknown): WebviewMessage | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
   const keys = Object.keys(v).sort().join(",");
+  if (keys === "type" && (v.type === "shareCopy" || v.type === "shareOpen"))
+    return { type: v.type };
+  if (
+    keys === "request,requestId,type" &&
+    v.type === "share" &&
+    Number.isSafeInteger(v.requestId) &&
+    Number(v.requestId) > 0 &&
+    shareRequest(v.request)
+  )
+    return v as WebviewMessage;
   if (keys === "type" && v.type === "ready") return { type: "ready" };
   if (
     keys === "command,type" &&

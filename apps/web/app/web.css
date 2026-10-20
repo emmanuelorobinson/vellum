@@ -1,0 +1,22 @@
+@import "@vellum/ui-tokens/tokens.css";
+@font-face {
+  font-family: Inter;
+  src: url("/fonts/InterVariable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-wght.ttf") format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font-family: var(--font-ui), sans-serif;
+}

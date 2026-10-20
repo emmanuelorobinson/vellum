@@ -130,6 +130,7 @@ export class DesignEditorProvider
     this.panels.set(panel, document);
     this.active = document;
     let ready = false;
+    let shareUrl: string | undefined;
     const message = panel.webview.onDidReceiveMessage(async (raw: unknown) => {
       const value = parseMessage(raw);
       if (!value) return;
@@ -138,6 +139,29 @@ export class DesignEditorProvider
           ready = true;
           this.readyPanels.add(panel);
           await this.send(panel, document);
+          return;
+        }
+        if (value.type === "shareOpen") {
+          if (shareUrl) await vscode.env.openExternal(vscode.Uri.parse(shareUrl, true));
+          return;
+        }
+        if (value.type === "shareCopy") {
+          if (shareUrl) await vscode.env.clipboard.writeText(shareUrl);
+          return;
+        }
+        if (value.type === "share") {
+          try {
+            if (document.uri.scheme !== "file") throw Error();
+            const state = await this.daemon.share(document.uri.fsPath, value.request);
+            shareUrl = state.url;
+            await panel.webview.postMessage({ type: "share", requestId: value.requestId, state });
+          } catch {
+            await panel.webview.postMessage({
+              type: "share",
+              requestId: value.requestId,
+              state: { state: "failed" },
+            });
+          }
           return;
         }
         switch (value.command) {

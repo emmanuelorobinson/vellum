@@ -37,6 +37,14 @@
     },
     "test": {
       "dependsOn": ["^test"]
+    },
+    "@vellum/account#build": {
+      "dependsOn": ["^build", "//#wasm:build"],
+      "outputs": [".next/**", "!.next/cache/**", "public/engine/**", "public/fonts/**"]
+    },
+    "@vellum/web#build": {
+      "dependsOn": ["^build", "//#wasm:build"],
+      "outputs": [".next/**", "!.next/cache/**", "public/engine/**", "public/fonts/**"]
     }
   },
   "globalPassThroughEnv": [

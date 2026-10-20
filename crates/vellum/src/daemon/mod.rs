@@ -6,6 +6,7 @@ mod headless;
 mod live;
 pub mod production;
 mod recovery;
+pub mod share;
 mod view;
 
 pub use documents::{Documents, Env, External, Opened, Planned, SpawnRequest, SpawnTask, ToolIds};

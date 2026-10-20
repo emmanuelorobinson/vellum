@@ -653,3 +653,65 @@ test("@electron account device flow, browser approval, cancellation and offline 
   await page.getByRole("button", { name: "Check account" }).click();
   await expect(page.locator(".signin-page").getByRole("status")).toHaveText("✓ Signed in");
 });
+
+test("@electron share dialog reads daemon dependencies and closes without starting an upload", async () => {
+  const initial = await app.firstWindow();
+  await dialog([join(directory, "one")]);
+  await initial.getByRole("button", { name: "Open a folder", exact: true }).click();
+  await expect.poll(() => app.windows().length).toBe(1);
+  const page = app.windows()[0];
+  if (!page) throw Error("Missing folder window");
+  await dialog([join(directory, "one", "a.vellum")]);
+  await menu("file.open");
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  const shareDialog = page.getByRole("dialog", { name: "Share a.vellum" });
+  await expect(shareDialog).toBeVisible();
+  await expect(shareDialog.getByRole("button", { name: "Create share link" })).toBeVisible();
+  await shareDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(shareDialog).toHaveCount(0);
+  const state = await page.evaluate(() =>
+    window.vellumDesktop.request({ type: "share", tab: "ungranted", request: { action: "check" } }),
+  );
+  expect(state.ok).toBe(false);
+});
+
+// @network: local fixture API only, no installed protocol, real keychain or vendor account.
+test("@electron shared snapshot protocol saves a new copy and opens it without signing in", async () => {
+  test.skip(!process.env.VELLUM_TEST_SHARE_ORIGIN, "Needs the local share fixture API");
+  await app.firstWindow();
+  const parent = join(directory, "received");
+  await mkdir(parent);
+  await dialog([parent]);
+  const origin = process.env.VELLUM_TEST_SHARE_ORIGIN as string;
+  await app.evaluate(
+    ({ app }, url) => {
+      app.emit("open-url", { preventDefault() {} }, url);
+    },
+    `vellum://share/test_00000000000000000000000000000001?origin=${encodeURIComponent(origin)}`,
+  );
+  await expect
+    .poll(async () => {
+      for (const window of app.windows())
+        if (
+          !window.isClosed() &&
+          (await window
+            .getByRole("tab", { name: /app.vellum/ })
+            .count()
+            .catch(() => 0))
+        )
+          return true;
+      return false;
+    })
+    .toBe(true);
+  const { readdir } = await import("node:fs/promises");
+  const roots = await readdir(parent);
+  expect(roots).toHaveLength(1);
+  const original = JSON.parse(
+    await readFile(resolve("../../target/share-acceptance.json"), "utf8"),
+  ) as { entry: string; files: { path: string; data: string }[] };
+  const file = original.files.find((f) => f.path === original.entry);
+  if (!file) throw Error("Missing fixture entry");
+  expect(await readFile(join(parent, roots[0] as string, ...original.entry.split("/")))).toEqual(
+    Buffer.from(file.data, "base64"),
+  );
+});

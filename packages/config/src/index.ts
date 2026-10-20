@@ -53,4 +53,6 @@ export const brand = {
   name: "Vellum",
   tagline: copy.tagline,
   desktopAppId: "dev.vellum.desktop",
+  desktopProtocol: "vellum",
+  shareRootMarker: ".vellum-share-root",
 } as const;

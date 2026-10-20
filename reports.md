@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 62 needs deployment/platform and visual acceptance.** Configure the private R2 bucket, account/API
+  origin and lifecycle policy; run live R2/Polar, real-keychain upload/retry and installed protocol registration
+  on macOS/Windows/Linux. Native fixture import, WASM pixels, ZIP bytes and revocation pass locally. All 14
+  W02/W03 comparisons remain above the unchanged 1% gate (2.36–10.34%); W01 has functional/pixel evidence,
+  not a matching-content design golden. Review `target/screen-goldens/p62-*` and `docs/runbooks/sharing.md`.
+  Superseded/revoked object bytes and abandoned local spools need operator cleanup; no automatic GC shipped.
+
 - **Prompt 61 needs live cloud acceptance.** Provision an HTTPS account origin, deployment secrets, an SES
   sender/IAM identity, Polar Pro product and 2026-10 webhook, Postgres/Redis and worker mounts. Local
   Postgres/Redis, Bun, browser and real native export/preview acceptance pass; paid checkout, mail delivery,
@@ -3848,3 +3855,124 @@ changed. The initial unscoped host Vitest invocations also collected Node/Playwr
 package's src scope passed. Full workspace suites, native VS Code account acceptance, real keychain/service
 login, live Polar/SES, deployment, remote CI and non-macOS execution were not run. No read-only specification
 changed. Nothing committed.
+
+## Prompt 61 follow-up — account protocol acceptance
+
+The main Prompt 61 implementation was already present. Fixed credential selection in the shared auth
+wrapper and extended protocol acceptance. Live deployment/vendor, keychain, platform and visual boundaries
+remain in Needs a person; this follow-up does not make Prompt 61 fully accepted.
+
+- TDD: four explicit invalid Authorization values fell back to a valid browser cookie, and nested account
+  URLs were accepted although the CLI requires an origin. All five regressions were observed red first.
+  The wrapper now removes cookie fallback for protocol handlers and every server-side auth entrypoint,
+  preserves caller headers, and rejects nested base URLs. Existing `/v1/` defense remains.
+- Added denial/claiming-account ownership, malformed mixed-credential approval/denial, client binding,
+  polling slowdown and expiry contracts. Real Postgres verifies malformed credentials cannot sign out the
+  browser, a valid native token selects its own session, and a revoked token cannot select the browser.
+  No token or credential is logged; no real keychain, mail or billing service was used.
+- Native account device acceptance passed twice serially outside the macOS sandbox; the sandboxed launch
+  aborted. The previously reported intermittent hang did not reproduce in those runs, but is not declared
+  resolved. A05 desktop visual failures remain; no UI, golden, tolerance or read-only specification changed.
+- No §3.2 reference row names P61. Read sibling outpost's auth composition and reused Vellum's existing
+  wrapper and fixtures; no external code ported. Better Auth skill, Context7 and installed protocol source
+  informed the checks. Pencil confirmed the read-only copy and supplied A05/device structure; snapshots
+  were inspected. `design-open` still reports the missing OS application name. Updated the account runbook.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Rust 1.99.0, macOS ARM64; pnpm telemetry opt-outs):
+
+- Package-local `<package>/node_modules/.bin/vitest run --root <package> src`: auth (10), billing (5),
+  jobs (4), mail (2), host-api (14). Account used `tests` instead of `src` (3).
+- `apps/api/node_modules/.bin/vitest run --root apps/api src` (10, none skipped), with
+  `VELLUM_TEST_DATABASE_URL`, `VELLUM_TEST_REDIS_URL` and `VELLUM_TEST_BINARY` pointed to isolated temporary
+  Postgres 18/Redis 8 containers and `target/debug/vellum`; includes real PNG/PDF/Git-preview artifacts.
+  Both temporary containers were removed; pre-existing containers were left running.
+- From apps/desktop: `node_modules/.bin/playwright test --config test/playwright.config.ts --grep
+  'account device' --repeat-each 2` (2 native passes against the existing desktop bundle/fake CLI).
+- `node scripts/skia-build.mjs test -p vellum --test account_cli` (1);
+  `cargo test -p vellum-account-http -- --include-ignored` (4);
+  `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1).
+- `NEXT_TELEMETRY_DISABLED=1 apps/account/node_modules/.bin/next build apps/account`;
+  `pnpm type-check` (33 tasks, existing `/private/tmp/vellum-p56-bin` PATH shim);
+  `node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`;
+  `cargo fmt --all -- --check`.
+- `bash scripts/check-deps.sh` (pure allowlist, bans/licenses/sources, 564 modules/1,548 TS dependencies);
+  `bash scripts/check-clean-room.sh`; `node scripts/copy-lint.mjs`; `node scripts/token-lint.mjs`;
+  scoped Biome on the three changed TS files; checksum; `git diff --check`.
+
+Global Biome still has four unrelated fixture/import-format errors; `cargo deny check` still fails on
+existing advisories (bans/licenses/sources pass). No dependency or advisory policy changed. The initial
+root Vitest invocation used a missing root executable; package-local invocations above passed. Full
+workspace suites, new browser goldens, Bun service smoke, live SES/Polar, real keychain login, deployment,
+remote CI and Windows/Linux were not run. Nothing committed.
+
+## Prompt 62
+
+Built explicit share snapshots, resumable daemon uploads, private R2 storage, the read-only web viewer,
+recipient native opening and W03 account/plan controls. Local acceptance passes; this is not a visually or
+live-service accepted release. Work spanned 19–20 October 2026. No service deployed or real keychain changed.
+
+- Native: current DocumentTarget snapshot, typed dependency traversal through transitive libraries, images,
+  fonts, scripts, styles, slots and overrides. Canonical single-file documents retain repo-relative paths.
+  Missing paths require Share anyway and produce an incomplete marker. Snapshot reads reject root escapes,
+  symlinks and special files. A red regression caught metadata `src`/`asset` keys being treated as file reads;
+  only actual model fields now grant reads. Positive image and sandbox script pixel cases pass.
+- Daemon-owned background rendering/upload survives dialog/connection closure. Private spools hold immutable
+  snapshot bytes and public identifiers, never credentials. Retry resumes received 512 KiB chunks; Update
+  replaces the same link atomically; permanent tombstones defeat delayed publication. Four native workers,
+  bounded bundles/resources, 24-hour upload expiry and whole-upload SHA-256 checks. Pro is rechecked for
+  chunks/publication; owners can revoke after expiry. Cached native status is the last known publication.
+- ObjectStore memory/R2 CAS contract and owner-scoped API; public reads/downloads check revocation each time,
+  with no public bucket or signed object URLs. Account proxy preserves bounded binary chunks and bearer
+  precedence; standalone web proxy exposes only public reads. A red proxy test caught missing PUT/status
+  routing and binary conversion. Existing auth/API edits from Prompt 61 were preserved.
+- Viewer uses the existing vellum-wasm/Skia display-list ABI and exact-member host-browser reads with writes
+  rejected. Core-derived spec/CSS, portable stored ZIP, frame navigation and incomplete/unavailable states.
+  Native protocol import asks for a destination before credential-free download and exclusive new-folder
+  writes. ZIP/native imports add an empty host root marker so sibling libraries work without fake Git metadata.
+  Packaged registration is declared; development acceptance injects the OS event. Native editor rendering/editing
+  still has Prompt 55's existing runtime boundary. W03 uses existing sessions and Polar checkout/customer portal.
+- TDD red cases covered missing storage/UI behavior, path escape, missing proxy routes, native imports, build
+  ordering and metadata privacy. Script coverage exposed blank output; native sandbox results are now frozen
+  into the shared renderer. Preparation runs off the daemon request thread. Test setup fixes covered a shadowed
+  helper, Home-window replacement, required working directory and expired fixture state; no assertion weakened.
+  Hot reloads interrupted design captures; a built static gallery produced all 14 final comparisons.
+- Pencil confirmed the read-only copy and supplied W01/W02 (every state)/W03 structure, tokens and screenshots;
+  the OS opener could not find `Pen`. W02 dialog regions differ by 2.80–10.34%; W03 full frames by 2.365%/2.414%.
+  W01 native fixture screenshots/pixels pass but are not a matching-content design comparison. Gaps appended;
+  no reference, tolerance or read-only specification changed. Actual upload byte progress replaces fixture counts.
+- No §3.2 row names P62. Read sibling openses scoped storage and dubid/thepriceofbread R2 wrapper patterns;
+  kept the wrapper boundary and added private CAS publication; no source ported. Used Context7 and installed
+  SDK/Turbo docs. Added ADR-026, sharing runbook, exact S3 SDK 3.1152.0 pin and CI/task-graph ordering.
+
+Passed (Node 24.21.0, pnpm 12.11.2, Bun 1.3.14, Rust 1.99.0, macOS ARM64; pnpm telemetry opt-outs):
+
+- `node scripts/skia-build.mjs test -p vellum --test share --test exports --test daemon_documents`
+  (7 sharing, 10 exports, 30 document cases); `node scripts/skia-build.mjs test -p vellum --lib daemon::share`
+  (1 resume case); `node scripts/skia-build.mjs test -p vellum-testkit --test canary` (1).
+- Package-local `node_modules/.bin/vitest run --root <package> src`: storage (8), host-browser (3), host-api
+  (15), host-electron (5), API (7 passed/4 integration cases skipped: no DB/Redis/native environment), desktop
+  (26), extension (40), billing (5), config (3). Account `tests` (4); editor-react `--project unit src/share` (1).
+- `node scripts/skia-build.mjs build -p vellum`; `node apps/desktop/build.mjs --with-daemon`;
+  `node apps/extension/build.mjs --with-daemon`; `node --test apps/desktop/packaging.test.mjs apps/extension/packaging.test.mjs`
+  (6); `node --test scripts/__tests__/share-build.test.mjs` (actual Turbo graph).
+- `NEXT_TELEMETRY_DISABLED=1 VELLUM_API_URL=http://127.0.0.1:3112 apps/web/node_modules/.bin/next build apps/web`;
+  equivalent account Next build. Renderer assets staged with `node scripts/web-assets.mjs web` and `account`.
+- Local fixture API plus built Next hosts: `node apps/web/test/browser.mjs` (native Rust snapshot → API → actual
+  WASM pixel values → ZIP exact bytes/root marker → revoke), `node apps/account/test/plan-browser.mjs` (identity,
+  Pro, shared files, session confirmation and intercepted billing redirect). Chrome selected via VELLUM_CHROME;
+  no vendor requests. Native desktop Playwright, from apps/desktop with the bundled Electron selected: separate
+  `--grep 'share dialog reads'` and `--grep 'shared snapshot protocol'` passes. The latter used
+  `VELLUM_TEST_SHARE_ORIGIN=http://127.0.0.1:3112`, compared installed document bytes and changed no OS defaults.
+- `pnpm type-check` (33 tasks, existing /private/tmp/vellum-p56-bin PATH shim); workspace/all-targets Clippy
+  with `-D warnings`; `cargo fmt --all -- --check`; `bash scripts/check-deps.sh` (pure allowlist,
+  bans/licenses/sources and 606-module/1,631-dependency TS cruise); clean-room/copy/token checks; scoped Biome
+  (55 files); `actionlint .github/workflows/cloud.yml`; checksum and `git diff --check`.
+
+Remaining checks: global Biome retains its four unrelated fixture/import-format errors. Cargo advisories
+retain nine existing failures (bans/licenses/sources pass). Unfiltered renderer workflow actionlint flags its
+existing `vellum-gpu` custom runner label; the same workflow passes with that known label diagnostic filtered.
+No policy, dependency advisory or unrelated fixture was weakened. Full workspace suites, live services, real
+keychain upload, installed-protocol registration, remote CI and Windows/Linux were not run. The account
+approval-review usage limit interrupted a screenshot attempt; the authorized comparison ran after reset.
+All 14 W02/W03 design comparisons failed the unchanged gate; reports/comparison sheets remain in target.
+Temporary API/account/viewer/gallery servers were stopped. Nothing committed.

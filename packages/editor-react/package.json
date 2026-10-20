@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./harness": "./src/harness.tsx"
+    "./harness": "./src/harness.tsx",
+    "./share": "./src/share/index.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -45,6 +46,7 @@
     "@vellum/engine-client": "workspace:*",
     "@vellum/host-api": "workspace:*",
     "@vellum/host-fake": "workspace:*",
-    "@vellum/host-browser": "workspace:*"
+    "@vellum/host-browser": "workspace:*",
+    "@vellum/renderer-skia": "workspace:*"
   }
 }

@@ -21,6 +21,12 @@ export class SignInRequired extends Error {
     super("Sign in required");
   }
 }
+/** An explicit Authorization header selects the native credential, even when it is invalid. */
+function credentialHeaders(raw: Headers): Headers {
+  const headers = new Headers(raw);
+  if (headers.has("authorization")) headers.delete("cookie");
+  return headers;
+}
 export function createAuth(options: {
   baseURL: string;
   secret: string;
@@ -35,6 +41,7 @@ export function createAuth(options: {
     url.password ||
     url.search ||
     url.hash ||
+    url.pathname !== "/" ||
     options.secret.length < 32
   )
     throw new Error("Invalid authentication configuration");
@@ -60,7 +67,7 @@ export function createAuth(options: {
     ],
   });
   const getSession: Auth["getSession"] = async (headers) => {
-    const result = await auth.api.getSession({ headers });
+    const result = await auth.api.getSession({ headers: credentialHeaders(headers) });
     return result
       ? {
           user: { id: result.user.id, email: result.user.email, name: result.user.name },
@@ -69,7 +76,12 @@ export function createAuth(options: {
       : null;
   };
   return {
-    handler: (request) => auth.handler(request),
+    handler: (request) =>
+      auth.handler(
+        request.headers.has("authorization")
+          ? new Request(request, { headers: credentialHeaders(request.headers) })
+          : request,
+      ),
     getSession,
     async requireUser(headers) {
       const session = await getSession(headers);
@@ -77,8 +89,12 @@ export function createAuth(options: {
       return session.user;
     },
     verifyDeviceCode: (headers, userCode) =>
-      auth.api.deviceVerify({ headers, query: { user_code: userCode } }),
+      auth.api.deviceVerify({
+        headers: credentialHeaders(headers),
+        query: { user_code: userCode },
+      }),
     async sessions(headers) {
+      headers = credentialHeaders(headers);
       const current = await getSession(headers);
       if (!current) throw new SignInRequired();
       return (await auth.api.listSessions({ headers })).map((s) => ({
@@ -88,6 +104,7 @@ export function createAuth(options: {
       }));
     },
     async revoke(headers, id) {
+      headers = credentialHeaders(headers);
       if (!(await getSession(headers))) throw new SignInRequired();
       const target = (await auth.api.listSessions({ headers })).find((s) => s.id === id);
       if (!target) throw new Error("Session unavailable");

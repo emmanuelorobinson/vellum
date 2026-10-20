@@ -111,6 +111,24 @@ jobs:
         run: |
           node scripts/renderer-gpu.mjs --software
           node scripts/renderer-goldens.mjs --software
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Share snapshot native upload, browser WASM, ZIP and revoke (@chrome)
+        env:
+          VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          VELLUM_TEST_SHARE_OUTPUT: ${{ github.workspace }}/target/share-acceptance.json
+          VELLUM_API_URL: http://127.0.0.1:3112
+        run: |
+          node scripts/skia-build.mjs test --locked -p vellum --test share
+          pnpm --filter @vellum/web build
+          bun apps/api/test/share-server.ts > target/share-fixture.log 2>&1 &
+          fixture=$!
+          pnpm --filter @vellum/web exec next start -H 127.0.0.1 -p 3111 > target/share-viewer.log 2>&1 &
+          viewer=$!
+          trap 'kill "$fixture" "$viewer"' EXIT
+          node apps/web/test/wait.mjs
+          node apps/web/test/browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -120,6 +138,7 @@ jobs:
             target/renderer-goldens/
             target/skia-measurements/
             packages/renderer-skia/dist/
+            target/screen-goldens/p62-*.png
   hardware:
     if: github.event_name == 'workflow_dispatch' && inputs.hardware_gpu
     name: Hardware GPU ${{ matrix.platform }} ${{ matrix.arch }}

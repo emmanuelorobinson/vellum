@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "NEXT_TELEMETRY_DISABLED=1 next build",
+    "build": "node ../../scripts/web-assets.mjs web && NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "next start -p 3001",
     "type-check": "tsc --noEmit",
     "test": "vitest run"
@@ -15,13 +15,19 @@
     "@vellum/config": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "@vellum/editor-react": "workspace:*",
+    "@vellum/host-browser": "workspace:*",
+    "@vellum/ui-tokens": "workspace:*",
+    "@vellum/host-api": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@playwright/test": "catalog:",
+    "vite": "catalog:"
   }
 }

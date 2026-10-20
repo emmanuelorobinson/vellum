@@ -1,4 +1,11 @@
-import { externalUrl, type HostServices, PortError, type ThemeInfo } from "@vellum/host-api";
+import {
+  externalUrl,
+  type HostServices,
+  PortError,
+  type ShareRequest,
+  shareRequest,
+  type ThemeInfo,
+} from "@vellum/host-api";
 import type { AccountState } from "@vellum/host-api/account-state";
 
 export const MENU_CATEGORIES = [
@@ -61,6 +68,7 @@ export interface DesktopState {
   account?: AccountState;
 }
 export type DesktopRequest =
+  | { type: "share"; tab: string; request: ShareRequest }
   | {
       type:
         | "state"
@@ -135,6 +143,14 @@ export function parseRequest(value: unknown): DesktopRequest | null {
       "downloadUpdate",
       "installUpdate",
     ].includes(String(v.type))
+  )
+    return v as DesktopRequest;
+  if (
+    keys === "request,tab,type" &&
+    v.type === "share" &&
+    typeof v.tab === "string" &&
+    /^[a-zA-Z0-9_-]{1,80}$/.test(v.tab) &&
+    shareRequest(v.request)
   )
     return v as DesktopRequest;
   const validId = (id: unknown) => typeof id === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(id);

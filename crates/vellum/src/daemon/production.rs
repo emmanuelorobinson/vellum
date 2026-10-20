@@ -208,6 +208,10 @@ mod scene {
         doc: &Document,
         fs: std::sync::Arc<dyn vellum_core::ports::FileSystem>,
         path: &str,
+        script_outputs: std::collections::BTreeMap<
+            (String, vellum_types::NodeId),
+            vellum_core::script_nodes::Output,
+        >,
     ) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError> {
         use vellum_core::ports::ExportError;
         let fonts = vellum_text_parley::ParleyFonts::new();
@@ -225,7 +229,7 @@ mod scene {
         let renderer = vellum_render_skia::Renderer::new().map_err(ExportError::new)?;
         Ok(Rc::new(SceneServices::new(
             SceneConfig {
-                script_outputs: Default::default(),
+                script_outputs,
                 path: path.into(),
                 libraries: Rc::new(ExportLibraries {
                     fs,
@@ -268,7 +272,7 @@ pub fn export_services(
 ) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError> {
     #[cfg(feature = "scene")]
     {
-        scene::export_services(doc, fs, path)
+        scene::export_services(doc, fs, path, Default::default())
     }
     #[cfg(not(feature = "scene"))]
     {
@@ -279,12 +283,41 @@ pub fn export_services(
     }
 }
 
+/// Snapshot rendering injects successful sandboxed derived outputs; scripts never run in the web viewer.
+pub fn snapshot_services(
+    doc: &vellum_types::Document,
+    fs: Arc<dyn FileSystem>,
+    path: &str,
+    outputs: std::collections::BTreeMap<
+        (String, vellum_types::NodeId),
+        vellum_core::script_nodes::Output,
+    >,
+) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError> {
+    #[cfg(feature = "scene")]
+    {
+        scene::export_services(doc, fs, path, outputs)
+    }
+    #[cfg(not(feature = "scene"))]
+    {
+        let _ = (doc, fs, path, outputs);
+        Err(vellum_core::ports::ExportError::new(
+            "Snapshot renderer unavailable",
+        ))
+    }
+}
+
 /// The nearest folder above `path` that holds a `.git`, which is where a repo's documents are rooted so that
 /// `../` into a library or an assets folder stays inside it.
 fn repo_root(path: &Path) -> Option<PathBuf> {
     path.ancestors()
         .skip(1)
-        .find(|dir| dir.join(".git").symlink_metadata().is_ok())
+        .find(|dir| {
+            dir.join(".git").symlink_metadata().is_ok()
+                || dir
+                    .join(vellum_types::brand::SHARE_ROOT_MARKER)
+                    .symlink_metadata()
+                    .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink() && m.len() == 0)
+        })
         .map(Path::to_path_buf)
 }
 
@@ -373,6 +406,7 @@ pub fn handler(state: PathBuf) -> vellum_ipc_local::HandlerFactory {
         Ok(docs) => Box::new(
             crate::mcp::McpServer::new(Registry::standard(), docs)
                 .with_default_cwd(std::env::current_dir().ok())
+                .with_shares(state.clone())
                 // A daemon whose session store cannot open still serves tools; nothing is recorded.
                 .with_session_log(crate::sessions::SessionLog::open(&state).ok()),
         ),
@@ -392,6 +426,111 @@ impl vellum_ipc_local::RpcHandler for Unavailable {
             "error": {"code": -32603, "message": format!("The daemon could not set up its documents: {}", self.0)},
         }))
     }
+}
+
+/// Snapshot-only native filesystem: no symlinks, special files, hidden files, or unbounded reads.
+pub fn share_files(path: &str) -> Result<(Arc<dyn FileSystem>, String), FsError> {
+    let full = Path::new(path);
+    let root = repo_root(full)
+        .or_else(|| full.parent().map(Path::to_path_buf))
+        .ok_or_else(|| FsError::InvalidPath(path.into()))?;
+    let inner = full
+        .strip_prefix(&root)
+        .map_err(|_| FsError::InvalidPath(path.into()))?
+        .to_string_lossy()
+        .replace('\\', "/");
+    struct Safe(PathBuf);
+    impl FileSystem for Safe {
+        fn read(&self, p: &str) -> Result<Vec<u8>, FsError> {
+            use std::io::Read;
+            vellum_core::ports::check_path(p, false)?;
+            let mut full = self.0.clone();
+            for part in p.split('/') {
+                if part.starts_with('.') {
+                    return Err(FsError::InvalidPath(p.into()));
+                }
+                full.push(part);
+                let meta = std::fs::symlink_metadata(&full).map_err(|e| {
+                    if e.kind() == std::io::ErrorKind::NotFound {
+                        FsError::NotFound(p.into())
+                    } else {
+                        FsError::Unavailable("Dependency unreadable".into())
+                    }
+                })?;
+                if meta.file_type().is_symlink() {
+                    return Err(FsError::Unavailable(
+                        "Snapshot dependencies cannot be symlinks".into(),
+                    ));
+                }
+            }
+            let file = std::fs::File::open(full)
+                .map_err(|_| FsError::Unavailable("Dependency unreadable".into()))?;
+            let meta = file
+                .metadata()
+                .map_err(|_| FsError::Unavailable("Dependency unreadable".into()))?;
+            if !meta.is_file() || meta.len() > 64 * 1024 * 1024 {
+                return Err(FsError::Unavailable(
+                    "Dependency exceeds snapshot limits".into(),
+                ));
+            }
+            let mut bytes = vec![];
+            file.take(64 * 1024 * 1024 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|_| FsError::Unavailable("Dependency unreadable".into()))?;
+            if bytes.len() > 64 * 1024 * 1024 {
+                return Err(FsError::Unavailable(
+                    "Dependency exceeds snapshot limits".into(),
+                ));
+            }
+            Ok(bytes)
+        }
+        fn list(&self, p: &str) -> Result<Vec<String>, FsError> {
+            vellum_core::ports::check_path(p, true)?;
+            let full = self.0.join(p);
+            let meta = std::fs::symlink_metadata(&full).map_err(|_| FsError::NotFound(p.into()))?;
+            if !meta.is_dir() || meta.file_type().is_symlink() {
+                return Err(FsError::Unavailable("Not a snapshot directory".into()));
+            }
+            let mut names = vec![];
+            for entry in std::fs::read_dir(full)
+                .map_err(|_| FsError::Unavailable("Directory unreadable".into()))?
+            {
+                let entry =
+                    entry.map_err(|_| FsError::Unavailable("Directory unreadable".into()))?;
+                names.push(entry.file_name().to_string_lossy().into_owned());
+                if names.len() > 2048 {
+                    return Err(FsError::Unavailable("Directory too large".into()));
+                }
+            }
+            names.sort();
+            Ok(names)
+        }
+        fn exists(&self, p: &str) -> Result<bool, FsError> {
+            Ok(self.read(p).is_ok())
+        }
+        fn write(&self, _: &str, _: &[u8]) -> Result<(), FsError> {
+            Err(no_write())
+        }
+        fn sync_file(&self, _: &str) -> Result<(), FsError> {
+            Err(no_write())
+        }
+        fn rename(&self, _: &str, _: &str) -> Result<(), FsError> {
+            Err(no_write())
+        }
+        fn remove_file(&self, _: &str) -> Result<(), FsError> {
+            Err(no_write())
+        }
+        fn create_dir_all(&self, _: &str) -> Result<(), FsError> {
+            Err(no_write())
+        }
+        fn sync_dir(&self, _: &str) -> Result<(), FsError> {
+            Err(no_write())
+        }
+    }
+    fn no_write() -> FsError {
+        FsError::Unavailable("Snapshot files are read-only".into())
+    }
+    Ok((Arc::new(Safe(root)), inner))
 }
 
 #[cfg(test)]

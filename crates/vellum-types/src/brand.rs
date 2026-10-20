@@ -8,3 +8,6 @@ pub const TAGLINE: &str = "Design where your code lives.";
 
 /// The native credential namespace. Preserve or migrate it when renaming the product.
 pub const KEYCHAIN_SERVICE: &str = "vellum";
+
+/// A trusted local recipient import marks its filesystem root without inventing a Git repository.
+pub const SHARE_ROOT_MARKER: &str = ".vellum-share-root";

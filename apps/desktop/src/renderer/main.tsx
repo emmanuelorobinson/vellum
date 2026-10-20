@@ -4,11 +4,12 @@ import {
   createEditorSession,
   createWorkspace,
 } from "@vellum/editor-core";
-import { EditorWorkspace } from "@vellum/editor-react";
+import { EditorWorkspace, ShareDialog } from "@vellum/editor-react";
 import type { EngineClient, EngineSnapshot } from "@vellum/engine-client";
+import { type SharePort, shareState } from "@vellum/host-api";
 import { createElectronHost } from "@vellum/host-electron";
 import { createBridgeServices, type DesktopState } from "@vellum/host-electron/bridge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Home } from "./Home";
 import { DocumentTabs } from "./Tabs";
@@ -70,6 +71,9 @@ let host: ReturnType<typeof createElectronHost> | undefined;
 let services: ReturnType<typeof createBridgeServices> | undefined;
 
 function App() {
+  const [sharing, setSharing] = useState(false);
+  const sharePorts = useRef(new Map<string, SharePort>());
+
   const [state, setState] = useState<DesktopState | null>(null);
   const [problem, setProblem] = useState(false);
   useEffect(() => {
@@ -123,6 +127,23 @@ function App() {
   const editor = tab ? editors.get(tab.id) : null;
   if (!tab || !editor || (state.page && state.page !== "editor") || state.recovery)
     return <Home state={state} bridge={bridge} />;
+  if (!sharePorts.current.has(tab.id))
+    sharePorts.current.set(tab.id, {
+      request: async (request) => {
+        const reply = await bridge.request({ type: "share", tab: tab.id, request });
+        if (!reply.ok) throw Error("Sharing unavailable");
+        return shareState(reply.value);
+      },
+      copy: async (text) => {
+        const r = await bridge.request({ type: "clipboardWrite", text });
+        if (!r.ok) throw Error();
+      },
+      open: async (url) => {
+        await bridge.request({ type: "external", url });
+      },
+    });
+  const sharePort = sharePorts.current.get(tab.id);
+  if (!sharePort) throw Error("Share port unavailable");
   return (
     <main
       id={`document-${tab.id}`}
@@ -156,6 +177,7 @@ function App() {
           visualStyles: [],
           designSystems: [],
         }}
+        onShare={() => setSharing(true)}
         onPauseAll={() => {
           void bridge.request({ type: "pauseAll" });
         }}
@@ -188,6 +210,14 @@ function App() {
           ),
         }}
       />
+      {sharing && (
+        <ShareDialog
+          key={tab.id}
+          name={tab.name}
+          port={sharePort}
+          onClose={() => setSharing(false)}
+        />
+      )}
     </main>
   );
 }

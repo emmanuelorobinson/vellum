@@ -79,8 +79,35 @@ it.skipIf(!databaseURL)(
       const bearer = new Headers({ authorization: `Bearer ${token.access_token}` });
       const cli = await auth.getSession(bearer);
       expect(cli !== null).toBe(true);
+      const browser = new Headers({ cookie });
+      const mixed = new Headers({ cookie, authorization: "Bearer invalid.signature" });
+      expect(await auth.getSession(mixed)).toBeNull();
+      expect(
+        await (
+          await auth.handler(
+            new Request("http://localhost:3000/api/auth/get-session", {
+              headers: mixed,
+            }),
+          )
+        ).json(),
+      ).toBeNull();
+      expect((await post("/sign-out", {}, Object.fromEntries(mixed))).status).toBe(200);
+      expect((await auth.getSession(browser))?.id).toBe(session?.id);
+      expect(
+        (
+          await auth.getSession(
+            new Headers({ cookie, authorization: bearer.get("authorization") ?? "" }),
+          )
+        )?.id,
+      ).toBe(cli?.id);
       await auth.revoke(new Headers({ cookie }), cli?.id ?? "");
       expect(await auth.getSession(bearer)).toBeNull();
+      expect(
+        await auth.getSession(
+          new Headers({ cookie, authorization: bearer.get("authorization") ?? "" }),
+        ),
+      ).toBeNull();
+      expect((await auth.getSession(browser))?.id).toBe(session?.id);
       const store = postgresEntitlements(pool),
         userId = session?.user.id ?? "";
       const update = (eventId: string, version: number, active = true) => ({

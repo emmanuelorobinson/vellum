@@ -1,0 +1,248 @@
+.vs-dialog {
+  position: fixed;
+  inset: 160px auto auto 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 32px));
+  margin: 0;
+  padding: 24px;
+  max-height: calc(100dvh - 180px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: 12px;
+  font-family: var(--font-ui), sans-serif;
+}
+.vs-dialog:not([open]) {
+  display: none;
+}
+.vs-dialog::backdrop {
+  background: transparent;
+}
+.vs-dialog h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.vs-dialog p {
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.55;
+  color: var(--chrome-secondary);
+  margin: 0;
+}
+.vs-dialog [role="status"] {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chrome-text);
+}
+.vs-dialog [data-state="checking"] {
+  color: var(--chrome-attention);
+}
+.vs-dialog [data-state="failed"] {
+  color: var(--chrome-error);
+}
+.vs-dialog [data-state="shared"] {
+  color: var(--chrome-success);
+}
+.vs-dialog ul {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.vs-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vs-actions button,
+.vv-shell button,
+.vv-shell .vv-button {
+  border: 1px solid var(--chrome-border);
+  border-radius: 6px;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  padding: 8px 12px;
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+}
+.vs-actions [data-primary],
+.vv-shell [data-primary] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.vs-actions [data-destructive] {
+  color: var(--chrome-error);
+}
+.vs-url {
+  font:
+    12px var(--font-mono),
+    monospace;
+  overflow-wrap: anywhere;
+  color: var(--chrome-text);
+}
+.vs-dialog .vs-small {
+  font-size: 12px;
+}
+.vs-dialog progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--chrome-text);
+}
+.vs-dialog :focus-visible,
+.vv-shell :focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+.vv-shell {
+  height: 100dvh;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 12px;
+}
+.vv-shell header {
+  height: 52px;
+  border-bottom: 1px solid var(--chrome-separator);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+}
+.vv-shell header strong {
+  font-size: 13px;
+}
+.vv-shell header p {
+  margin: auto;
+  color: var(--chrome-secondary);
+}
+.vv-body {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 280px;
+  height: calc(100dvh - 52px);
+}
+.vv-frames {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+}
+.vv-shell h3 {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--chrome-secondary);
+  margin: 0 0 8px;
+}
+.vv-frames button[aria-pressed="true"] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+.vv-canvas {
+  background: var(--canvas-backdrop);
+  overflow: auto;
+  position: relative;
+  padding: 80px 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 20px;
+}
+.vv-canvas canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.vv-canvas figure {
+  margin: 0;
+  flex-shrink: 0;
+}
+.vv-canvas figcaption {
+  margin-bottom: 8px;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+}
+.vv-canvas .vv-download {
+  position: sticky;
+  inset-block-start: -64px;
+  align-self: start;
+  z-index: 1;
+}
+.vv-inspect {
+  overflow: auto;
+}
+.vv-inspect > h2 {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--chrome-separator);
+}
+.vv-inspect section {
+  padding: 12px;
+  border-bottom: 1px solid var(--chrome-separator);
+}
+.vv-inspect pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12.5px / 1.5 var(--font-mono),
+    monospace;
+  margin: 0;
+}
+.vv-notice {
+  padding: 16px;
+  color: var(--chrome-attention);
+}
+.vv-shell [role="alert"] {
+  color: var(--chrome-error);
+}
+@media (max-width: 760px) {
+  .vv-body {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+  .vv-inspect {
+    grid-column: 1 / -1;
+  }
+  .vv-shell header {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+  }
+  .vv-shell header p {
+    margin: 0;
+  }
+  .vv-body {
+    height: auto;
+    min-height: calc(100dvh - 52px);
+  }
+  .vs-dialog {
+    inset-block-start: 64px;
+    max-height: calc(100dvh - 80px);
+  }
+}
+/* The measured W02 border is included in its 24 px content inset. */
+.vs-dialog {
+  padding: 23px;
+}
+.vs-dialog h2 {
+  line-height: 18px;
+}
+.vs-dialog [role="status"] {
+  line-height: 16px;
+}
+.vs-dialog [data-state="shared"] {
+  font-size: 12px;
+  line-height: 15px;
+}
+.vs-actions button {
+  height: 31px;
+  padding: 0 12px;
+  line-height: 15px;
+}

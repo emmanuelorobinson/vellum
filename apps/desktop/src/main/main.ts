@@ -39,6 +39,7 @@ import { DesktopLibrary } from "./library";
 import { type MenuAction, menuModel } from "./menus";
 import { TurnNotifications } from "./notifications";
 import { APP_URL, assetPath, CSP, trustedSender } from "./security";
+import { downloadSnapshot, installSnapshot, parseShareLink } from "./share-link";
 import {
   atomicMetadata,
   metadataPath,
@@ -678,6 +679,11 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
     case "close":
       await closeTab(entry, value.tab);
       return;
+    case "share": {
+      const path = model.path(requiredFolder(entry), value.tab);
+      if (!entry.relay) throw Error("offline");
+      return entry.relay.share(path, value.request);
+    }
     case "readDocument": {
       const path = model.path(requiredFolder(entry), value.tab);
       if ((await realpath(path)) !== path) throw Error("invalid");
@@ -850,6 +856,47 @@ function createWindow(folder: string | null): WindowEntry {
   void window.loadURL(APP_URL);
   return entry;
 }
+const pendingShareLinks: string[] = [];
+let importingShare = false;
+let shareReady = false;
+async function receiveShareLink(value: string) {
+  if (importingShare) return;
+  let link: ReturnType<typeof parseShareLink>;
+  try {
+    link = parseShareLink(value);
+  } catch {
+    return;
+  }
+  if (!shareReady) {
+    if (pendingShareLinks.length < 10) pendingShareLinks.push(value);
+    return;
+  }
+  importingShare = true;
+  try {
+    const picked = await dialog.showOpenDialog({
+      title: `Save shared snapshot from ${new URL(link.origin).hostname}`,
+      properties: ["openDirectory", "createDirectory"],
+    });
+    const parent = picked.filePaths[0];
+    if (picked.canceled || !parent) return;
+    const bundle = await downloadSnapshot(link, fetch);
+    const path = await installSnapshot(parent, bundle);
+    const entry = [...windows.values()][0] ?? createWindow(null);
+    await openKnown(entry, path);
+  } catch {
+    await dialog.showMessageBox({
+      type: "error",
+      message: "Share unavailable",
+      detail: "The snapshot could not be downloaded or opened. Check the link and try again.",
+    });
+  } finally {
+    importingShare = false;
+  }
+}
+app.on("open-url", (event, value) => {
+  event.preventDefault();
+  void receiveShareLink(value);
+});
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 else {
@@ -878,7 +925,9 @@ else {
       /* A failed save keeps the app open. */
     });
   });
-  app.on("second-instance", () => {
+  app.on("second-instance", (_event, args) => {
+    for (const value of args)
+      if (value.startsWith(`${brand.desktopProtocol}://`)) void receiveShareLink(value);
     const entry = [...windows.values()][0];
     entry?.window.show();
     entry?.window.focus();
@@ -1007,6 +1056,9 @@ else {
         },
       );
       // The renderer has no web permissions, downloads, navigation or network access.
+      if (app.isPackaged) app.setAsDefaultProtocolClient(brand.desktopProtocol);
+      for (const value of process.argv)
+        if (value.startsWith(`${brand.desktopProtocol}://`)) pendingShareLinks.push(value);
       const first = createWindow(null);
       void connect(first);
       const session = first.window.webContents.session;
@@ -1016,6 +1068,8 @@ else {
       session.webRequest.onBeforeRequest((details, callback) =>
         callback({ cancel: assetPath(details.url) === null }),
       );
+      shareReady = true;
+      for (const value of pendingShareLinks.splice(0)) void receiveShareLink(value);
       nativeTheme.on("updated", () => {
         for (const entry of windows.values()) push(entry);
       });

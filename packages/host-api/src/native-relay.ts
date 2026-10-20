@@ -1,5 +1,6 @@
 /** Stdio to private IPC. The bundled Rust bridge owns authentication, safe run-dir checks and daemon startup. */
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { type ShareRequest, type ShareState, shareState } from "./share";
 export interface SessionRow {
   id: string;
   path: string;
@@ -191,6 +192,10 @@ export class DaemonProcess {
     }
     if ((result as { done?: boolean }).done !== true) throw Error("recovery not acknowledged");
     return {};
+  }
+  async share(document: string, request: ShareRequest): Promise<ShareState> {
+    await this.connect();
+    return shareState(await this.request("vellum/share", { document, ...request }));
   }
   async hostState(paths: readonly string[]): Promise<HostState> {
     await this.connect();

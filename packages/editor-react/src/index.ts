@@ -10,3 +10,4 @@ export {
 } from "./agent/ConnectAgentsDialog";
 export { EditorWorkspace, type EditorWorkspaceProps } from "./EditorWorkspace";
 export { ResourceDialogs } from "./resources/ResourceDialogs";
+export * from "./share/ShareDialog";

@@ -5,9 +5,10 @@ import {
   createEditorSession,
   createWorkspace,
 } from "@vellum/editor-core";
-import { EditorWorkspace } from "@vellum/editor-react";
+import { EditorWorkspace, ShareDialog } from "@vellum/editor-react";
 import type { EngineClient, EngineSnapshot } from "@vellum/engine-client";
 import type { Appearance } from "@vellum/host-api";
+import { type SharePort, type ShareState, shareState } from "@vellum/host-api";
 import { createRoot } from "react-dom/client";
 import "@vellum/ui-tokens/tokens.css";
 import "./theme.css";
@@ -66,6 +67,44 @@ interface State {
   problem: string;
 }
 let state: State | null = null;
+let sharing = false,
+  shareSequence = 0;
+const sharePending = new Map<
+  number,
+  { resolve: (s: ShareState) => void; timer: ReturnType<typeof setTimeout> }
+>();
+const sharePort: SharePort = {
+  request: (request) =>
+    new Promise((resolve) => {
+      const requestId = ++shareSequence;
+      const timer = setTimeout(() => {
+        sharePending.delete(requestId);
+        resolve({ state: "failed" });
+      }, 30000);
+      sharePending.set(requestId, { resolve, timer });
+      api.postMessage({ type: "share", requestId, request });
+    }),
+  copy: async () => {
+    api.postMessage({ type: "shareCopy" });
+  },
+  open: async () => {
+    api.postMessage({ type: "shareOpen" });
+  },
+};
+window.addEventListener("message", (event) => {
+  const value = event.data;
+  if (value?.type !== "share") return;
+  const p = sharePending.get(value.requestId);
+  if (!p) return;
+  sharePending.delete(value.requestId);
+  clearTimeout(p.timer);
+  try {
+    p.resolve(shareState(value.state));
+  } catch {
+    p.resolve({ state: "failed" });
+  }
+});
+
 const platform = /Mac/.test(navigator.userAgent)
   ? "mac"
   : /Win/.test(navigator.userAgent)
@@ -76,57 +115,73 @@ function render() {
   const current = state;
   workspace.resize({ width: innerWidth, height: innerHeight });
   root.render(
-    <EditorWorkspace
-      workspace={workspace}
-      session={session}
-      engine={engine}
-      controller={controller}
-      device={device}
-      host="vscode"
-      platform={platform}
-      appearance={current.appearance}
-      fileName={current.fileName}
-      dirty={current.dirty}
-      saveState={current.dirty ? "unsaved" : "saved"}
-      branch={null}
-      connection={current.daemon ? { mode: "headless" } : { mode: "offline" }}
-      agents={[]}
-      actors={{}}
-      recent={{}}
-      now={() => Date.now()}
-      nextNodeId={() => `unavailable${++nextId}`}
-      assets={{
-        libraries: [],
-        iconSets: [],
-        projectIconFolder: null,
-        visualStyles: [],
-        designSystems: [],
-      }}
-      slots={{
-        agent: (
-          <div className="vellum-host-problem" role="status">
-            <p>⊘ Document engine unavailable</p>
-            <p>
-              This build opens files as read-only. The compiled document engine and live editor
-              connection are not available.
-            </p>
-            <button type="button" onClick={() => send("openAsText")}>
-              Open as text
-            </button>
-            {!current.daemon && (
-              <button type="button" onClick={() => send("restartDaemon")}>
-                Restart daemon
+    <>
+      <EditorWorkspace
+        workspace={workspace}
+        session={session}
+        engine={engine}
+        controller={controller}
+        device={device}
+        host="vscode"
+        platform={platform}
+        appearance={current.appearance}
+        fileName={current.fileName}
+        dirty={current.dirty}
+        saveState={current.dirty ? "unsaved" : "saved"}
+        branch={null}
+        connection={current.daemon ? { mode: "headless" } : { mode: "offline" }}
+        agents={[]}
+        actors={{}}
+        recent={{}}
+        now={() => Date.now()}
+        nextNodeId={() => `unavailable${++nextId}`}
+        assets={{
+          libraries: [],
+          iconSets: [],
+          projectIconFolder: null,
+          visualStyles: [],
+          designSystems: [],
+        }}
+        slots={{
+          agent: (
+            <div className="vellum-host-problem" role="status">
+              <p>⊘ Document engine unavailable</p>
+              <p>
+                This build opens files as read-only. The compiled document engine and live editor
+                connection are not available.
+              </p>
+              <button type="button" onClick={() => send("openAsText")}>
+                Open as text
               </button>
-            )}
-            {current.problem !== "document-runtime-unavailable" && (
-              <p>File or host state changed. Reopen the file as text to inspect it.</p>
-            )}
-          </div>
-        ),
-      }}
-      onPauseAll={() => send("pauseAll")}
-      onConnectAgents={() => send("connectAgents")}
-    />,
+              {!current.daemon && (
+                <button type="button" onClick={() => send("restartDaemon")}>
+                  Restart daemon
+                </button>
+              )}
+              {current.problem !== "document-runtime-unavailable" && (
+                <p>File or host state changed. Reopen the file as text to inspect it.</p>
+              )}
+            </div>
+          ),
+        }}
+        onShare={() => {
+          sharing = true;
+          render();
+        }}
+        onPauseAll={() => send("pauseAll")}
+        onConnectAgents={() => send("connectAgents")}
+      />
+      {sharing && (
+        <ShareDialog
+          name={current.fileName}
+          port={sharePort}
+          onClose={() => {
+            sharing = false;
+            render();
+          }}
+        />
+      )}
+    </>,
   );
 }
 window.addEventListener("message", (event: MessageEvent<unknown>) => {

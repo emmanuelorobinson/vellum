@@ -350,3 +350,12 @@ installed package types/docs were checked. Polar 1.x uses async webhooks and sna
 BullMQ 6 requires an explicit Redis client under native ESM. The pnpm installer generated nine exact
 minimumReleaseAgeExclude entries for the selected newly released Better Auth/BullMQ versions.
 Rust account HTTP reuses existing reqwest 0.13.5, Tokio 1.53.2 and url 2.5.8; no vendor version changed.
+
+## Prompt 62 snapshot sharing (2026-10-19)
+
+Added `@aws-sdk/client-s3` 3.1152.0, matching the existing SES SDK generation. R2's current official
+S3 compatibility docs were checked through Context7; conditional object writes are exercised at the SDK
+boundary. The existing reqwest/Tokio adapter also carries the bounded snapshot protocol. No Rust vendor
+version changed. Viewer rendering uses the existing shared WASM/Skia ABI. Next route-handler and Turbo
+2.11.7 task-order contracts were checked through Context7 and the installed Turbo docs; graph acceptance
+verifies that both viewer hosts wait for the root WASM build. See ADR-026 and `docs/runbooks/sharing.md`.
