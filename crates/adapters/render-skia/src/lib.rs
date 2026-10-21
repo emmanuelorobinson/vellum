@@ -6,6 +6,7 @@ mod cache;
 pub use cache::CacheStats;
 mod fonts;
 mod geometry;
+mod pdf;
 mod shaders;
 mod svg;
 pub use shaders::ShaderDiagnostic;
@@ -787,12 +788,14 @@ impl vellum_core::ports::ExportRenderer for Renderer {
                 }
             })
             .collect();
+        if format == "pdf" {
+            return pdf::render(frames, &scenes);
+        }
         let bytes = match format {
             "png" => self.png(&pages[0]),
             "jpeg" => self.jpeg(&pages[0]),
             "webp" => self.webp(&pages[0]),
             "svg" => self.svg(&pages[0]).map(String::into_bytes),
-            "pdf" => self.pdf(&pages),
             _ => return Err(ExportError::new("Unsupported export encoding")),
         }
         .map_err(ExportError::new)?;

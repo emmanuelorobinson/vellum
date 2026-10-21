@@ -389,3 +389,11 @@ reference code ported, no cloud service deployed. Current advisory failures rema
 | tract-onnx | 0.23.9 | Stable self-contained CPU inference inside image-ops, transformers disabled |
 
 The experimental prerelease ONNX wrapper was removed. No prerelease or advisory exception was added.
+
+
+## Prompt 68 PDF page boxes (2026-10-21)
+
+`vellum-render-skia` pins `lopdf = 0.46.0` (MIT, current stable verified with `cargo search` and
+`cargo info`; default features off: no clock, parallel parser, network or font/image engine).
+It parses only bounded bytes produced by Skia to correct fractional MediaBox sizes. Rendering stays
+on the existing Skia path at 72 dpi; no foreign PDF input or vendor code is ported.

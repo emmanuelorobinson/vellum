@@ -263,3 +263,77 @@ fn library_local_ids_do_not_shadow_a_selected_document_layer() {
     assert_eq!(scene.frames[0].bounds.width, 64.);
     assert_eq!(scene.frames[0].roots[0].address.to_string(), "frame00001");
 }
+
+#[test]
+fn slides_pdf_expands_pages_orders_subsets_and_keeps_frame_sizes() {
+    let mut d = doc();
+    d.pages[0].kind = vellum_types::PageKind::Slides;
+    d.pages[0].children.pop();
+    // Annotations never become PDF pages.
+    d.pages[0].children.insert(1, serde_json::from_value(json!({"type":"note","id":"notes00001","name":"Private notes","content":"TEST DATA","width":100,"height":100})).unwrap());
+    let before = common::encode(&d);
+    let mut daemon = common::Daemon::with_scene(&d, &["slides.vellum"]);
+    let mut session = Session::default();
+    let registry = Registry::standard();
+    for ids in [json!(["page000001"]), json!(["frame00002", "frame00001"])] {
+        let mut ctx = ToolCtx::new(&mut daemon.docs, &mut session);
+        let out = registry
+            .call(
+                &mut ctx,
+                "export",
+                json!({"document":"slides.vellum","nodes":ids,"format":"pdf"}),
+            )
+            .unwrap();
+        assert_eq!(out["nodes"], json!(["frame00001", "frame00002"]));
+        let bytes =
+            vellum_core::base64::decode(out["files"][0]["base64"].as_str().unwrap()).unwrap();
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(text.contains("/Count 2"));
+        assert!(
+            text.find("/MediaBox [0 0 64 40]").unwrap()
+                < text.find("/MediaBox [0 0 32 48]").unwrap()
+        );
+    }
+    let mut ctx = ToolCtx::new(&mut daemon.docs, &mut session);
+    let out = registry
+        .call(
+            &mut ctx,
+            "export",
+            json!({"document":"slides.vellum","nodes":["frame00002"],"format":"pdf"}),
+        )
+        .unwrap();
+    let bytes = vellum_core::base64::decode(out["files"][0]["base64"].as_str().unwrap()).unwrap();
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(text.contains("/Count 1"));
+    assert!(text.contains("/MediaBox [0 0 32 48]"));
+    assert_eq!(common::encode(&daemon.on_disk("slides.vellum")), before);
+}
+
+#[test]
+fn slides_pdf_preserves_fractional_frame_dimensions() {
+    let mut d = doc();
+    d.pages[0].kind = vellum_types::PageKind::Slides;
+    d.pages[0].children.truncate(1);
+    if let vellum_types::Node::Frame(frame) = &mut d.pages[0].children[0] {
+        frame.width = serde_json::from_value(json!(64.5)).unwrap();
+        frame.height = serde_json::from_value(json!(40.25)).unwrap();
+    }
+    let scene = scene_services()
+        .prepare_export(&d, &["frame00001".into()])
+        .unwrap();
+    let pdf = scene_services()
+        .render_export(&scene.frames, "pdf")
+        .unwrap();
+    if let Ok(dir) = std::env::var("VELLUM_SLIDE_ARTIFACTS") {
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(format!("{dir}/fractional.pdf"), &pdf).unwrap();
+        let doubled: Vec<_> = scene.frames.iter().map(|f| f.at_scale(2.)).collect();
+        let png = scene_services().render_export(&doubled, "png").unwrap();
+        std::fs::write(format!("{dir}/fractional.png"), png).unwrap();
+    }
+    assert!(
+        String::from_utf8_lossy(&pdf)
+            .replace("/MediaBox[", "/MediaBox [")
+            .contains("/MediaBox [0 0 64.5 40.25]")
+    );
+}

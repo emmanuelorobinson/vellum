@@ -215,3 +215,43 @@ pub fn file_stem(name: &str, ordinal: usize, suffix: &str) -> String {
         safe(suffix)
     )
 }
+
+/// PDF slide-page requests expand to top-level frames. Selected slides follow their page's order;
+/// ordinary canvas targets retain selection order. Each deck is emitted at its first requested target.
+pub fn pdf_targets(
+    doc: &vellum_types::Document,
+    targets: &[String],
+) -> Result<Vec<String>, ExportError> {
+    use std::collections::BTreeSet;
+    use vellum_types::{Node, PageKind};
+    let mut result = Vec::new();
+    let mut decks = BTreeSet::new();
+    for target in targets {
+        let deck = doc.pages.iter().find(|p| {
+            p.kind == PageKind::Slides
+                && (p.id.as_str() == target
+                    || p.children
+                        .iter()
+                        .any(|n| matches!(n, Node::Frame(_)) && n.id().as_str() == target))
+        });
+        if let Some(page) = deck {
+            if !decks.insert(page.id.clone()) {
+                continue;
+            }
+            let all = targets.iter().any(|id| id == page.id.as_str());
+            result.extend(
+                page.children
+                    .iter()
+                    .filter(|n| matches!(n, Node::Frame(_)))
+                    .filter(|n| all || targets.iter().any(|id| id == n.id().as_str()))
+                    .map(|n| n.id().as_str().to_owned()),
+            );
+        } else if !result.contains(target) {
+            result.push(target.clone());
+        }
+    }
+    if result.is_empty() || result.len() > 100 {
+        return Err(ExportError::new("Select between 1 and 100 frames"));
+    }
+    Ok(result)
+}

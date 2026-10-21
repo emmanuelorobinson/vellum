@@ -11,6 +11,7 @@ import {
   type createCommandController,
   createEdgeUi,
   createShellActions,
+  createSlidesController,
   type DesignController,
   documentNodes,
   type EdgeEnvironment,
@@ -34,6 +35,7 @@ import {
   type ResourceController,
   type SessionProblem,
   type SettingsController,
+  type SlidesHost,
   selectionLabel,
   sessionProblem,
   type TokenSyncController,
@@ -94,6 +96,7 @@ import {
 } from "./shell/EdgeLayer";
 import { Palette } from "./shell/Palette";
 import { SettingsDialog, type SettingsHost } from "./shell/SettingsDialog";
+import { Presentation, SlideActions, SlideStrip } from "./slides/Slides";
 import "./editor.css";
 import "./authoring/authoring.css";
 import "./ledger/ledger.css";
@@ -129,6 +132,9 @@ export interface EdgeProps {
 }
 
 export interface EditorWorkspaceProps {
+  /** Host uses the shared export renderer, live revision checks and native save UI. */
+  slidesHost?: SlidesHost;
+  nextPageId?(): PageId;
   /** Only supplied for a document whose live collaboration was explicitly enabled. */
   collaboration?: CollaborationController;
   browser?: BrowserPort;
@@ -257,6 +263,50 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   }, []);
   const doc = snapshot.document;
   const [pageId, setPageId] = useState<PageId | null>(session.page || null);
+
+  const slides = useMemo(
+    () =>
+      createSlidesController({
+        engine,
+        device: props.device,
+        page: () => session.page,
+        nextPageId: props.nextPageId ?? props.nextNodeId,
+        onPage: (id) => {
+          setPageId(id);
+          session.setPage(id);
+        },
+        commit: (tx) => session.commit(tx),
+        ...(props.slidesHost ? { host: props.slidesHost } : {}),
+      }),
+    [engine, session, props.device, props.nextPageId, props.nextNodeId, props.slidesHost],
+  );
+  useStore(slides.subscribe);
+  useEffect(() => () => slides.dispose(), [slides]);
+  const slidePage = doc?.pages.find((p) => p.id === session.page)?.kind === "slides";
+  useEffect(() => {
+    if (slides.state.presenting && slides.state.page !== session.page) slides.stop();
+  }, [slides, session.page]);
+  const selectSlide = (id: string, additive: boolean) => {
+    const ids = additive
+      ? session.state.selection.includes(id)
+        ? session.state.selection.filter((n) => n !== id)
+        : [...session.state.selection, id]
+      : [id];
+    session.select(ids);
+    const b = session.sceneBounds(id);
+    if (b && b.width > 0 && b.height > 0) {
+      const left = layout.canvasInsets.left + 32,
+        right = layout.canvasInsets.right + 32;
+      const width = Math.max(1, state.width - left - right),
+        height = Math.max(1, state.height - 240);
+      const zoom = Math.min(width / b.width, height / b.height);
+      session.setViewport({
+        x: b.x - (left + (width - b.width * zoom) / 2) / zoom,
+        y: b.y - (160 + (height - b.height * zoom) / 2) / zoom,
+        zoom,
+      });
+    }
+  };
 
   // The window is the canvas; the workspace works out what floats over it.
   useEffect(() => {
@@ -705,6 +755,29 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         });
       }}
       onKeyDown={(e) => {
+        const binding = controller.keys.fromEvent(e.nativeEvent, {
+          host: props.host,
+          platform: props.platform,
+          focus: slides.state.presenting ? "presentation" : context(e.target).focus,
+        });
+        if (slides.state.presenting) {
+          if (binding?.command === "present.next") {
+            e.preventDefault();
+            slides.next();
+          } else if (binding?.command === "present.previous") {
+            e.preventDefault();
+            slides.previous();
+          } else if (binding?.command === "present.stop") {
+            e.preventDefault();
+            slides.stop();
+          }
+          return;
+        }
+        if (binding?.command === "present.start" && slidePage && slides.canPresent()) {
+          e.preventDefault();
+          slides.start(session.state.selection[0]);
+          return;
+        }
         if (e.defaultPrevented) return;
         if (props.collaboration && e.key === "Escape") {
           if (props.collaboration.state.placing) {
@@ -775,7 +848,12 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             }
             size={{ width: state.width, height: state.height }}
             {...(prefs
-              ? { wheel: { zooms: prefs["canvas.wheelZooms"], invert: prefs["canvas.invertZoom"] } }
+              ? {
+                  wheel: {
+                    zooms: prefs["canvas.wheelZooms"],
+                    invert: prefs["canvas.invertZoom"],
+                  },
+                }
               : {})}
             {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
             {...(props.content ? { content: props.content } : {})}
@@ -869,26 +947,36 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                     />,
                   )
                 : (props.slots?.history ?? null),
-              layers: panelLoading(
-                "layers",
-                <LayersTab
-                  document={doc}
-                  page={pageId ?? session.page}
-                  onPage={(id) => {
-                    setPageId(id);
-                    session.setPage(id);
-                  }}
+              layers: slidePage ? (
+                <SlideStrip
+                  controller={slides}
                   selection={session.state.selection}
-                  onSelect={(ids) => session.select(ids)}
-                  commit={commit}
-                  device={props.device}
-                  now={props.now}
-                  recent={props.recent}
-                  actors={props.actors}
-                  {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
+                  onSelect={selectSlide}
                   readOnly={readOnly}
-                  onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
-                />,
+                />
+              ) : (
+                panelLoading(
+                  "layers",
+                  <LayersTab
+                    onNewSlides={() => slides.newPage()}
+                    document={doc}
+                    page={pageId ?? session.page}
+                    onPage={(id) => {
+                      setPageId(id);
+                      session.setPage(id);
+                    }}
+                    selection={session.state.selection}
+                    onSelect={(ids) => session.select(ids)}
+                    commit={commit}
+                    device={props.device}
+                    now={props.now}
+                    recent={props.recent}
+                    actors={props.actors}
+                    {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
+                    readOnly={readOnly}
+                    onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
+                  />,
+                )
               ),
               assets: panelLoading(
                 "assets",
@@ -925,6 +1013,13 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               run={run}
               enabled={enabled}
               shortcut={shortcut}
+            />
+          ) : null}
+          {visible.topRight && slidePage ? (
+            <SlideActions
+              controller={slides}
+              selection={session.state.selection}
+              shortcut={shortcut("present.start")}
             />
           ) : null}
           {visible.topRight && props.collaboration ? (
@@ -1180,6 +1275,9 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                 ×
               </button>
             </div>
+          ) : null}
+          {slides.state.presenting ? (
+            <Presentation controller={slides} revision={snapshot.revision} />
           ) : null}
         </TipProvider>
       </PortalContainer.Provider>

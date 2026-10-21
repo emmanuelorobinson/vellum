@@ -1,0 +1,143 @@
+/* C32 strip/actions: dimensions read from the frame; appearance values use exported tokens. */
+.vc-slides {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow: auto;
+}
+.vc-slide {
+  flex: none;
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 0;
+  outline: 1px solid var(--chrome-border);
+  outline-offset: -0.5px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-sunken);
+  cursor: pointer;
+}
+.vc-slide[aria-selected="true"] {
+  background: var(--chrome-selected);
+  outline-color: var(--canvas-selection);
+}
+.vc-slide__number {
+  font-size: 11px;
+  line-height: 13px;
+  font-weight: 400;
+  color: var(--chrome-secondary);
+}
+.vc-slide__title {
+  font-size: 14px;
+  line-height: 17px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vc-slide-actions {
+  position: absolute;
+  right: 218px;
+  top: 72px;
+  width: 238px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: calc(100% - 452px);
+  gap: var(--space-2);
+}
+.vc-slide-actions button,
+.vc-presentation button {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 0;
+  outline: 1px solid var(--chrome-border);
+  outline-offset: -0.5px;
+  background: var(--chrome-panel);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+  cursor: pointer;
+}
+.vc-slide-actions .vc-slide-present {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  outline-color: var(--chrome-text);
+}
+.vc-slide-actions button:disabled,
+.vc-presentation button:disabled {
+  color: var(--chrome-muted);
+  cursor: default;
+}
+.vc-slide-actions [role="alert"] {
+  color: var(--chrome-error);
+}
+.vc-presentation {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas-backdrop);
+  color: var(--chrome-text);
+  outline: none;
+}
+.vc-presentation img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.vc-presentation-controls {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  background: var(--chrome-panel);
+  white-space: nowrap;
+}
+.vc-slides-new {
+  margin: var(--space-2);
+}
+
+.vc-slide-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+}
+.vc-slide-pages select {
+  min-width: 0;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-xs);
+}
+
+.vc-slide-actions-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 238px;
+  height: 31px;
+  flex: none;
+  white-space: nowrap;
+}

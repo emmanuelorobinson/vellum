@@ -350,7 +350,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Export selected layers to PNG, JPEG, WEBP, SVG, PDF, HTML + CSS or HTML + Tailwind. Returns named files as MIME/base64 data, warnings and, for one PNG or inline HTML output, clipboard MIME data. PDF pages follow selection order; multiple raster images become a ZIP. HTML includes its styles and works offline. No file is written. The caller saves the bundle; agent file writes require permission.",
+      "description": "Export selected layers to PNG, JPEG, WEBP, SVG, PDF, HTML + CSS or HTML + Tailwind. Returns named files as MIME/base64 data, warnings and, for one PNG or inline HTML output, clipboard MIME data. PDF slides follow deck order (a slides page exports its frames); canvas PDF pages follow selection order; multiple raster images become a ZIP. HTML includes its styles and works offline. No file is written. The caller saves the bundle; agent file writes require permission.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -371,7 +371,7 @@
             "type": "string"
           },
           "nodes": {
-            "description": "Layer or page ids, in selection order. PDF uses this as page order; multiple rasters return a ZIP.",
+            "description": "Layer or page ids. PDF slides follow deck order; a slides page exports each frame. Canvas targets retain selection order; multiple rasters return a ZIP.",
             "items": {
               "type": "string"
             },

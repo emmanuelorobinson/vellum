@@ -8,6 +8,7 @@ import type {
   NodeIdPath,
   NodePatch,
   Origin,
+  Page,
   PageId,
   Point,
   PropDef,
@@ -36,6 +37,7 @@ export type DocumentShell = Required<
   Pick<Document, "meta" | "imports" | "themes" | "styles" | "fonts" | "comments">
 >;
 export type ToolOp =
+  | { type: "insertPage"; index: number; page: Page }
   | { type: "convertScript"; id: NodeId }
   | { type: "makeSlot"; id: NodeId; suggested: ComponentId[] }
   | { type: "setComponent"; id: ComponentId; component: Component | null }

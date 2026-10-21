@@ -18,7 +18,7 @@ enum Assets {
 #[serde(deny_unknown_fields)]
 struct Input {
     document: Option<String>,
-    /// Layer or page ids, in selection order. PDF uses this as page order; multiple rasters return a ZIP.
+    /// Layer or page ids. PDF slides follow deck order; a slides page exports each frame. Canvas targets retain selection order; multiple rasters return a ZIP.
     nodes: Vec<String>,
     /// png, jpeg, webp, svg, pdf, html-css or html-tailwind.
     format: String,
@@ -45,7 +45,7 @@ impl Tool for Export {
         1
     }
     fn description(&self) -> &'static str {
-        "Export selected layers to PNG, JPEG, WEBP, SVG, PDF, HTML + CSS or HTML + Tailwind. Returns named files as MIME/base64 data, warnings and, for one PNG or inline HTML output, clipboard MIME data. PDF pages follow selection order; multiple raster images become a ZIP. HTML includes its styles and works offline. No file is written. The caller saves the bundle; agent file writes require permission."
+        "Export selected layers to PNG, JPEG, WEBP, SVG, PDF, HTML + CSS or HTML + Tailwind. Returns named files as MIME/base64 data, warnings and, for one PNG or inline HTML output, clipboard MIME data. PDF slides follow deck order (a slides page exports its frames); canvas PDF pages follow selection order; multiple raster images become a ZIP. HTML includes its styles and works offline. No file is written. The caller saves the bundle; agent file writes require permission."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<Input>()
@@ -54,7 +54,7 @@ impl Tool for Export {
         true
     }
     fn run(&self, ctx: &mut ToolCtx<'_>, input: Value) -> Result<Value, ToolError> {
-        let input: Input = parse_input(input)?;
+        let mut input: Input = parse_input(input)?;
         if input.nodes.is_empty() || input.nodes.len() > 100 {
             return Err(ToolError::invalid(
                 "nodes",
@@ -81,6 +81,10 @@ impl Tool for Export {
                     "There is no layer or page {target:?}"
                 )));
             }
+        }
+        if input.format == "pdf" {
+            input.nodes = pdf_targets(&doc, &input.nodes)
+                .map_err(|e| ToolError::invalid("nodes", e.to_string()))?;
         }
         let services = ctx.docs().services();
         let scene = ctx

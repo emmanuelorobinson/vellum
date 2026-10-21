@@ -20,6 +20,7 @@ export * from "./resources/variables";
 export * from "./session";
 export * from "./shaders/controller";
 export * from "./shell";
+export * from "./slides";
 export * from "./tool-types";
 export { initialToolState, transitionTool } from "./tools";
 export * from "./viewport";

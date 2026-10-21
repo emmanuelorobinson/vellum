@@ -30,6 +30,7 @@ export interface LayersTabProps {
   document: Document | null;
   page: PageId | null;
   onPage(id: PageId): void;
+  onNewSlides?(): void;
   selection: readonly string[];
   onSelect(ids: string[]): void;
   /** Applies a Person transaction; the host reports a refusal. */
@@ -249,6 +250,16 @@ export function LayersTab(props: LayersTabProps) {
   return (
     <div className="vc-layers" data-state={rows.length ? "layers" : "empty"}>
       <h3 className="vc-heading">Pages</h3>
+      {props.onNewSlides ? (
+        <button
+          type="button"
+          className="vc-textbutton vc-slides-new"
+          disabled={props.readOnly}
+          onClick={props.onNewSlides}
+        >
+          New page → Slides
+        </button>
+      ) : null}
       <div className="vc-pages" role="listbox" aria-label="Pages">
         {doc.pages.map((p) => (
           <button

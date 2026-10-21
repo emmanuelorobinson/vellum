@@ -168,3 +168,60 @@ fn undo_turn_with_nothing_kept_leaves_the_history() {
     );
     assert!(history.undo(&mut doc, &agent).is_none());
 }
+
+#[test]
+fn slide_order_uses_attributed_history_and_survives_undo_redo() {
+    use vellum_types::{Page, PageKind};
+    let mut doc = document();
+    let original = doc.clone();
+    let mut history = History::new();
+    commit(
+        &mut history,
+        &mut doc,
+        alice(),
+        vec![Op::InsertPage {
+            index: 2,
+            page: Box::new(Page {
+                id: crate::ops::tests::common::page_id("deck000001"),
+                name: "TEST DATA slides".into(),
+                kind: PageKind::Slides,
+                children: vec![
+                    shape("frame", "slide00002", json!({})),
+                    shape("note", "notes00001", json!({"content":"TEST DATA"})),
+                    shape("frame", "slide00003", json!({})),
+                ],
+            }),
+        }],
+    );
+    let target = vec!["deck000001".into()];
+    assert_eq!(
+        crate::export::pdf_targets(&doc, &target).unwrap(),
+        ["slide00002", "slide00003"]
+    );
+    commit(
+        &mut history,
+        &mut doc,
+        alice(),
+        vec![Op::Reorder {
+            id: id("slide00003"),
+            index: 0,
+        }],
+    );
+    assert_eq!(
+        crate::export::pdf_targets(&doc, &target).unwrap(),
+        ["slide00003", "slide00002"]
+    );
+    assert!(history.undo(&mut doc, &person(ALICE)).is_some());
+    assert_eq!(
+        crate::export::pdf_targets(&doc, &target).unwrap(),
+        ["slide00002", "slide00003"]
+    );
+    assert!(history.redo(&mut doc, &person(ALICE)).is_some());
+    assert_eq!(
+        crate::export::pdf_targets(&doc, &target).unwrap(),
+        ["slide00003", "slide00002"]
+    );
+    assert!(history.undo(&mut doc, &person(ALICE)).is_some());
+    assert!(history.undo(&mut doc, &person(ALICE)).is_some());
+    assert_eq!(doc, original);
+}

@@ -8,6 +8,13 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 68 needs native-host and visual acceptance.** Attach the live document ABI/EditorLink from
+  Prompt 55 and the revision-checked slide renderer/PDF destination callbacks in desktop/extension.
+  C32 strip comparisons remain 1.057% light / 1.036% dark; actions 7.238% / 6.452%, above the unchanged
+  1% gate. Full-frame artwork/new states and installed Windows/Linux/macOS acceptance are unverified.
+  Existing 14 dependency advisories and 20 contrast failures remain. See `docs/runbooks/slides.md`
+  and `target/screen-goldens/p68-*`; remote CI has not run.
+
 - **Prompt 67 needs native-host and visual acceptance.** Connect Prompt 55's writable runtime and
   shader inspect/chooser/example callbacks in the desktop/extension. Both C33 heading/file/chooser
   comparisons exceed the unchanged 1% gate (1.690% light, 1.458% dark); full-frame artwork and the
@@ -4440,3 +4447,73 @@ using the same commands/target directories above. This verifies the completed im
 unscoped run continues to expose the concurrent shader lint. The final native import/asset/MCP/SVG rerun
 passes on the completed bounded discovery/expansion implementation. All source, asset and executable
 content limitations remain as described in the runbook; no native GUI or full-fidelity acceptance is implied.
+
+## Prompt 68
+
+Built slides-page creation over the existing PageKind/InsertPage, a numbered strip with drag and
+keyboard reorder, page navigation, selected-slide fit, Present with the existing rebindable keyboard
+scope, and PDF export of all/selected slides in deck order. Annotations never become slides. Creation
+and reorder are person-origin Ops through session.commit; native history tests verify undo/redo.
+Presentation starts at the selected slide or the slide containing a selected child, clamps navigation,
+isolates the editor with a modal dialog, restores focus and never changes document/history/selection/view.
+Page creation/reorder are refused while presenting. Slow/stale/missing/error pixels are explicit.
+
+PDF planning extends the existing CLI/MCP export path without a format change. Per-frame sizes include
+fractional values within renderer f32 precision. Skia rounds PDF device bounds; bounded internally
+produced bytes get corrected MediaBox metadata through MIT lopdf 0.46.0 (default features off), with
+canvas clipping/offset and no higher raster DPI. The version baseline records the dependency. Only
+lopdf's SHA-2 wrapper was registered; no advisory exception or general dependency rule was relaxed.
+
+Owner authorized read-only C32 inspection after the opener could not find Pen. Read both appearances,
+structure, tokens, bounds and screenshots without mutations/saves. Added one design-gap line for extra
+controls/states. Sibling search found no reusable slides implementation. Context7 official React docs
+informed effect cleanup; inspected the installed Skia PDF source to establish its rounding. No reference
+code was ported. Reviewed the two documentation-only MCP schema snapshot changes. No protected spec,
+snapshot, tolerance or checksum was changed; no commit/deployment was made.
+
+Differences/limits: installed desktop/extension authoring and slide callbacks still await Prompt 55's
+live document runtime/EditorLink; they are not claimed as wired. slidesHostFromExport provides the
+revision-checked shared-renderer/native-writer bridge. Present fills the host window without changing
+OS fullscreen. Browser tests use scripted engine/service replies; native PDF tests use the real renderer.
+Existing export budgets (100 frames, dimensions, pixels, bundle/tool bytes) still apply.
+
+TDD caught missing APIs, notes being rendered as one page, fractional MediaBox rounding, nested selection
+starting at the first slide, and page creation reaching apply during presentation; corrected each.
+Fixed fixture types, a redundant dialog role and matching measured stroke/line-height geometry.
+Sandbox listener/SDK/advisory locks required permitted retries; crates.io HTTP returned 403, while Cargo
+metadata/fetch succeeded. No automatic approval rejection remains. The dependency script still prints
+success after cargo-deny failure; direct checks were used as evidence.
+
+Passed commands (telemetry disabled; Node 24/pnpm 12 via `/private/tmp/vellum-p56-bin`, Rust 1.99, macOS ARM64):
+
+- `pnpm --filter @vellum/editor-core --filter @vellum/editor-react --filter @vellum/engine-client test`
+  (2,388 core, 313 React, six engine boundary tests); final scoped type-check for those packages.
+- `CARGO_TARGET_DIR=target/prompt63-verification cargo test --offline -p vellum-core --lib` (328).
+- `VELLUM_SLIDE_ARTIFACTS="$PWD/target/slides-pdf" CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum --test exports --test mcp -p vellum-render-skia --test renderer`
+  (46). Poppler `pdftoppm -png -r 144 -singlefile target/slides-pdf/fractional.pdf target/slides-pdf/pdf-render`
+  plus bundled Python/pypdf/Pillow confirms the 64.5 × 40.25 MediaBox, 129 × 81 raster and four exact
+  red/green pixel probes against the shared PNG; rendered image visually inspected.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum-core -p vellum-render-skia -p vellum --all-targets -- -D warnings`.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs build --offline --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten` (SDK cache access permitted).
+- `pnpm type-check` (33 tasks); `pnpm deps:check` (658 TS modules/1,822 edges);
+  direct `cargo deny --log-level error check bans licenses sources`;
+  `CARGO_TARGET_DIR=target/prompt63-verification pnpm types:check` (146 types).
+- Scoped `pnpm exec biome check` over changed TS/TSX/CSS (warnings only); `cargo fmt --all --check`;
+  `bash scripts/check-clean-room.sh`; `node scripts/copy-lint.mjs`; `pnpm checksum`; `git diff --check`.
+- Chrome lane: `pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts slides.spec.ts --workers=1 --grep 'presentation keys|PDF all|read-only|slow slide'` (four behavior tests).
+
+Not passing / unverified:
+
+- Full `slides.spec.ts` has four behavior passes and four C32 visual failures at the unchanged 1% gate:
+  strip 1.057% light / 1.036% dark, actions 7.238% / 6.452%. Compared regions have the queried sizes
+  (360 × 556 and 238 × 31). Sheets/metrics are in `target/screen-goldens/p68-*`. Full C32 artwork and
+  added page/error/presentation states are not visually accepted.
+- `cargo deny --log-level error check`: 14 existing advisories; bans/licences/sources pass.
+  `pnpm tokens:lint`: 20 existing exported inverse-text contrast failures. No suppression added.
+  `node --test scripts/__tests__/design-spec-rules.test.mjs`: eight pass; the pre-existing Prompt 46
+  DESIGN-GAPS line-format error remains. The file is append-only; this prompt's appended line conforms.
+- Installed host document authoring/presentation/PDF-save integration, remote CI and Windows/Linux
+  acceptance remain unverified. No full workspace/GPU/installed-host release acceptance is claimed.
+
+Playwright's Vite/Chromium processes close after tests. Generated PDF/PNG/comparison/WASM outputs and
+build caches remain under target for review; no credentials, user design file or external service changed.
