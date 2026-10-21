@@ -977,3 +977,9 @@
 .vc-shader-controls > button {
   white-space: nowrap;
 }
+.vc-shader-controls > button {
+  font:
+    500 12px / 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+}

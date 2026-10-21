@@ -161,7 +161,7 @@ export function ShaderControls({
       .join("/");
   const choose = async (id?: string) => {
     const before = selection();
-    const beforeNode = ctx.design.single()?.item.node;
+    const beforeNode = JSON.stringify(ctx.design.single()?.item.node);
     setBusy(true);
     setMessage(null);
     try {
@@ -171,7 +171,7 @@ export function ShaderControls({
       if (
         choice &&
         selection() === before &&
-        ctx.design.single()?.item.node === beforeNode &&
+        JSON.stringify(ctx.design.single()?.item.node) === beforeNode &&
         !ctx.disabled
       )
         apply({ ...choice, visible: true });

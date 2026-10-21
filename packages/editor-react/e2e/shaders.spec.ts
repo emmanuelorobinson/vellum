@@ -30,6 +30,19 @@ test("uniform edits and variable binding commit attributed transactions; gallery
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
 });
+test("choosing and importing shaders use ordinary person transactions", async ({ page }) => {
+  await page.goto("/shaders.html");
+  await page.getByRole("button", { name: "Choose shader file…", exact: true }).click();
+  await expect(page.getByText("effects/chosen.vsh", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Examples…", exact: true }).click();
+  await page.getByRole("button", { name: "Use shader", exact: true }).first().click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("effects/checker.vsh", { exact: true })).toBeVisible();
+  const tx = await page.evaluate(() => (window as any).shaderTest.engine.transactions);
+  expect(tx).toHaveLength(2);
+  expect(tx.every((t: any) => t.origin.actor.kind === "person" && t.ops.length === 1)).toBe(true);
+  expect(tx[1].ops[0].patch.fills[0].src).toBe("effects/checker.vsh");
+});
 test("compile errors are visible on the node and in the controls", async ({ page }) => {
   await page.goto("/shaders.html?error");
   await expect(page.locator(".vc-shader-controls [role=alert]")).toContainText("unknown value");

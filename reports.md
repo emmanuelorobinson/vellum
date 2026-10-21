@@ -8,6 +8,14 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 67 needs native-host and visual acceptance.** Connect Prompt 55's writable runtime and
+  shader inspect/chooser/example callbacks in the desktop/extension. Both C33 heading/file/chooser
+  comparisons exceed the unchanged 1% gate (1.690% light, 1.458% dark); full-frame artwork and the
+  added binding/gallery states are not claimed as matching design goldens. Native and WASM CPU/WebGL
+  shader examples match analytic pixels exactly. Resolve the existing 14 dependency advisories and
+  20 exported contrast failures, then run remote CI and Windows/Linux acceptance. See ADR-008,
+  `docs/runbooks/shaders.md` and `target/screen-goldens/p67-*`.
+
 - **Prompt 66 needs native, provider and visual acceptance.** Attach Prompt 55's writable runtime and
   person-origin image/Figma/.pen callbacks; the desktop remains explicitly read-only. Provision a reviewed local
   segmentation model and real Figma/image-provider keychain entries, then test live providers, production
@@ -4305,10 +4313,78 @@ test environment remain in target and /private/tmp. No real credential or existi
 
 ## Prompt 67
 
-Started from the shader adapter shell; failing compiler/contract/limit tests confirmed the missing API.
-Preserving the pre-existing Cargo.lock edits and untracked import-pen adapter. The design opener could
-not find Pen; the owner authorized read-only inspection of the open C33 shader design. No design writes.
-Sibling search found no reusable shader implementation outside excluded extracted/vendor material.
+Built ShaderCompiler over the pinned Skia compiler, with a pure admission pass for a documented
+straight-line dialect; typed compile/runtime errors; scalar, boolean, colour and vector uniforms;
+reserved node size and effect-content inputs; variable resolution through the existing resolver.
+No loops, helper functions, recursion, arrays, preprocessors or offset/multiple content samples reach
+Skia. Source, token, nesting, statement, uniform and per-frame resource/draw budgets bound work.
+ADR-008 defers automatic GLSL import; no new vendor version or format schema was added.
+
+Native and WASM render fills/effects through the shared renderer, accept host-supplied source resources,
+include source bytes in cache keys and expose diagnostics. Invalid fills are transparent and invalid
+effects retain their input in editable scenes; exports/screenshots refuse incomplete shader pixels.
+The daemon loads only visible named dependencies; colliding library-relative paths fail explicitly.
+Shader-backed screenshot/export pixels match. Existing in-memory execute scene reads have no file
+resource provider and explicitly reject missing shader sources rather than returning incomplete pixels.
+
+Added C33 controls, typed errors on affected nodes, variable bindings, safe asynchronous source reloads,
+file selection, effect selection and a local gallery for two shaders, a sandboxed script and a token
+library. Edits use ordinary person-origin transactions; native tests verify undo. Host callbacks own
+reads/copying/opening and their authorization. Installed desktop/extension callbacks remain unattached
+behind Prompt 55's read-only runtime. The ports and scripted UI fixtures are not native acceptance.
+
+Design opener could not find Pen; the owner explicitly authorized read-only C33 inspection in the open
+file. Read component properties, variables, bounds and screenshots without mutations/saves. Added one
+DESIGN-GAPS line for binding/error/reload/gallery states. No design/reference/tolerance/checksum changed.
+Read the pinned rust-skia wrappers and Context7 official documentation; no reference code was ported.
+Sibling search found no reusable implementation outside excluded extracted/vendor content.
+
+TDD confirmed missing compiler, renderer-resource/diagnostic and controller APIs. Later tests caught an
+incorrectly annotated fixture, a comparison-operator admission bug and a constant-chunk Clippy issue;
+all were fixed. A browser fixture initially lacked scripted engine replies and had a wrong import path;
+fixed those rather than weakening assertions. Fixed a measured chooser wrap and Chrome profile cleanup
+race. Registered ShaderCompiler as a permitted Skia wrapper and the existing vellum-gpu runner label
+with actionlint; no advisory exception was added. Added native and browser CI steps; remote runs unverified.
+Concurrent .pen import edits were preserved. Another chat committed both features as e628ce9 while this
+session was verifying; the final UI/test/handoff refinements follow that commit.
+
+Passed commands (telemetry disabled; Node 24/pnpm 12 via `/private/tmp/vellum-p56-bin`, Rust 1.99):
+
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum-render-skia --test shaders --test appearance --test cache -p vellum-shader-sksl --test compiler`
+  (17 tests); `node scripts/skia-build.mjs test --offline -p vellum --test shaders --test exports --test tools`
+  with the same target directory (49 tests). Final example rerun passes all three tests/four pixel references.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum --test cli`
+  (12 tests, real local IPC). The earlier broad sandboxed run failed six IPC-dependent CLI tests; permitted
+  retry passes. No full workspace release-test acceptance is claimed.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum-shader-sksl -p vellum-render-skia -p vellum-core -p vellum --all-targets -- -D warnings`;
+  `pnpm type-check` (33 tasks); `cargo fmt --all --check`.
+- `pnpm --filter @vellum/editor-core --filter @vellum/editor-react --filter @vellum/renderer-skia test`
+  (2,381 core, 312 React, five renderer tests); scoped Biome over changed TS/CSS/MJS/JSON (warnings only).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs build --offline --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten`;
+  `node scripts/shader-goldens.mjs` (both shader examples exact in WASM CPU and Chrome WebGL; hostile source
+  returns Unsupported). Four native examples pass analytic RGBA references. Artifacts: `target/shader-examples/`.
+- `pnpm deps:check` (pure allowlist, bans/licences/sources and 651 TS modules/1,794 edges);
+  `CARGO_TARGET_DIR=target/prompt63-verification pnpm types:check` (146 types);
+  `bash scripts/check-clean-room.sh`; `node scripts/copy-lint.mjs`;
+  `node scripts/spec-checksums.mjs check`; `actionlint .github/workflows/shaders.yml .github/workflows/renderer.yml`;
+  canonicalize `--check` for `examples/design-systems/starter.lib.vellum`; `git diff --check`.
+
+Not passing / not verified:
+
+- `pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts shaders.spec.ts --workers=1`:
+  four behavior tests pass; both 280 x 108 heading/file/chooser comparisons fail at 1.690% light / 1.458% dark
+  against the unchanged 1% gate. Side-by-side sheets and measurements are in `target/screen-goldens/p67-*`.
+  Full C33 artwork and newly added gallery/binding states are not claimed visually accepted.
+- `cargo deny check`: 14 advisories on existing locked dependencies; bans/licences/sources pass.
+  `pnpm tokens:lint`: 20 exported inverse-text contrast failures; the new fixture colour-literal issue was
+  fixed. Neither policy nor tokens were relaxed. Initial SDK/advisory lock and loopback sandbox denials
+  passed on authorized retries; a pnpm identity check failed under the default shell path, so direct scripts
+  and the recorded Node 24/pnpm 12 path were used. Existing ts-rs and debug-linker warnings remain.
+- Native authoring/source watcher/example-opening callbacks, production shader latency/preemption,
+  Windows/Linux and remote CI acceptance remain open. Per-pixel static limits are not GPU preemption.
+
+Test Vite servers and shader Chrome processes stop after their runs. Local generated WASM, examples,
+comparison sheets and build caches remain for review. No deployment or credential change was made.
 
 
 ## Prompt 66 follow-up — .pen import
