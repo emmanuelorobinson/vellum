@@ -8,6 +8,7 @@
 mod assets;
 mod batch;
 mod bridge;
+mod browser;
 mod content;
 mod context;
 mod coordinate;
@@ -449,6 +450,10 @@ pub trait Tool {
     fn input_schema(&self) -> Schema;
     /// Whether it leaves the document as it found it.
     fn read_only(&self) -> bool;
+    /// Whether this tool can interact with external resources.
+    fn open_world(&self) -> bool {
+        false
+    }
     /// What its step shows in the Agent panel.
     fn verb(&self) -> Verb {
         Verb::Read
@@ -559,6 +564,7 @@ impl Registry {
         nodes::register(&mut tools);
         scene::register(&mut tools);
         export::register(&mut tools);
+        browser::register(&mut tools);
         library::register(&mut tools);
         write::register(&mut tools);
         model::register(&mut tools);
@@ -591,7 +597,11 @@ impl Registry {
                 let started = ctx.docs.now().0;
                 ctx.introduce();
                 ctx.note = StepNote::default();
-                let arguments = step::preview(&input);
+                let arguments = if name == "browser" {
+                    step::preview(&browser::history_input(&input))
+                } else {
+                    step::preview(&input)
+                };
                 let result = tool.run(ctx, input);
                 let note = std::mem::take(&mut ctx.note);
                 let mut step =

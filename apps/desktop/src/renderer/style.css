@@ -474,3 +474,11 @@ dialog.recovery-dialog::backdrop {
 [data-platform="mac"] .vc-topright {
   z-index: 2;
 }
+
+.desktop-browser-panel {
+  position: fixed;
+  z-index: 100;
+  top: 80px;
+  right: 32px;
+  width: min(800px, calc(100vw - 64px));
+}

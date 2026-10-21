@@ -154,6 +154,7 @@ pub struct Documents {
     outside: Option<Rc<dyn crate::permissions::Outside>>,
     /// Where `fill_image` finds stock pictures, when a key is set up.
     stock: Option<Rc<dyn vellum_core::ports::ImageSource>>,
+    browser: Option<Rc<dyn vellum_core::ports::BrowserPort>>,
 }
 
 /// An external client's `spawn_agents` call, for the host that runs helper agents.
@@ -215,7 +216,16 @@ impl Documents {
             spawns: None,
             outside: None,
             stock: None,
+            browser: None,
         }
+    }
+
+    /// Composition-owned browser, never chosen by tool input.
+    pub fn set_browser(&mut self, browser: Rc<dyn vellum_core::ports::BrowserPort>) {
+        self.browser = Some(browser);
+    }
+    pub fn browser(&self) -> Option<Rc<dyn vellum_core::ports::BrowserPort>> {
+        self.browser.clone()
     }
 
     /// Applies what a person pressed (Pause all, Stop, a resume) to every open file's Guard, and remembers it for

@@ -331,3 +331,39 @@ fn font_bytes_are_shared_and_missing_data_is_explicit() {
             })
     );
 }
+
+#[test]
+fn embed_uses_derived_pixels_at_device_size_without_mutating_the_node() {
+    use std::collections::BTreeMap;
+    use vellum_types::AssetId;
+    let roots = resolve(vec![node(
+        "web",
+        "embed",
+        json!({"url":"http://localhost:3000/","device":"phone","width":390,"height":844,"radius":12}),
+    )]);
+    let original = roots.clone();
+    let l = boxes(&[("web", [0., 0., 390., 844.])]);
+    let images = BTreeMap::from([(id("web"), AssetId::new("preview0001").unwrap())]);
+    let out = display_list::build_with_embeds(
+        &roots,
+        &l,
+        &FixedMetricText::new(),
+        &StaticFonts::new(&[]),
+        &mut Scene::new(RstarIndex::new()),
+        Viewport {
+            bounds: Rect::new(0., 0., 390., 844.),
+            scale: 1.,
+        },
+        &images,
+    )
+    .unwrap();
+    assert!(out.problems.is_empty(), "{:?}", out.problems);
+    assert!(
+        out.list
+            .commands
+            .iter()
+            .any(|c| matches!(c,DrawCmd::Image{dst,..} if *dst==[0.,0.,390.,844.]))
+    );
+    assert!(out.list.resources.iter().any(|r|matches!(r,Resource::Shape(vellum_types::display::Shape::Rect{radii,..}) if *radii==[12.;4])));
+    assert_eq!(roots, original);
+}

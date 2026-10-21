@@ -6,6 +6,96 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "description": "Capture an HTTP(S) page, including localhost dev servers, as a PNG or import it as editable layers. import_element needs a CSS selector. Give the viewport in pixels; additional asset origins need separate permission. embed adds a live website node. Imports need a parent and use one undoable transaction. Unsupported content is reported in notes. Open a document first so network permissions can be recorded.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "screenshot",
+              "import",
+              "import_element",
+              "embed"
+            ],
+            "type": "string"
+          },
+          "device": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "height": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "index": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "origins": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "scroll": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "width": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "x": {
+            "format": "double",
+            "type": "number"
+          },
+          "y": {
+            "format": "double",
+            "type": "number"
+          },
+          "zoom": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "url",
+          "action"
+        ],
+        "title": "Input",
+        "type": "object"
+      },
+      "name": "browser"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": false
       },
@@ -753,14 +843,14 @@
     },
     {
       "_meta": {
-        "vellum/version": 1
+        "vellum/version": 2
       },
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": false
       },
-      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. Returns the new layer ids and notes on what could not be imported.",
+      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. Returns the new layer ids and notes on what could not be imported. BrowserPort computed DOM snapshots use format html.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -774,7 +864,7 @@
             "type": "string"
           },
           "format": {
-            "description": "\"svg\", \"image\" or \"figma\". Worked out from the content when left out.",
+            "description": "\"svg\", \"image\", \"figma\" or \"html\" (a BrowserPort computed DOM snapshot). Detected when absent.",
             "type": "string"
           },
           "index": {

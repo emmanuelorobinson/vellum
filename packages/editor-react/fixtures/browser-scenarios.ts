@@ -1,0 +1,2 @@
+// TEST DATA. Import preview artwork; never shipped as product content.
+export const BROWSER_FIXTURE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800"><rect width="1280" height="800" fill="#FBFAF5"/><text x="24" y="42" fill="#234D3C" font-family="sans-serif" font-size="20">TEST DATA</text><rect x="24" y="150" width="680" height="120" rx="8" fill="#F3F3E9"/><text x="48" y="190" fill="#234D3C" font-family="sans-serif" font-size="20">Editable card</text></svg>`;

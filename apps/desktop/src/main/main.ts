@@ -32,6 +32,7 @@ import {
   shell,
 } from "electron";
 import { EVENT_CHANNEL, REQUEST_CHANNEL } from "../shared/bridge";
+import { createElectronBrowser } from "./browser";
 import { connections } from "./connections";
 import { type ConfirmClose, FolderWindows } from "./folders";
 import { WEB_PREFERENCES, windowChrome } from "./index";
@@ -365,6 +366,7 @@ async function newFile(entry: WindowEntry) {
   entry.page = "editor";
   push(entry);
 }
+const browserWatches = new WeakMap<WindowEntry, Map<string, { dispose(): void }>>();
 async function action(entry: WindowEntry, item: MenuAction) {
   if (!item.enabled) return;
   try {
@@ -679,6 +681,46 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
     case "close":
       await closeTab(entry, value.tab);
       return;
+    case "browserStop": {
+      browserWatches.get(entry)?.get(value.id)?.dispose();
+      browserWatches.get(entry)?.delete(value.id);
+      return;
+    }
+    case "browserWatch":
+    case "browserCapture": {
+      const browser = createElectronBrowser({
+        create: (options) => new BrowserWindow(options),
+        authorize: async (origin) => {
+          const answer = await dialog.showMessageBox(entry.window, {
+            message: "Allow the import browser to load this origin?",
+            detail: origin,
+            buttons: ["Cancel", "Allow once"],
+            cancelId: 0,
+            defaultId: 0,
+          });
+          if (answer.response !== 1) throw Error("denied");
+        },
+      });
+      if (value.type === "browserCapture") return browser.capture(value.request);
+      let watches = browserWatches.get(entry);
+      if (!watches) {
+        watches = new Map();
+        browserWatches.set(entry, watches);
+      }
+      if (watches.size >= 8 || watches.has(value.id)) throw Error("invalid");
+      const watch = await browser.watch?.(
+        value.request,
+        (capture) => push(entry, { type: "browserFrame", id: value.id, capture }),
+        () => push(entry, { type: "browserFrame", id: value.id, capture: null }),
+      );
+      if (!watch) throw Error("failed");
+      if (entry.closing || entry.window.isDestroyed()) {
+        watch.dispose();
+        throw Error("failed");
+      }
+      watches.set(value.id, watch);
+      return;
+    }
     case "share": {
       const path = model.path(requiredFolder(entry), value.tab);
       if (!entry.relay) throw Error("offline");
@@ -847,6 +889,8 @@ function createWindow(folder: string | null): WindowEntry {
       });
   });
   window.on("closed", () => {
+    for (const watch of browserWatches.get(entry)?.values() ?? []) watch.dispose();
+    browserWatches.delete(entry);
     windows.delete(contentsId);
     if (!windows.size) void account.cancel();
     clearInterval(entry.noticeTimer);

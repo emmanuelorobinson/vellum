@@ -652,7 +652,7 @@ struct ImportInputs {
     text: Option<String>,
     /// The file's name, which names the layer. Taken from `path` when there is one.
     name: Option<String>,
-    /// "svg", "image" or "figma". Worked out from the content when left out.
+    /// "svg", "image", "figma" or "html" (a BrowserPort computed DOM snapshot). Detected when absent.
     format: Option<String>,
     /// Left edge of the imported content inside the parent, for a parent without auto layout.
     x: Option<f64>,
@@ -660,8 +660,9 @@ struct ImportInputs {
     y: Option<f64>,
 }
 
-fn importers() -> [(&'static str, &'static str, Box<dyn Importer>); 3] {
+fn importers() -> [(&'static str, &'static str, Box<dyn Importer>); 4] {
     [
+        ("html", "html", Box::new(vellum_import_html::HtmlImporter)),
         (
             "figma",
             "figma-clipboard",
@@ -702,14 +703,14 @@ impl Tool for Import {
         "import"
     }
     fn version(&self) -> u32 {
-        1
+        2
     }
     fn description(&self) -> &'static str {
         "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and \
          vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), \
          or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file \
          `path` (needs the person's permission) or the content inline as `data` or `text`. Returns the new layer ids \
-         and notes on what could not be imported."
+         and notes on what could not be imported. BrowserPort computed DOM snapshots use format html."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<ImportInputs>()
@@ -761,7 +762,7 @@ impl Tool for Import {
             Some(wanted) => all
                 .iter()
                 .find(|(key, id, _)| *key == wanted || *id == wanted)
-                .ok_or_else(|| ToolError::invalid("format", format!("{wanted:?} is not a format. Use svg, image or figma.")))?,
+                .ok_or_else(|| ToolError::invalid("format", format!("{wanted:?} is not a format. Use svg, image, figma or html (a computed DOM snapshot).")))?,
             None => all
                 .iter()
                 .find(|(_, _, importer)| importer.recognizes(&ImportInput { bytes: &bytes, name: &file }))
@@ -777,49 +778,72 @@ impl Tool for Import {
             })
             .map_err(|e| ToolError::invalid("", e.to_string()))?;
 
-        let (doc_path, doc) = ctx.document(document.as_deref())?;
-        let mut hashes = Vec::new();
-        for asset in &imported.assets {
-            hashes.push(
-                ctx.docs()
-                    .put_asset(&doc_path, &asset.bytes, &asset.mime)?
-                    .as_str()
-                    .to_owned(),
-            );
-        }
-        let mut taken = ids_in_use(&doc);
-        let mut batch = Batch::default();
-        let (mut created, mut total) = (Vec::new(), 0);
-        for (i, mut value) in imported.nodes.into_iter().enumerate() {
-            resolve_assets(&mut value, &hashes);
-            // The content sits at its own coordinates, shifted to where it was asked to go.
-            if x.is_some() || y.is_some() {
-                let (dx, dy) = (x.unwrap_or(0.), y.unwrap_or(0.));
-                let (ox, oy) = value.get("position").map_or((0., 0.), |p| {
-                    (p["x"].as_f64().unwrap_or(0.), p["y"].as_f64().unwrap_or(0.))
-                });
-                value["position"] = json!({"type": "absolute", "x": ox + dx, "y": oy + dy});
-            }
-            let at = format!("import[{i}]");
-            let node = new_node(value, &doc, &mut ctx.docs().tool_ids(), &mut taken, &at)?;
-            let mut to = place(&doc, &parent, index, None, "parent")?;
-            to.index += i;
-            created.push(node.id().as_str().to_owned());
-            total += count(&node);
-            batch.push(
-                Op::Insert {
-                    to,
-                    node: Box::new(node),
-                },
-                Label::new(i, at)
-                    .rename("to.parent", "parent")
-                    .rename("to.index", "index"),
-            );
-        }
-        ctx.commit(&doc_path, batch)?;
-        Ok(json!({
-            "document": doc_path, "importer": chosen.1, "created": created, "nodes": total,
-            "assets": hashes, "notes": imported.notes,
-        }))
+        apply_imported(
+            ctx,
+            document.as_deref(),
+            &parent,
+            index,
+            x,
+            y,
+            chosen.1,
+            imported,
+        )
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_imported(
+    ctx: &mut ToolCtx<'_>,
+    document: Option<&str>,
+    parent: &str,
+    index: Option<u32>,
+    x: Option<f64>,
+    y: Option<f64>,
+    importer: &str,
+    imported: vellum_core::ports::Imported,
+) -> Result<Value, ToolError> {
+    let (doc_path, doc) = ctx.document(document)?;
+    let mut hashes = Vec::new();
+    for asset in &imported.assets {
+        hashes.push(
+            ctx.docs()
+                .put_asset(&doc_path, &asset.bytes, &asset.mime)?
+                .as_str()
+                .to_owned(),
+        );
+    }
+    let mut taken = ids_in_use(&doc);
+    let mut batch = Batch::default();
+    let (mut created, mut total) = (Vec::new(), 0);
+    for (i, mut value) in imported.nodes.into_iter().enumerate() {
+        resolve_assets(&mut value, &hashes);
+        // The content sits at its own coordinates, shifted to where it was asked to go.
+        if x.is_some() || y.is_some() {
+            let (dx, dy) = (x.unwrap_or(0.), y.unwrap_or(0.));
+            let (ox, oy) = value.get("position").map_or((0., 0.), |p| {
+                (p["x"].as_f64().unwrap_or(0.), p["y"].as_f64().unwrap_or(0.))
+            });
+            value["position"] = json!({"type": "absolute", "x": ox + dx, "y": oy + dy});
+        }
+        let at = format!("import[{i}]");
+        let node = new_node(value, &doc, &mut ctx.docs().tool_ids(), &mut taken, &at)?;
+        let mut to = place(&doc, parent, index, None, "parent")?;
+        to.index += i;
+        created.push(node.id().as_str().to_owned());
+        total += count(&node);
+        batch.push(
+            Op::Insert {
+                to,
+                node: Box::new(node),
+            },
+            Label::new(i, at)
+                .rename("to.parent", "parent")
+                .rename("to.index", "index"),
+        );
+    }
+    ctx.commit(&doc_path, batch)?;
+    Ok(json!({
+        "document": doc_path, "importer": importer, "created": created, "nodes": total,
+        "assets": hashes, "notes": imported.notes,
+    }))
 }

@@ -11,6 +11,12 @@
 mod cli;
 mod share;
 
+struct PermissionHost {
+    prompt: Option<std::rc::Rc<dyn vellum_core::ports::PermissionPrompt>>,
+    person: vellum_types::Actor,
+    clock: std::rc::Rc<dyn vellum_core::ports::Clock>,
+}
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -63,6 +69,7 @@ pub struct McpServer {
     log: Option<SessionLog>,
     cli_runs: BTreeMap<u64, cli::Run>,
     shares: Option<crate::daemon::share::Uploads>,
+    permissions: Option<PermissionHost>,
 }
 
 impl McpServer {
@@ -76,7 +83,23 @@ impl McpServer {
             log: None,
             cli_runs: BTreeMap::new(),
             shares: None,
+            permissions: None,
         }
+    }
+
+    /// Hosts supply their trusted human prompt. None records unattended denials; it never grants access.
+    pub fn with_permissions(
+        mut self,
+        prompt: Option<std::rc::Rc<dyn vellum_core::ports::PermissionPrompt>>,
+        person: vellum_types::Actor,
+        clock: std::rc::Rc<dyn vellum_core::ports::Clock>,
+    ) -> Self {
+        self.permissions = Some(PermissionHost {
+            prompt,
+            person,
+            clock,
+        });
+        self
     }
 
     /// Records every connection's tool calls in `log` (ARCHITECTURE §7.6: external sessions keep tool calls only).
@@ -137,7 +160,7 @@ impl McpServer {
                     "annotations": {
                         "readOnlyHint": tool.read_only(),
                         "destructiveHint": tool.destructive(),
-                        "openWorldHint": false,
+                        "openWorldHint": tool.open_world(),
                     },
                     "_meta": {"vellum/version": tool.version()},
                 })
@@ -220,6 +243,20 @@ impl McpServer {
         // Whatever changed on disk since the last call is applied first, so a read sees the file as it is.
         self.docs.poll();
         self.session(conn);
+        if let (Some(host), Some(log)) = (&self.permissions, &self.log) {
+            let broker = vellum_core::permissions::Broker::new(
+                Default::default(),
+                log.shared_store(),
+                host.clock.clone(),
+                host.prompt.clone(),
+                host.person.clone(),
+            );
+            self.docs
+                .set_outside(std::rc::Rc::new(crate::permissions::Brokered::new(
+                    std::rc::Rc::new(broker),
+                    None,
+                )));
+        }
         let session = self.sessions.get_mut(&conn).expect("just made");
         let mut ctx = ToolCtx::new(&mut self.docs, session);
         let result = self.registry.call(&mut ctx, name, arguments);

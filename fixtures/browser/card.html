@@ -1,0 +1,12 @@
+<!doctype html>
+<!-- TEST DATA. Chrome oracle for editable geometry, text, images and a responsive viewport. -->
+<style>
+@font-face {font-family:Inter;src:url('/InterVariable.ttf');font-weight:100 900}
+*{box-sizing:border-box;font-optical-sizing:none} html,body{margin:0;background:white;font-family:Inter}
+#card{position:absolute;left:16px;top:16px;width:288px;height:200px;background:rgb(240,244,248);border-radius:8px;padding:16px}
+h1{margin:0;color:rgb(20,40,60);font:600 20px/24px Inter;font-optical-sizing:none}
+p{margin:12px 0;color:rgb(50,60,70);font:400 14px/20px Inter;font-optical-sizing:none}
+img{width:32px;height:32px;display:block}
+@media(min-width:600px){#card{width:480px}}
+</style>
+<article id="card"><h1>Editable card</h1><p>Computed layout and pixels.</p><img alt="Test square" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%23204060'/%3E%3C/svg%3E"></article>

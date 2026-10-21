@@ -1,14 +1,19 @@
 import {
+  createBrowserImport,
   createCommandController,
   createEditorHandlers,
   createEditorSession,
   createWorkspace,
 } from "@vellum/editor-core";
-import { EditorWorkspace, ShareDialog } from "@vellum/editor-react";
+import { BrowserImportPanel, EditorWorkspace, ShareDialog } from "@vellum/editor-react";
 import type { EngineClient, EngineSnapshot } from "@vellum/engine-client";
 import { type SharePort, shareState } from "@vellum/host-api";
 import { createElectronHost } from "@vellum/host-electron";
-import { createBridgeServices, type DesktopState } from "@vellum/host-electron/bridge";
+import {
+  createBridgeServices,
+  createDesktopBrowser,
+  type DesktopState,
+} from "@vellum/host-electron/bridge";
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Home } from "./Home";
@@ -71,6 +76,8 @@ let host: ReturnType<typeof createElectronHost> | undefined;
 let services: ReturnType<typeof createBridgeServices> | undefined;
 
 function App() {
+  const [importing, setImporting] = useState(false);
+  const browserImport = useRef(createBrowserImport({ browser: createDesktopBrowser(bridge) }));
   const [sharing, setSharing] = useState(false);
   const sharePorts = useRef(new Map<string, SharePort>());
 
@@ -99,8 +106,10 @@ function App() {
         current = event.state;
         update(current);
       }
-      if (event.type === "command" && current?.active)
-        void editors.get(current.active)?.controller.execute(event.command);
+      if (event.type === "command" && current?.active) {
+        if (event.command === "file.importBrowser") setImporting(true);
+        else void editors.get(current.active)?.controller.execute(event.command);
+      }
     });
     void bridge.request({ type: "state" }).then((result) => {
       if (result.ok && result.value) {
@@ -151,11 +160,21 @@ function App() {
       role="tabpanel"
       aria-labelledby={`tab-${tab.id}`}
     >
+      {importing ? (
+        <div className="desktop-browser-panel">
+          <BrowserImportPanel
+            controller={browserImport.current}
+            readOnly
+            onClose={() => setImporting(false)}
+          />
+        </div>
+      ) : null}
       <EditorWorkspace
         workspace={editor.workspace}
         session={editor.session}
         controller={editor.controller}
         engine={engine}
+        browser={browserImport.current.host.browser}
         device="desktop"
         host="desktop"
         platform={state.platform}

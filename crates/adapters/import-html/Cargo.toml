@@ -6,5 +6,12 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+serde_json.workspace = true
+
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+
 [lints]
 workspace = true

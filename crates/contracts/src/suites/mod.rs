@@ -31,3 +31,5 @@ pub(crate) fn close(a: f64, b: f64) -> bool {
 }
 pub mod export;
 pub mod sync;
+
+pub mod browser;

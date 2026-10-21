@@ -55,15 +55,16 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 deny = [
-  { crate = "tokio", wrappers = ["vellum-ipc-local", "vellum-model-http", "vellum-account-http", "vellum-engine-claude-code", "vellum-engine-codex", "reqwest", "hyper", "hyper-util", "hyper-rustls", "tower", "tokio-rustls", "wasm-bindgen-futures", "vellum-sync-ws", "vellum-assets-s3", "axum", "tokio-tungstenite", "tokio-util", "tokio-postgres", "postgres", "object_store", "h2"], reason = "ADR-027 sync adapters; native runtimes stay in IPC, model/account HTTP and installed engine adapters (ADR-003, ADR-023, ADR-007)" },
-  { crate = "reqwest", wrappers = ["vellum-model-http", "vellum-account-http", "object_store"], reason = "model and account HTTP stay in their bounded transport adapters (ADR-023, Prompt 61)" },
+  { crate = "tokio", wrappers = ["vellum-browser-cdp", "chromiumoxide", "async-tungstenite", "vellum-ipc-local", "vellum-model-http", "vellum-account-http", "vellum-engine-claude-code", "vellum-engine-codex", "reqwest", "hyper", "hyper-util", "hyper-rustls", "tower", "tokio-rustls", "wasm-bindgen-futures", "vellum-sync-ws", "vellum-assets-s3", "axum", "tokio-tungstenite", "tokio-util", "tokio-postgres", "postgres", "object_store", "h2"], reason = "ADR-027 sync adapters; native runtimes stay in IPC, model/account HTTP and installed engine adapters (ADR-003, ADR-023, ADR-007)" },
+  { crate = "reqwest", wrappers = ["vellum-model-http", "vellum-account-http", "object_store", "chromiumoxide"], reason = "model and account HTTP stay in their bounded transport adapters (ADR-023, Prompt 61)" },
   { crate = "secret-service", wrappers = ["zbus-secret-service-keyring-store"], reason = "keyring Linux backend only (ADR-023)" },
   # A vendor crate is reached only through the adapter that wraps it (guide §8, §13).
   { crate = "axum", wrappers = ["vellum-sync-ws"], reason = "ADR-027 sync transport only" },
   { crate = "postgres", wrappers = ["vellum-sync-postgres"], reason = "ADR-027 sync persistence only" },
   { crate = "redis", wrappers = ["vellum-sync-redis"], reason = "ADR-027 ephemeral sync membership only" },
-  { crate = "tungstenite", wrappers = ["vellum-sync-ws", "tokio-tungstenite"], reason = "ADR-027 WebSocket protocol stays inside the transport adapter, including native acceptance clients" },
+  { crate = "tungstenite", wrappers = ["vellum-sync-ws", "tokio-tungstenite", "async-tungstenite"], reason = "ADR-027 WebSocket protocol stays inside the transport adapter, including native acceptance clients" },
   { crate = "object_store", wrappers = ["vellum-assets-s3"], reason = "ADR-027 private S3 snapshot adapter only" },
+  { crate = "chromiumoxide", wrappers = ["vellum-browser-cdp"], reason = "ADR-028 managed browser behind BrowserPort only" },
   { crate = "loro", wrappers = ["vellum-doc-loro"], reason = "Loro sits behind DocStore (Invariant 5)" },
   { crate = "taffy", wrappers = ["vellum-layout-taffy"], reason = "layout goes through the LayoutEngine port" },
   { crate = "parley", wrappers = ["vellum-text-parley"], reason = "text goes through the TextEngine port" },

@@ -479,6 +479,7 @@ fn render_problem(problem: &display_list::Problem) -> String {
         UnsupportedNode { node, kind } => {
             format!("the {} node {node} cannot be drawn yet", kind.as_str())
         }
+        MissingEmbed { node } => format!("the embed {node} has no authorized browser preview"),
         MissingFontData { node, .. } => format!("the font of {node} has no data to draw with"),
         Text { node, problem } => format!("the text of {node} could not be laid out ({problem:?})"),
     }

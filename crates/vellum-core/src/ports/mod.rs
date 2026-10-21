@@ -8,6 +8,7 @@
 //! Coordinates are `f64` model units, times are UTC milliseconds (guide §9).
 
 mod assets;
+mod browser;
 mod clock;
 mod codec;
 mod content;
@@ -35,6 +36,9 @@ mod tokens;
 mod watch;
 
 pub use assets::{AssetCollect, AssetError, AssetHash, AssetHashError, AssetStore, check_mime};
+pub use browser::{
+    BrowserCapture, BrowserError, BrowserPort, BrowserRequest, DomNode, DomSnapshot,
+};
 pub use clock::{Clock, IdGen, Timestamp};
 pub use codec::{Codec, CodecError, Position};
 pub use content::{

@@ -1,0 +1,262 @@
+.vb-import {
+  box-sizing: border-box;
+  width: min(800px, 100%);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  font: 12px var(--font-ui);
+}
+.vb-import header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vb-import h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+.vb-import button,
+.vb-properties button {
+  font: inherit;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--chrome-text);
+  background: var(--chrome-panel);
+  cursor: pointer;
+}
+.vb-import button:disabled,
+.vb-properties button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.vb-import button[data-primary] {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  border-color: var(--chrome-text);
+  font-weight: 600;
+}
+.vb-import :focus-visible,
+.vb-properties :focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+.vb-address {
+  padding: var(--space-3);
+  background: var(--chrome-sunken);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.vb-address input {
+  flex: 1;
+  min-width: 0;
+  font: 12px var(--font-mono);
+  border: 0;
+  background: transparent;
+  color: var(--chrome-text);
+}
+.vb-address select,
+.vb-select-row select {
+  border: 0;
+  background: var(--chrome-sunken);
+  color: var(--chrome-secondary);
+  font: inherit;
+  max-width: 240px;
+}
+.vb-preview {
+  height: 340px;
+  overflow: auto;
+  background: var(--chrome-sunken);
+  position: relative;
+}
+.vb-preview > p {
+  padding: var(--space-6);
+  color: var(--chrome-secondary);
+}
+.vb-preview-content {
+  position: relative;
+  width: 100%;
+}
+.vb-preview-content img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.vb-preview-content .vb-picker {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: crosshair;
+  border: 0;
+  border-radius: 0;
+}
+.vb-selection {
+  pointer-events: none;
+  position: absolute;
+  outline: 2px solid var(--canvas-selection);
+  border-radius: var(--radius-xs);
+}
+.vb-select-row,
+.vb-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.vb-select-row > button {
+  border: 0;
+  padding: 0;
+  color: var(--chrome-secondary);
+  background: transparent;
+}
+.vb-import p {
+  margin: 0;
+  line-height: 1.55;
+}
+.vb-notice {
+  color: var(--chrome-secondary);
+}
+.vb-error {
+  color: var(--chrome-error);
+}
+.vb-properties {
+  box-sizing: border-box;
+  min-height: 240px;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--chrome-separator);
+  font: 12px var(--font-ui);
+  color: var(--chrome-text);
+}
+.vb-properties h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--chrome-secondary);
+}
+.vb-properties label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+:where(.vb-properties label) > span {
+  width: 76px;
+  flex-shrink: 0;
+  color: var(--chrome-secondary);
+}
+.vb-properties input,
+.vb-properties select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  font: 12px var(--font-mono);
+}
+.vb-properties > button {
+  align-self: flex-start;
+}
+.vb-properties p {
+  margin: 0;
+  color: var(--chrome-secondary);
+  line-height: 1.55;
+}
+.vb-embed {
+  position: relative;
+  overflow: hidden;
+  font: 11px var(--font-ui);
+  color: var(--chrome-secondary);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  background: var(--chrome-panel);
+}
+.vb-embed img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.vb-embed button,
+.vb-embed span {
+  position: absolute;
+  left: var(--space-2);
+  padding: var(--space-1);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-xs);
+}
+.vb-embed button {
+  top: var(--space-2);
+  font: inherit;
+  cursor: pointer;
+}
+.vb-embed span {
+  bottom: var(--space-2);
+}
+
+.vb-canvas-embeds {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.vb-properties input,
+.vb-properties select {
+  height: 28px;
+}
+.vb-properties label {
+  height: 28px;
+}
+.vb-import h2 {
+  line-height: 24px;
+}
+.vb-import,
+.vb-properties {
+  font-optical-sizing: none;
+  line-height: 1.25;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+.vb-properties {
+  border-bottom: 0;
+  box-shadow: inset 0 -1px var(--chrome-separator);
+}
+.vb-properties h3 {
+  line-height: 13px;
+}
+.vb-properties > button {
+  box-sizing: border-box;
+  height: 31px;
+  font-weight: 500;
+}
+.vb-properties input,
+.vb-properties select {
+  font-weight: 450;
+}
+.vb-properties p {
+  line-height: 19px;
+}
+.vb-properties {
+  background: var(--chrome-panel);
+}
+.vb-properties label > span {
+  font-weight: 450;
+}
+.vb-properties p {
+  line-height: 1.55;
+}
+.vb-properties > button {
+  min-width: 87px;
+}

@@ -36,6 +36,9 @@ pub enum Problem {
         node: NodeIdPath,
         kind: NodeKind,
     },
+    MissingEmbed {
+        node: NodeIdPath,
+    },
     MissingFontData {
         node: NodeIdPath,
         font: FontHandle,
@@ -63,6 +66,19 @@ pub fn build<S: SpatialIndex>(
     fonts: &dyn FontSource,
     scene: &mut Scene<S>,
     viewport: Viewport,
+) -> Result<Output, Error> {
+    build_with_embeds(roots, l, text, fonts, scene, viewport, &BTreeMap::new())
+}
+/// Host-supplied, permission-authorized preview assets. These are derived session data, never file content.
+/// The caller supplies the encoded pixels to the renderer alongside the returned display list.
+pub fn build_with_embeds<S: SpatialIndex>(
+    roots: &[Arc<ResolvedNode>],
+    l: &LayoutResult,
+    text: &dyn TextEngine,
+    fonts: &dyn FontSource,
+    scene: &mut Scene<S>,
+    viewport: Viewport,
+    embeds: &BTreeMap<NodeIdPath, vellum_types::AssetId>,
 ) -> Result<Output, Error> {
     if !viewport.bounds.is_valid() || !viewport.scale.is_finite() || viewport.scale <= 0. {
         return Err(Error::InvalidViewport);
@@ -185,6 +201,7 @@ pub fn build<S: SpatialIndex>(
         fonts,
         needed: &needed,
         viewport,
+        embeds,
     };
     b.out
         .list
@@ -213,6 +230,7 @@ struct Builder<'a> {
     fonts: &'a dyn FontSource,
     needed: &'a BTreeSet<NodeIdPath>,
     viewport: Viewport,
+    embeds: &'a BTreeMap<NodeIdPath, vellum_types::AssetId>,
 }
 impl Builder<'_> {
     fn resource(&mut self, r: Resource) -> Result<u32, Error> {
@@ -349,6 +367,29 @@ impl Builder<'_> {
                 image,
                 dst: [0., 0., f(bounds.width)?, f(bounds.height)?],
             });
+        }
+        if let Node::Embed(_) = n {
+            if let Some(asset) = self.embeds.get(&r.address) {
+                self.out.list.commands.push(DrawCmd::Save);
+                self.out.list.commands.push(DrawCmd::Clip {
+                    shape: shape.ok_or(Error::UnresolvedValue)?,
+                });
+                let image = self.resource(Resource::Image(RenderImage {
+                    asset: asset.clone(),
+                    fit: vellum_types::ImageFit::Stretch,
+                    crop: None,
+                    opacity: 1.,
+                }))?;
+                self.out.list.commands.push(DrawCmd::Image {
+                    image,
+                    dst: [0., 0., f(bounds.width)?, f(bounds.height)?],
+                });
+                self.out.list.commands.push(DrawCmd::Restore);
+            } else {
+                self.out.problems.push(Problem::MissingEmbed {
+                    node: r.address.clone(),
+                });
+            }
         }
         if let Some(s) = n.stroke() {
             let stroke = self.resource(Resource::Stroke(stroke(s)?))?;

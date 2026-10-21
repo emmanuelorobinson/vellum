@@ -50,6 +50,10 @@ pub(super) fn shape(r: &ResolvedNode, l: &LayoutResult) -> Result<Option<Shape>,
         }),
         Node::Boolean(n) => Some(boolean(r, l, n.op)?),
         Node::Group(_) => Some(boolean(r, l, BoolOp::Union)?),
+        Node::Embed(n) => Some(Shape::Rect {
+            size,
+            radii: [number(&n.radius)?; 4],
+        }),
         Node::Image(_) | Node::Script(_) => Some(Shape::Rect {
             size,
             radii: [0.; 4],

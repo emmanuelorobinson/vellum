@@ -392,24 +392,44 @@ pub fn documents(state: &Path) -> std::io::Result<Documents> {
         Ok(watcher) => Box::new(watcher),
         Err(_) => Box::new(NoWatcher),
     };
-    Ok(Documents::new(
+    let mut docs = Documents::new(
         env,
         watcher,
         Recovery::new(Arc::new(StdFs::new(recovery)), codec, content_hash),
-    ))
+    );
+    docs.set_browser(Rc::new(vellum_browser_cdp::ChromiumBrowser {
+        executable: std::env::var_os("VELLUM_CHROME").map(PathBuf::from),
+    }));
+    Ok(docs)
 }
 
 /// What `vellum daemon` answers MCP with: the standard registry over the real documents. It is built on the
 /// thread that runs it, because the documents hold state that cannot move between threads.
 pub fn handler(state: PathBuf) -> vellum_ipc_local::HandlerFactory {
     Box::new(move || match documents(&state) {
-        Ok(docs) => Box::new(
-            crate::mcp::McpServer::new(Registry::standard(), docs)
-                .with_default_cwd(std::env::current_dir().ok())
-                .with_shares(state.clone())
-                // A daemon whose session store cannot open still serves tools; nothing is recorded.
-                .with_session_log(crate::sessions::SessionLog::open(&state).ok()),
-        ),
+        Ok(docs) => {
+            use std::io::IsTerminal;
+            let person = vellum_types::Actor::Person {
+                device: vellum_types::DeviceId::new(docs.ulid()).expect("a ULID"),
+            };
+            let prompt: Option<Rc<dyn vellum_core::ports::PermissionPrompt>> =
+                if std::io::stdin().is_terminal() && std::io::stderr().is_terminal() {
+                    Some(Rc::new(crate::permissions::TerminalPrompt::new(
+                        "MCP client",
+                        std::io::BufReader::new(std::io::stdin()),
+                        std::io::stderr(),
+                    )))
+                } else {
+                    None
+                };
+            Box::new(
+                crate::mcp::McpServer::new(Registry::standard(), docs)
+                    .with_default_cwd(std::env::current_dir().ok())
+                    .with_shares(state.clone())
+                    .with_session_log(crate::sessions::SessionLog::open(&state).ok())
+                    .with_permissions(prompt, person, Rc::new(SystemClock::new())),
+            )
+        }
         Err(error) => Box::new(Unavailable(error.to_string())),
     })
 }

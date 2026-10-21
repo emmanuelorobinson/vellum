@@ -5,6 +5,7 @@
 //! turn's usage, messages and end with [`SessionLog::record_turn_event`]; its steps arrive through the same
 //! bridge steps as any client's. Sessions are keyed by repository root and repo-relative path ([`doc_key`]).
 use std::path::{Component, Path, PathBuf};
+use std::rc::Rc;
 
 use vellum_core::ports::{
     DocKey, DocKeyError, EventBody, EventSeq, ImageRef, NewEvent, NewSession, SessionKind,
@@ -79,7 +80,7 @@ pub fn step_record(step: &Step, thumbnail: Option<ImageRef>) -> StepRecord {
 
 /// The daemon's session store and the prices it estimates with.
 pub struct SessionLog {
-    store: Box<dyn SessionStore>,
+    store: Rc<dyn SessionStore>,
     pricing: Pricing,
     is_repo: Box<dyn Fn(&Path) -> bool>,
 }
@@ -88,7 +89,7 @@ impl SessionLog {
     /// A log that finds repository roots on this computer's disk ([`holds_git`]).
     pub fn new(store: Box<dyn SessionStore>, pricing: Pricing) -> Self {
         Self {
-            store,
+            store: Rc::from(store),
             pricing,
             is_repo: Box::new(holds_git),
         }
@@ -107,6 +108,11 @@ impl SessionLog {
             Box::new(SqliteSessions::open(db, cache)?),
             pricing(),
         ))
+    }
+
+    /// The same store records a permission decision before an outside action can proceed.
+    pub(crate) fn shared_store(&self) -> Rc<dyn SessionStore> {
+        self.store.clone()
     }
 
     pub fn store(&self) -> &dyn SessionStore {

@@ -33,6 +33,12 @@ export function menuModel(state: {
       accelerator: "CommandOrControl+N",
       enabled: true,
     },
+    {
+      id: "file.importBrowser",
+      label: "Import…",
+      command: "file.importBrowser",
+      enabled: state.hasDocument,
+    },
     { id: "file.save", label: "Save", accelerator: "CommandOrControl+S", enabled: false },
     {
       id: "file.saveAs",

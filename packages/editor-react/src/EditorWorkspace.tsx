@@ -43,6 +43,7 @@ import {
   world,
 } from "@vellum/editor-core";
 import type { EngineClient } from "@vellum/engine-client";
+import type { BrowserPort } from "@vellum/host-api";
 import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId, Value } from "@vellum/types-ts";
 import type { Mode } from "@vellum/ui-tokens";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -53,6 +54,8 @@ import { InlinePrompt, type ScreenRect, SelectionToolbar } from "./agent/InlineP
 import { PresenceLayer } from "./agent/PresenceLayer";
 import { AuthoringDialogs } from "./authoring/AuthoringDialogs";
 import { CanvasAuthoring } from "./authoring/CanvasAuthoring";
+import { EmbedProperties } from "./browser/BrowserImport";
+import { CanvasEmbeds } from "./browser/CanvasEmbeds";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
 import type { ActorView } from "./chrome/ActorMarker";
 import { BottomStrip, type Connection } from "./chrome/BottomStrip";
@@ -126,6 +129,7 @@ export interface EdgeProps {
 export interface EditorWorkspaceProps {
   /** Only supplied for a document whose live collaboration was explicitly enabled. */
   collaboration?: CollaborationController;
+  browser?: BrowserPort;
   /** The command palette (⌘/), layer context menu and Editor settings. */
   shell?: {
     palette?: PaletteController;
@@ -240,6 +244,10 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   useStore(edgeUi.subscribe);
   const root = useRef<HTMLDivElement | null>(null);
   // Menus and popovers mount inside the workspace so they follow its appearance.
+  const [openEmbed, setOpenEmbed] = useState<{ address: string; revision: number }>({
+    address: "",
+    revision: 0,
+  });
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const setRoot = useCallback((el: HTMLDivElement | null) => {
     root.current = el;
@@ -775,6 +783,9 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               ? { colour: (c: Value<string>) => props.design?.colour(c, doc) ?? (c as string) }
               : {})}
           />
+          {props.browser ? (
+            <CanvasEmbeds session={session} browser={props.browser} open={openEmbed} />
+          ) : null}
           {props.authoring ? (
             <CanvasAuthoring
               authoring={props.authoring}
@@ -956,7 +967,24 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                 <RightPanel
                   activityRequest={activityRequest}
                   design={
-                    session.state.mode.type === "scaling" ? (
+                    selectedLibrary?.type === "embed" ? (
+                      <EmbedProperties
+                        node={selectedLibrary}
+                        {...(props.browser
+                          ? {
+                              onOpen: () =>
+                                setOpenEmbed((previous) => ({
+                                  address: session.state.selection[0] ?? "",
+                                  revision: previous.revision + 1,
+                                })),
+                            }
+                          : {})}
+                        disabled={readOnly}
+                        onChange={(patch) => {
+                          props.design?.edit(() => patch);
+                        }}
+                      />
+                    ) : session.state.mode.type === "scaling" ? (
                       <ScalePanel session={session} disabled={readOnly} />
                     ) : session.state.mode.type === "path" ? (
                       <VectorPanel session={session} design={props.design} disabled={readOnly} />

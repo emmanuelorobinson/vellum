@@ -73,3 +73,6 @@ pub use variable::{AliasEntry, LiteralEntry, Variable, VariableBody, VariableVal
 /// The `.vellum` file format version this build writes. Older versions stay readable forever;
 /// a newer one opens read-only.
 pub const FORMAT_VERSION: u32 = 1;
+
+/// Computed browser snapshots, independent of CDP or any vendor.
+pub mod browser;

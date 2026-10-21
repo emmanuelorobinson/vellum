@@ -1,4 +1,8 @@
 import {
+  type BrowserCapture,
+  type BrowserPort,
+  type BrowserRequest,
+  browserRequest,
   externalUrl,
   type HostServices,
   PortError,
@@ -68,6 +72,9 @@ export interface DesktopState {
   account?: AccountState;
 }
 export type DesktopRequest =
+  | { type: "browserCapture"; request: BrowserRequest }
+  | { type: "browserWatch"; id: string; request: BrowserRequest }
+  | { type: "browserStop"; id: string }
   | { type: "share"; tab: string; request: ShareRequest }
   | {
       type:
@@ -103,6 +110,7 @@ export type DesktopRequest =
   | { type: "external"; url: string }
   | { type: "clipboardWrite"; text: string };
 export type DesktopEvent =
+  | { type: "browserFrame"; id: string; capture: BrowserCapture | null }
   | { type: "state"; state: DesktopState }
   | { type: "changed"; tab: string }
   | { type: "command"; command: string };
@@ -153,6 +161,50 @@ export function parseRequest(value: unknown): DesktopRequest | null {
     shareRequest(v.request)
   )
     return v as DesktopRequest;
+  if (keys === "request,type" && v.type === "browserCapture") {
+    try {
+      const request = v.request as BrowserRequest;
+      if (
+        !request ||
+        typeof request !== "object" ||
+        Array.isArray(request) ||
+        Object.keys(request).some(
+          (key) =>
+            ![
+              "url",
+              "width",
+              "height",
+              "origins",
+              "selector",
+              "scroll",
+              "zoom",
+              "snapshot",
+            ].includes(key),
+        )
+      )
+        return null;
+      return { type: "browserCapture", request: browserRequest(request) };
+    } catch {
+      return null;
+    }
+  }
+  if (
+    v.type === "browserWatch" &&
+    keys === "id,request,type" &&
+    typeof v.id === "string" &&
+    /^[a-zA-Z0-9_-]{1,80}$/.test(v.id)
+  ) {
+    const parsed = parseRequest({ type: "browserCapture", request: v.request });
+    if (parsed?.type === "browserCapture")
+      return { type: "browserWatch", id: v.id, request: parsed.request };
+  }
+  if (
+    v.type === "browserStop" &&
+    keys === "id,type" &&
+    typeof v.id === "string" &&
+    /^[a-zA-Z0-9_-]{1,80}$/.test(v.id)
+  )
+    return { type: "browserStop", id: v.id };
   const validId = (id: unknown) => typeof id === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
   if (
     keys === "id,type" &&
@@ -297,6 +349,47 @@ export function createBridgeServices(
       disposed = true;
       unsubscribe();
       themes.clear();
+    },
+  };
+}
+
+/** Narrow preload client: capture has no arbitrary scripts, CDP or document-write access. */
+export function createDesktopBrowser(bridge: DesktopBridge): BrowserPort {
+  let sequence = 0;
+  return {
+    async watch(request, frame, failed) {
+      const id = `browser-${++sequence}`;
+      const unsubscribe = bridge.subscribe((event) => {
+        if (event.type === "browserFrame" && event.id === id) {
+          if (event.capture) frame(event.capture);
+          else failed();
+        }
+      });
+      try {
+        const reply = await bridge.request({
+          type: "browserWatch",
+          id,
+          request: browserRequest(request),
+        });
+        if (!reply.ok) throw new PortError("failed");
+        return {
+          dispose() {
+            unsubscribe();
+            void bridge.request({ type: "browserStop", id });
+          },
+        };
+      } catch (error) {
+        unsubscribe();
+        throw error;
+      }
+    },
+    async capture(request) {
+      const reply = await bridge.request({
+        type: "browserCapture",
+        request: browserRequest(request),
+      });
+      if (!reply.ok) throw new PortError(reply.code === "offline" ? "offline" : "unsupported");
+      return reply.value as BrowserCapture;
     },
   };
 }

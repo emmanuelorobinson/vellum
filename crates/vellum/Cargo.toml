@@ -14,6 +14,8 @@ name = "vellum"
 path = "src/main.rs"
 
 [dependencies]
+vellum-browser-cdp = { path = "../adapters/browser-cdp" }
+vellum-import-html = { path = "../adapters/import-html" }
 vellum-account-http = { path = "../adapters/account-http" }
 vellum-engine-codex = { path = "../adapters/engine-codex" }
 vellum-engine-claude-code = { path = "../adapters/engine-claude-code" }

@@ -633,6 +633,9 @@ importers:
       '@vellum/engine-client':
         specifier: workspace:*
         version: link:../engine-client
+      '@vellum/host-api':
+        specifier: workspace:*
+        version: link:../host-api
       '@vellum/types-ts':
         specifier: workspace:*
         version: link:../types-ts

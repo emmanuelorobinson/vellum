@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DesktopEvent } from "./bridge";
+import type { DesktopEvent, DesktopRequest } from "./bridge";
 import { createBridgeServices } from "./bridge";
 
 describe("contextBridge Host services", () => {
@@ -73,4 +73,43 @@ it("accepts only fixed account actions, never renderer URLs, tokens or command a
     expect(parseRequest({ type, url: "https://untrusted.example" })).toBeNull();
     expect(parseRequest({ type, args: ["--account-url", "https://untrusted.example"] })).toBeNull();
   }
+});
+
+it("starts a narrow live browser stream and stops it when disposed", async () => {
+  const { createDesktopBrowser, parseRequest } = await import("./bridge");
+  let receive: ((event: DesktopEvent) => void) | undefined;
+  const unsubscribe = vi.fn();
+  const request = vi.fn(async (_request: DesktopRequest) => ({ ok: true as const }));
+  const port = createDesktopBrowser({
+    request,
+    subscribe: (listener) => {
+      receive = listener;
+      return unsubscribe;
+    },
+  });
+  const frame = vi.fn();
+  const stop = await port.watch?.(
+    { url: "http://localhost:3000/", width: 375, height: 812 },
+    frame,
+    () => {},
+  );
+  const start = request.mock.calls[0]?.[0];
+  expect(start).toMatchObject({ type: "browserWatch" });
+  if (start?.type !== "browserWatch") throw Error("missing watch");
+  receive?.({
+    type: "browserFrame",
+    id: start.id,
+    capture: { png: "cG5n", width: 375, height: 812 },
+  });
+  expect(frame).toHaveBeenCalledOnce();
+  stop?.dispose();
+  expect(unsubscribe).toHaveBeenCalledOnce();
+  expect(request).toHaveBeenLastCalledWith({ type: "browserStop", id: start.id });
+  expect(
+    parseRequest({
+      type: "browserWatch",
+      id: "valid",
+      request: { url: "file:///etc/passwd", width: 1, height: 1 },
+    }),
+  ).toBeNull();
 });

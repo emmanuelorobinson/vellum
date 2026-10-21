@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 65 needs native/editor and visual acceptance.** Connect Prompt 55's writable runtime and
+  person-origin import callbacks; desktop import writes are explicitly disabled meanwhile. Native Electron
+  capture/live-session acceptance timed out; run its bounded Electron lane and Windows/Linux/remote CI.
+  HTML import fidelity passes all three fixtures. The two embed property goldens remain above 1%
+  (3.190%/2.961%); review `target/screen-goldens/p65-*` and `docs/runbooks/browser-import.md`.
+
 - **Prompt 64 needs host integration and design acceptance.** Finish Prompt 55's shared document ABI/
   EditorLink and attach the new sync bindings in the native editors; their installed runtime remains read-only.
   Account capability issuance/email invitations and persistent native outbox/rebase integration are not built.
@@ -4140,3 +4146,70 @@ Failed or not verified:
 
 Stopped the local browser fixture and removed only the three disposable Prompt 64 service containers.
 The rebuilt image and local comparison/design caches remain available for review.
+
+## Prompt 65
+
+Built BrowserPort and its versioned computed DOM DTOs, fake and contract; Chromiumoxide 0.9.1 captures
+with separate private temporary profiles, authorized origins, bounded startup/capture/cleanup and no
+arbitrary CDP interface. Desktop uses Electron's isolated Chromium windows and a narrow preload bridge;
+live embeds retain a page and stream frames until stopped/unmounted. Added the browser tool
+(screenshot/import/import_element plus embed), HTML snapshot import through the existing asset/Op
+transaction path, C31 import/selection controls, embed URL/device/zoom controls and derived clipped
+embed pixels. No additional document store or format change. Added ADR-028 and
+`docs/runbooks/browser-import.md`.
+
+Read the open design only after the owner explicitly authorized it (the required copy opener could not
+find Pen). Queried C31 and C31-embed, their properties and variables; never wrote/saved the design.
+Sibling search found no reusable importer/browser in clarum, dubid, cutesycal, outpost or rea-work;
+kept this repo's existing native window defaults and importer pipeline. Context7 supplied Chromiumoxide
+and Electron documentation; no reference code was ported.
+
+TDD confirmed the missing importer, tool host hook, controller, UI, live-session behavior and production
+broker hook before their implementations. Fixed a zero-height viewport root, text line wrapping, inherited nonblocking fixture
+sockets truncating font responses and Chromiumoxide's shared default profile. Fixture fonts are required
+to load; unsupported font features are reported. Final Chrome-to-editable-layer comparisons pass the
+unchanged 1% gate: phone 0.133%, desktop 0.085%, selected element 0.835%. Real Chrome checks also verify
+PNG device dimensions at 80% zoom. The new import is one attributed, undoable transaction; denied browser
+reads never launch Chromium and screenshots leave the document unchanged.
+
+Acceptance still open: installed desktop imports stay disabled with an explanation until Prompt 55's
+writable document ABI/person-origin import callbacks exist. Foreground daemon browser calls now attach
+the real PermissionBroker to the same shared session store;
+terminal consent is available when stdin/stderr are terminals, while background calls record unattended
+denials. Opening a document first establishes the session. A new MCP test proves denial/allow records
+precede capture; no caller-supplied approval argument was added. Browser step previews also omit raw
+URLs/origins/selectors, with a regression proving rejected URL credentials never enter that ledger.
+GUI permission cards and Stop latency
+while waiting for synchronous terminal consent still need host acceptance. The native Electron
+harness repeatedly timed out before capture completion; its unit/bridge fakes are not native acceptance.
+Direct remote-page keyboard/pointer input is not exposed. Ordinary canvas screenshot image-resource
+integration is a pre-existing limitation; the fidelity lane uses the asset-backed export path. Windows,
+Linux and remote CI were not run.
+
+C31 behavior and both import-title goldens pass. Embed property goldens remain above 1%: 3.190% light,
+2.961% dark, at the correct 280 × 240 size. Full-frame import artwork was not claimed as compared.
+Artifacts: `target/screen-goldens/p65-*`, `target/browser-fidelity/`. No reference or tolerance changed.
+Token lint retains the 12 existing inverse-text contrast failures; new fixture colour-literal issues
+were fixed. Cargo deny retains existing Loro/zip/Linux keyring advisories; bans/licences/sources pass.
+Initial sandboxed pnpm and direct Cargo/Skia attempts failed/stalled; escalated pnpm and the prescribed
+source-only Skia wrapper were used successfully. Existing ts-rs attribute warnings remain.
+
+Exact passing commands (development telemetry disabled):
+
+- `pnpm type-check` (33 tasks); `pnpm deps:check`; `pnpm clean-room`; `pnpm copy-lint`;
+  `pnpm types:check`; `pnpm checksum`; `git diff --check`.
+- `pnpm --filter @vellum/editor-core test` (2,375); `pnpm --filter @vellum/editor-react test` (312);
+  `pnpm --filter @vellum/desktop test` (29 Vitest plus packaging); `pnpm --filter @vellum/host-api test`
+  (23); `pnpm --filter @vellum/host-electron test` (6). Each affected package's `type-check` also passed.
+- `cargo test -p vellum-import-html`; `cargo test -p vellum-browser-cdp --test policy`;
+  `cargo test -p vellum-contracts --test browser`; `cargo test -p vellum-index-rstar --test engine_output`.
+- `node scripts/skia-build.mjs test -p vellum --test browser_tools --test asset_tools --test mcp --test tools --test exports --test sessions`.
+- `VELLUM_CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' cargo test -p vellum-browser-cdp --test chrome -- --ignored`.
+- `VELLUM_CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' node scripts/skia-build.mjs test -p vellum --test browser_fidelity -- --ignored --nocapture`;
+  `node scripts/browser-fidelity.mjs`.
+- `node scripts/skia-build.mjs clippy -p vellum -p vellum-browser-cdp -p vellum-import-html -p vellum-index-rstar -p vellum-contracts -p vellum-types -p vellum-core --all-targets -- -D warnings`.
+- Focused `pnpm exec biome check` over touched TS/CSS/JSON/MJS sources; `cargo fmt --all`.
+
+Not passing: `cargo deny check`, `pnpm tokens:lint`, the two C31 embed goldens in
+`pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts browser.spec.ts --workers=1`,
+and `node apps/desktop/test/browser-native.mjs`. These are not accepted release evidence.
