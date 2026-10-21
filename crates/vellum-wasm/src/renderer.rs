@@ -95,6 +95,43 @@ pub extern "C" fn vellum_image(id: usize, p: usize) -> u32 {
     })
 }
 #[unsafe(no_mangle)]
+pub extern "C" fn vellum_shader(id: usize, p: usize) -> u32 {
+    status(|s| {
+        let id = take(s, id)?;
+        let code = take(s, p)?;
+        if id.len() > 1024 || code.len() > 16 * 1024 || s.resources.shaders.len() >= 64 {
+            return Err("Shader resource limit exceeded".into());
+        }
+        let id = String::from_utf8(id).map_err(|_| "Invalid shader id")?;
+        let code = String::from_utf8(code).map_err(|_| "Invalid shader source")?;
+        s.resources.shaders.insert(id, code.into());
+        Ok(())
+    })
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn vellum_shader_errors() -> usize {
+    STATE.with_borrow_mut(|s| {
+        let errors = s
+            .scene
+            .as_ref()
+            .map(|scene| {
+                scene
+                    .shader_errors()
+                    .iter()
+                    .map(|d| {
+                        let kind = match d.error {
+                            vellum_core::ports::ShaderError::Unsupported { .. } => "unsupported",
+                            _ => "invalid",
+                        };
+                        serde_json::json!({"src":d.src,"kind":kind,"message":d.error.to_string()})
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        buffer(s, serde_json::to_vec(&errors).unwrap_or_default())
+    })
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn vellum_scene(p: usize) -> u32 {
     status(|s| {
         let bytes = take(s, p)?;

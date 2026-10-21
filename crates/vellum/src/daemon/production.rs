@@ -150,6 +150,9 @@ mod scene {
                 ..Default::default()
             };
             let scene = self.0.prepare(&output.list, &resources).map_err(error)?;
+            if let Some(problem) = scene.shader_errors().first() {
+                return Err(error(format!("{}: {}", problem.src, problem.error)));
+            }
             let page = vellum_render_skia::Page {
                 width: (bounds.width * scale).ceil() as u32,
                 height: (bounds.height * scale).ceil() as u32,

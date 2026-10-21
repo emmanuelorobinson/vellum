@@ -1,0 +1,15 @@
+[package]
+name = "vellum-import-pen"
+description = "Independent reader for the publicly documented .pen interchange format."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+serde_json.workspace = true
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+vellum-types = { path = "../../vellum-types" }
+[lints]
+workspace = true

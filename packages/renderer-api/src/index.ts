@@ -22,6 +22,8 @@ export interface Frame {
   displayList: Uint8Array;
   fonts: readonly FontResource[];
   images: readonly ImageResource[];
+  /** Host-authorized relative source references; renderer never reads files. */
+  shaders?: readonly { id: string; source: string }[];
 }
 export type RendererState = "ready" | "context-lost" | "disposed";
 export interface Renderer {
@@ -31,6 +33,7 @@ export interface Renderer {
   draw(frame: Frame): void;
   /** Native and browser CPU paths produce unpremultiplied RGBA, top row first. */
   readPixels(): Uint8Array;
+  shaderErrors?(): readonly { src: string; kind: string; message: string }[];
   dispose(): void;
 }
 export function checkViewport(v: Viewport): [number, number] {

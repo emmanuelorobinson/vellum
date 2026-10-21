@@ -84,3 +84,27 @@ describe("Renderer contract and resource lifetime", () => {
     renderer.dispose();
   });
 });
+
+it("uploads bounded shader resources and reads diagnostics without leaking transfer buffers", async () => {
+  const { module, live } = mockModule();
+  const { canvas } = canvasMock();
+  const renderer = await createRenderer(canvas, async () => module);
+  renderer.draw({
+    displayList: new Uint8Array([0]),
+    fonts: [],
+    images: [],
+    shaders: [{ id: "checker.vsh", source: "half4 main(float2 p) { return half4(1); }" }],
+  });
+  expect(renderer.shaderErrors?.()).toEqual([]);
+  expect(live()).toBe(0);
+  expect(() =>
+    renderer.draw({
+      displayList: new Uint8Array([0]),
+      fonts: [],
+      images: [],
+      shaders: [{ id: "x", source: "x".repeat(16385) }],
+    }),
+  ).toThrow(/large/);
+  expect(live()).toBe(0);
+  renderer.dispose();
+});

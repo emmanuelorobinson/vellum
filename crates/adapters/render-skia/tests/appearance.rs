@@ -183,6 +183,23 @@ fn all_blends_work_and_multiply_is_analytic() {
 }
 #[test]
 fn invalid_appearance_and_shaders_are_explicit_errors() {
+    let scene = Renderer::new()
+        .unwrap()
+        .prepare(
+            &list(
+                RenderPaint::Shader {
+                    src: "untrusted".into(),
+                    uniforms: Default::default(),
+                },
+                vec![],
+                BlendMode::Normal,
+            ),
+            &Resources::default(),
+        )
+        .unwrap();
+    assert_eq!(scene.shader_errors().len(), 1);
+    assert_eq!(scene.shader_errors()[0].src, "untrusted");
+
     for paint in [
         RenderPaint::Gradient {
             kind: GradientKind::Linear,
@@ -193,10 +210,6 @@ fn invalid_appearance_and_shaders_are_explicit_errors() {
             columns: 2,
             rows: 2,
             points: vec![],
-        },
-        RenderPaint::Shader {
-            src: "untrusted".into(),
-            uniforms: Default::default(),
         },
     ] {
         assert!(

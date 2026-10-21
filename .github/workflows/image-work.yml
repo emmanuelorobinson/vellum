@@ -25,11 +25,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: python -m pip install onnx==1.19.1
       - run: python scripts/image-model-fixture.py target/image-model-fixture/segmentation.onnx
-      - run: cargo test --locked -p vellum-import-figma-api -p vellum-images-generate -p vellum-image-ops --lib --tests
+      - run: cargo test --locked -p vellum-import-pen -p vellum-import-figma-api -p vellum-images-generate -p vellum-image-ops --lib --tests
       - name: Native inference fixture (no model download, no GPU)
         run: VELLUM_TEST_ONNX_MODEL="$PWD/target/image-model-fixture/segmentation.onnx" cargo test --locked -p vellum-image-ops --test local native_onnx_inference -- --ignored
       - run: cargo test --locked -p vellum-contracts --test media
-      - run: cargo clippy --locked -p vellum-image-ops -p vellum-import-figma-api -p vellum-images-generate --all-targets -- -D warnings
+      - run: cargo clippy --locked -p vellum-import-pen -p vellum-image-ops -p vellum-import-figma-api -p vellum-images-generate --all-targets -- -D warnings
       - name: Specification intact
         if: always()
         run: node scripts/spec-checksums.mjs check

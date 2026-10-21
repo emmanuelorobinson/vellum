@@ -5455,6 +5455,7 @@ dependencies = [
  "vellum-import-figma-clipboard",
  "vellum-import-html",
  "vellum-import-image",
+ "vellum-import-pen",
  "vellum-import-svg",
  "vellum-index-rstar",
  "vellum-ipc-local",
@@ -5468,6 +5469,7 @@ dependencies = [
  "vellum-script-quickjs",
  "vellum-secrets-keyring",
  "vellum-sessions-sqlite",
+ "vellum-shader-sksl",
  "vellum-sync-ws",
  "vellum-testkit",
  "vellum-text-parley",
@@ -5726,6 +5728,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "vellum-import-pen"
+version = "0.0.0"
+dependencies = [
+ "serde_json",
+ "vellum-contracts",
+ "vellum-core",
+ "vellum-types",
+]
+
+[[package]]
 name = "vellum-import-svg"
 version = "0.0.0"
 dependencies = [
@@ -5873,6 +5885,11 @@ dependencies = [
 [[package]]
 name = "vellum-shader-sksl"
 version = "0.0.0"
+dependencies = [
+ "skia-safe",
+ "vellum-contracts",
+ "vellum-core",
+]
 
 [[package]]
 name = "vellum-sync-disk"
@@ -6008,6 +6025,7 @@ dependencies = [
 name = "vellum-wasm"
 version = "0.0.0"
 dependencies = [
+ "serde_json",
  "vellum-core",
  "vellum-render-skia",
  "vellum-types",

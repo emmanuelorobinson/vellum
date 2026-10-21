@@ -19,7 +19,12 @@ pub(crate) fn blender(mode: BlendMode) -> Result<sk::Blender, Error> {
             .map_err(|_|Error::Geometry)?.make_blender(sk::Data::new_empty(),None).ok_or(Error::Geometry),
     }.into())
 }
-pub(crate) fn paint(p: &RenderPaint, bounds: Rect) -> Result<Paint, Error> {
+pub(crate) fn paint(
+    p: &RenderPaint,
+    bounds: Rect,
+    resources: &crate::Resources,
+    errors: &mut Vec<crate::ShaderDiagnostic>,
+) -> Result<Paint, Error> {
     let mut out = Paint::default();
     out.set_anti_alias(true);
     let base = [
@@ -160,8 +165,19 @@ pub(crate) fn paint(p: &RenderPaint, bounds: Rect) -> Result<Paint, Error> {
                 None,
             ));
         }
-        RenderPaint::Shader { .. } => {
-            return Err(Error::Unsupported("runtime shaders require v1.1"));
+        RenderPaint::Shader { src, uniforms } => {
+            match crate::shaders::fill(src, uniforms, bounds, resources) {
+                Ok(shader) => {
+                    out.set_shader(shader);
+                }
+                Err(error) => {
+                    errors.push(crate::ShaderDiagnostic {
+                        src: src.clone(),
+                        error,
+                    });
+                    out.set_color(Color::TRANSPARENT);
+                }
+            }
         }
         RenderPaint::Image(_) => {
             return Err(Error::Unsupported(
@@ -184,6 +200,9 @@ fn blur(n: f32, input: Option<ImageFilter>) -> Result<ImageFilter, Error> {
 }
 pub(crate) fn effects(
     effects: &[RenderEffect],
+    bounds: Rect,
+    resources: &crate::Resources,
+    errors: &mut Vec<crate::ShaderDiagnostic>,
 ) -> Result<(Option<ImageFilter>, Option<ImageFilter>), Error> {
     use sk::image_filters as f;
     let mut input = None;
@@ -235,8 +254,17 @@ pub(crate) fn effects(
                     f::blend(blender(s.blend)?, input, outside, None)
                 }
             }
-            RenderEffect::Shader { .. } => {
-                return Err(Error::Unsupported("runtime shader effects require v1.1"));
+            RenderEffect::Shader { src, uniforms } => {
+                match crate::shaders::effect(src, uniforms, bounds, resources, input.clone()) {
+                    Ok(filter) => Some(filter),
+                    Err(error) => {
+                        errors.push(crate::ShaderDiagnostic {
+                            src: src.clone(),
+                            error,
+                        });
+                        input
+                    }
+                }
             }
         };
     }
@@ -245,7 +273,12 @@ pub(crate) fn effects(
 
 /// Backdrop filters sample the destination but write only inside the layer's geometric silhouette.
 /// Work in the layer's local coordinates; absolute transforms inside the group are rebased here.
-pub(crate) fn mask_backdrops(ops: &mut [crate::Op]) -> Result<(), Error> {
+pub(crate) fn mask_backdrops(
+    ops: &mut [crate::Op],
+    pending: &std::collections::BTreeMap<usize, Vec<RenderEffect>>,
+    resources: &crate::Resources,
+    errors: &mut Vec<crate::ShaderDiagnostic>,
+) -> Result<(), Error> {
     use crate::Op;
     let mut current = sk::Matrix::new_identity();
     let mut stack = Vec::new();
@@ -254,8 +287,29 @@ pub(crate) fn mask_backdrops(ops: &mut [crate::Op]) -> Result<(), Error> {
             Op::Transform(m) => current = matrix(*m),
             Op::Save => stack.push(current),
             Op::Restore => current = stack.pop().ok_or(Error::Geometry)?,
-            Op::Layer { backdrop, .. } => {
+            Op::Layer { .. } => {
                 stack.push(current);
+                let bounds = if pending[&at]
+                    .iter()
+                    .any(|e| matches!(e, RenderEffect::Shader { .. }))
+                {
+                    let inverse = current.invert().ok_or(Error::Geometry)?;
+                    coverage(&ops[at + 1..], &inverse)?.compute_tight_bounds()
+                } else {
+                    Rect::default()
+                };
+                let (filter, backdrop) = effects(&pending[&at], bounds, resources, errors)?;
+                if let Op::Layer {
+                    paint,
+                    backdrop: target,
+                } = &mut ops[at]
+                {
+                    paint.set_image_filter(filter);
+                    *target = backdrop;
+                }
+                let Op::Layer { backdrop, .. } = &ops[at] else {
+                    unreachable!()
+                };
                 if let Some(filter) = backdrop {
                     let inverse = current.invert().ok_or(Error::Geometry)?;
                     let mask = coverage(&ops[at + 1..], &inverse)?;

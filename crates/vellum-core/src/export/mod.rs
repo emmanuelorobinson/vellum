@@ -37,6 +37,7 @@ pub struct ExportFrame {
     /// Text pixels from the shared renderer. HTML keeps the source text alongside the visible outlines.
     pub text_visuals: BTreeMap<vellum_types::NodeIdPath, TextVisual>,
     pub images: BTreeMap<AssetId, Arc<[u8]>>,
+    pub shaders: BTreeMap<String, Arc<str>>,
     /// The host can require a visual fallback for content it cannot express as DOM.
     pub fallback: bool,
 }
@@ -53,6 +54,7 @@ impl ExportFrame {
             faces: vec![],
             text_visuals: BTreeMap::new(),
             images: BTreeMap::new(),
+            shaders: BTreeMap::new(),
             fallback: false,
         }
     }

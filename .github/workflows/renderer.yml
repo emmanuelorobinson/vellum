@@ -76,6 +76,7 @@ jobs:
             target/skia-measurements/
             target/renderer-fixtures/
             target/renderer-goldens/
+            target/shader-examples/
   webgl:
     name: Browser WASM and WebGL2 integration
     runs-on: ubuntu-24.04
@@ -100,6 +101,7 @@ jobs:
         run: pnpm wasm:build
       - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-fixtures -- target/renderer-fixtures
       - run: node scripts/skia-build.mjs run --release -p vellum --example renderer-goldens
+      - run: node scripts/skia-build.mjs test --locked -p vellum --test shaders
       - uses: browser-actions/setup-chrome@v2
         id: chrome
         with:
@@ -111,6 +113,7 @@ jobs:
         run: |
           node scripts/renderer-gpu.mjs --software
           node scripts/renderer-goldens.mjs --software
+          node scripts/shader-goldens.mjs --software
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
@@ -136,6 +139,7 @@ jobs:
           path: |
             target/renderer-fixtures/
             target/renderer-goldens/
+            target/shader-examples/
             target/skia-measurements/
             packages/renderer-skia/dist/
             target/screen-goldens/p62-*.png
@@ -170,3 +174,4 @@ jobs:
           path: |
             target/renderer-fixtures/
             target/renderer-goldens/
+            target/shader-examples/

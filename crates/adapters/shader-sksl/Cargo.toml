@@ -8,3 +8,9 @@ publish.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+skia-safe.workspace = true
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }

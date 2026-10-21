@@ -6,7 +6,9 @@ mod cache;
 pub use cache::CacheStats;
 mod fonts;
 mod geometry;
+mod shaders;
 mod svg;
+pub use shaders::ShaderDiagnostic;
 #[cfg(target_os = "emscripten")]
 pub mod webgl;
 use skia_safe::{
@@ -41,6 +43,7 @@ pub struct Resources {
     pub fonts: BTreeMap<FontHandle, FontData>,
     /// Host-supplied encoded PNG/JPEG bytes, keyed by document asset id. Never a file path or URL.
     pub images: BTreeMap<AssetId, Arc<[u8]>>,
+    pub shaders: BTreeMap<String, Arc<str>>,
 }
 pub struct Renderer {
     fonts: FontMgr,
@@ -50,6 +53,7 @@ pub struct Renderer {
 #[derive(Clone)]
 pub struct Scene {
     ops: Rc<Vec<Op>>,
+    shader_errors: Rc<Vec<ShaderDiagnostic>>,
     cache: Rc<RefCell<cache::DrawCache>>,
 }
 pub(crate) enum Op {
@@ -89,7 +93,12 @@ impl std::ops::Deref for Brush {
     }
 }
 impl Brush {
-    fn new(source: &RenderPaint, bounds: Rect) -> Result<Self, Error> {
+    fn new(
+        source: &RenderPaint,
+        bounds: Rect,
+        resources: &Resources,
+        errors: &mut Vec<ShaderDiagnostic>,
+    ) -> Result<Self, Error> {
         // Empty/whitespace glyph runs and degenerate geometry still have valid appearance.
         let bounds = Rect::from_xywh(
             bounds.left,
@@ -98,7 +107,7 @@ impl Brush {
             bounds.height().max(1.),
         );
         Ok(Self {
-            paint: appearance::paint(source, bounds)?,
+            paint: appearance::paint(source, bounds, resources, errors)?,
             source: source.clone(),
             bounds,
         })
@@ -171,6 +180,32 @@ impl Renderer {
         Ok(scene)
     }
     pub fn prepare(&self, list: &DisplayList, resources: &Resources) -> Result<Scene, Error> {
+        if resources.shaders.len() > 64
+            || resources
+                .shaders
+                .iter()
+                .any(|(id, src)| id.len() > 1024 || src.len() > 16 * 1024)
+        {
+            return Err(Error::Unsupported("shader resource limit exceeded"));
+        }
+        let uses = list
+            .commands
+            .iter()
+            .filter(|cmd| match cmd {
+                DrawCmd::Path { paint, .. } | DrawCmd::GlyphRun { paint, .. } => matches!(
+                    list.resources.get(*paint as usize),
+                    Some(Resource::Paint(RenderPaint::Shader { .. }))
+                ),
+                DrawCmd::Effect { effect } => matches!(
+                    list.resources.get(*effect as usize),
+                    Some(Resource::Effect(RenderEffect::Shader { .. }))
+                ),
+                _ => false,
+            })
+            .count();
+        if uses > 128 {
+            return Err(Error::Unsupported("at most 128 shader draws per frame"));
+        }
         // The ABI validator also covers typed callers (indices, stack, finite values, resource kinds).
         list.to_bytes().map_err(Error::Buffer)?;
         let mut prepared_glyphs = BTreeMap::new();
@@ -209,6 +244,8 @@ impl Renderer {
             }
         }
         let mut ops = vec![];
+        let mut shader_errors = vec![];
+        let mut pending_effects = BTreeMap::new();
         for (at, cmd) in list.commands.iter().enumerate() {
             match cmd {
                 DrawCmd::Save => ops.push(Op::Save),
@@ -233,9 +270,11 @@ impl Renderer {
                             effect.clone()
                         })
                         .collect::<Vec<_>>();
-                    let (filter, backdrop) = appearance::effects(&effects)?;
-                    paint.set_image_filter(filter);
-                    ops.push(Op::Layer { paint, backdrop });
+                    pending_effects.insert(ops.len(), effects);
+                    ops.push(Op::Layer {
+                        paint,
+                        backdrop: None,
+                    });
                 }
                 DrawCmd::Effect { .. } => {
                     if at == 0
@@ -281,7 +320,10 @@ impl Renderer {
                                 bounds.width().max(1.),
                                 bounds.height().max(1.),
                             );
-                            ops.push(Op::Path(path, Brush::new(paint, bounds)?));
+                            ops.push(Op::Path(
+                                path,
+                                Brush::new(paint, bounds, resources, &mut shader_errors)?,
+                            ));
                         }
                     }
                 }
@@ -302,7 +344,12 @@ impl Renderer {
                 } => {
                     let glyphs = prepared_glyphs[glyphs].clone();
                     let bounds = glyph_bounds[at];
-                    let paint = Brush::new(get_paint(list, *paint), bounds)?;
+                    let paint = Brush::new(
+                        get_paint(list, *paint),
+                        bounds,
+                        resources,
+                        &mut shader_errors,
+                    )?;
                     if let Some(i) = stroke {
                         let s = get_stroke(list, *i);
                         validate_stroke(s)?;
@@ -337,9 +384,10 @@ impl Renderer {
                 }
             }
         }
-        appearance::mask_backdrops(&mut ops)?;
+        appearance::mask_backdrops(&mut ops, &pending_effects, resources, &mut shader_errors)?;
         Ok(Scene {
             ops: Rc::new(ops),
+            shader_errors: Rc::new(shader_errors),
             cache: Rc::default(),
         })
     }
@@ -386,6 +434,9 @@ impl Renderer {
     }
 }
 impl Scene {
+    pub fn shader_errors(&self) -> &[ShaderDiagnostic] {
+        &self.shader_errors
+    }
     /// Draw into a clean device-space viewport. The caller owns clear/presentation/context lifetime.
     pub fn draw(&self, canvas: &Canvas) {
         self.draw_cached(canvas, 1.);
@@ -712,11 +763,18 @@ impl vellum_core::ports::ExportRenderer for Renderer {
                     &Resources {
                         fonts: f.output.fonts.clone(),
                         images: f.images.clone(),
+                        shaders: f.shaders.clone(),
                     },
                 )
                 .map_err(ExportError::new)
             })
             .collect::<Result<Vec<_>, _>>()?;
+        if let Some(problem) = scenes.iter().flat_map(|s| s.shader_errors()).next() {
+            return Err(ExportError::new(format!(
+                "{}: {}",
+                problem.src, problem.error
+            )));
+        }
         let pages: Vec<_> = frames
             .iter()
             .zip(&scenes)

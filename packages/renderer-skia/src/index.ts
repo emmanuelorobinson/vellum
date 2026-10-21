@@ -37,6 +37,8 @@ export interface SkiaModule {
   _vellum_resources_clear(): void;
   _vellum_font(low: number, high: number, index: number, buffer: number): number;
   _vellum_image(id: number, buffer: number): number;
+  _vellum_shader(id: number, buffer: number): number;
+  _vellum_shader_errors(): number;
   _vellum_scene(buffer: number): number;
   _vellum_render(): number;
   _vellum_zoom(zoom: number): number;
@@ -159,6 +161,22 @@ class SkiaRenderer implements Renderer {
         this.module._vellum_free(bytes);
       }
     }
+    if ((frame.shaders?.length ?? 0) > 64) throw new Error("Too many shader resources");
+    for (const shader of frame.shaders ?? []) {
+      const encoded = new TextEncoder().encode(shader.source);
+      const name = new TextEncoder().encode(shader.id);
+      if (encoded.length > 16384 || name.length > 1024)
+        throw new Error("Shader resource too large");
+      const id = this.upload(name);
+      let buffer = 0;
+      try {
+        buffer = this.upload(encoded);
+        this.check(this.module._vellum_shader(id, buffer));
+      } finally {
+        this.module._vellum_free(id);
+        this.module._vellum_free(buffer);
+      }
+    }
     const buffer = this.upload(frame.displayList);
     try {
       this.check(this.module._vellum_scene(buffer));
@@ -166,6 +184,9 @@ class SkiaRenderer implements Renderer {
       this.module._vellum_free(buffer);
     }
     this.check(this.module._vellum_render());
+  }
+  shaderErrors(): readonly { src: string; kind: string; message: string }[] {
+    return JSON.parse(new TextDecoder().decode(this.take(this.module._vellum_shader_errors())));
   }
   readPixels() {
     this.active();

@@ -61,7 +61,7 @@ export async function launchChrome({
       cdp.close();
       proc.kill();
       await new Promise((ok) => (proc.exitCode !== null ? ok() : proc.once("exit", ok)));
-      rmSync(profile, { recursive: true, force: true });
+      rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     },
   };
 }

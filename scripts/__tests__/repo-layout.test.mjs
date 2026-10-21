@@ -44,6 +44,7 @@ const rustCrates = [
     "engine-codex",
     "import-svg",
     "import-image",
+    "import-pen",
     "import-figma-clipboard",
     "import-figma-api",
     "import-html",

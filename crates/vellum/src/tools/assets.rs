@@ -25,9 +25,9 @@ use super::{ErrorKind, Tool, ToolCtx, ToolError, Verb};
 
 pub(super) fn register(tools: &mut Vec<Box<dyn Tool>>, icons: Rc<Catalog>) {
     tools.push(Box::new(SearchIcons(icons.clone())));
-    tools.push(Box::new(InsertIcon(icons)));
+    tools.push(Box::new(InsertIcon(icons.clone())));
     tools.push(Box::new(FillImage));
-    tools.push(Box::new(Import));
+    tools.push(Box::new(Import(icons)));
 }
 
 /// The largest picture or file read, in bytes.
@@ -673,7 +673,7 @@ impl Tool for FillImage {
 
 // ---- import ----------------------------------------------------------------------------------------------
 
-struct Import;
+struct Import(Rc<Catalog>);
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -686,15 +686,15 @@ struct ImportInputs {
     parent: String,
     /// Where among the parent's children, back to front. Defaults to the top.
     index: Option<u32>,
-    /// A file in the repository: an SVG, or a PNG, JPEG or WEBP picture. Needs the person's permission.
+    /// A file in the repository: .pen 2.21, SVG, or PNG/JPEG/WEBP. Needs permission; .pen companion images are authorized separately.
     path: Option<String>,
     /// The file as base64 (a `data:` URL also works). Needs no permission.
     data: Option<String>,
-    /// Text content to import: SVG markup, or the HTML a Figma copy puts on the clipboard. Needs no permission.
+    /// Inline .pen or Figma REST JSON, computed DOM JSON, SVG markup, or Figma clipboard HTML. Needs no filesystem permission.
     text: Option<String>,
     /// The file's name, which names the layer. Taken from `path` when there is one.
     name: Option<String>,
-    /// "svg", "image", "figma" or "html" (a BrowserPort computed DOM snapshot). Detected when absent.
+    /// "pen", "svg", "image", "figma", "figma-api", or "html". Detected when absent.
     format: Option<String>,
     /// Left edge of the imported content inside the parent, for a parent without auto layout.
     x: Option<f64>,
@@ -702,8 +702,16 @@ struct ImportInputs {
     y: Option<f64>,
 }
 
-fn importers() -> [(&'static str, &'static str, Box<dyn Importer>); 5] {
+fn importers() -> [(&'static str, &'static str, Box<dyn Importer>); 6] {
     [
+        (
+            "pen",
+            "pen",
+            Box::new(
+                vellum_import_pen::PenImporter::default()
+                    .with_path_bounds(vellum_import_svg::path_bounds),
+            ),
+        ),
         (
             "figma-api",
             "figma-api",
@@ -750,14 +758,14 @@ impl Tool for Import {
         "import"
     }
     fn version(&self) -> u32 {
-        3
+        4
     }
     fn description(&self) -> &'static str {
         "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and \
          vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), \
          or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file \
          `path` (needs the person's permission) or the content inline as `data` or `text`. For a full Figma file, give figma (a design URL or key); its token stays in the OS keychain. Returns the new layer ids \
-         and notes on what could not be imported. BrowserPort computed DOM snapshots use format html."
+         and notes on what could not be imported. .pen 2.21 files become editable layers; local component instances and themed variables are resolved, companion images need separate file permission, and executable content is never loaded. BrowserPort computed DOM snapshots use format html."
     }
     fn input_schema(&self) -> schemars::Schema {
         schema_of::<ImportInputs>()
@@ -841,6 +849,7 @@ impl Tool for Import {
                 "Give exactly one of `path`, `data` or `text`.",
             ));
         }
+        let source_path = path.clone();
         let (bytes, file) = match (path, data, text) {
             (Some(path), _, _) => read_path(ctx, &path, "path")?,
             (_, Some(data), _) => (
@@ -856,21 +865,25 @@ impl Tool for Import {
             Some(wanted) => all
                 .iter()
                 .find(|(key, id, _)| *key == wanted || *id == wanted)
-                .ok_or_else(|| ToolError::invalid("format", format!("{wanted:?} is not a format. Use svg, image, figma or html (a computed DOM snapshot).")))?,
+                .ok_or_else(|| ToolError::invalid("format", format!("{wanted:?} is not a format. Use pen, svg, image, figma, figma-api or html (a computed DOM snapshot).")))?,
             None => all
                 .iter()
                 .find(|(_, _, importer)| importer.recognizes(&ImportInput { bytes: &bytes, name: &file }))
                 .ok_or_else(|| {
-                    ToolError::invalid("", "This is not an SVG, a PNG, JPEG or WEBP picture, or a Figma copy. Other formats are not imported.")
+                    ToolError::invalid("", "This is not an SVG, a PNG, JPEG or WEBP picture, a supported .pen file, a Figma response or a computed DOM snapshot.")
                 })?,
         };
-        let imported = chosen
-            .2
-            .import(&ImportInput {
-                bytes: &bytes,
-                name: &file,
-            })
-            .map_err(|e| ToolError::invalid("", e.to_string()))?;
+        let imported = if chosen.1 == "pen" {
+            import_pen(ctx, &bytes, &file, source_path.as_deref(), &self.0)?
+        } else {
+            chosen
+                .2
+                .import(&ImportInput {
+                    bytes: &bytes,
+                    name: &file,
+                })
+                .map_err(|e| ToolError::invalid("", e.to_string()))?
+        };
 
         apply_imported(
             ctx,
@@ -945,4 +958,138 @@ pub(super) fn apply_imported(
         "document": doc_path, "importer": importer, "created": created, "nodes": total, "frames":frames,
         "assets": hashes, "notes": imported.notes,
     }))
+}
+
+fn import_pen(
+    ctx: &mut ToolCtx<'_>,
+    bytes: &[u8],
+    name: &str,
+    source: Option<&str>,
+    icons: &Catalog,
+) -> Result<vellum_core::ports::Imported, ToolError> {
+    let input = ImportInput { bytes, name };
+    let mut assets = std::collections::BTreeMap::new();
+    let mut notes = vec![];
+    let mut total = 0usize;
+    let paths = vellum_import_pen::PenImporter::image_paths(&input)
+        .map_err(|e| ToolError::invalid("", e.to_string()))?;
+    if let Some(source) = source {
+        let source = PathBuf::from(source);
+        let full = if source.is_absolute() {
+            source
+        } else {
+            ctx.session()
+                .cwd
+                .as_ref()
+                .expect("read_path validated cwd")
+                .join(source)
+        };
+        let base = full.parent().expect("a file has a parent");
+        for relative in paths {
+            let path = base.join(&relative);
+            match read_path(ctx, &path.to_string_lossy(), "path") {
+                Ok((bytes, name)) => {
+                    total += bytes.len();
+                    if total > 64 * 1024 * 1024 {
+                        return Err(ToolError::invalid("path", "Companion images exceed 64 MB."));
+                    }
+                    match picture(&bytes, &name) {
+                        Ok((mime, _)) => {
+                            assets.insert(
+                                relative,
+                                vellum_core::ports::ImportedAsset { mime, bytes },
+                            );
+                        }
+                        Err(_) => notes.push(
+                            "A companion image was unreadable and its fill was omitted."
+                                .to_string(),
+                        ),
+                    }
+                }
+                Err(_) => notes
+                    .push("A companion image was unavailable or its read was denied.".to_string()),
+            }
+        }
+    }
+    let mut imported = vellum_import_pen::PenImporter::with_assets(assets)
+        .with_path_bounds(vellum_import_svg::path_bounds)
+        .import(&input)
+        .map_err(|e| ToolError::invalid("", e.to_string()))?;
+    // Inline images use the same header validation as other imported pictures before any assets/ops are written.
+    for asset in &mut imported.assets {
+        let (mime, _) = picture(&asset.bytes, "image")?;
+        asset.mime = mime;
+    }
+    lower_pen_icons(&mut imported.nodes, icons, &mut imported.notes);
+    imported.notes.extend(notes);
+    if imported.nodes.is_empty() {
+        return Err(ToolError::invalid(
+            "",
+            "No supported layers could be imported from this .pen file.",
+        ));
+    }
+    Ok(imported)
+}
+
+/// Icon nodes use the existing catalog/insert-icon conversion, so imports draw without a foreign icon SDK.
+fn lower_pen_icons(nodes: &mut Vec<Value>, catalog: &Catalog, notes: &mut Vec<String>) {
+    nodes.retain_mut(|node| {
+        if let Some(children) = node.get_mut("children").and_then(Value::as_array_mut) {
+            lower_pen_icons(children, catalog, notes);
+        }
+        if node["type"] != "icon" {
+            return true;
+        }
+        let library = node["library"].as_str().unwrap_or("");
+        let name = node["icon"].as_str().unwrap_or("");
+        let weight = node["weight"].as_u64().unwrap_or(400) as u16;
+        let Some(glyph) = catalog
+            .library(library)
+            .and_then(|l| l.glyph(name, weight, false))
+        else {
+            notes.push("An unavailable icon was omitted.".into());
+            return false;
+        };
+        let size = node["width"]
+            .as_f64()
+            .or_else(|| node["height"].as_f64())
+            .unwrap_or(24.);
+        if !node["width"].is_number() || !node["height"].is_number() {
+            notes.push("Layout-sized icons retain the catalog's base stroke weight.".into());
+        }
+        let input = InsertIconInput {
+            document: None,
+            parent: String::new(),
+            index: None,
+            library: library.into(),
+            name: name.into(),
+            size: Some(size),
+            weight: Some(weight),
+            fill: Some(false),
+            color: None,
+            color_variable: None,
+            x: None,
+            y: None,
+            layer_name: None,
+        };
+        let vector = icon_node(&glyph, &input, size);
+        let paints = node.get("fills").cloned().unwrap_or_else(|| json!([]));
+        let object = node.as_object_mut().expect("node object");
+        for key in ["icon", "library", "weight", "fill"] {
+            object.remove(key);
+        }
+        object.insert("type".into(), json!("vector"));
+        for key in ["path", "viewBox"] {
+            object.insert(key.into(), vector[key].clone());
+        }
+        if let Some(stroke) = vector.get("stroke") {
+            let mut stroke = stroke.clone();
+            stroke["paints"] = paints;
+            object.insert("stroke".into(), stroke);
+            object.insert("fills".into(), json!([]));
+        } else {
+            object.insert("fills".into(), paints);
+        }
+        true
+    });
 }

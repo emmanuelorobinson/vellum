@@ -870,3 +870,110 @@
 .vc-paintgroup[data-hidden] .vc-swatch {
   opacity: 0.5;
 }
+
+/* C33 shader section: measured 12px inset, 10px gap, 11px section title. */
+.vc-shader-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+}
+.vc-shader-heading {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+}
+.vc-shader-controls .vc-prop {
+  width: 100%;
+}
+.vc-shader-controls .vc-prop__label {
+  width: 76px;
+  flex: 0 0 76px;
+}
+.vc-shader-controls .vc-field {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vc-shader-uniform {
+  width: 100%;
+}
+.vc-shader-uniform .vx-binding {
+  max-width: 100%;
+  margin-top: 4px;
+  color: var(--chrome-secondary);
+  background: var(--chrome-sunken);
+  border: 0;
+  font: inherit;
+}
+.vc-shader-error {
+  display: flex;
+  gap: 8px;
+  color: var(--chrome-error);
+  overflow-wrap: anywhere;
+}
+.vc-examples {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 20px;
+  color: var(--chrome-text);
+  background: var(--chrome-panel);
+}
+.vc-examples ul {
+  list-style: none;
+  padding: 0;
+}
+.vc-examples li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--chrome-separator);
+}
+.vc-shader-node-error {
+  position: absolute;
+  padding: 12px;
+  border: 1px solid var(--chrome-error);
+  background: var(--chrome-panel);
+  pointer-events: auto;
+  overflow: auto;
+}
+
+.vc-shader-controls .vc-paint__hint {
+  white-space: normal;
+  line-height: 1.55;
+  margin: 0;
+}
+.vc-shader-controls .vc-shader-heading {
+  font-family: var(--font-ui);
+}
+.vc-shader-controls .vc-prop {
+  gap: 12px;
+}
+.vc-shader-controls .vc-shader-heading {
+  line-height: 13px;
+}
+.vc-shader-controls > button {
+  height: 31px;
+}
+.vc-shader-controls > button:first-of-type {
+  width: 143px;
+}
+
+.vc-examples-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--chrome-scrim);
+}
+.vc-examples {
+  z-index: 51;
+}
+.vc-shader-controls > button {
+  white-space: nowrap;
+}

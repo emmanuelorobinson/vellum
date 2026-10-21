@@ -33,6 +33,7 @@ import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import type { DesignContext } from "./context";
 import { Segmented, SelectField, TextButton, TextField, ValueField } from "./controls";
+import { ShaderControls } from "./ShaderControls";
 import { SPEC } from "./specs";
 
 export type PaintScope = "fill" | "stroke";
@@ -528,26 +529,6 @@ function ImageBody(props: {
   );
 }
 
-function ShaderBody(props: { ctx: DesignContext; paint: Paint }) {
-  const raw = props.paint as unknown as Loose;
-  const isShader = paintKind(props.paint) === "shader";
-  return (
-    <>
-      <p className="vc-paint__hint">Shader fills arrive in v1.1.</p>
-      {isShader ? (
-        <div className="vc-prop vc-prop--wide">
-          <span className="vc-prop__label">Source</span>
-          <span className="vc-prop__control">
-            <span className="vc-field" data-height="28" data-state="disabled">
-              <span className="vc-mono-value vc-select__value">{String(raw.src)}</span>
-            </span>
-          </span>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
 /* ----------------------------------------------------------------------------------------- popover */
 
 type Tab = "solid" | "gradient" | "image" | "shader";
@@ -675,7 +656,17 @@ export function PaintPopover(props: {
                     onChoose={() => setOpen(false)}
                   />
                 ) : null}
-                {tab === "shader" ? <ShaderBody ctx={ctx} paint={paint} /> : null}
+                {tab === "shader" ? (
+                  <ShaderControls
+                    ctx={ctx}
+                    shader={
+                      paintKind(paint) === "shader"
+                        ? (paint as Extract<Paint, { type: "shader" }>)
+                        : null
+                    }
+                    apply={(v) => apply(() => ({ type: "shader", ...v }) as Paint)}
+                  />
+                ) : null}
                 <Popover.Close className="vc-button vc-paint__done" data-primary="">
                   Done
                 </Popover.Close>

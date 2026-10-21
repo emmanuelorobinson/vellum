@@ -888,14 +888,14 @@
     },
     {
       "_meta": {
-        "vellum/version": 3
+        "vellum/version": 4
       },
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": false
       },
-      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. For a full Figma file, give figma (a design URL or key); its token stays in the OS keychain. Returns the new layer ids and notes on what could not be imported. BrowserPort computed DOM snapshots use format html.",
+      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. For a full Figma file, give figma (a design URL or key); its token stays in the OS keychain. Returns the new layer ids and notes on what could not be imported. .pen 2.21 files become editable layers; local component instances and themed variables are resolved, companion images need separate file permission, and executable content is never loaded. BrowserPort computed DOM snapshots use format html.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -913,7 +913,7 @@
             "type": "string"
           },
           "format": {
-            "description": "\"svg\", \"image\", \"figma\" or \"html\" (a BrowserPort computed DOM snapshot). Detected when absent.",
+            "description": "\"pen\", \"svg\", \"image\", \"figma\", \"figma-api\", or \"html\". Detected when absent.",
             "type": "string"
           },
           "index": {
@@ -931,11 +931,11 @@
             "type": "string"
           },
           "path": {
-            "description": "A file in the repository: an SVG, or a PNG, JPEG or WEBP picture. Needs the person's permission.",
+            "description": "A file in the repository: .pen 2.21, SVG, or PNG/JPEG/WEBP. Needs permission; .pen companion images are authorized separately.",
             "type": "string"
           },
           "text": {
-            "description": "Text content to import: SVG markup, or the HTML a Figma copy puts on the clipboard. Needs no permission.",
+            "description": "Inline .pen or Figma REST JSON, computed DOM JSON, SVG markup, or Figma clipboard HTML. Needs no filesystem permission.",
             "type": "string"
           },
           "x": {

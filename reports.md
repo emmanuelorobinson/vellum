@@ -9,7 +9,7 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
 - **Prompt 66 needs native, provider and visual acceptance.** Attach Prompt 55's writable runtime and
-  person-origin image/Figma callbacks; the desktop remains explicitly read-only. Provision a reviewed local
+  person-origin image/Figma/.pen callbacks; the desktop remains explicitly read-only. Provision a reviewed local
   segmentation model and real Figma/image-provider keychain entries, then test live providers, production
   segmentation quality/performance and Stop responsiveness during synchronous work. All six C30/C31
   comparisons fail the unchanged 1% gate (3.06–12.30%). Stable vtracer adds deprecated adler/ansi_term/atty
@@ -4302,3 +4302,65 @@ Not passing / unverified:
 Stopped the temporary Vite server and closed the inspection browser. Moved browser inspection logs under
 `target/prompt66-browser-inspection/`; generated model/comparison/build artifacts and the isolated Python
 test environment remain in target and /private/tmp. No real credential or existing external service changed.
+
+## Prompt 67
+
+Started from the shader adapter shell; failing compiler/contract/limit tests confirmed the missing API.
+Preserving the pre-existing Cargo.lock edits and untracked import-pen adapter. The design opener could
+not find Pen; the owner authorized read-only inspection of the open C33 shader design. No design writes.
+Sibling search found no reusable shader implementation outside excluded extracted/vendor material.
+
+
+## Prompt 66 follow-up — .pen import
+
+The owner confirmed legal review is complete. Added an independent reader for the public .pen 2.21
+schema, verified against the live official documentation; no private SDK, vendor code/schema, design,
+HTML export or assets were copied. The existing import tool/CLI/MCP auto-detects files or accepts
+`format: "pen"` with inline data. Added ADR-030 and `docs/runbooks/pen-import.md`; no protected spec changed.
+
+Frames/layout, shapes, text, graphics and local component overrides become editable content through one
+attributed, undoable Op transaction. Themes/variables resolve to values; instances expand. Registered
+icons reuse the existing catalog/vector converter, and implicit path bounds reuse the SVG helper via
+composition, with no adapter dependency cycle or new vendor dependency. Source files stay unchanged.
+File input and each companion image need separate broker reads; inline pictures work without disk I/O.
+Remote/unsafe paths, scripts, browsers, shaders and external libraries are not loaded. Metadata and script
+inputs cannot request hidden reads; resource discovery shares the converter's themed resolution.
+Cycle/depth/layer/input, image and expansion-work/property-byte caps bound malformed or amplified input.
+Unknown versions fail explicitly. Partial conversion notes include font, binding, gradient and pivot limits.
+
+TDD confirmed missing adapter/tool support, instance-position inheritance, alias override precedence,
+hidden asset discovery and themed image discovery before fixes. Added hand-authored TEST DATA fixtures,
+shared importer contracts, typed output and undo/permission tests. Updated/reviewed the additive import
+schema snapshot and registered CI tests. No tolerance, reference, specification checksum or unrelated
+shader work was changed by this follow-up.
+
+Passed (telemetry disabled, Node 24/pnpm 12, Rust 1.99, macOS ARM64):
+
+- `CARGO_TARGET_DIR=target/prompt66 cargo test --offline -p vellum-import-pen --lib --tests`
+  (13 behavior tests plus smoke; includes the sub-256 KB repeated-text amplification input and a per-path size bound).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum --test pen_import --test asset_tools --test mcp -p vellum-import-svg`
+  (four native importer tests, 18 asset-tool tests, 23 MCP tests and the SVG suite); earlier image-work
+  regressions also passed. The source/image broker fake never permits network access.
+- `CARGO_TARGET_DIR=target/prompt66 cargo clippy --offline -p vellum-import-pen -p vellum-import-svg --all-targets -- -D warnings`;
+  `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum --lib --bins -- -D warnings`.
+- `pnpm type-check` (33 tasks); `bash scripts/check-deps.sh rust`; dependency-cruiser (648 modules/1,777 edges);
+  `cargo deny check bans licenses sources` (final direct run passes); clean-room, copy-lint, repo-layout
+  (eight tests), scoped Biome, scoped rustfmt, actionlint for the touched workflows, `pnpm checksum` and
+  `git diff --check`.
+
+Not accepted: native editor writes still await Prompt 55; general .pen pixel fidelity and Windows/Linux/
+remote CI have not been exercised. Older/newer versions are not claimed compatible. The complete
+`cargo deny check` retains advisory failures; no dependency exception was added for this importer.
+Concurrent Prompt 67 shader work temporarily failed the Skia wrapper rule, formatter parsing and a shader
+test typecheck; the final direct bans/licences/sources check passes. A later full all-target Clippy run
+still finds `collapsible_if` in the concurrently edited core shader module. Importer/SVG and composition
+lib/bin Clippy passed before that concurrent lint appeared; no unrelated source was edited to hide it.
+The dependency script printed success after cargo-deny's earlier failure, so its exit status alone was
+not accepted as evidence; the direct cargo-deny result is recorded above. Existing ts-rs/debug linker
+warnings remain. No real foreign design, credentials or installed GUI acceptance was used or claimed.
+
+Final scoped Clippy also passes with `--no-deps` on importer/SVG `--all-targets` and composition `--lib --bins`
+using the same commands/target directories above. This verifies the completed import source while the
+unscoped run continues to expose the concurrent shader lint. The final native import/asset/MCP/SVG rerun
+passes on the completed bounded discovery/expansion implementation. All source, asset and executable
+content limitations remain as described in the runbook; no native GUI or full-fidelity acceptance is implied.

@@ -325,6 +325,34 @@ impl Tool for Screenshot {
                 "There is no page or node {node:?} to draw."
             )));
         }
+        fn has_shader(nodes: &[vellum_types::Node]) -> bool {
+            nodes
+                .iter()
+                .any(|n| !vellum_core::shaders::sources(n).is_empty() || has_shader(n.children()))
+        }
+        if doc.pages.iter().any(|p| has_shader(&p.children)) {
+            let services = ctx.docs().services();
+            let scene = ctx
+                .docs()
+                .export_scene(&path, &doc, std::slice::from_ref(&node))
+                .map_err(scene_error)?;
+            let frames: Vec<_> = scene.frames.iter().map(|f| f.at_scale(scale)).collect();
+            let (width, height) = frames[0].size();
+            if width > 8192 || height > 8192 || u64::from(width) * u64::from(height) > 16_777_216 {
+                return Err(scene_error("Render exceeds image bounds"));
+            }
+            let bytes = services
+                .render_export(&frames, "png")
+                .map_err(scene_error)?;
+            if bytes.len() > 700 * 1024 {
+                return Err(scene_error(
+                    "Rendered data exceeds the synchronous result budget",
+                ));
+            }
+            return Ok(
+                json!({"document":path,"node":node,"scale":scale,"image":{"mime":"image/png","base64":vellum_core::base64::encode(&bytes),"width":width,"height":height}}),
+            );
+        }
         let image = ctx.target(&path)?.render(&node, scale)?;
         let image = to_json(&image).map_err(scene_error)?;
         Ok(json!({"document": path, "node": node, "scale": scale, "image": image}))

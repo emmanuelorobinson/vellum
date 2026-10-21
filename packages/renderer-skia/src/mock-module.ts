@@ -55,6 +55,17 @@ export function mockModule() {
       buffers.delete(p);
       return 1;
     },
+    _vellum_shader: (id, p) => {
+      buffers.delete(id);
+      buffers.delete(p);
+      return 1;
+    },
+    _vellum_shader_errors: () => {
+      const bytes = new TextEncoder().encode("[]"),
+        p = alloc(bytes.length);
+      heap.set(bytes, p);
+      return p;
+    },
     _vellum_scene: (p) => {
       const len = buffers.get(p);
       buffers.delete(p);

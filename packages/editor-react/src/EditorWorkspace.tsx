@@ -68,6 +68,7 @@ import { TipProvider } from "./chrome/Tooltip";
 import { TopRightBar } from "./chrome/TopRightBar";
 import { ZoomPill } from "./chrome/ZoomPill";
 import { CollaborationLayer, CollaborationToolbar } from "./collaboration/Collaboration";
+import { CanvasShaders } from "./design/CanvasShaders";
 import type { DesignHost } from "./design/context";
 import { DesignTab } from "./design/DesignTab";
 import { useEngineSnapshot, useStore, useWorkspace } from "./hooks";
@@ -786,6 +787,9 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
           />
           {props.browser ? (
             <CanvasEmbeds session={session} browser={props.browser} open={openEmbed} />
+          ) : null}
+          {designHost.shaders ? (
+            <CanvasShaders session={session} controller={designHost.shaders} />
           ) : null}
           {props.authoring ? (
             <CanvasAuthoring

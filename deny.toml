@@ -72,7 +72,7 @@ deny = [
   { crate = "parley", wrappers = ["vellum-text-parley"], reason = "text goes through the TextEngine port" },
   { crate = "rstar", wrappers = ["vellum-index-rstar"], reason = "the spatial index goes through its port" },
   { crate = "zip", wrappers = ["vellum-export-raster", "vellum"], reason = "deterministic export bundles; composition-root dev tests inspect archives" },
-  { crate = "skia-safe", wrappers = ["vellum-render-skia"], reason = "drawing goes through the Renderer port" },
+  { crate = "skia-safe", wrappers = ["vellum-render-skia", "vellum-shader-sksl"], reason = "drawing and bounded shader compilation stay behind Renderer and ShaderCompiler (ADR-008)" },
   { crate = "rquickjs", wrappers = ["vellum-script-quickjs"], reason = "scripts run only in ScriptRuntime (Invariant 8)" },
   { crate = "rusqlite", wrappers = ["vellum-sessions-sqlite", "vellum-sync-sqlite"], reason = "ADR-027 sync log and sessions go through the SessionStore port" },
   { crate = "keyring", wrappers = ["vellum-secrets-keyring"], reason = "keys live in the OS keychain only (Invariant 10)" },

@@ -30,6 +30,7 @@ pub mod resolver;
 pub mod scene;
 pub mod script_nodes;
 pub mod sessions;
+pub mod shaders;
 pub mod spec;
 pub mod tokens;
 pub mod turns;

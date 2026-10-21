@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "formatVersion": 1,
+    "name": "Starter tokens",
+    "createdWith": "Vellum"
+  },
+  "variables": {
+    "ink": {
+      "type": "color",
+      "name": "color/ink",
+      "values": [
+        {
+          "value": "#404040"
+        }
+      ]
+    },
+    "space": {
+      "type": "number",
+      "name": "space/base",
+      "values": [
+        {
+          "value": 8
+        }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "id": "page",
+      "name": "Swatches",
+      "children": [
+        {
+          "type": "rect",
+          "id": "swatch",
+          "name": "Ink",
+          "width": 16,
+          "height": 16,
+          "fills": [
+            {
+              "type": "solid",
+              "color": {
+                "$var": "ink"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

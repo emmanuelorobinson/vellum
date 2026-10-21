@@ -1,0 +1,34 @@
+[
+  {
+    "id": "checker",
+    "name": "Checker",
+    "kind": "Shaders",
+    "description": "A checker fill with a colour control",
+    "file": "shaders/checker.vsh",
+    "effect": false,
+    "uniforms": { "tint": "#404040", "scale": 4 }
+  },
+  {
+    "id": "tint-content",
+    "name": "Tint content",
+    "kind": "Shaders",
+    "description": "Tint the layer's own rendering",
+    "file": "shaders/tint-content.vsh",
+    "effect": true,
+    "uniforms": { "tint": "#FF0000", "strength": 1 }
+  },
+  {
+    "id": "bars",
+    "name": "Bars",
+    "kind": "Scripts",
+    "description": "A deterministic script node with a count input",
+    "file": "scripts/bars.js"
+  },
+  {
+    "id": "starter",
+    "name": "Starter tokens",
+    "kind": "Design systems",
+    "description": "A local library with colour and spacing variables",
+    "file": "design-systems/starter.lib.vellum"
+  }
+]

@@ -1,6 +1,21 @@
-//! ShaderCompiler producing SkSL (v1.1).
-//!
-//! Shell only: no behaviour yet. Real code lands in the prompt that owns this crate.
-
-/// The Cargo package name, used by the smoke test and by diagnostics.
+//! Vellum's bounded expression dialect → SkSL. No GLSL rewriting or ambient resources.
+use vellum_core::ports::{CompiledShader, ShaderCompiler, ShaderError, ShaderTarget};
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
+#[derive(Default)]
+pub struct SkslCompiler;
+impl ShaderCompiler for SkslCompiler {
+    fn compile(&self, src: &str, target: ShaderTarget) -> Result<CompiledShader, ShaderError> {
+        vellum_core::shaders::inspect(src)?;
+        if target != ShaderTarget::Sksl {
+            return Err(ShaderError::Unsupported {
+                message: "WGSL is not implemented".into(),
+            });
+        }
+        skia_safe::RuntimeEffect::make_for_shader(src, None)
+            .map_err(|message| ShaderError::Invalid { message })?;
+        Ok(CompiledShader {
+            target,
+            code: src.to_owned(),
+        })
+    }
+}

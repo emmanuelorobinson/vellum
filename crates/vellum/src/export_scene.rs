@@ -41,7 +41,64 @@ pub fn prepare(
             sources(c, out);
         }
     }
+    fn shader_origins(
+        r: &vellum_core::resolver::ResolvedNode,
+        out: &mut BTreeMap<String, std::collections::BTreeSet<String>>,
+    ) {
+        if !r.value.visible {
+            return;
+        }
+        for src in vellum_core::shaders::sources(&r.value.node) {
+            out.entry(src).or_default().insert(r.source.clone());
+        }
+        for c in &r.children {
+            shader_origins(c, out);
+        }
+    }
     for frame in &mut scene.frames {
+        let mut shader_files = BTreeMap::new();
+        for root in &frame.roots {
+            shader_origins(root, &mut shader_files);
+        }
+        if shader_files.len() > 64 {
+            return Err(ExportError::new(
+                "At most 64 shader sources per export frame",
+            ));
+        }
+        for (src, origins) in shader_files {
+            if origins.len() != 1 {
+                return Err(ExportError::new(
+                    "Shader paths conflict across libraries; use distinct relative paths",
+                ));
+            }
+            vellum_core::ports::check_path(&src, false).map_err(ExportError::new)?;
+            if src.contains(':') {
+                return Err(ExportError::new("Shader sources must be relative files"));
+            }
+            let owner = origins
+                .first()
+                .filter(|s| !s.is_empty())
+                .map_or(path, String::as_str);
+            let dir = owner.rsplit_once('/').map(|(d, _)| d).unwrap_or("");
+            let file = if dir.is_empty() {
+                src.clone()
+            } else {
+                format!("{dir}/{src}")
+            };
+            let bytes = fs.read(&file).map_err(ExportError::new)?;
+            if bytes.len() > 16 * 1024 {
+                return Err(ExportError::new("Shader source exceeds 16 KiB"));
+            }
+            let code = String::from_utf8(bytes).map_err(ExportError::new)?;
+            #[cfg(feature = "scene")]
+            {
+                use vellum_core::ports::{ShaderCompiler, ShaderTarget};
+                vellum_shader_sksl::SkslCompiler
+                    .compile(&code, ShaderTarget::Sksl)
+                    .map_err(ExportError::new)?;
+            }
+            frame.shaders.insert(src, code.into());
+        }
         let mut origins = BTreeMap::new();
         for root in &frame.roots {
             sources(root, &mut origins);

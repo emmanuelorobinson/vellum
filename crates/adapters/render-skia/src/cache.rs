@@ -23,11 +23,13 @@ pub(crate) struct FrameEntry {
     pub scene: Scene,
 }
 pub(crate) fn resource_bytes(r: &Resources) -> usize {
-    r.images.values().map(|v| v.len()).sum::<usize>()
+    r.shaders.values().map(|s| s.len()).sum::<usize>()
+        + r.images.values().map(|v| v.len()).sum::<usize>()
         + r.fonts.values().map(|v| v.bytes.len()).sum::<usize>()
 }
 pub(crate) fn equal(a: &Resources, b: &Resources) -> bool {
-    a.images == b.images
+    a.shaders == b.shaders
+        && a.images == b.images
         && a.fonts.len() == b.fonts.len()
         && a.fonts.iter().all(|(id, f)| {
             b.fonts

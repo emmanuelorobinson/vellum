@@ -17,6 +17,7 @@ workspace = true
 
 [target.'cfg(target_os = "emscripten")'.dependencies]
 vellum-core = { path = "../vellum-core" }
+serde_json.workspace = true
 vellum-render-skia = { path = "../adapters/render-skia" }
 
 [[bin]]

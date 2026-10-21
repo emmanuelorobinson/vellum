@@ -54,6 +54,7 @@ import {
   ValueField,
 } from "./controls";
 import { changePaint, HexInline, PaintPopover, type PaintScope } from "./PaintPopover";
+import { ShaderControls } from "./ShaderControls";
 import { SPEC } from "./specs";
 
 const swatchStyle = (css: string | null) => (css ? { background: css } : undefined);
@@ -510,7 +511,14 @@ function EffectPopover(props: { ctx: DesignContext; row: EffectRow; children: Re
                     </PropertyRow>
                   </>
                 ) : row.kind === "shader" ? (
-                  <p className="vc-paint__hint">Shader effects arrive in v1.1.</p>
+                  <ShaderControls
+                    ctx={ctx}
+                    effect
+                    shader={effect as Extract<Effect, { type: "shader" }>}
+                    apply={(v) =>
+                      change(ctx, row.index, () => ({ type: "shader", ...v }) as Effect)
+                    }
+                  />
                 ) : (
                   <PropertyRow label="Radius">
                     <ValueField
@@ -573,32 +581,55 @@ function AddEffectMenu(props: {
 }) {
   const container = usePortalContainer();
   const { ctx } = props;
+  const [error, setError] = useState<string | null>(null);
   return (
-    <Menu.Root>
-      <Menu.Trigger className={props.className} aria-label={props.label} disabled={ctx.disabled}>
-        {props.children}
-      </Menu.Trigger>
-      <Menu.Portal container={container}>
-        <Menu.Positioner side="bottom" align="start" sideOffset={4}>
-          <Menu.Popup className="vc-menu">
-            {EFFECT_KINDS.map((k: EffectKind) => {
-              const made = newEffect(k, { shadow: ctx.design.defaults.shadow });
-              return (
-                <Menu.Item
-                  key={k}
-                  className="vc-menu__item"
-                  disabled={!made}
-                  onClick={() => made && ctx.edit(addEffectTo(made))}
-                >
-                  {effectLabelOf(k)}
-                  {!made ? <span className="vc-menu__key">v1.1</span> : null}
-                </Menu.Item>
-              );
-            })}
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+    <>
+      <Menu.Root>
+        <Menu.Trigger className={props.className} aria-label={props.label} disabled={ctx.disabled}>
+          {props.children}
+        </Menu.Trigger>
+        <Menu.Portal container={container}>
+          <Menu.Positioner side="bottom" align="start" sideOffset={4}>
+            <Menu.Popup className="vc-menu">
+              {EFFECT_KINDS.map((k: EffectKind) => {
+                const made = newEffect(k, { shadow: ctx.design.defaults.shadow });
+                return (
+                  <Menu.Item
+                    key={k}
+                    className="vc-menu__item"
+                    disabled={!made && !(k === "shader" && ctx.host.shaders?.host.choose)}
+                    onClick={() => {
+                      setError(null);
+                      if (made) ctx.edit(addEffectTo(made));
+                      else if (k === "shader") {
+                        const selected = ctx.session.state.selection.join("/");
+                        void ctx.host.shaders?.host
+                          .choose?.(true)
+                          .then((choice) => {
+                            if (
+                              choice &&
+                              !ctx.disabled &&
+                              ctx.session.state.selection.join("/") === selected
+                            )
+                              ctx.edit(addEffectTo({ type: "shader", ...choice }));
+                          })
+                          .catch(() => setError("The shader effect could not be opened"));
+                      }
+                    }}
+                  >
+                    {effectLabelOf(k)}
+                    {!made && !ctx.host.shaders?.host.choose ? (
+                      <span className="vc-menu__key">Unavailable</span>
+                    ) : null}
+                  </Menu.Item>
+                );
+              })}
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+      {error ? <span role="alert">{error}</span> : null}
+    </>
   );
 }
 
@@ -631,7 +662,7 @@ export function EffectsSection({ ctx }: { ctx: DesignContext }) {
                 className="vc-iconbutton vc-effectvis"
                 aria-label={row.visible ? "Hide effect" : "Show effect"}
                 aria-pressed={!row.visible}
-                disabled={ctx.disabled || row.kind === "shader"}
+                disabled={ctx.disabled}
                 onClick={() => change(ctx, row.index, (e) => setEffectVisible(e, !row.visible))}
               >
                 <Icon name={row.visible ? "eye" : "eye-off"} size={16} />

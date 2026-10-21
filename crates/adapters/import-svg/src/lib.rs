@@ -1077,3 +1077,13 @@ fn length(text: &str, reference: f64, font_size: f64) -> Option<f64> {
         _ => return None,
     })
 }
+
+/// Bounds for an SVG path, using the same parser and curve sampling as SVG imports.
+/// Composition roots can inject this pure function into other format readers.
+pub fn path_bounds(data: &str) -> Option<[f64; 4]> {
+    let (segments, error) = path::parse(data);
+    if error.is_some() {
+        return None;
+    }
+    path::bounds(&segments).filter(|b| b.iter().all(|n| n.is_finite()))
+}

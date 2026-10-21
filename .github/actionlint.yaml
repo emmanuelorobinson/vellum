@@ -1,0 +1,4 @@
+# Existing opt-in hardware renderer lanes use this project-specific runner label.
+self-hosted-runner:
+  labels:
+    - vellum-gpu

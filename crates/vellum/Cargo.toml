@@ -14,6 +14,7 @@ name = "vellum"
 path = "src/main.rs"
 
 [dependencies]
+vellum-import-pen = { path = "../adapters/import-pen" }
 vellum-image-ops = { path = "../adapters/image-ops" }
 vellum-images-generate = { path = "../adapters/images-generate" }
 vellum-import-figma-api = { path = "../adapters/import-figma-api" }
@@ -44,6 +45,7 @@ vellum-sessions-sqlite = { path = "../adapters/sessions-sqlite" }
 vellum-layout-taffy = { path = "../adapters/layout-taffy", optional = true }
 vellum-text-parley = { path = "../adapters/text-parley", optional = true }
 vellum-render-skia = { path = "../adapters/render-skia", optional = true }
+vellum-shader-sksl = { path = "../adapters/shader-sksl", optional = true }
 vellum-index-rstar = { path = "../adapters/index-rstar", optional = true }
 vellum-script-quickjs = { path = "../adapters/script-quickjs", optional = true }
 vellum-engine-builtin = { path = "../adapters/engine-builtin" }
@@ -67,6 +69,7 @@ scene = [
     "dep:vellum-layout-taffy",
     "dep:vellum-text-parley",
     "dep:vellum-render-skia",
+    "dep:vellum-shader-sksl",
     "dep:vellum-index-rstar",
 ]
 # The QuickJS sandbox `execute` runs in. Without it `execute` says so; every other tool works.
