@@ -1,0 +1,15 @@
+[package]
+name = "vellum-images-generate"
+description = "Image generation through a credential-safe image model adapter."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+vellum-core = { path = "../../vellum-core" }
+serde_json.workspace = true
+url = "=2.5.8"
+[dev-dependencies]
+vellum-contracts = { path = "../../contracts" }
+[lints]
+workspace = true

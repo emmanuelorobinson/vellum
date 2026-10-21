@@ -49,6 +49,7 @@ const rustCrates = [
     "import-html",
     "icons",
     "images-stock",
+    "images-generate",
     "image-ops",
     "export-tokens",
     "export-html",

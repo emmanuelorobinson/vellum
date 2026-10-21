@@ -229,6 +229,7 @@
   display: none;
 }
 .vx-image-picker.vc-resource-dialog {
+  box-sizing: border-box;
   top: 100px;
   left: auto;
   right: 16px;
@@ -470,4 +471,95 @@
   padding: 8px;
   font: inherit;
   user-select: text;
+}
+
+.vx-image-generate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vx-image-generate > label:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vx-image-generate textarea {
+  box-sizing: border-box;
+  width: 100%;
+  height: 144px;
+  resize: vertical;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
+  color: var(--chrome-text);
+  font: 450 14px / 1.55 var(--font-ui);
+}
+.vx-image-picker--generate.vc-resource-dialog {
+  border: 0;
+  border-radius: 0;
+  box-shadow: -1px 0 var(--chrome-separator);
+  padding: 12px;
+  gap: 10px;
+}
+.vx-image-picker--generate .vc-resource-header {
+  margin-bottom: 0;
+}
+.vx-image-picker--generate .vc-resource-header h2 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--chrome-secondary);
+}
+.vx-image-generate .vx-muted {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.vx-image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+.vx-image-actions h3 {
+  line-height: 18px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.vx-image-actions p {
+  margin: 0;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.vx-image-picker--generate .vx-image-tabs button[aria-selected="true"] {
+  font-weight: 450;
+}
+.vx-image-generate .vx-button {
+  font-weight: 500;
+}
+
+.vx-image-picker--generate .vc-resource-header {
+  height: 13px;
+  min-height: 13px;
+}
+.vx-image-picker--generate .vc-resource-header h2 {
+  line-height: 13px;
+}
+.vx-image-generate > label:first-child {
+  line-height: 19px;
+}
+.vx-image-generate .vx-image-property > span {
+  flex: 0 0 76px;
+  color: var(--chrome-secondary);
+}
+.vx-image-generate .vx-image-property select {
+  height: 28px;
+  font: 450 12px / 15px var(--font-mono);
+  border-radius: var(--radius-xs);
+}
+.vx-image-generate .vx-muted {
+  line-height: 17px;
 }

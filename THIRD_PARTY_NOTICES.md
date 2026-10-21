@@ -75,3 +75,10 @@ Apache-2.0; Vellum states no change to them beyond the conversion above.
 `crates/adapters/import-figma-clipboard/src/kiwi.rs` is a decoder written for the Kiwi format by reading
 `kiwi-schema` 0.5.0 (MIT, github.com/evanw/kiwi), `ByteBuffer` and `decodeBinarySchema`. No code was copied or
 translated. `tests/fixtures/generate.mjs` uses that package to write the test fixtures; it is not a dependency.
+
+## Image processing dependencies (Prompt 66)
+
+`vellum-image-ops` links image 0.25.10 (MIT OR Apache-2.0), vtracer 0.6.5 (MIT OR Apache-2.0) and
+tract-onnx 0.23.9 (MIT OR Apache-2.0). They remain ordinary Cargo dependencies behind the adapter;
+no source code was copied or ported. Their dependency licence texts must accompany redistribution.
+No segmentation weights are bundled. A person must provision and review a model's licence separately.

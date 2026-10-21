@@ -65,6 +65,8 @@ deny = [
   { crate = "tungstenite", wrappers = ["vellum-sync-ws", "tokio-tungstenite", "async-tungstenite"], reason = "ADR-027 WebSocket protocol stays inside the transport adapter, including native acceptance clients" },
   { crate = "object_store", wrappers = ["vellum-assets-s3"], reason = "ADR-027 private S3 snapshot adapter only" },
   { crate = "chromiumoxide", wrappers = ["vellum-browser-cdp"], reason = "ADR-028 managed browser behind BrowserPort only" },
+  { crate = "vtracer", wrappers = ["vellum-image-ops"], reason = "ADR-029 local tracing only" },
+  { crate = "tract-onnx", wrappers = ["vellum-image-ops"], reason = "ADR-029 local segmentation only" },
   { crate = "loro", wrappers = ["vellum-doc-loro"], reason = "Loro sits behind DocStore (Invariant 5)" },
   { crate = "taffy", wrappers = ["vellum-layout-taffy"], reason = "layout goes through the LayoutEngine port" },
   { crate = "parley", wrappers = ["vellum-text-parley"], reason = "text goes through the TextEngine port" },

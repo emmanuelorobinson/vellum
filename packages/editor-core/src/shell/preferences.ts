@@ -21,6 +21,7 @@ export interface Preferences {
   "assets.iconSets": string[];
   "assets.stockProvider": string;
   "assets.imageModel": string;
+  "assets.imageProvider": string;
   /** The canvas backdrop for this document, as `#rrggbb`; `null` follows the appearance. */
   "canvas.backdrop": string | null;
   "canvas.pixelGrid": boolean;
@@ -52,6 +53,7 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   "assets.iconSets": ["lucide", "material", "phosphor", "feather"],
   "assets.stockProvider": "pixabay",
   "assets.imageModel": "default",
+  "assets.imageProvider": "none",
   "canvas.backdrop": null,
   "canvas.pixelGrid": false,
   "canvas.snapPixelGrid": true,
@@ -104,6 +106,7 @@ const checks: { [K in PreferenceKey]: (v: unknown) => string | null } = {
     Array.isArray(v) && v.every((x) => typeof x === "string") ? null : "Choose icon sets",
   "assets.stockProvider": text,
   "assets.imageModel": text,
+  "assets.imageProvider": text,
   "canvas.backdrop": (v) =>
     v === null || (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v))
       ? null

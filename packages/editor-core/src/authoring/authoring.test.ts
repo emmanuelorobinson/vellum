@@ -342,3 +342,45 @@ it("image fit edits address the picker's target even after the selection changes
 it("color controls accept the core colour shorthand and normalize valid hex", () => {
   expect(parseScriptInput({ name: "bar", kind: "color" }, "#abc")).toBe("#AABBCC");
 });
+
+it("generated images carry model metadata and closing ignores a late result", async () => {
+  const n = {
+    type: "rect",
+    id: "picture",
+    name: "Picture",
+    width: 100,
+    height: 100,
+    fills: [{ type: "solid", color: "#112233" }],
+  } as Node;
+  const document = { ...doc, pages: [{ id: "page", name: "Page", children: [n] }] };
+  const engine = new FakeEngineClient({ document, revision: 1, readOnly: false }, {
+    get: () => item(n),
+  } as never);
+  let finish!: (r: { asset: string }) => void;
+  const c = createAuthoringController({
+    engine,
+    device: "device",
+    nextNodeId: () => "new",
+    host: {
+      generateImage: () =>
+        new Promise((r) => {
+          finish = r;
+        }),
+    },
+  });
+  c.openImage("picture", "fill", 0);
+  const pending = c.generateImage("TEST DATA botanical", "configured", "fixture");
+  c.close();
+  finish({ asset: "b".repeat(64) });
+  await pending;
+  expect(engine.transactions).toHaveLength(0);
+  c.openImage("picture", "fill", 0);
+  engine.script({ document, revision: 2, readOnly: false });
+  const complete = c.generateImage("TEST DATA botanical", "configured", "fixture");
+  finish({ asset: "b".repeat(64) });
+  await complete;
+  expect(engine.transactions).toHaveLength(1);
+  expect(JSON.stringify(engine.transactions[0])).toContain(
+    '"generated":{"provider":"configured","model":"fixture"}',
+  );
+});

@@ -18,7 +18,11 @@ export function AuthoringDialogs({
 }) {
   useStore(a.subscribe);
   const s = a.state;
-  const [tab, setTab] = useState<"upload" | "stock">("upload");
+  const [tab, setTab] = useState<"upload" | "stock" | "generate">("upload");
+  const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState("");
+  const models = a.host.imageModels ?? [];
+  const chosen = models.find((m) => `${m.provider}/${m.id}` === model) ?? models[0];
   const [query, setQuery] = useState("");
   const disabled = readOnly || s.busy;
   if (!s.dialog)
@@ -106,7 +110,7 @@ export function AuthoringDialogs({
       className={`vx-image-picker vx-image-picker--${tab}`}
     >
       <div className="vx-image-tabs" role="tablist" aria-label="Image source">
-        {(["upload", "stock"] as const).map((t) => (
+        {(["upload", "stock", "generate"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -114,20 +118,57 @@ export function AuthoringDialogs({
             aria-selected={tab === t}
             onClick={() => setTab(t)}
           >
-            {t === "upload" ? "Upload" : "Stock"}
+            {t === "upload" ? "Upload" : t === "stock" ? "Stock" : "Generate"}
           </button>
         ))}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={false}
-          disabled
-          title="Image generation · v1.1"
-        >
-          Generate · v1.1
-        </button>
       </div>
-      {tab === "upload" ? (
+      {tab === "generate" ? (
+        <section className="vx-image-generate">
+          <label>
+            Describe the image
+            <textarea
+              aria-label="Describe the image"
+              value={prompt}
+              maxLength={32000}
+              disabled={disabled}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+          </label>
+          <label className="vx-image-property">
+            <span>Model</span>
+            <select
+              aria-label="Image generation model"
+              value={chosen ? `${chosen.provider}/${chosen.id}` : ""}
+              disabled={disabled || !models.length}
+              onChange={(e) => setModel(e.target.value)}
+            >
+              {!models.length ? (
+                <option value="">Configured image model</option>
+              ) : (
+                models.map((m) => (
+                  <option key={`${m.provider}/${m.id}`} value={`${m.provider}/${m.id}`}>
+                    {m.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="vx-button"
+            data-primary=""
+            disabled={disabled || !chosen || !a.host.generateImage || !prompt.trim()}
+            onClick={() => chosen && void a.generateImage(prompt, chosen.provider, chosen.id)}
+          >
+            Generate
+          </button>
+          <p className="vx-muted">
+            {a.host.generateImage && models.length
+              ? "Image generation · v1.1"
+              : "Configure an image provider and model in Settings, Assets."}
+          </p>
+        </section>
+      ) : tab === "upload" ? (
         <>
           <section
             className="vx-upload"
@@ -288,7 +329,12 @@ export function AuthoringDialogs({
           </button>
         </>
       )}
-      {s.busy ? <p role="status">Importing image…</p> : null}
+      {s.busy ? (
+        <p role="status">
+          <Icon name="loader-circle" size={16} />
+          {tab === "generate" ? "Generating image…" : "Importing image…"}
+        </p>
+      ) : null}
       {s.error ? (
         <p role="alert" className="vx-error">
           ⚠ {s.error}

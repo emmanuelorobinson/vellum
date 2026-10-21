@@ -379,3 +379,13 @@ allowlist changes. Adapter boundaries and canonical compaction epochs are in ADR
 Self-host composition uses SQLite, private disk and memory presence without a billing/account service.
 Cloud composition uses Postgres/Redis/private R2 and the existing entitlement vocabulary. No external
 reference code ported, no cloud service deployed. Current advisory failures remain recorded in reports.md.
+
+## Prompt 66 image work (2026-10-21, ADR-029)
+
+| Adapter dependency | Exact pin | Scope |
+|---|---|---|
+| image | 0.25.10 | Bounded PNG/JPEG/WebP decode and PNG encoding inside image-ops |
+| vtracer | 0.6.5 | Stable tracing API inside image-ops; deprecated transitive packages remain advisory failures |
+| tract-onnx | 0.23.9 | Stable self-contained CPU inference inside image-ops, transformers disabled |
+
+The experimental prerelease ONNX wrapper was removed. No prerelease or advisory exception was added.

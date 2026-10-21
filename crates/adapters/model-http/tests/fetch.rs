@@ -126,3 +126,80 @@ fn a_server_that_is_not_there_is_a_network_error() {
     };
     assert_eq!(get(port, "/", None, 10).err(), Some(FetchError::Network));
 }
+
+#[test]
+#[ignore = "network lane: needs a loopback TCP socket, no external service"]
+fn media_exchange_posts_json_with_header_credentials_and_bounds_redirects_and_bodies() {
+    use vellum_core::ports::{MediaHttp, MediaMethod, MediaRequest};
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        use std::io::BufRead;
+        let (stream, _) = listener.accept().unwrap();
+        let mut reader = std::io::BufReader::new(stream);
+        let mut head = String::new();
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            if line == "\r\n" {
+                break;
+            }
+            head.push_str(&line)
+        }
+        let len = head
+            .lines()
+            .find_map(|l| {
+                l.to_ascii_lowercase()
+                    .strip_prefix("content-length: ")
+                    .and_then(|s| s.parse::<usize>().ok())
+            })
+            .unwrap_or(0);
+        let mut body = vec![0; len];
+        reader.read_exact(&mut body).unwrap();
+        tx.send((head, body)).unwrap();
+        reader
+            .get_mut()
+            .write_all(&http("200 OK", "Content-Type: application/json\r\n", b"{}"))
+            .unwrap();
+    });
+    let request = MediaRequest {
+        url: format!("http://127.0.0.1:{port}/generate"),
+        method: MediaMethod::Post,
+        body: b"{\"n\":1}".to_vec(),
+        credential: Some((
+            "Authorization".into(),
+            SecretString::new("Bearer TEST_DATA_MEDIA_CANARY_66"),
+        )),
+        max_bytes: 100,
+    };
+    let response = fetcher().exchange(&request).unwrap();
+    assert_eq!(response.body, b"{}");
+    let (head, body) = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    assert!(head.starts_with("POST /generate HTTP/1.1"));
+    assert!(
+        head.to_lowercase()
+            .contains("authorization: bearer test_data_media_canary_66")
+    );
+    assert!(!head.lines().next().unwrap().contains("CANARY"));
+    assert_eq!(body, request.body);
+    let (port, _) = serve(vec![http(
+        "302 Found",
+        "Location: https://example.com/redirect\r\n",
+        b"",
+    )]);
+    let r = MediaRequest {
+        url: format!("http://127.0.0.1:{port}/"),
+        method: MediaMethod::Get,
+        body: vec![],
+        credential: None,
+        max_bytes: 2,
+    };
+    assert_eq!(fetcher().exchange(&r).unwrap().status, 302);
+    let (port, _) = serve(vec![http("200 OK", "", b"larger")]);
+    let r = MediaRequest {
+        url: format!("http://127.0.0.1:{port}/"),
+        ..r
+    };
+    assert_eq!(fetcher().exchange(&r), Err(FetchError::TooLarge));
+}

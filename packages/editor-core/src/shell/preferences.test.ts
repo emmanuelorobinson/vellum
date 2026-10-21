@@ -120,3 +120,15 @@ describe("keyboard shortcuts in settings", () => {
     expect(settings().rebind("agent.stop", "Mod+KeyP")).toEqual({ ok: false, conflicts: ["host"] });
   });
 });
+
+it("image provider settings persist a configured provider and can return to unconfigured", async () => {
+  const host = new FakePreferencesHost();
+  const p = createPreferences(host);
+  expect(p.set("assets.imageProvider", "configured")).toEqual({ ok: true });
+  expect(p.set("assets.imageModel", "fixture")).toEqual({ ok: true });
+  const again = createPreferences(host);
+  await again.load();
+  expect(again.get("assets.imageProvider")).toBe("configured");
+  again.reset("assets.imageProvider");
+  expect(again.get("assets.imageProvider")).toBe("none");
+});

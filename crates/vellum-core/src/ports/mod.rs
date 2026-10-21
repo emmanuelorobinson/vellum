@@ -21,6 +21,7 @@ mod fonts;
 mod geometry;
 mod import;
 mod layout;
+mod media;
 mod model;
 mod path;
 mod permissions;
@@ -67,6 +68,7 @@ pub use layout::{
     Dimension, DirtySet, Insets, LayoutContent, LayoutEngine, LayoutNode, LayoutResult,
     LayoutStyle, LayoutTree,
 };
+pub use media::*;
 pub use model::*;
 pub use path::{Path, PathOps, PathSegment, StrokeStyle};
 pub use permissions::{

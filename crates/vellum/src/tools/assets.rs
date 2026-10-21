@@ -427,6 +427,10 @@ struct FillInput {
     node: String,
     /// A picture file (PNG, JPEG or WEBP) in the repository. Needs the person's permission.
     path: Option<String>,
+    /// Generate an image using the provider configured in Settings, Assets.
+    prompt: Option<String>,
+    /// The image model id. Defaults to the model configured in native image settings.
+    model: Option<String>,
     /// A picture as base64 (a `data:` URL also works). Needs no permission.
     data: Option<String>,
     /// Words to find a stock picture with. The picture is downloaded into the repository, so the design never
@@ -452,11 +456,11 @@ impl Tool for FillImage {
         "fill_image"
     }
     fn version(&self) -> u32 {
-        1
+        2
     }
     fn description(&self) -> &'static str {
         "Fill a layer with a real picture: a file from the repository (`path`), a picture you hold (`data`, base64) or \
-         a stock photo found by words (`query`). The picture is stored in the repository next to the document. An \
+         a stock photo found by words (`query`), or a generated image (`prompt`, configured `model`). The picture is stored in the repository next to the document. An \
          image layer gets the new picture; any other shape gets an image fill. A stock photo's author, page and licence \
          are written to the layer's metadata. Reading a file or reaching the stock library asks the person first."
     }
@@ -476,18 +480,25 @@ impl Tool for FillImage {
             path,
             data,
             query,
+            prompt,
+            model,
             result,
             orientation,
             fit,
         } = parse_input(input)?;
-        let given = [path.is_some(), data.is_some(), query.is_some()]
-            .iter()
-            .filter(|g| **g)
-            .count();
+        let given = [
+            path.is_some(),
+            data.is_some(),
+            query.is_some(),
+            prompt.is_some(),
+        ]
+        .iter()
+        .filter(|g| **g)
+        .count();
         if given != 1 {
             return Err(ToolError::invalid(
                 "path",
-                "Give exactly one of `path`, `data` or `query`.",
+                "Give exactly one of `path`, `data`, `query` or `prompt`.",
             ));
         }
         let fit = match fit.as_deref() {
@@ -537,8 +548,33 @@ impl Tool for FillImage {
         }
 
         // Where the picture comes from.
+        let mut generated = None;
         let mut stock_note = None;
-        let (bytes, mime, attribution) = if let Some(query) = query {
+        let (bytes, mime, attribution) = if let Some(prompt) = prompt {
+            let generator = ctx.docs().image_generator().ok_or_else(|| {
+                ToolError::new(
+                    ErrorKind::Refused,
+                    "Configure an image provider in Settings, Assets.",
+                )
+            })?;
+            let model = model
+                .or_else(|| ctx.docs().image_model())
+                .filter(|m| !m.trim().is_empty())
+                .ok_or_else(|| ToolError::invalid("model", "Choose an image model."))?;
+            let outside = ctx.docs().outside().ok_or_else(|| {
+                refused_without_outside("Image generation", "Connect a permission host.")
+            })?;
+            outside.network(&ctx.origin(), generator.origin())?;
+            let r = generator
+                .generate(&vellum_core::ports::GenerateImage {
+                    prompt,
+                    model: model.clone(),
+                })
+                .map_err(|e| ToolError::new(ErrorKind::Document, e.to_string()))?;
+            picture(&r.bytes, "generated.png")?;
+            generated = Some(json!({"provider":generator.provider(),"model":model}));
+            (r.bytes, r.mime, None)
+        } else if let Some(query) = query {
             let Some(stock) = ctx.docs().stock() else {
                 return Err(ToolError::new(
                     ErrorKind::Refused,
@@ -596,6 +632,10 @@ impl Tool for FillImage {
         // The change: the layer's picture, and where the picture came from.
         let mut metadata: Map<String, Value> = target.metadata().clone().into_iter().collect();
         metadata.remove("attribution");
+        metadata.remove("generated");
+        if let Some(generated) = generated {
+            metadata.insert("generated".into(), generated);
+        }
         if let Some(a) = &attribution {
             metadata.insert("attribution".into(), attribution_json(a));
         }
@@ -638,6 +678,8 @@ struct Import;
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct ImportInputs {
+    /// A Figma design URL or file key. Token stays in SecretStore.
+    figma: Option<String>,
     /// The document. Defaults to the one opened last.
     document: Option<String>,
     /// The page or layer to import into, by id.
@@ -660,8 +702,13 @@ struct ImportInputs {
     y: Option<f64>,
 }
 
-fn importers() -> [(&'static str, &'static str, Box<dyn Importer>); 4] {
+fn importers() -> [(&'static str, &'static str, Box<dyn Importer>); 5] {
     [
+        (
+            "figma-api",
+            "figma-api",
+            Box::new(vellum_import_figma_api::FigmaImporter),
+        ),
         ("html", "html", Box::new(vellum_import_html::HtmlImporter)),
         (
             "figma",
@@ -703,13 +750,13 @@ impl Tool for Import {
         "import"
     }
     fn version(&self) -> u32 {
-        2
+        3
     }
     fn description(&self) -> &'static str {
         "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and \
          vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), \
          or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file \
-         `path` (needs the person's permission) or the content inline as `data` or `text`. Returns the new layer ids \
+         `path` (needs the person's permission) or the content inline as `data` or `text`. For a full Figma file, give figma (a design URL or key); its token stays in the OS keychain. Returns the new layer ids \
          and notes on what could not be imported. BrowserPort computed DOM snapshots use format html."
     }
     fn input_schema(&self) -> schemars::Schema {
@@ -726,6 +773,7 @@ impl Tool for Import {
     }
     fn run(&self, ctx: &mut ToolCtx<'_>, input: Value) -> Result<Value, ToolError> {
         let ImportInputs {
+            figma,
             document,
             parent,
             index,
@@ -737,6 +785,52 @@ impl Tool for Import {
             x,
             y,
         } = parse_input(input)?;
+        if let Some(figma) = figma {
+            if path.is_some() || data.is_some() || text.is_some() {
+                return Err(ToolError::invalid(
+                    "figma",
+                    "Give only the Figma URL or key.",
+                ));
+            }
+            let key = vellum_import_figma_api::file_key(&figma)
+                .map_err(|e| ToolError::invalid("figma", e.to_string()))?;
+            let (_, doc) = ctx.document(document.as_deref())?;
+            place(&doc, &parent, index, None, "parent")?;
+            let source = ctx.docs().figma().ok_or_else(|| {
+                ToolError::new(ErrorKind::Refused, "Figma import is not configured.")
+            })?;
+            let outside = ctx.docs().outside().ok_or_else(|| {
+                refused_without_outside("Figma import", "Connect a permission host.")
+            })?;
+            // Figma supplies its image URLs; the adapter restricts them to Figma's CDN/S3 and never sends the token there.
+            let origin = ctx.origin();
+            let imported = source
+                .import_file(&key, &|url| {
+                    outside
+                        .network(&origin, url)
+                        .map_err(|_| vellum_core::ports::ImageWorkError::PermissionDenied)
+                })
+                .map_err(|e| {
+                    ToolError::new(
+                        if e == vellum_core::ports::ImageWorkError::PermissionDenied {
+                            ErrorKind::Refused
+                        } else {
+                            ErrorKind::Document
+                        },
+                        e.to_string(),
+                    )
+                })?;
+            return apply_imported(
+                ctx,
+                document.as_deref(),
+                &parent,
+                index,
+                x,
+                y,
+                "figma-api",
+                imported,
+            );
+        }
         let given = [path.is_some(), data.is_some(), text.is_some()]
             .iter()
             .filter(|g| **g)
@@ -814,7 +908,11 @@ pub(super) fn apply_imported(
     }
     let mut taken = ids_in_use(&doc);
     let mut batch = Batch::default();
-    let (mut created, mut total) = (Vec::new(), 0);
+    fn frame_count(node: &vellum_types::Node) -> usize {
+        usize::from(matches!(node, vellum_types::Node::Frame(_)))
+            + node.children().iter().map(frame_count).sum::<usize>()
+    }
+    let (mut created, mut total, mut frames) = (Vec::new(), 0, 0);
     for (i, mut value) in imported.nodes.into_iter().enumerate() {
         resolve_assets(&mut value, &hashes);
         // The content sits at its own coordinates, shifted to where it was asked to go.
@@ -831,6 +929,7 @@ pub(super) fn apply_imported(
         to.index += i;
         created.push(node.id().as_str().to_owned());
         total += count(&node);
+        frames += frame_count(&node);
         batch.push(
             Op::Insert {
                 to,
@@ -843,7 +942,7 @@ pub(super) fn apply_imported(
     }
     ctx.commit(&doc_path, batch)?;
     Ok(json!({
-        "document": doc_path, "importer": importer, "created": created, "nodes": total,
+        "document": doc_path, "importer": importer, "created": created, "nodes": total, "frames":frames,
         "assets": hashes, "notes": imported.notes,
     }))
 }

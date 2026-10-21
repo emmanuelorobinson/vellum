@@ -3,7 +3,9 @@
 //! network (checked on the addresses the connection will actually use), no redirects, bounded size and time.
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
-use vellum_core::ports::{FetchError, FetchRequest, FetchResponse, HttpFetch};
+use vellum_core::ports::{
+    FetchError, FetchRequest, FetchResponse, HttpFetch, MediaHttp, MediaMethod, MediaRequest,
+};
 
 pub struct HttpFetcher {
     timeout: Duration,
@@ -140,6 +142,7 @@ async fn run(
     max_bytes: usize,
     timeout: Duration,
     loopback: bool,
+    media: Option<MediaRequest>,
 ) -> Result<FetchResponse, FetchError> {
     // Resolve here and connect to exactly the addresses that passed, so a name cannot answer differently later.
     let addrs: Vec<SocketAddr> = tokio::net::lookup_host((target.host.as_str(), target.port))
@@ -156,7 +159,27 @@ async fn run(
         .resolve_to_addrs(&target.host, &addrs)
         .build()
         .map_err(|_| FetchError::Network)?;
-    let mut response = client.get(target.url).send().await.map_err(|e| {
+    let mut builder = if media
+        .as_ref()
+        .is_some_and(|r| r.method == MediaMethod::Post)
+    {
+        client
+            .post(target.url)
+            .header("Content-Type", "application/json")
+            .body(media.as_ref().expect("present").body.clone())
+    } else {
+        client.get(target.url)
+    };
+    if let Some((name, secret)) = media.as_ref().and_then(|r| r.credential.as_ref()) {
+        if !matches!(
+            name.to_ascii_lowercase().as_str(),
+            "authorization" | "x-figma-token"
+        ) {
+            return Err(FetchError::Blocked);
+        }
+        builder = builder.header(name, secret.expose());
+    }
+    let mut response = builder.send().await.map_err(|e| {
         if e.is_timeout() {
             FetchError::Timeout
         } else {
@@ -208,9 +231,46 @@ impl HttpFetch for HttpFetcher {
         let (sender, receiver) = std::sync::mpsc::channel();
         let (max, timeout, loopback) = (request.max_bytes, self.timeout, self.loopback);
         runtime()?.spawn(async move {
-            let _ = sender.send(run(target, max, timeout, loopback).await);
+            let _ = sender.send(run(target, max, timeout, loopback, None).await);
         });
         // The task has its own timeout; this one only guards a runtime that has stopped.
+        receiver
+            .recv_timeout(self.timeout + Duration::from_secs(15))
+            .map_err(|_| FetchError::Timeout)?
+    }
+}
+
+impl MediaHttp for HttpFetcher {
+    fn exchange(&self, request: &MediaRequest) -> Result<FetchResponse, FetchError> {
+        if request.credential.as_ref().is_some_and(|(name, _)| {
+            !matches!(
+                name.to_ascii_lowercase().as_str(),
+                "authorization" | "x-figma-token"
+            )
+        }) {
+            return Err(FetchError::Blocked);
+        }
+        if request.body.len() > 128 * 1024 || request.max_bytes > 64 * 1024 * 1024 {
+            return Err(FetchError::TooLarge);
+        }
+        let target = check(
+            &FetchRequest {
+                url: request.url.clone(),
+                secret: None,
+                max_bytes: request.max_bytes,
+            },
+            self.loopback,
+        )?;
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let (max, timeout, loopback) = (request.max_bytes, self.timeout, self.loopback);
+        let request = request.clone();
+        runtime()?.spawn(async move {
+            let result =
+                tokio::time::timeout(timeout, run(target, max, timeout, loopback, Some(request)))
+                    .await
+                    .unwrap_or(Err(FetchError::Timeout));
+            let _ = sender.send(result);
+        });
         receiver
             .recv_timeout(self.timeout + Duration::from_secs(15))
             .map_err(|_| FetchError::Timeout)?

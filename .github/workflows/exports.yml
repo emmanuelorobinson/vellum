@@ -28,6 +28,8 @@ jobs:
           chrome-version: 155.0.8059.39
           install-dependencies: true
       - run: node scripts/skia-build.mjs test --locked -p vellum --test exports -p vellum-export-html -p vellum-export-raster
+      - name: Attributed image generation, removal, tracing and REST import
+        run: node scripts/skia-build.mjs test --locked -p vellum --test image_work
       - name: Native Git merge-driver and before/after PNG acceptance (Git on PATH, no account)
         run: node scripts/skia-build.mjs test --locked -p vellum --test git_preview
       - name: Native CLI, local model and export acceptance (no account)

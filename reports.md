@@ -8,6 +8,14 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 66 needs native, provider and visual acceptance.** Attach Prompt 55's writable runtime and
+  person-origin image/Figma callbacks; the desktop remains explicitly read-only. Provision a reviewed local
+  segmentation model and real Figma/image-provider keychain entries, then test live providers, production
+  segmentation quality/performance and Stop responsiveness during synchronous work. All six C30/C31
+  comparisons fail the unchanged 1% gate (3.06–12.30%). Stable vtracer adds deprecated adler/ansi_term/atty
+  advisory failures; no exception was added. Run remote CI and Windows/Linux lanes. See
+  `docs/runbooks/image-work.md`, ADR-029 and `target/screen-goldens/p66-*`.
+
 - **Prompt 65 needs native/editor and visual acceptance.** Connect Prompt 55's writable runtime and
   person-origin import callbacks; desktop import writes are explicitly disabled meanwhile. Native Electron
   capture/live-session acceptance timed out; run its bounded Electron lane and Windows/Linux/remote CI.
@@ -4213,3 +4221,84 @@ Exact passing commands (development telemetry disabled):
 Not passing: `cargo deny check`, `pnpm tokens:lint`, the two C31 embed goldens in
 `pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts browser.spec.ts --workers=1`,
 and `node apps/desktop/test/browser-native.mjs`. These are not accepted release evidence.
+
+## Prompt 66
+
+Figma REST and image-ops shells confirmed by failing tests. Design opener could not find Pen; the owner
+explicitly authorized read-only inspection of the currently open design. Queried C30-generate, C30-edit and
+C31-figma without mutations/saves. Initial sandbox dependency fetch could not resolve crates.io; retrying
+with network access. No sibling importer/image-processing implementation found in clarum, dubid, cutesycal,
+outpost or rea-work (excluded extracted/vendor material). No reference code is being ported.
+
+
+Built the Figma REST importer with per-origin broker authorization, SecretStore header tokens and local
+image-fill storage; ImageOps with bounded image decoding, local ONNX inference through stable tract and
+vtracer tracing; a configurable GPT Image-compatible image generator; generated provider/model metadata;
+one attributed undoable Op transaction per import/image operation. Trace preserves id, fixed size and
+placement and reports crop/decorations lost. No proprietary .fig parser, format change or new document store.
+
+Added C30 Generate/image actions, C31 progress/report and unavailable native entry, C25 provider/model and
+keychain host controls, framework-independent cancellation, native public-settings/stdin-to-keychain CLI,
+fakes/contracts, native inference/HTTP/CLI tests, CI lanes, ADR-029, dependency notices and the runbook.
+The installed editor is still read-only: no native authoring callback or settings/keychain GUI is claimed
+as attached. All live writes are provided by the daemon/CLI; native integration awaits Prompt 55.
+
+TDD: importer/ops/provider/controller tests failed on the missing implementation; cancellation failed
+before its token was implemented. Fixed invalid fixture setup, model-output scaling, inherited fixture
+fonts/portal, missing HTML language, an HTTP Clippy item-order error and the no-DOM core signal type.
+The intended additive MCP schema change failed its snapshot test; regenerated and reviewed it. Native
+inference first passed with an experimental prerelease wrapper; that dependency was removed in favor of
+stable tract to retain the no-prerelease rule. The final Rust inference fixture passes. Source-built Skia
+links with an __eh_frame size warning in this large debug binary; production binary performance is unverified.
+
+Validation commands and outstanding checks are recorded below; no test tolerance, specification checksum,
+reference snapshot, existing advisory rule or unrelated fixture was changed. No commit or deployment made.
+
+
+Passed (Node 24/pnpm 12 via `/private/tmp/vellum-p56-bin`, Rust 1.99, macOS ARM64; telemetry opt-outs):
+
+- `pnpm type-check` (33 tasks, rerun on final lockfile); scoped `type-check` for editor-core/editor-react/desktop.
+- `pnpm --filter @vellum/editor-core test` (2,379); `pnpm --filter @vellum/editor-react --filter @vellum/desktop test`
+  (312 React, 29 desktop unit tests, three packaging checks). Final focused controller/preference checks pass.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum --test image_work --test asset_tools --test browser_tools --test mcp --test tools --test sessions -p vellum-testkit --test canary`
+  (93 tests, including four image/REST/native CLI tests, 23 MCP tests, six sessions and the canary test).
+- `CARGO_TARGET_DIR=target/prompt66 cargo test --offline -p vellum-import-figma-api -p vellum-images-generate -p vellum-image-ops --lib --tests`;
+  final `cargo test --offline -p vellum-images-generate --test provider --test smoke -p vellum-import-figma-api --test rest -p vellum-contracts --test media`.
+  Shared contracts/fakes, REST loss/schema/assets/auth cases and provider failures pass; the ordinary lane
+  explicitly skips the native-model test without its fixture variable.
+- `/private/tmp/vellum-p66-onnx/bin/python scripts/image-model-fixture.py target/image-model-fixture/segmentation.onnx`;
+  `VELLUM_TEST_ONNX_MODEL="$PWD/target/image-model-fixture/segmentation.onnx" CARGO_TARGET_DIR=target/prompt66 cargo test --offline -p vellum-image-ops --test local -- --include-ignored`
+  (three pass on final image 0.25.10/tract 0.23.9; no production weights or external inference service).
+- `CARGO_TARGET_DIR=target/prompt66 cargo test --offline -p vellum-model-http --test fetch -- --include-ignored`
+  (seven real loopback tests: JSON POST/header credential, response cap, no redirects, existing GET rules).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum -p vellum-image-ops -p vellum-images-generate -p vellum-import-figma-api -p vellum-model-http -p vellum-core -p vellum-contracts --all-targets -- -D warnings`.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/types-gen.mjs --check` (146 types);
+  `pnpm deps:check` (Rust pure allowlist, bans/licences/sources, 644 TS modules/1,756 edges);
+  scoped `pnpm exec biome check` (20 files, warnings only); `cargo fmt --all --check`;
+  `node --test scripts/__tests__/repo-layout.test.mjs`; `node scripts/copy-lint.mjs`;
+  `bash scripts/check-clean-room.sh`; `actionlint .github/workflows/image-work.yml .github/workflows/exports.yml`;
+  `node scripts/spec-checksums.mjs check`; `git diff --check`.
+
+Not passing / unverified:
+
+- `pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts images.spec.ts --workers=1`:
+  two behavior tests pass; all six unchanged-1% goldens fail. Generate: 3.227% light / 3.061% dark;
+  image-action heading: 12.296% / 10.805%; Figma report title: 11.214% / 9.302%. Dimensions match
+  queried design bounds (Generate 344 x 351); the report title intentionally identifies the REST source.
+  Screenshots/measurements remain in `target/screen-goldens/p66-*`; full-frame artwork is not claimed as compared.
+- `cargo deny check`: advisories fail, bans/licences/sources pass. Stable vtracer adds deprecated
+  adler/ansi_term/atty to the existing advisory failures; no allowlist or prerelease exception was added.
+- Global `pnpm exec biome check .`: seven pre-existing errors (two import orders, two agent fixture formats,
+  three browser fixture font fallbacks). The new fixture's missing language was fixed; scoped files pass.
+  `node scripts/token-lint.mjs` retains 12 exported inverse-text contrast failures. The combined repo-layout/
+  version-baseline suite fails only on the existing `postject@1.0.0-alpha.6` pin; Cargo has no prerelease.
+- Initial sandbox fetch/listen/advisory-lock attempts failed; authorized network/loopback retries passed.
+  One browser rerun's automatic approval review timed out, then its permitted retry ran. Initial Clippy,
+  DOM-signal typecheck, portal fixture and schema snapshot failures were corrected, not suppressed.
+- Native editor imports/image writes and settings/keychain GUI attachment, live Figma/GPT Image requests,
+  real keychain writes, production-model quality/performance, Stop latency, remote CI and Windows/Linux
+  acceptance remain open. No full GPU/workspace/installed-host release acceptance is claimed.
+
+Stopped the temporary Vite server and closed the inspection browser. Moved browser inspection logs under
+`target/prompt66-browser-inspection/`; generated model/comparison/build artifacts and the isolated Python
+test environment remain in target and /private/tmp. No real credential or existing external service changed.

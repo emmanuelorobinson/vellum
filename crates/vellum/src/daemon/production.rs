@@ -397,6 +397,7 @@ pub fn documents(state: &Path) -> std::io::Result<Documents> {
         watcher,
         Recovery::new(Arc::new(StdFs::new(recovery)), codec, content_hash),
     );
+    crate::asset_settings::attach(&mut docs, state)?;
     docs.set_browser(Rc::new(vellum_browser_cdp::ChromiumBrowser {
         executable: std::env::var_os("VELLUM_CHROME").map(PathBuf::from),
     }));

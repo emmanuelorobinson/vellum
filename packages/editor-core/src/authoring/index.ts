@@ -75,6 +75,18 @@ export interface AuthoringHost {
     page: number,
   ): Promise<{ photos: readonly StockPhoto[]; total: number }>;
   importStock?(photo: StockPhoto): Promise<ImportedPicture>;
+  imageModels?: readonly { provider: string; id: string; name: string }[];
+  generateImage?(request: {
+    prompt: string;
+    provider: string;
+    model: string;
+  }): Promise<ImportedPicture>;
+  /** Host computes pixels and applies one person-origin transaction after checking expectedRevision. */
+  processImage?(request: {
+    address: string;
+    action: "remove_background" | "trace";
+    expectedRevision: number;
+  }): Promise<void>;
 }
 export function scriptView(
   snapshot: ScriptSnapshot | undefined,
@@ -506,26 +518,44 @@ export function createAuthoringController(deps: {
         if (!disposed && t === searchTicket) change({ searching: false });
       }
     },
-    async importImage(source: "choose" | "upload" | "stock", file?: unknown) {
+    async processImage(address: string, action: "remove_background" | "trace") {
+      if (!host.processImage) return;
+      await run(async () => {
+        writable();
+        await host.processImage!({ address, action, expectedRevision: engine.snapshot().revision });
+      });
+    },
+    generateImage(prompt: string, provider: string, model: string) {
+      if (!prompt.trim() || prompt.length > 32000 || !provider || !model) {
+        change({ error: "Describe the image and choose a configured model" });
+        return Promise.resolve();
+      }
+      return c.importImage("generate", { prompt, provider, model });
+    },
+    async importImage(source: "choose" | "upload" | "stock" | "generate", file?: unknown) {
       const target = state.image;
       if (!target) return;
       const photo = state.photos.find((p) => p.id === state.selected);
       if (
         (source === "choose" && !host.chooseImage) ||
         (source === "upload" && !host.uploadImage) ||
-        (source === "stock" && (!host.importStock || !photo))
+        (source === "stock" && (!host.importStock || !photo)) ||
+        (source === "generate" && !host.generateImage)
       )
         return;
       await run(async () => {
         writable();
         const rev = engine.snapshot().revision,
           t = ticket;
+        const request = file as { prompt: string; provider: string; model: string };
         const result =
-          source === "choose"
-            ? await host.chooseImage!()
-            : source === "upload"
-              ? await host.uploadImage!(file)
-              : await host.importStock!(photo!);
+          source === "generate"
+            ? await host.generateImage!(request)
+            : source === "choose"
+              ? await host.chooseImage!()
+              : source === "upload"
+                ? await host.uploadImage!(file)
+                : await host.importStock!(photo!);
         if (!result || disposed || ticket !== t) return;
         if (engine.snapshot().revision !== rev) throw Error("The document changed; try again");
         if (!/^[a-f\d]{64}$/.test(result.asset))
@@ -553,6 +583,9 @@ export function createAuthoringController(deps: {
               ...n.metadata,
             };
             delete metadata.attribution;
+            delete metadata.generated;
+            if (source === "generate")
+              metadata.generated = { provider: request.provider, model: request.model };
             if (result.attribution) metadata.attribution = { ...result.attribution };
             return {
               ...(target.scope === "fill"

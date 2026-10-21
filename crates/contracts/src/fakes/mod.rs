@@ -51,3 +51,7 @@ pub mod sync;
 
 mod browser;
 pub use browser::MemoryBrowser;
+mod media;
+pub use media::{
+    MemoryFigma, MemoryGenerator, MemoryImageOps, MemoryMediaHttp, MemorySegmentation,
+};

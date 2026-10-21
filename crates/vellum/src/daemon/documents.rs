@@ -155,6 +155,10 @@ pub struct Documents {
     /// Where `fill_image` finds stock pictures, when a key is set up.
     stock: Option<Rc<dyn vellum_core::ports::ImageSource>>,
     browser: Option<Rc<dyn vellum_core::ports::BrowserPort>>,
+    figma: Option<Rc<dyn vellum_core::ports::FigmaSource>>,
+    image_ops: Option<Rc<dyn vellum_core::ports::ImageOps>>,
+    image_generator: Option<Rc<dyn vellum_core::ports::ImageGenerator>>,
+    image_model: Option<String>,
 }
 
 /// An external client's `spawn_agents` call, for the host that runs helper agents.
@@ -217,7 +221,48 @@ impl Documents {
             outside: None,
             stock: None,
             browser: None,
+            figma: None,
+            image_ops: None,
+            image_generator: None,
+            image_model: None,
         }
+    }
+
+    pub fn set_figma(&mut self, value: Rc<dyn vellum_core::ports::FigmaSource>) {
+        self.figma = Some(value);
+    }
+    pub fn figma(&self) -> Option<Rc<dyn vellum_core::ports::FigmaSource>> {
+        self.figma.clone()
+    }
+    pub fn set_image_ops(&mut self, value: Rc<dyn vellum_core::ports::ImageOps>) {
+        self.image_ops = Some(value);
+    }
+    pub fn image_ops(&self) -> Option<Rc<dyn vellum_core::ports::ImageOps>> {
+        self.image_ops.clone()
+    }
+    pub fn set_image_model(&mut self, model: String) {
+        self.image_model = Some(model);
+    }
+    pub fn image_model(&self) -> Option<String> {
+        self.image_model.clone()
+    }
+    pub fn set_image_generator(&mut self, value: Rc<dyn vellum_core::ports::ImageGenerator>) {
+        self.image_generator = Some(value);
+    }
+    pub fn image_generator(&self) -> Option<Rc<dyn vellum_core::ports::ImageGenerator>> {
+        self.image_generator.clone()
+    }
+    pub fn get_asset(
+        &self,
+        path: &str,
+        hash: &vellum_core::ports::AssetHash,
+    ) -> Result<Vec<u8>, TargetError> {
+        use vellum_core::ports::AssetStore;
+        let unavailable = |e: String| TargetError::File(FileError::Fs(FsError::Unavailable(e)));
+        let (fs, inner) = (self.env.locate)(path).map_err(FileError::Fs)?;
+        let store = vellum_assets_fs::FsAssets::new(fs, vellum_assets_fs::assets_dir_for(&inner))
+            .map_err(|e| unavailable(e.to_string()))?;
+        store.get(hash).map_err(|e| unavailable(e.to_string()))
     }
 
     /// Composition-owned browser, never chosen by tool input.

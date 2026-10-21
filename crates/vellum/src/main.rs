@@ -18,6 +18,22 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Configure non-secret image settings; restart the daemon after changing them.
+    AssetSettings {
+        #[arg(long)]
+        provider: Option<String>,
+        #[arg(long)]
+        endpoint: Option<String>,
+        #[arg(long)]
+        model: Option<String>,
+        #[arg(long)]
+        segmentation_model: Option<std::path::PathBuf>,
+    },
+    /// Read a Figma or image-provider key from stdin and save it only in the OS keychain.
+    AssetKey {
+        #[arg()]
+        kind: String,
+    },
     /// Native editor sync bridge. --key names an OS-keychain entry, never a credential value.
     Sync {
         #[arg(long)]
@@ -87,6 +103,50 @@ fn execute(cli: Cli) -> std::io::Result<ExitCode> {
         .unwrap_or_else(|| dir.path().to_path_buf());
     let out = vellum::cli::commands::Output { json: cli.json };
     match cli.command {
+        Command::AssetSettings {
+            provider,
+            endpoint,
+            model,
+            segmentation_model,
+        } => {
+            let mut settings = vellum::asset_settings::AssetSettings::load(&state)?;
+            if provider.is_some() || endpoint.is_some() || model.is_some() {
+                settings.provider = provider;
+                settings.endpoint = endpoint;
+                settings.model = model;
+            }
+            if segmentation_model.is_some() {
+                settings.segmentation_model = segmentation_model;
+            }
+            settings.save(&state)?;
+            out.result(
+                "asset settings",
+                serde_json::to_value(settings)?,
+                "Image settings saved. Restart the daemon to apply them.",
+            )?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::AssetKey { kind } => {
+            use std::io::{IsTerminal, Read};
+            if std::io::stdin().is_terminal() {
+                return Err(std::io::Error::other(
+                    "Pipe the credential from a secret manager. Terminal input is disabled so the key is not echoed.",
+                ));
+            }
+            let mut input = String::new();
+            std::io::stdin().take(4098).read_to_string(&mut input)?;
+            vellum::asset_settings::save_key(
+                &vellum_secrets_keyring::Keychain::new(brand::KEYCHAIN_SERVICE),
+                &kind,
+                &input,
+            )?;
+            out.result(
+                "asset key",
+                serde_json::json!({"stored":true}),
+                "Key stored in the OS keychain.",
+            )?;
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Sync { .. } => unreachable!("sync returns before daemon setup"),
         Command::User(command) => vellum::cli::commands::run(command, &dir, &out).map(|ok| {
             if ok {

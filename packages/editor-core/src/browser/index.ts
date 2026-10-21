@@ -147,3 +147,5 @@ export function embedRequest(
     scroll: [node.scroll?.x ?? 0, node.scroll?.y ?? 0],
   });
 }
+
+export * from "./figma";

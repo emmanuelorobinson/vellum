@@ -1,0 +1,35 @@
+name: Image work
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+jobs:
+  local-model:
+    name: REST fixtures, stable tracing and local ONNX inference
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: python -m pip install onnx==1.19.1
+      - run: python scripts/image-model-fixture.py target/image-model-fixture/segmentation.onnx
+      - run: cargo test --locked -p vellum-import-figma-api -p vellum-images-generate -p vellum-image-ops --lib --tests
+      - name: Native inference fixture (no model download, no GPU)
+        run: VELLUM_TEST_ONNX_MODEL="$PWD/target/image-model-fixture/segmentation.onnx" cargo test --locked -p vellum-image-ops --test local native_onnx_inference -- --ignored
+      - run: cargo test --locked -p vellum-contracts --test media
+      - run: cargo clippy --locked -p vellum-image-ops -p vellum-import-figma-api -p vellum-images-generate --all-targets -- -D warnings
+      - name: Specification intact
+        if: always()
+        run: node scripts/spec-checksums.mjs check

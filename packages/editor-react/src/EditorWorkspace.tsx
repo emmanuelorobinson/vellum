@@ -54,6 +54,7 @@ import { InlinePrompt, type ScreenRect, SelectionToolbar } from "./agent/InlineP
 import { PresenceLayer } from "./agent/PresenceLayer";
 import { AuthoringDialogs } from "./authoring/AuthoringDialogs";
 import { CanvasAuthoring } from "./authoring/CanvasAuthoring";
+import { ImageActions } from "./authoring/ImageActions";
 import { EmbedProperties } from "./browser/BrowserImport";
 import { CanvasEmbeds } from "./browser/CanvasEmbeds";
 import { CanvasHost, type ContentSource, type RendererFactory } from "./canvas/CanvasHost";
@@ -989,14 +990,28 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                     ) : session.state.mode.type === "path" ? (
                       <VectorPanel session={session} design={props.design} disabled={readOnly} />
                     ) : (
-                      <DesignTab
-                        design={props.design}
-                        session={session}
-                        paintEditor={props.paintEditor}
-                        document={doc}
-                        readOnly={readOnly}
-                        host={designHost}
-                      />
+                      <>
+                        {props.authoring &&
+                        inspected &&
+                        selectedLibrary &&
+                        (selectedLibrary.type === "image" ||
+                          ("fills" in selectedLibrary &&
+                            selectedLibrary.fills?.some((p) => p.type === "image"))) ? (
+                          <ImageActions
+                            authoring={props.authoring}
+                            address={inspected}
+                            disabled={readOnly}
+                          />
+                        ) : null}
+                        <DesignTab
+                          design={props.design}
+                          session={session}
+                          paintEditor={props.paintEditor}
+                          document={doc}
+                          readOnly={readOnly}
+                          host={designHost}
+                        />
+                      </>
                     )
                   }
                   {...(props.ledger?.inspect

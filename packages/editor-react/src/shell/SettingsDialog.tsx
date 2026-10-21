@@ -17,6 +17,15 @@ import "./shell.css";
 
 /** What only the host can do for Settings. */
 export interface SettingsHost {
+  imageProviders?: readonly {
+    id: string;
+    name: string;
+    models: readonly { id: string; name: string }[];
+  }[];
+  imageKeySet?: boolean;
+  changeImageKey?(): void;
+  figmaKeySet?: boolean;
+  changeFigmaKey?(): void;
   /** Stock image providers the host has configured. */
   stockProviders?: readonly { id: string; name: string }[];
   /** A stock provider key is in the keychain. The key itself never comes here. */
@@ -632,13 +641,52 @@ export function SettingsDialog({
                     </button>
                   </span>
                 </Row>
+                <Row label="Image generation provider">
+                  <Select
+                    label="Image generation provider"
+                    value={p["assets.imageProvider"]}
+                    disabled={!host.imageProviders?.length}
+                    options={
+                      host.imageProviders?.map((v) => [v.id, v.name] as const) ?? [
+                        ["none", "Not configured"],
+                      ]
+                    }
+                    onChange={(v) => set("assets.imageProvider", v)}
+                  />
+                </Row>
+                <Row label="Image provider key" note={copy.keyStorage}>
+                  <button
+                    type="button"
+                    className="vs-link"
+                    disabled={!host.changeImageKey}
+                    onClick={() => host.changeImageKey?.()}
+                  >
+                    {host.imageKeySet ? "Change" : "Add key"}
+                  </button>
+                </Row>
+                <Row label="Figma token" note={copy.keyStorage}>
+                  <button
+                    type="button"
+                    className="vs-link"
+                    disabled={!host.changeFigmaKey}
+                    onClick={() => host.changeFigmaKey?.()}
+                  >
+                    {host.figmaKeySet ? "Change" : "Add key"}
+                  </button>
+                </Row>
                 <Row label="Image generation model">
                   <Select
                     label="Image generation model"
-                    value="default"
-                    disabled
-                    options={[["default", "Default"]]}
-                    onChange={() => {}}
+                    value={p["assets.imageModel"]}
+                    disabled={!host.imageProviders?.some((v) => v.id === p["assets.imageProvider"])}
+                    options={
+                      host.imageProviders
+                        ?.find((v) => v.id === p["assets.imageProvider"])
+                        ?.models.map((v) => [v.id, v.name] as const) ?? [
+                        ["default", "Configured image model"],
+                      ]
+                    }
+                    onChange={(v) => set("assets.imageModel", v)}
                   />
                 </Row>
               </Section>

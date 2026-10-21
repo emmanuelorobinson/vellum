@@ -494,14 +494,14 @@
     },
     {
       "_meta": {
-        "vellum/version": 1
+        "vellum/version": 2
       },
       "annotations": {
         "destructiveHint": true,
         "openWorldHint": false,
         "readOnlyHint": false
       },
-      "description": "Fill a layer with a real picture: a file from the repository (`path`), a picture you hold (`data`, base64) or a stock photo found by words (`query`). The picture is stored in the repository next to the document. An image layer gets the new picture; any other shape gets an image fill. A stock photo's author, page and licence are written to the layer's metadata. Reading a file or reaching the stock library asks the person first.",
+      "description": "Fill a layer with a real picture: a file from the repository (`path`), a picture you hold (`data`, base64) or a stock photo found by words (`query`), or a generated image (`prompt`, configured `model`). The picture is stored in the repository next to the document. An image layer gets the new picture; any other shape gets an image fill. A stock photo's author, page and licence are written to the layer's metadata. Reading a file or reaching the stock library asks the person first.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -518,6 +518,10 @@
             "description": "How the picture fills the layer: \"fill\" (cover, the default), \"fit\" (contain) or \"stretch\".",
             "type": "string"
           },
+          "model": {
+            "description": "The image model id. Defaults to the model configured in native image settings.",
+            "type": "string"
+          },
           "node": {
             "description": "The layer to fill: an image layer, or a frame, rectangle, ellipse or other shape.",
             "type": "string"
@@ -528,6 +532,10 @@
           },
           "path": {
             "description": "A picture file (PNG, JPEG or WEBP) in the repository. Needs the person's permission.",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "Generate an image using the provider configured in Settings, Assets.",
             "type": "string"
           },
           "query": {
@@ -843,14 +851,51 @@
     },
     {
       "_meta": {
-        "vellum/version": 2
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Remove an image background using the configured local ONNX model, or trace flat artwork into editable vectors with vtracer. Uses the selected image layer or a shape with one image fill, preserves its id and placement, and commits one undoable attributed transaction. No network or automatic model downloads.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "remove_background",
+              "trace"
+            ],
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "node",
+          "action"
+        ],
+        "title": "Input",
+        "type": "object"
+      },
+      "name": "image_ops"
+    },
+    {
+      "_meta": {
+        "vellum/version": 3
       },
       "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": false
       },
-      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. Returns the new layer ids and notes on what could not be imported. BrowserPort computed DOM snapshots use format html.",
+      "description": "Bring existing content onto the canvas as editable layers: an SVG (shapes become rectangles, ellipses and vectors, text becomes text), a PNG, JPEG or WEBP picture (an image layer, the file stored in the repository), or layers copied from Figma (pass the clipboard HTML as `text`; pictures do not come across). Give a file `path` (needs the person's permission) or the content inline as `data` or `text`. For a full Figma file, give figma (a design URL or key); its token stays in the OS keychain. Returns the new layer ids and notes on what could not be imported. BrowserPort computed DOM snapshots use format html.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -861,6 +906,10 @@
           },
           "document": {
             "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "figma": {
+            "description": "A Figma design URL or file key. Token stays in SecretStore.",
             "type": "string"
           },
           "format": {

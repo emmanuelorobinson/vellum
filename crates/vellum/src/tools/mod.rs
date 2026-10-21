@@ -14,6 +14,7 @@ mod context;
 mod coordinate;
 mod execute;
 mod export;
+mod image_work;
 mod library;
 mod model;
 mod nodes;
@@ -565,6 +566,7 @@ impl Registry {
         scene::register(&mut tools);
         export::register(&mut tools);
         browser::register(&mut tools);
+        image_work::register(&mut tools);
         library::register(&mut tools);
         write::register(&mut tools);
         model::register(&mut tools);
@@ -597,7 +599,11 @@ impl Registry {
                 let started = ctx.docs.now().0;
                 ctx.introduce();
                 ctx.note = StepNote::default();
-                let arguments = if name == "browser" {
+                let arguments = if matches!(name, "import" | "fill_image") {
+                    step::preview(
+                        &serde_json::json!({"document":input.get("document"),"node":input.get("node"),"parent":input.get("parent")}),
+                    )
+                } else if name == "browser" {
                     step::preview(&browser::history_input(&input))
                 } else {
                     step::preview(&input)

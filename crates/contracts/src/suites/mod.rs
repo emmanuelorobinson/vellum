@@ -33,3 +33,4 @@ pub mod export;
 pub mod sync;
 
 pub mod browser;
+pub mod media;

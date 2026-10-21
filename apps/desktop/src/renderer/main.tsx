@@ -3,9 +3,15 @@ import {
   createCommandController,
   createEditorHandlers,
   createEditorSession,
+  createFigmaImport,
   createWorkspace,
 } from "@vellum/editor-core";
-import { BrowserImportPanel, EditorWorkspace, ShareDialog } from "@vellum/editor-react";
+import {
+  BrowserImportPanel,
+  EditorWorkspace,
+  FigmaImportPanel,
+  ShareDialog,
+} from "@vellum/editor-react";
 import type { EngineClient, EngineSnapshot } from "@vellum/engine-client";
 import { type SharePort, shareState } from "@vellum/host-api";
 import { createElectronHost } from "@vellum/host-electron";
@@ -77,6 +83,8 @@ let services: ReturnType<typeof createBridgeServices> | undefined;
 
 function App() {
   const [importing, setImporting] = useState(false);
+  const [importKind, setImportKind] = useState<"browser" | "figma">("browser");
+  const figmaImport = useRef(createFigmaImport({}));
   const browserImport = useRef(createBrowserImport({ browser: createDesktopBrowser(bridge) }));
   const [sharing, setSharing] = useState(false);
   const sharePorts = useRef(new Map<string, SharePort>());
@@ -162,11 +170,36 @@ function App() {
     >
       {importing ? (
         <div className="desktop-browser-panel">
-          <BrowserImportPanel
-            controller={browserImport.current}
-            readOnly
-            onClose={() => setImporting(false)}
-          />
+          <nav aria-label="Import source">
+            <button
+              type="button"
+              onClick={() => setImportKind("browser")}
+              aria-pressed={importKind === "browser"}
+            >
+              Website
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportKind("figma")}
+              aria-pressed={importKind === "figma"}
+            >
+              Figma
+            </button>
+          </nav>
+          {importKind === "browser" ? (
+            <BrowserImportPanel
+              controller={browserImport.current}
+              readOnly
+              onClose={() => setImporting(false)}
+            />
+          ) : (
+            <>
+              <FigmaImportPanel controller={figmaImport.current} readOnly />
+              <button type="button" onClick={() => setImporting(false)}>
+                Close import
+              </button>
+            </>
+          )}
         </div>
       ) : null}
       <EditorWorkspace

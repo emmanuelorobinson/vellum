@@ -14,6 +14,9 @@ name = "vellum"
 path = "src/main.rs"
 
 [dependencies]
+vellum-image-ops = { path = "../adapters/image-ops" }
+vellum-images-generate = { path = "../adapters/images-generate" }
+vellum-import-figma-api = { path = "../adapters/import-figma-api" }
 vellum-browser-cdp = { path = "../adapters/browser-cdp" }
 vellum-import-html = { path = "../adapters/import-html" }
 vellum-account-http = { path = "../adapters/account-http" }
