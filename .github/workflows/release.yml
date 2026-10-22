@@ -1,0 +1,289 @@
+name: Release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: vellum-release
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+  VELLUM_SKIA_FROM_SOURCE: '1'
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Stable version tag on reviewed main history
+        id: identity
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          echo "version=$(node scripts/release.mjs identity)" >> "$GITHUB_OUTPUT"
+      - name: All sixteen blockers false, every required job passed for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p target/release-evidence
+          node scripts/release.mjs gate > target/release-evidence/candidate.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: candidate-evidence
+          path: target/release-evidence/candidate.json
+  module:
+    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.6
+      - name: Fresh source-only renderer (no binary cache restored)
+        env:
+          CARGO_TARGET_DIR: target/release-wasm-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/skia-build.mjs build --locked --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten
+      - run: node scripts/spec-checksums.mjs check
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: packages/renderer-skia/dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-renderer-module
+          path: packages/renderer-skia/dist/
+          if-no-files-found: error
+  native:
+    needs: [gate, module]
+    environment: release-signing
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: darwin-arm64, platform: darwin, arch: arm64, runner: macOS, cpu: ARM64, triple: aarch64-apple-darwin, exe: vellum }
+          - { target: darwin-x64, platform: darwin, arch: x64, runner: macOS, cpu: X64, triple: x86_64-apple-darwin, exe: vellum }
+          - { target: win32-x64, platform: win32, arch: x64, runner: Windows, cpu: X64, triple: x86_64-pc-windows-msvc, exe: vellum.exe }
+          - { target: win32-arm64, platform: win32, arch: arm64, runner: Windows, cpu: ARM64, triple: aarch64-pc-windows-msvc, exe: vellum.exe }
+          - { target: linux-x64, platform: linux, arch: x64, runner: Linux, cpu: X64, triple: x86_64-unknown-linux-gnu, exe: vellum }
+          - { target: linux-arm64, platform: linux, arch: arm64, runner: Linux, cpu: ARM64, triple: aarch64-unknown-linux-gnu, exe: vellum }
+    # Ephemeral native signing runners; OS keychain identities and build tools are provisioned by the owner.
+    runs-on: [self-hosted, vellum-release, '${{ matrix.runner }}', '${{ matrix.cpu }}']
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_VERSION: ${{ needs.gate.outputs.version }}
+      RELEASE_TARGET: ${{ matrix.target }}
+      RELEASE_BINARY: target/release-source-${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.triple }}/release/${{ matrix.exe }}
+      CARGO_TARGET_DIR: target/release-source-${{ github.run_id }}-${{ github.run_attempt }}
+      CSC_NAME: ${{ vars.VELLUM_MAC_SIGNING_IDENTITY }}
+      APPLE_KEYCHAIN_PROFILE: ${{ vars.VELLUM_NOTARY_PROFILE }}
+      VELLUM_WINDOWS_CERT_SHA1: ${{ vars.VELLUM_WINDOWS_CERT_SHA1 }}
+      VELLUM_TIMESTAMP_URL: ${{ vars.VELLUM_TIMESTAMP_URL }}
+      VELLUM_WINDOWS_PUBLISHER: ${{ vars.VELLUM_WINDOWS_PUBLISHER }}
+      VELLUM_UPDATE_URL: ${{ vars.VELLUM_UPDATE_URL }}${{ matrix.target }}/
+      VELLUM_UPDATE_PUBLIC_KEY_FILE: ${{ github.workspace }}/target/release-public.pem
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: rustup toolchain install
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-renderer-module
+          path: packages/renderer-skia/dist/
+      - name: Verify source identity of the shared module before packaging
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for file in packages/renderer-skia/dist/*; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --signer-digest "$GITHUB_SHA"
+          done
+      - name: Fresh source-only CLI and daemon
+        run: node scripts/skia-build.mjs build --locked --release -p vellum --bin vellum --target ${{ matrix.triple }}
+      - name: Sign and verify the native CLI; notarize macOS through the OS keychain
+        run: node scripts/release-native.mjs sign "$RELEASE_VERSION" "$RELEASE_TARGET" "$RELEASE_BINARY"
+      - name: Platform VSIX with the signed daemon
+        run: node apps/extension/packaging.mjs package "$RELEASE_TARGET" "$RELEASE_BINARY" "$GITHUB_WORKSPACE/target/release-native/$RELEASE_TARGET/vellum-$RELEASE_VERSION-$RELEASE_TARGET.vsix"
+      - name: Install the public update trust root
+        env:
+          RELEASE_PUBLIC_KEY: ${{ vars.VELLUM_RELEASE_PUBLIC_KEY }}
+        run: node -e 'require("fs").writeFileSync(process.env.VELLUM_UPDATE_PUBLIC_KEY_FILE, process.env.RELEASE_PUBLIC_KEY)'
+      - name: Signed Electron installers (macOS notarization, Windows publisher validation)
+        env:
+          VELLUM_DESKTOP_ACCEPTANCE: complete
+        run: node apps/desktop/packaging.mjs --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} --daemon "$RELEASE_BINARY"
+      - name: Sign updater metadata, bundle Electron feeds, stage native npm and CLI archives
+        env:
+          VELLUM_RELEASE_PRIVATE_KEY: ${{ secrets.VELLUM_RELEASE_PRIVATE_KEY }}
+        run: node -e 'process.stdout.write(process.env.VELLUM_RELEASE_PRIVATE_KEY)' | node scripts/release-native.mjs bundle "$RELEASE_VERSION" "$RELEASE_TARGET" "$RELEASE_BINARY"
+      - run: pnpm checksum
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: target/release-native/${{ matrix.target }}/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.target }}
+          path: target/release-native/${{ matrix.target }}/
+          if-no-files-found: error
+  assemble:
+    needs: [gate, native]
+    environment: release-signing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: rustup toolchain install
+      - run: cargo fetch --locked
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: target/release-input
+      - name: Verify every native artifact before assembly
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for file in target/release-input/native-*/*; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --signer-digest "$GITHUB_SHA"
+          done
+      - run: node scripts/release-packages.mjs assemble "$RELEASE_VERSION" target/release-input target/release "$GITHUB_REPOSITORY"
+      - run: pnpm security:sbom
+      - run: cp target/security/*.cdx.json target/release/
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-evidence
+          path: target/release/
+      - name: Sign the complete artifact inventory and verify its pinned public key
+        env:
+          RELEASE_PUBLIC_KEY: ${{ vars.VELLUM_RELEASE_PUBLIC_KEY }}
+          VELLUM_RELEASE_PRIVATE_KEY: ${{ secrets.VELLUM_RELEASE_PRIVATE_KEY }}
+        run: |
+          node -e 'require("fs").writeFileSync("target/release-public.pem", process.env.RELEASE_PUBLIC_KEY)'
+          node -e 'process.stdout.write(process.env.VELLUM_RELEASE_PRIVATE_KEY)' | node scripts/release.mjs seal target/release "$RELEASE_VERSION" "$GITHUB_SHA" target/release-public.pem
+      - run: pnpm checksum
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: target/release/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-release
+          path: target/release/
+          if-no-files-found: error
+  publish:
+    needs: [gate, assemble]
+    environment: release-publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-release
+          path: target/release/
+      - name: Recheck the candidate, signatures, hashes and source provenance before publication
+        env:
+          RELEASE_PUBLIC_KEY: ${{ vars.VELLUM_RELEASE_PUBLIC_KEY }}
+        run: |
+          node scripts/release.mjs gate
+          node -e 'require("fs").writeFileSync("target/release-public.pem", process.env.RELEASE_PUBLIC_KEY)'
+          node scripts/release.mjs verify target/release "$RELEASE_VERSION" "$GITHUB_SHA" target/release-public.pem
+          for file in target/release/*; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --signer-digest "$GITHUB_SHA"
+          done
+      - name: Validate every feed and required publishing input before any registry write
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          HOMEBREW_TAP: ${{ vars.VELLUM_HOMEBREW_TAP }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VELLUM_UPDATE_BUCKET: ${{ vars.VELLUM_UPDATE_BUCKET }}
+        run: node scripts/release-publish.mjs preflight "$RELEASE_VERSION"
+      - name: Obtain the scoped update-feed publishing role
+        # OIDC fails before any registry write if the scoped update-feed role is not provisioned.
+        uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          role-to-assume: ${{ vars.VELLUM_RELEASE_AWS_ROLE }}
+          aws-region: ${{ vars.VELLUM_UPDATE_REGION }}
+          role-session-name: vellum-release-${{ github.run_id }}
+      - name: Stage the signed GitHub release as a draft
+        run: node scripts/release-publish.mjs draft "$RELEASE_VERSION"
+      - name: Publish native packages then npm wrapper (trusted npm publishing)
+        run: node scripts/release-publish.mjs npm "$RELEASE_VERSION"
+      - name: Publish all platform VSIX packages to Marketplace and Open VSX
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: node scripts/release-publish.mjs extensions "$RELEASE_VERSION"
+      - name: Update the owned Homebrew tap with the signed archive hashes
+        env:
+          HOMEBREW_TAP: ${{ vars.VELLUM_HOMEBREW_TAP }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: node scripts/release-publish.mjs homebrew "$RELEASE_VERSION"
+      - name: Publish immutable Electron payloads, then signed envelopes and latest metadata
+        env:
+          VELLUM_UPDATE_BUCKET: ${{ vars.VELLUM_UPDATE_BUCKET }}
+        run: node scripts/release-publish.mjs feed "$RELEASE_VERSION"
+      - name: Publish the GitHub release after every distribution succeeds
+        run: node scripts/release-publish.mjs finalize "$RELEASE_VERSION"

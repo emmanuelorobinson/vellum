@@ -21,9 +21,10 @@ export function buildKey(
   patchFiles = readdirSync(join(root, "patches/skia-bindings"))
     .sort()
     .map((n) => [n, readFileSync(join(root, "patches/skia-bindings", n), "utf8")]),
+  sdk = "unspecified-sdk",
 ) {
   return createHash("sha256")
-    .update(JSON.stringify({ target, ...config, patchFiles }))
+    .update(JSON.stringify({ target, sdk, ...config, patchFiles }))
     .digest("hex");
 }
 export function checkBindings(text) {
@@ -39,7 +40,31 @@ function main() {
   if (host.status !== 0) throw new Error(host.stderr);
   const target = targetAt < 0 ? host.stdout.match(/^host: (.+)$/m)?.[1] : args[targetAt + 1];
   if (!target) throw new Error("Cannot determine target");
-  const key = buildKey(target);
+  const sdkCommand =
+    target === "wasm32-unknown-emscripten"
+      ? null
+      : process.platform === "darwin"
+        ? ["xcrun", ["--sdk", "macosx", "--show-sdk-version"]]
+        : process.platform === "win32"
+          ? [
+              "powershell",
+              [
+                "-NoProfile",
+                "-Command",
+                "$sdkRoot = (Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots').KitsRoot10; Get-ChildItem ($sdkRoot + 'Include') -Name | Sort-Object",
+              ],
+            ]
+          : ["clang", ["--version"]];
+  const sdkResult = sdkCommand && spawnSync(...sdkCommand, { encoding: "utf8" });
+  const sdk =
+    process.env.VELLUM_SKIA_SDK ||
+    (sdkCommand
+      ? sdkResult.status === 0 && !sdkResult.error
+        ? sdkResult.stdout.trim()
+        : ""
+      : `emsdk-${config.emsdk}`);
+  if (!sdk) throw Error("Cannot identify the native SDK/compiler; configure VELLUM_SKIA_SDK");
+  const key = buildKey(target, undefined, sdk);
   if (args[0] === "--key") {
     process.stdout.write(key);
     return;
@@ -110,6 +135,7 @@ function main() {
   mkdirSync(join(buildRoot, "skia-measurements"), { recursive: true });
   const measurement = {
     key,
+    sdk,
     target,
     command: args,
     seconds: (performance.now() - start) / 1000,

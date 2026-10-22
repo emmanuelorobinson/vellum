@@ -7,6 +7,7 @@ test("Skia identities separate targets and every patch change", () => {
   assert.notEqual(buildKey("aarch64-apple-darwin"), buildKey("x86_64-apple-darwin"));
   assert.notEqual(buildKey("test", [["p", "old"]]), buildKey("test", [["p", "new"]]));
   assert.equal(buildKey("test"), buildKey("test"));
+  assert.notEqual(buildKey("test", [], "SDK 1"), buildKey("test", [], "SDK 2"));
 });
 test("retired macOS 27 patch cannot silently return", () => {
   assert.throws(

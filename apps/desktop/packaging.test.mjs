@@ -1,8 +1,32 @@
 // TEST DATA. Configuration and release gating without signing credentials or publishing.
 
 import assert from "node:assert/strict";
+import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import { builderConfig } from "./packaging.mjs";
+
+test("release signing prerequisites follow the native platform; Linux uses signed update metadata", () => {
+  const common = {
+    preview: false,
+    version: "1.2.3",
+    productName: "TEST DATA",
+    feed: "https://example.invalid/updates/",
+    publisher: "TEST DATA",
+    publicKey: generateKeyPairSync("ed25519").publicKey.export({ type: "spki", format: "pem" }),
+    accepted: true,
+  };
+  const linux = builderConfig({ ...common, platform: "linux" });
+  assert.equal(linux.forceCodeSigning, false);
+  assert.throws(() => builderConfig({ ...common, platform: "darwin", signed: true }), /release/);
+  const win = builderConfig({
+    ...common,
+    platform: "win32",
+    signed: true,
+    certificateSha1: "a".repeat(40),
+  });
+  assert.equal(win.forceCodeSigning, true);
+  assert.equal(win.win.signtoolOptions.certificateSha1, "a".repeat(40));
+});
 
 test("all six native targets and artifact formats are explicit; unsigned releases fail closed", () => {
   const config = builderConfig({ preview: true, version: "0.0.0", productName: "TEST DATA" });

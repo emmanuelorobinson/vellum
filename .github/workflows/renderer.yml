@@ -9,6 +9,7 @@ on:
         type: boolean
         default: false
         description: Run all six configured self-hosted hardware GPU lanes
+  workflow_call:
 permissions:
   contents: read
 env:

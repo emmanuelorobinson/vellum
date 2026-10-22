@@ -1,0 +1,22 @@
+name: Keyed Skia source builds (ADR-016 option A)
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/skia-build.mjs
+      - scripts/skia-config.json
+      - patches/skia-bindings/**
+      - rust-toolchain.toml
+      - Cargo.toml
+      - Cargo.lock
+      - .cargo/config.toml
+      - .github/workflows/skia-source.yml
+      - .github/workflows/renderer.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-matrix:
+    # Option A builds Skia at its pinned source revision, with SDK/flags/patch keyed CI caches.
+    # No distributable Skia archives are consumed or published. Release builds use fresh targets.
+    uses: ./.github/workflows/renderer.yml

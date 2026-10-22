@@ -8,6 +8,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 72 machinery is implemented; release remains blocked.** Finish the prior native-host,
+  permission, Stop, parity, visual and performance acceptance, 17 unaccepted token/spec gaps, 20 contrast
+  failures and 14 Rust advisories. The broad script run also retains stale ADR/design-gap/reference-path
+  expectations and the lockfile prerelease failure; whole-repo Biome has 12 existing errors. Provision
+  protected signing/publishing environments, six native signing runners/OS identities, registry ownership,
+  scoped update hosting and remote acceptance lanes. Upload the pinned, generated
+  `target/design-snapshots.json` bundle (748 PNGs, about 176 MiB) through the operator workflow.
+  ADR-032 retains ADR-016's source-only Skia option A; no binary archive publisher/consumer was added.
+  See `docs/runbooks/release.md`. No production signature, upload or publication was performed.
+
 - **Prompt 71 needs performance and deployment acceptance.** Full native rebuild pan/drag/batch and Canvas2D
   remain over §12; gates are red at their original limits. Open (107.93 ms), idle RSS (47.66 MiB), Skia draw
   timings and WASM gzip (1,953,527 bytes) pass locally. Finish P55's live host path, optimize the failing
@@ -4756,3 +4766,76 @@ Not passing / not claimed:
   hardware and Windows/Linux native lanes, paired baseline CI and remote CI remain unverified. Default
   no-egress is covered structurally/in injected tests; no full network-blocked installed-host or new whole-repo
   canary campaign is claimed. No commit, deployment, cloud provisioning or production credential changed.
+
+## Prompt 72 — CI/CD, release pipelines and release blockers (implementation; release blocked)
+
+Built a checked map of all sixteen canonical blockers to eight workflows/39 required jobs, with explicit
+open acceptance notes. The read-only candidate gate requires the latest trusted same-commit run, current
+attempt, every named job, and evidence less than seven days old. Missing, skipped, failed, stale, fork/PR,
+in-progress, malformed or truncated evidence fails closed; an older success cannot hide a newer failure.
+Local status is an inventory, never release authorization. Strict v1 parity refuses the existing pending rows.
+
+Added six-platform VS Code/Electron lanes and strict UI acceptance using a locally exported, hash-pinned
+design bundle (748 PNGs; SHA-256 in policy/runbook). Import verifies exact inventory, paths, PNG signatures
+and bundle bytes before staging; no design credentials or exporter runs in CI. Browser release acceptance
+allows no skips/flakes, and blocking design gaps require explicit append-only closure. Existing golden
+tolerances and specification bytes are unchanged. The generated bundle is `target/design-snapshots.json`.
+
+Release is explicit dispatch at a stable, reviewed main-history tag with matching Cargo/host versions.
+Protected signing/publishing jobs build fresh source-only WASM and six native CLI/daemon binaries, validate
+architectures, use OS signing/notarization, and stage platform VSIX, Electron feed bundles, six native npm
+packages plus `@vellum/cli`, and a hash-pinned Homebrew formula. The wrapper has no install/download script
+and preserves arguments/signals/exit codes. Assembly requires exactly 29 payloads (including SBOMs and
+candidate evidence), signs their version/source/names/sizes/SHA-256, and verifies source/workflow attestations.
+Publishing rechecks candidate/tag/signatures before writes, keeps GitHub draft until registries/tap/feed
+succeed, validates every feed in preflight and uploads immutable payloads before signed/latest metadata.
+Cross-registry publication is explicitly non-atomic; recovery and provisioning are in the runbook.
+
+ADR-032 records the guide difference: ADR-016 already chose option A, so no Skia binary archive consumer or
+publisher was introduced. Added change-triggered source-matrix CI and SDK/compiler identity to cache keys;
+release targets restore no compiled cache. Fixed cross-platform packaging's Apple-only credential guard,
+added Windows certificate-store selection, and routed the format-files example through the source wrapper.
+The initial broad run's three Skia/source-sync format failures are resolved; all 14 format-spec tests pass.
+Release-only environment lint overrides apply outside Turbo; signing/registry secrets are not added to its
+global environment/cache inputs. Other lint rules remain enabled. Existing workflow lint defects were fixed.
+
+Reference study: no §3.2 row names this prompt; no reference code was ported. Sibling Outpost records open
+release evidence and Cutesycal maps blockers to suites. Vellum retains explicit incompleteness and adds
+same-commit trusted job evidence plus signed exact payloads. Context7 official docs and installed tooling
+informed Actions, npm, Electron, VSCE and AWS OIDC/CLI usage.
+
+Passed (Node 24, pnpm 12.11.2 through existing `/private/tmp/vellum-p56-bin`, telemetry disabled):
+
+- `node --test scripts/__tests__/release*.test.mjs scripts/__tests__/skia-build.test.mjs apps/desktop/packaging.test.mjs scripts/__tests__/reports.test.mjs scripts/__tests__/repo-layout.test.mjs` (33).
+  TDD first confirmed absent release helpers, SDK-insensitive keys and Linux requiring Apple credentials;
+  later tests cover API pagination/reruns, missing jobs, bundle corruption, skipped parity/browser tests,
+  signature/hash/extra-file failures, moved tags, feed order and real offline npm tarball staging.
+- `pnpm --filter @vellum/desktop --filter @vellum/extension test` (desktop 29 + 4 packaging;
+  extension 41 + 3 packaging); `pnpm type-check` (34 tasks).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum --all-targets -- -D warnings`;
+  same wrapper `test --offline -p vellum-render-skia --test smoke --test renderer` (12).
+- `CARGO_TARGET_DIR=target/prompt63-verification node --test scripts/__tests__/format-spec.test.mjs` (14);
+  `CARGO_TARGET_DIR=target/prompt63-verification pnpm format-spec:check`; `pnpm design:check` (11 recorded warnings).
+- `bash scripts/check-deps.sh` (Rust allowlist, bans/licenses/sources, TS: 686 modules / 1,908 edges);
+  `actionlint .github/workflows/*.yml`; scoped Biome over all changed implementation/config files;
+  `bash scripts/check-clean-room.sh`; `node scripts/copy-lint.mjs`; `pnpm checksum`; `git diff --check`.
+- `node scripts/release.mjs snapshot-pack target/design-snapshots.json`; the resulting bytes also pass
+  `unpackSnapshotBundle` against the committed digest/inventory (748 PNGs). Local identity/parity/publication
+  probes correctly refuse placeholder versions, pending parity and execution outside the Release workflow.
+
+Not passing / not claimed:
+
+- Final broad `CARGO_TARGET_DIR=target/prompt63-verification node --test 'scripts/__tests__/*.test.mjs'`:
+  **231 pass, five fail, six tagged skips** (242 total). Remaining failures: ADR-000 test still requires Proposed
+  after acceptance; an existing append-only DESIGN-GAPS line fails its old grammar; reference index names
+  missing `R3 taffy: main.rs`; the 20 existing contrast errors; `postject@1.0.0-alpha.6` prerelease guard.
+  No test was weakened, reference/spec edited, advisory ignored or golden tolerance changed.
+- `pnpm tokens:check` still fails on 17 unaccepted Prompt 43 token/spec differences. Whole-repo
+  `pnpm exec biome check .` reports 12 existing errors / 147 warnings; changed-file Biome is clean.
+  Permitted `cargo deny --log-level error check` reports the existing 14 advisories. Its initial sandbox
+  attempt could not lock the advisory cache; the permitted retry completed. Default pnpm's identity probe
+  could not verify the registry and fell back to 12.8.1; actual pnpm checks used the existing 12.11.2 shim.
+- Production keys/OS signing, notarization, namespace/registry ownership, protected environments, S3/IAM/HTTPS
+  delivery, six signing runners, remote/GPU/installed-engine/installed-host lanes, installer upgrade/rollback,
+  and a new full-session canary campaign were not exercised. Prior P55 native ABI, security, parity,
+  UI/RTL/contrast and performance blockers remain. No commit, PR, production credential, deployment or release.

@@ -1,0 +1,57 @@
+name: Release acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+jobs:
+  acceptance:
+    name: Strict parity and UI acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - run: pnpm --filter @vellum/editor-react exec playwright install chromium --with-deps
+      # Exported locally using the existing read-only design workflow, reviewed, then uploaded by
+      # the operator to design-<pen checksum>. No design service credentials run in CI.
+      - name: Fetch and verify the approved design bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p target/release-acceptance
+          hash=$(node -p 'JSON.parse(require("fs").readFileSync("docs/design/snapshots/inventory.json")).source_sha256')
+          gh release download "design-$hash" --repo "$GITHUB_REPOSITORY" --pattern design-snapshots.json --dir target/release-acceptance
+          node scripts/release.mjs snapshot-unpack target/release-acceptance/design-snapshots.json
+      - name: No pending v1 parity or blocking design gaps
+        run: |
+          node scripts/release.mjs parity
+          node scripts/release.mjs design-gaps
+          pnpm design:check
+          pnpm tokens:check
+          pnpm tokens:lint
+      - name: Execute v1 mapped behavior tests with the production renderer
+        run: node scripts/skia-build.mjs test --locked --workspace
+      - name: UI, edge-state, WCAG and RTL goldens (zero skips or flakes)
+        run: |
+          pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts --reporter=json > target/release-acceptance/browser.json
+          node scripts/release.mjs browser target/release-acceptance/browser.json
+      - if: always()
+        run: pnpm checksum
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-acceptance
+          path: |
+            target/release-acceptance/browser.json
+            target/screen-goldens/

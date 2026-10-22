@@ -10,6 +10,8 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "release:status": "node scripts/release.mjs status",
+    "release:gate": "node scripts/release.mjs gate",
     "security:check": "node scripts/security.mjs check",
     "security:fuzz": "node scripts/security.mjs fuzz",
     "security:sbom": "node scripts/security.mjs sbom",

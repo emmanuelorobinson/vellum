@@ -32,7 +32,8 @@ jobs:
       # the design exporter must provide those snapshots to this lane before those components land.
       - name: Component goldens against design snapshots (pending until implemented)
         run: |
-          export VELLUM_CHROME="$(pnpm --filter @vellum/editor-react exec node -e 'console.log(require("playwright").chromium.executablePath())')"
+          VELLUM_CHROME="$(pnpm --filter @vellum/editor-react exec node -e 'console.log(require("playwright").chromium.executablePath())')"
+          export VELLUM_CHROME
           pnpm --filter @vellum/editor-react test:goldens
       - uses: actions/upload-artifact@v4
         if: always()

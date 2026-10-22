@@ -34,8 +34,20 @@ if (run.status !== 0) {
 }
 
 const filesRun = spawnSync(
-  "cargo",
-  ["run", "--quiet", "-p", "vellum", "--example", "format-files"],
+  process.execPath,
+  // This example uses only codecs at runtime, but its dev-dependency graph still includes Skia.
+  // Use the shared source wrapper so offline reuse and the native build policy stay consistent.
+  [
+    join(repo, "scripts/skia-build.mjs"),
+    "run",
+    "--quiet",
+    "--locked",
+    "--no-default-features",
+    "-p",
+    "vellum",
+    "--example",
+    "format-files",
+  ],
   {
     cwd: repo,
     encoding: "utf8",

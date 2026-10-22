@@ -17,6 +17,8 @@ export function builderConfig({
   signed,
   notarize,
   accepted,
+  platform = process.platform,
+  certificateSha1,
 }) {
   if (!preview) {
     if (
@@ -25,8 +27,9 @@ export function builderConfig({
       !feed ||
       !publicKey ||
       !publisher ||
-      !signed ||
-      !notarize ||
+      !["darwin", "win32", "linux"].includes(platform) ||
+      (platform !== "linux" && !signed) ||
+      (platform === "darwin" && !notarize) ||
       !accepted
     )
       throw Error(
@@ -65,7 +68,8 @@ export function builderConfig({
       { from: "dist/bin", to: "bin" },
       ...(!preview ? [{ from: "dist/desktop-release.json", to: "desktop-release.json" }] : []),
     ],
-    forceCodeSigning: !preview,
+    // Linux distributions are authenticated by the Ed25519 release inventory and update envelope.
+    forceCodeSigning: !preview && platform !== "linux",
     // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder expands these placeholders.
     artifactName: "${productName}-${version}-${os}-${arch}.${ext}",
     publish: preview ? null : { provider: "generic", url: feed },
@@ -82,7 +86,10 @@ export function builderConfig({
     },
     win: {
       verifyUpdateCodeSignature: true,
-      signtoolOptions: { publisherName: publisher },
+      signtoolOptions: {
+        publisherName: publisher,
+        ...(certificateSha1 ? { certificateSha1 } : {}),
+      },
       target: [{ target: "nsis", arch: ["x64", "arm64"] }],
     },
     linux: {
@@ -137,9 +144,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     feed: process.env.VELLUM_UPDATE_URL,
     publicKey,
     publisher: process.env.VELLUM_WINDOWS_PUBLISHER,
-    signed: !!process.env.CSC_LINK || !!process.env.CSC_NAME,
+    platform,
+    certificateSha1: process.env.VELLUM_WINDOWS_CERT_SHA1,
+    signed:
+      !!process.env.CSC_LINK || !!process.env.CSC_NAME || !!process.env.VELLUM_WINDOWS_CERT_SHA1,
     notarize:
-      !!process.env.APPLE_API_KEY ||
+      (!!process.env.APPLE_API_KEY &&
+        !!process.env.APPLE_API_KEY_ID &&
+        !!process.env.APPLE_API_ISSUER) ||
+      !!process.env.APPLE_KEYCHAIN_PROFILE ||
       (!!process.env.APPLE_ID &&
         !!process.env.APPLE_APP_SPECIFIC_PASSWORD &&
         !!process.env.APPLE_TEAM_ID),

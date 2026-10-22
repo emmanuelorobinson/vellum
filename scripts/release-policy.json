@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "maxAgeHours": 168,
+  "designBundleSha256": "5fe1859c47f6d59b75478ca4aacb04c5f10df713626406340c9f6d70c2f0c40e",
+  "lanes": [
+    {
+      "workflow": "ci.yml",
+      "jobs": [
+        "Rust (fmt, clippy, test)",
+        "TypeScript (type-check, lint, test)",
+        "Repo checks (script tests, dependency rules, clean room, copy, specification checksums)",
+        "Layout oracle (chrome lane)",
+        "Text fixtures (fonts lane)"
+      ]
+    },
+    {
+      "workflow": "renderer.yml",
+      "jobs": [
+        "Native aarch64-apple-darwin",
+        "Native x86_64-apple-darwin",
+        "Native x86_64-pc-windows-msvc",
+        "Native aarch64-pc-windows-msvc",
+        "Native x86_64-unknown-linux-gnu",
+        "Native aarch64-unknown-linux-gnu",
+        "Browser WASM and WebGL2 integration",
+        "Hardware GPU macOS X64",
+        "Hardware GPU macOS ARM64",
+        "Hardware GPU Windows X64",
+        "Hardware GPU Windows ARM64",
+        "Hardware GPU Linux X64",
+        "Hardware GPU Linux ARM64"
+      ]
+    },
+    {
+      "workflow": "security.yml",
+      "jobs": ["boundaries", "fuzz", "Scripted session canary (loopback and native CPU renderer)"]
+    },
+    {
+      "workflow": "script-sandbox.yml",
+      "jobs": ["Native and WASM sandbox corpus"]
+    },
+    {
+      "workflow": "engines.yml",
+      "jobs": ["claude-code", "codex"]
+    },
+    {
+      "workflow": "hosts.yml",
+      "jobs": [
+        "VS Code darwin-arm64",
+        "Electron darwin-arm64",
+        "VS Code darwin-x64",
+        "Electron darwin-x64",
+        "VS Code win32-x64",
+        "Electron win32-x64",
+        "VS Code win32-arm64",
+        "Electron win32-arm64",
+        "VS Code linux-x64",
+        "Electron linux-x64",
+        "VS Code linux-arm64",
+        "Electron linux-arm64"
+      ]
+    },
+    {
+      "workflow": "release-acceptance.yml",
+      "jobs": ["Strict parity and UI acceptance"]
+    },
+    {
+      "workflow": "performance.yml",
+      "jobs": ["paired (native)", "paired (browser)"]
+    }
+  ],
+  "blockers": [
+    {
+      "id": "one-write-path",
+      "statement": "any document mutation not through an Op transaction, or a transaction without an origin",
+      "lanes": ["ci.yml"],
+      "evidence": ["crates/vellum-core/src/ops/tests/invariant_1.rs"],
+      "open": ["Prompt 55 live document ABI/EditorLink remains incomplete."]
+    },
+    {
+      "id": "actor-undo",
+      "statement": "\u2318Z ever undoing another actor's change",
+      "lanes": ["ci.yml"],
+      "evidence": ["crates/adapters/doc-loro/tests/contract.rs"],
+      "open": []
+    },
+    {
+      "id": "leases-pause",
+      "statement": "an agent write accepted inside another agent's lease or while paused",
+      "lanes": ["ci.yml", "engines.yml"],
+      "evidence": ["crates/vellum-core/src/guard/tests.rs", "crates/vellum/tests/parallel.rs"],
+      "open": []
+    },
+    {
+      "id": "deterministic-files",
+      "statement": "load \u2192 save not byte-identical on any fixture",
+      "lanes": ["ci.yml"],
+      "evidence": [
+        "crates/adapters/codec-json/tests/fixtures.rs",
+        "crates/adapters/codec-json/tests/canonical.rs"
+      ],
+      "open": []
+    },
+    {
+      "id": "render-parity",
+      "statement": "editor vs headless render over tolerance on any golden",
+      "lanes": ["renderer.yml"],
+      "evidence": ["crates/adapters/render-skia/tests/renderer.rs", "scripts/renderer-goldens.mjs"],
+      "open": []
+    },
+    {
+      "id": "layout-oracle",
+      "statement": "layout oracle failures",
+      "lanes": ["ci.yml"],
+      "evidence": ["scripts/gen-layout-oracle.sh"],
+      "open": []
+    },
+    {
+      "id": "script-sandbox",
+      "statement": "any script escape or nondeterminism",
+      "lanes": ["script-sandbox.yml", "security.yml"],
+      "evidence": ["crates/adapters/script-quickjs/src/lib.rs", "scripts/script-sandbox.mjs"],
+      "open": []
+    },
+    {
+      "id": "local-defaults",
+      "statement": "any TCP listener without --listen, any network call not configured by the person, telemetry on by default, or a local feature needing an account",
+      "lanes": ["security.yml", "hosts.yml"],
+      "evidence": ["packages/telemetry/src/index.test.ts", "crates/vellum/tests/telemetry_cli.rs"],
+      "open": [
+        "Installed-host network-blocked local/consent acceptance remains unverified (Prompts 69/71)."
+      ]
+    },
+    {
+      "id": "canary",
+      "statement": "canary key found anywhere",
+      "lanes": ["security.yml"],
+      "evidence": ["scripts/model-providers.mjs"],
+      "open": []
+    },
+    {
+      "id": "permissions",
+      "statement": "an agent action outside the canvas without a permission decision",
+      "lanes": ["ci.yml", "engines.yml"],
+      "evidence": ["crates/vellum/tests/permissions.rs"],
+      "open": ["Prompt 69 share publishing authority decision/enforcement remains open."]
+    },
+    {
+      "id": "stop-latency",
+      "statement": "Stop p95 over 3 s",
+      "lanes": ["ci.yml", "engines.yml", "performance.yml"],
+      "evidence": ["crates/vellum/tests/parallel.rs", "crates/vellum/tests/installed_codex.rs"],
+      "open": [
+        "Installed-engine Stop p95 acceptance on release hardware is unverified; Prompt 71 native/Basic budgets are red."
+      ]
+    },
+    {
+      "id": "v1-parity",
+      "statement": "any \u00a77.4 v1 parity row without a passing test",
+      "lanes": ["ci.yml", "release-acceptance.yml"],
+      "evidence": ["fixtures/parity/coverage.json", "scripts/lib/parity.mjs"],
+      "open": ["Parity inventory still contains explicitly pending v1 behavior tests."]
+    },
+    {
+      "id": "ui-states-goldens",
+      "statement": "any screen missing its explicit edge states, or any UI golden failing against the design snapshots",
+      "lanes": ["hosts.yml", "release-acceptance.yml"],
+      "evidence": [
+        "packages/editor-react/e2e/goldens.spec.ts",
+        "packages/editor-react/e2e/rtl-goldens.spec.ts"
+      ],
+      "open": [
+        "Prior UI goldens exceed unchanged tolerances; full screen/edge-state and installed-host acceptance remain open."
+      ]
+    },
+    {
+      "id": "design-current",
+      "statement": "stale design snapshots or tokens (design-check), or an open DESIGN-GAPS.md entry marked blocking",
+      "lanes": ["ci.yml", "release-acceptance.yml"],
+      "evidence": ["scripts/design-check.mjs", "scripts/design-tokens.mjs"],
+      "open": [
+        "Prompt 43 retains 17 unaccepted token/specification gaps; Prompt 70 reports 20 token contrast failures."
+      ]
+    },
+    {
+      "id": "clean-room",
+      "statement": "any clean-room check failure",
+      "lanes": ["ci.yml"],
+      "evidence": ["scripts/check-clean-room.sh"],
+      "open": []
+    },
+    {
+      "id": "skia-trust-fonts",
+      "statement": "any release artifact linked against unverified Skia binaries, or a native renderer that reads system fonts",
+      "lanes": ["ci.yml", "renderer.yml"],
+      "evidence": [
+        "scripts/skia-build.mjs",
+        "scripts/skia-config.json",
+        "crates/adapters/render-skia/tests/renderer.rs"
+      ],
+      "open": []
+    }
+  ]
+}
