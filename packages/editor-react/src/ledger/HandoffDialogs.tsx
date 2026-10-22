@@ -9,6 +9,7 @@ import {
   type TokenSyncController,
 } from "@vellum/editor-core";
 import { useEffect } from "react";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { ResourceDialog } from "../resources/Dialog";
 import { Toast } from "./LedgerLayer";
@@ -18,6 +19,7 @@ const formatName = (f: TokenFormat) =>
   f === "css" ? "CSS" : f === "tailwind" ? "Tailwind" : "Design Tokens JSON";
 
 function TokenDialog({ sync, readOnly }: { sync: TokenSyncController; readOnly: boolean }) {
+  const { t: translateUi } = useLocale();
   useStore(sync.subscribe);
   const s = sync.state;
   const dialog = s.dialog;
@@ -124,7 +126,7 @@ function TokenDialog({ sync, readOnly }: { sync: TokenSyncController; readOnly: 
       ) : null}
       <div className="vl-footer-actions">
         <button type="button" className="vx-button" onClick={() => sync.close()}>
-          Cancel
+          {translateUi("Cancel")}
         </button>
         {importing ? (
           <button
@@ -134,7 +136,7 @@ function TokenDialog({ sync, readOnly }: { sync: TokenSyncController; readOnly: 
             disabled={!sync.canApply() || readOnly}
             onClick={() => void sync.apply()}
           >
-            Apply
+            {translateUi("Apply")}
           </button>
         ) : (
           <button
@@ -153,6 +155,7 @@ function TokenDialog({ sync, readOnly }: { sync: TokenSyncController; readOnly: 
 }
 
 function ExportDialog({ exporter }: { exporter: ExportController }) {
+  const { t: translateUi } = useLocale();
   useStore(exporter.subscribe);
   const s = exporter.state;
   if (!s.open) return null;
@@ -243,7 +246,7 @@ function ExportDialog({ exporter }: { exporter: ExportController }) {
       ) : null}
       <div className="vl-footer-actions">
         <button type="button" className="vx-button" onClick={() => exporter.close()}>
-          Cancel
+          {translateUi("Cancel")}
         </button>
         <button
           type="button"

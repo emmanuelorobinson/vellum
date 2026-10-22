@@ -1,3 +1,4 @@
+import { DirectionProvider } from "@base-ui/react/direction-provider";
 import {
   type Act,
   type AgentController,
@@ -46,9 +47,12 @@ import {
 } from "@vellum/editor-core";
 import type { EngineClient } from "@vellum/engine-client";
 import type { BrowserPort } from "@vellum/host-api";
+import { createLocale } from "@vellum/i18n";
 import type { AgentId, ComponentId, DeviceId, Node, NodeId, PageId, Value } from "@vellum/types-ts";
 import type { Mode } from "@vellum/ui-tokens";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AgentAnnouncements } from "./accessibility/AgentAnnouncements";
+import { LocaleContext } from "./accessibility/locale";
 import { AgentTab } from "./agent/AgentTab";
 import { CollaborationNodes } from "./agent/CollaborationNodes";
 import type { ComposerHost } from "./agent/Composer";
@@ -132,6 +136,8 @@ export interface EdgeProps {
 }
 
 export interface EditorWorkspaceProps {
+  /** Host language when no local Settings controller is mounted. */
+  language?: string;
   /** Host uses the shared export renderer, live revision checks and native save UI. */
   slidesHost?: SlidesHost;
   nextPageId?(): PageId;
@@ -468,7 +474,6 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   })();
   const scopeLabel =
     doc && selection.length ? selectionLabel(doc, pageId ?? session.page, selection) : null;
-  const canvasMode = props.canvasAppearance ?? props.appearance;
   const zoomLabel = workspace.zoomLabel(session.state.viewport.zoom);
   const zoomItems = [
     ["Zoom in", "view.zoomIn"],
@@ -483,6 +488,23 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     key: shortcut(command as string),
   }));
   const prefs = shell?.settings?.preferences.state;
+  const preferredAppearance = prefs?.["appearance.theme"];
+  const chromeAppearance =
+    preferredAppearance === "light" || preferredAppearance === "dark"
+      ? preferredAppearance
+      : preferredAppearance === "high-contrast"
+        ? props.appearance === "light" || props.appearance === "hc-light"
+          ? "hc-light"
+          : "hc-dark"
+        : props.appearance;
+  const canvasMode = props.canvasAppearance ?? chromeAppearance;
+  const locale = useMemo(
+    () => createLocale(prefs?.language ?? props.language ?? "en"),
+    [prefs?.language, props.language],
+  );
+  useEffect(() => {
+    workspace.setDirection(locale.direction);
+  }, [workspace, locale.direction]);
   const shellActions = useMemo(
     () =>
       createShellActions({
@@ -716,572 +738,584 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const tool = session.state.tool;
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: one delegating key listener; focus is in the children
-    <div
-      ref={setRoot}
-      className="vc-workspace"
-      data-appearance={props.appearance}
-      data-canvas-appearance={canvasMode}
-      data-chrome-hidden={layout.chromeHidden ? "" : undefined}
-      data-animations={prefs && !prefs["canvas.animations"] ? "off" : undefined}
-      style={
-        prefs?.["canvas.backdrop"]
-          ? ({ "--canvas-backdrop": prefs["canvas.backdrop"] } as React.CSSProperties)
-          : undefined
-      }
-      onContextMenu={onContextMenu}
-      onPointerDownCapture={(e) => {
-        const c = props.collaboration;
-        if (!c?.state.placing || focusOf(e.target) !== "canvas" || e.button !== 0) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        c.newComment(
-          null,
-          world({ x: e.clientX - rect.left, y: e.clientY - rect.top }, session.state.viewport),
-        );
-      }}
-      onPointerMove={(e) => {
-        if (!props.collaboration || focusOf(e.target) !== "canvas") return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        props.collaboration.publishView({
-          page: session.page,
-          cursor: world(
-            { x: e.clientX - rect.left, y: e.clientY - rect.top },
-            session.state.viewport,
-          ),
-          viewport: session.state.viewport,
-          selection: [...session.state.selection],
-        });
-      }}
-      onKeyDown={(e) => {
-        const binding = controller.keys.fromEvent(e.nativeEvent, {
-          host: props.host,
-          platform: props.platform,
-          focus: slides.state.presenting ? "presentation" : context(e.target).focus,
-        });
-        if (slides.state.presenting) {
-          if (binding?.command === "present.next") {
-            e.preventDefault();
-            slides.next();
-          } else if (binding?.command === "present.previous") {
-            e.preventDefault();
-            slides.previous();
-          } else if (binding?.command === "present.stop") {
-            e.preventDefault();
-            slides.stop();
+    <LocaleContext.Provider value={locale}>
+      <DirectionProvider direction={locale.direction}>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: delegates keys from focusable children */}
+        <div
+          ref={setRoot}
+          className="vc-workspace"
+          lang={locale.language}
+          dir={locale.direction}
+          data-appearance={chromeAppearance}
+          data-canvas-appearance={canvasMode}
+          data-chrome-hidden={layout.chromeHidden ? "" : undefined}
+          data-animations={prefs && !prefs["canvas.animations"] ? "off" : undefined}
+          style={
+            prefs?.["canvas.backdrop"]
+              ? ({ "--canvas-backdrop": prefs["canvas.backdrop"] } as React.CSSProperties)
+              : undefined
           }
-          return;
-        }
-        if (binding?.command === "present.start" && slidePage && slides.canPresent()) {
-          e.preventDefault();
-          slides.start(session.state.selection[0]);
-          return;
-        }
-        if (e.defaultPrevented) return;
-        if (props.collaboration && e.key === "Escape") {
-          if (props.collaboration.state.placing) {
-            props.collaboration.placeComment(false);
+          onContextMenu={onContextMenu}
+          onPointerDownCapture={(e) => {
+            const c = props.collaboration;
+            if (!c?.state.placing || focusOf(e.target) !== "canvas" || e.button !== 0) return;
             e.preventDefault();
-            return;
-          }
-          if (props.collaboration.state.panel) {
-            props.collaboration.close();
-            e.preventDefault();
-            return;
-          }
-          if (props.collaboration.state.following) {
-            props.collaboration.follow(null);
-            e.preventDefault();
-            return;
-          }
-        }
-        if (
-          props.collaboration &&
-          e.key.toLowerCase() === "c" &&
-          !e.ctrlKey &&
-          !e.metaKey &&
-          !e.altKey &&
-          focusOf(e.target) === "canvas" &&
-          props.collaboration.canComment()
-        ) {
-          const id = session.state.selection[0] ?? null;
-          const bounds = id ? session.sceneBounds(id) : null;
-          if (id && bounds)
-            props.collaboration.newComment(id, { x: bounds.x + bounds.width, y: bounds.y });
-          else props.collaboration.placeComment(true);
-          e.preventDefault();
-          return;
-        }
-        // Escape while dragging a mesh point or crop corner puts it back and nothing else.
-        if (e.key === "Escape" && props.paintEditor?.cancel()) {
-          e.preventDefault();
-          return;
-        }
-        if (e.key === "Escape" && layout.agent.mode === "overlay") {
-          workspace.closeAgentOverlay();
-          return;
-        }
-        const ctx = context(e.target);
-        // Tab hides the chrome from the canvas; inside a panel it must still walk the controls (keyboard access).
-        if (e.key === "Tab" && ctx.focus !== "canvas" && ctx.focus !== "outside") return;
-        void controller.keyDown(e.nativeEvent, ctx);
-      }}
-      onKeyUp={(e) => void controller.keyUp(e.nativeEvent)}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as globalThis.Node | null))
-          void controller.blur();
-      }}
-    >
-      <PortalContainer.Provider value={container}>
-        <TipProvider>
-          <CanvasHost
-            session={session}
-            missingLibraries={
-              new Map(
-                props.resources?.host.libraries
-                  ?.filter((i) => props.resources?.libraryInfo(i.alias)?.state === "missing")
-                  .map(
-                    (i) => [i.alias, !!props.resources?.libraryInfo(i.alias)?.cached] as const,
-                  ) ?? [],
-              )
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            c.newComment(
+              null,
+              world({ x: e.clientX - rect.left, y: e.clientY - rect.top }, session.state.viewport),
+            );
+          }}
+          onPointerMove={(e) => {
+            if (!props.collaboration || focusOf(e.target) !== "canvas") return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            props.collaboration.publishView({
+              page: session.page,
+              cursor: world(
+                { x: e.clientX - rect.left, y: e.clientY - rect.top },
+                session.state.viewport,
+              ),
+              viewport: session.state.viewport,
+              selection: [...session.state.selection],
+            });
+          }}
+          onKeyDown={(e) => {
+            const binding = controller.keys.fromEvent(e.nativeEvent, {
+              host: props.host,
+              platform: props.platform,
+              focus: slides.state.presenting ? "presentation" : context(e.target).focus,
+            });
+            if (slides.state.presenting) {
+              if (binding?.command === "present.next") {
+                e.preventDefault();
+                slides.next();
+              } else if (binding?.command === "present.previous") {
+                e.preventDefault();
+                slides.previous();
+              } else if (binding?.command === "present.stop") {
+                e.preventDefault();
+                slides.stop();
+              }
+              return;
             }
-            size={{ width: state.width, height: state.height }}
-            {...(prefs
-              ? {
-                  wheel: {
-                    zooms: prefs["canvas.wheelZooms"],
-                    invert: prefs["canvas.invertZoom"],
-                  },
+            if (binding?.command === "present.start" && slidePage && slides.canPresent()) {
+              e.preventDefault();
+              slides.start(session.state.selection[0]);
+              return;
+            }
+            if (e.defaultPrevented) return;
+            if (props.collaboration && e.key === "Escape") {
+              if (props.collaboration.state.placing) {
+                props.collaboration.placeComment(false);
+                e.preventDefault();
+                return;
+              }
+              if (props.collaboration.state.panel) {
+                props.collaboration.close();
+                e.preventDefault();
+                return;
+              }
+              if (props.collaboration.state.following) {
+                props.collaboration.follow(null);
+                e.preventDefault();
+                return;
+              }
+            }
+            if (
+              props.collaboration &&
+              e.key.toLowerCase() === "c" &&
+              !e.ctrlKey &&
+              !e.metaKey &&
+              !e.altKey &&
+              focusOf(e.target) === "canvas" &&
+              props.collaboration.canComment()
+            ) {
+              const id = session.state.selection[0] ?? null;
+              const bounds = id ? session.sceneBounds(id) : null;
+              if (id && bounds)
+                props.collaboration.newComment(id, { x: bounds.x + bounds.width, y: bounds.y });
+              else props.collaboration.placeComment(true);
+              e.preventDefault();
+              return;
+            }
+            // Escape while dragging a mesh point or crop corner puts it back and nothing else.
+            if (e.key === "Escape" && props.paintEditor?.cancel()) {
+              e.preventDefault();
+              return;
+            }
+            if (e.key === "Escape" && layout.agent.mode === "overlay") {
+              workspace.closeAgentOverlay();
+              return;
+            }
+            const ctx = context(e.target);
+            // Tab hides the chrome from the canvas; inside a panel it must still walk the controls (keyboard access).
+            if (e.key === "Tab" && ctx.focus !== "canvas" && ctx.focus !== "outside") return;
+            void controller.keyDown(e.nativeEvent, ctx);
+          }}
+          onKeyUp={(e) => void controller.keyUp(e.nativeEvent)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as globalThis.Node | null))
+              void controller.blur();
+          }}
+        >
+          <PortalContainer.Provider value={container}>
+            <TipProvider>
+              {props.agent ? <AgentAnnouncements agent={props.agent} /> : null}
+              <CanvasHost
+                session={session}
+                missingLibraries={
+                  new Map(
+                    props.resources?.host.libraries
+                      ?.filter((i) => props.resources?.libraryInfo(i.alias)?.state === "missing")
+                      .map(
+                        (i) => [i.alias, !!props.resources?.libraryInfo(i.alias)?.cached] as const,
+                      ) ?? [],
+                  )
                 }
-              : {})}
-            {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
-            {...(props.content ? { content: props.content } : {})}
-            {...(props.createRenderer ? { createRenderer: props.createRenderer } : {})}
-            {...(props.paintEditor ? { paintEditor: props.paintEditor } : {})}
-            {...(props.design
-              ? { colour: (c: Value<string>) => props.design?.colour(c, doc) ?? (c as string) }
-              : {})}
-          />
-          {props.browser ? (
-            <CanvasEmbeds session={session} browser={props.browser} open={openEmbed} />
-          ) : null}
-          {designHost.shaders ? (
-            <CanvasShaders session={session} controller={designHost.shaders} />
-          ) : null}
-          {props.authoring ? (
-            <CanvasAuthoring
-              authoring={props.authoring}
-              session={session}
-              readOnly={readOnly}
-              contentAvailable={!!(props.content && props.createRenderer)}
-            />
-          ) : null}
-          <CollaborationNodes
-            offline={props.composerHost?.offline ?? false}
-            document={doc}
-            session={session}
-            readOnly={readOnly}
-            {...(props.agent ? { agent: props.agent } : {})}
-            {...(composer ? { composer } : {})}
-          />
-          <PresenceLayer
-            session={session}
-            actors={props.actors}
-            {...(props.presence ? { presence: props.presence } : {})}
-            {...(props.agent ? { agent: props.agent } : {})}
-          />
-          {props.collaboration ? (
-            <CollaborationLayer controller={props.collaboration} session={session} />
-          ) : null}
-          {visible.documentBar
-            ? (props.slots?.documentBar ?? (
-                <DocumentBar
-                  fileName={props.fileName}
-                  saveState={props.saveState}
-                  width={layout.documentBar.width}
-                  commands={controller.commands.list()}
+                size={{ width: state.width, height: state.height }}
+                {...(prefs
+                  ? {
+                      wheel: {
+                        zooms: prefs["canvas.wheelZooms"],
+                        invert: prefs["canvas.invertZoom"],
+                      },
+                    }
+                  : {})}
+                {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
+                {...(props.content ? { content: props.content } : {})}
+                {...(props.createRenderer ? { createRenderer: props.createRenderer } : {})}
+                {...(props.paintEditor ? { paintEditor: props.paintEditor } : {})}
+                {...(props.design
+                  ? { colour: (c: Value<string>) => props.design?.colour(c, doc) ?? (c as string) }
+                  : {})}
+              />
+              {props.browser ? (
+                <CanvasEmbeds session={session} browser={props.browser} open={openEmbed} />
+              ) : null}
+              {designHost.shaders ? (
+                <CanvasShaders session={session} controller={designHost.shaders} />
+              ) : null}
+              {props.authoring ? (
+                <CanvasAuthoring
+                  authoring={props.authoring}
+                  session={session}
+                  readOnly={readOnly}
+                  contentAvailable={!!(props.content && props.createRenderer)}
                 />
-              ))
-            : null}
-          <PanelFrame
-            layout={layout.agent}
-            tab={state.tab}
-            onTab={(tab) => workspace.switchTab(tab, { reveal: true })}
-            onCloseOverlay={() => workspace.closeAgentOverlay()}
-            shortcut={shortcut("agent.focus")}
-          >
-            {{
-              agent: props.agent
-                ? panelLoading(
-                    "agent",
-                    <AgentTab
-                      agent={props.agent}
-                      actors={props.actors}
-                      {...(composer ? { composer } : {})}
-                      {...(composerHostWithEdge ? { composerHost: composerHostWithEdge } : {})}
-                      composerSlot={props.slots?.agent}
-                      {...(notice && !edge?.loading?.agent
+              ) : null}
+              <CollaborationNodes
+                offline={props.composerHost?.offline ?? false}
+                document={doc}
+                session={session}
+                readOnly={readOnly}
+                {...(props.agent ? { agent: props.agent } : {})}
+                {...(composer ? { composer } : {})}
+              />
+              <PresenceLayer
+                session={session}
+                actors={props.actors}
+                {...(props.presence ? { presence: props.presence } : {})}
+                {...(props.agent ? { agent: props.agent } : {})}
+              />
+              {props.collaboration ? (
+                <CollaborationLayer controller={props.collaboration} session={session} />
+              ) : null}
+              {visible.documentBar
+                ? (props.slots?.documentBar ?? (
+                    <DocumentBar
+                      fileName={props.fileName}
+                      saveState={props.saveState}
+                      width={layout.documentBar.width}
+                      commands={controller.commands.list()}
+                    />
+                  ))
+                : null}
+              <PanelFrame
+                layout={layout.agent}
+                tab={state.tab}
+                onTab={(tab) => workspace.switchTab(tab, { reveal: true })}
+                onCloseOverlay={() => workspace.closeAgentOverlay()}
+                shortcut={shortcut("agent.focus")}
+              >
+                {{
+                  agent: props.agent
+                    ? panelLoading(
+                        "agent",
+                        <AgentTab
+                          agent={props.agent}
+                          actors={props.actors}
+                          {...(composer ? { composer } : {})}
+                          {...(composerHostWithEdge ? { composerHost: composerHostWithEdge } : {})}
+                          composerSlot={props.slots?.agent}
+                          {...(notice && !edge?.loading?.agent
+                            ? {
+                                notice: (
+                                  <AgentNotice
+                                    notice={notice}
+                                    actor={noticeActor}
+                                    model={composer?.modelLine() ?? null}
+                                    run={runEdge}
+                                  />
+                                ),
+                              }
+                            : {})}
+                        />,
+                      )
+                    : (props.slots?.agent ?? null),
+                  history: props.ledger?.history
+                    ? panelLoading(
+                        "history",
+                        <HistoryTab
+                          history={props.ledger.history}
+                          readOnly={readOnly}
+                          {...(props.ledger.timeZone ? { timeZone: props.ledger.timeZone } : {})}
+                          {...(composer ? { onAsk: () => shellActions.askAbout() } : {})}
+                        />,
+                      )
+                    : (props.slots?.history ?? null),
+                  layers: slidePage ? (
+                    <SlideStrip
+                      controller={slides}
+                      selection={session.state.selection}
+                      onSelect={selectSlide}
+                      readOnly={readOnly}
+                    />
+                  ) : (
+                    panelLoading(
+                      "layers",
+                      <LayersTab
+                        onNewSlides={() => slides.newPage()}
+                        document={doc}
+                        page={pageId ?? session.page}
+                        onPage={(id) => {
+                          setPageId(id);
+                          session.setPage(id);
+                        }}
+                        selection={session.state.selection}
+                        onSelect={(ids) => session.select(ids)}
+                        commit={commit}
+                        device={props.device}
+                        now={props.now}
+                        recent={props.recent}
+                        actors={props.actors}
+                        {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
+                        readOnly={readOnly}
+                        onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
+                      />,
+                    )
+                  ),
+                  assets: panelLoading(
+                    "assets",
+                    <AssetsTab
+                      {...props.assets}
+                      {...(props.authoring?.host.loadGuidelines
                         ? {
-                            notice: (
-                              <AgentNotice
-                                notice={notice}
-                                actor={noticeActor}
-                                model={composer?.modelLine() ?? null}
-                                run={runEdge}
-                              />
-                            ),
+                            onAction: (action, item) => {
+                              if (action === "guidelines") void props.authoring?.openGuidelines();
+                              else props.assets.onAction?.(action, item);
+                            },
+                          }
+                        : {})}
+                      components={components}
+                      readOnly={readOnly}
+                      onDropComponent={dropComponent}
+                      {...(props.resources
+                        ? {
+                            onVariables: () => props.resources?.open("variables"),
+                            onLibraries: () => props.resources?.open("libraries"),
+                            onThemes: () => props.resources?.open("themes"),
                           }
                         : {})}
                     />,
-                  )
-                : (props.slots?.agent ?? null),
-              history: props.ledger?.history
-                ? panelLoading(
-                    "history",
-                    <HistoryTab
-                      history={props.ledger.history}
-                      readOnly={readOnly}
-                      {...(props.ledger.timeZone ? { timeZone: props.ledger.timeZone } : {})}
-                      {...(composer ? { onAsk: () => shellActions.askAbout() } : {})}
-                    />,
-                  )
-                : (props.slots?.history ?? null),
-              layers: slidePage ? (
-                <SlideStrip
+                  ),
+                }}
+              </PanelFrame>
+              {visible.toolRail ? (
+                <ToolRail
+                  x={layout.toolRail.x}
+                  y={layout.toolRail.y}
+                  tool={tool === "path" ? "move" : tool}
+                  selectTool={(t) => session.dispatch({ type: "tool", tool: t })}
+                  run={run}
+                  enabled={enabled}
+                  shortcut={shortcut}
+                />
+              ) : null}
+              {visible.topRight && slidePage ? (
+                <SlideActions
                   controller={slides}
                   selection={session.state.selection}
-                  onSelect={selectSlide}
-                  readOnly={readOnly}
+                  shortcut={shortcut("present.start")}
                 />
-              ) : (
-                panelLoading(
-                  "layers",
-                  <LayersTab
-                    onNewSlides={() => slides.newPage()}
-                    document={doc}
-                    page={pageId ?? session.page}
-                    onPage={(id) => {
-                      setPageId(id);
-                      session.setPage(id);
-                    }}
-                    selection={session.state.selection}
-                    onSelect={(ids) => session.select(ids)}
-                    commit={commit}
-                    device={props.device}
-                    now={props.now}
-                    recent={props.recent}
-                    actors={props.actors}
-                    {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}
-                    readOnly={readOnly}
-                    onDrawFrame={() => session.dispatch({ type: "tool", tool: "frame" })}
-                  />,
-                )
-              ),
-              assets: panelLoading(
-                "assets",
-                <AssetsTab
-                  {...props.assets}
-                  {...(props.authoring?.host.loadGuidelines
-                    ? {
-                        onAction: (action, item) => {
-                          if (action === "guidelines") void props.authoring?.openGuidelines();
-                          else props.assets.onAction?.(action, item);
-                        },
-                      }
-                    : {})}
-                  components={components}
-                  readOnly={readOnly}
-                  onDropComponent={dropComponent}
-                  {...(props.resources
-                    ? {
-                        onVariables: () => props.resources?.open("variables"),
-                        onLibraries: () => props.resources?.open("libraries"),
-                        onThemes: () => props.resources?.open("themes"),
-                      }
-                    : {})}
-                />,
-              ),
-            }}
-          </PanelFrame>
-          {visible.toolRail ? (
-            <ToolRail
-              x={layout.toolRail.x}
-              y={layout.toolRail.y}
-              tool={tool === "path" ? "move" : tool}
-              selectTool={(t) => session.dispatch({ type: "tool", tool: t })}
-              run={run}
-              enabled={enabled}
-              shortcut={shortcut}
-            />
-          ) : null}
-          {visible.topRight && slidePage ? (
-            <SlideActions
-              controller={slides}
-              selection={session.state.selection}
-              shortcut={shortcut("present.start")}
-            />
-          ) : null}
-          {visible.topRight && props.collaboration ? (
-            <CollaborationToolbar
-              controller={props.collaboration}
-              {...(props.presence ? { presence: props.presence } : {})}
-              {...(props.onShare ? { onShare: props.onShare } : {})}
-              {...(props.onSettings ? { onSettings: props.onSettings } : {})}
-            />
-          ) : visible.topRight ? (
-            <TopRightBar
-              right={layout.topRight.right}
-              agents={props.agents}
-              {...(props.presence ? { presence: props.presence } : {})}
-              {...(props.onShare ? { onShare: props.onShare } : {})}
-              {...(props.onPreview ? { onPreview: props.onPreview } : {})}
-              {...(props.onSettings
-                ? { onSettings: props.onSettings }
-                : settings
-                  ? { onSettings: () => settings.open() }
-                  : {})}
-              {...(props.onPauseAll ? { onPauseAll: props.onPauseAll } : {})}
-              {...(props.onConnectAgents ? { onConnectAgents: props.onConnectAgents } : {})}
-            />
-          ) : null}
-          {layout.right.mode !== "hidden" && (props.design || props.slots?.right) ? (
-            <aside
-              className="vc-bar vc-right"
-              data-mode={layout.right.mode}
-              style={{
-                left: layout.right.rect.x,
-                top: layout.right.rect.y,
-                width: layout.right.rect.width,
-                height: layout.right.rect.height,
-              }}
-              aria-label="Properties"
-            >
-              {props.resources && missingLibrary ? (
-                <MissingLibraryPanel
-                  resources={props.resources}
-                  alias={missingLibrary}
-                  disabled={readOnly}
+              ) : null}
+              {visible.topRight && props.collaboration ? (
+                <CollaborationToolbar
+                  controller={props.collaboration}
+                  {...(props.presence ? { presence: props.presence } : {})}
+                  {...(props.onShare ? { onShare: props.onShare } : {})}
+                  {...(props.onSettings ? { onSettings: props.onSettings } : {})}
                 />
-              ) : props.design && props.paintEditor ? (
-                <RightPanel
-                  activityRequest={activityRequest}
-                  design={
-                    selectedLibrary?.type === "embed" ? (
-                      <EmbedProperties
-                        node={selectedLibrary}
-                        {...(props.browser
-                          ? {
-                              onOpen: () =>
-                                setOpenEmbed((previous) => ({
-                                  address: session.state.selection[0] ?? "",
-                                  revision: previous.revision + 1,
-                                })),
-                            }
-                          : {})}
-                        disabled={readOnly}
-                        onChange={(patch) => {
-                          props.design?.edit(() => patch);
-                        }}
-                      />
-                    ) : session.state.mode.type === "scaling" ? (
-                      <ScalePanel session={session} disabled={readOnly} />
-                    ) : session.state.mode.type === "path" ? (
-                      <VectorPanel session={session} design={props.design} disabled={readOnly} />
-                    ) : (
-                      <>
-                        {props.authoring &&
-                        inspected &&
-                        selectedLibrary &&
-                        (selectedLibrary.type === "image" ||
-                          ("fills" in selectedLibrary &&
-                            selectedLibrary.fills?.some((p) => p.type === "image"))) ? (
-                          <ImageActions
-                            authoring={props.authoring}
-                            address={inspected}
+              ) : visible.topRight ? (
+                <TopRightBar
+                  right={layout.topRight.right}
+                  agents={props.agents}
+                  {...(props.presence ? { presence: props.presence } : {})}
+                  {...(props.onShare ? { onShare: props.onShare } : {})}
+                  {...(props.onPreview ? { onPreview: props.onPreview } : {})}
+                  {...(props.onSettings
+                    ? { onSettings: props.onSettings }
+                    : settings
+                      ? { onSettings: () => settings.open() }
+                      : {})}
+                  {...(props.onPauseAll ? { onPauseAll: props.onPauseAll } : {})}
+                  {...(props.onConnectAgents ? { onConnectAgents: props.onConnectAgents } : {})}
+                />
+              ) : null}
+              {layout.right.mode !== "hidden" && (props.design || props.slots?.right) ? (
+                <aside
+                  className="vc-bar vc-right"
+                  data-mode={layout.right.mode}
+                  style={{
+                    insetInlineEnd: state.width - layout.right.rect.x - layout.right.rect.width,
+                    top: layout.right.rect.y,
+                    width: layout.right.rect.width,
+                    height: layout.right.rect.height,
+                  }}
+                  aria-label={locale.t("Properties")}
+                >
+                  {props.resources && missingLibrary ? (
+                    <MissingLibraryPanel
+                      resources={props.resources}
+                      alias={missingLibrary}
+                      disabled={readOnly}
+                    />
+                  ) : props.design && props.paintEditor ? (
+                    <RightPanel
+                      activityRequest={activityRequest}
+                      design={
+                        selectedLibrary?.type === "embed" ? (
+                          <EmbedProperties
+                            node={selectedLibrary}
+                            {...(props.browser
+                              ? {
+                                  onOpen: () =>
+                                    setOpenEmbed((previous) => ({
+                                      address: session.state.selection[0] ?? "",
+                                      revision: previous.revision + 1,
+                                    })),
+                                }
+                              : {})}
+                            disabled={readOnly}
+                            onChange={(patch) => {
+                              props.design?.edit(() => patch);
+                            }}
+                          />
+                        ) : session.state.mode.type === "scaling" ? (
+                          <ScalePanel session={session} disabled={readOnly} />
+                        ) : session.state.mode.type === "path" ? (
+                          <VectorPanel
+                            session={session}
+                            design={props.design}
                             disabled={readOnly}
                           />
-                        ) : null}
-                        <DesignTab
-                          design={props.design}
-                          session={session}
-                          paintEditor={props.paintEditor}
-                          document={doc}
-                          readOnly={readOnly}
-                          host={designHost}
-                        />
-                      </>
-                    )
-                  }
-                  {...(props.ledger?.inspect
-                    ? { inspect: <InspectPanel inspect={props.ledger.inspect} /> }
-                    : props.slots?.inspect
-                      ? { inspect: props.slots.inspect }
-                      : {})}
-                  {...(props.slots?.activity ? { activity: props.slots.activity } : {})}
-                />
-              ) : (
-                props.slots?.right
-              )}
-            </aside>
-          ) : null}
-          {visible.bottomStrip ? (
-            <BottomStrip
-              centerX={layout.bottomStrip.centerX}
-              y={layout.bottomStrip.y}
-              branch={props.branch}
-              dirty={props.dirty ?? false}
-              connection={props.connection}
-              basicRenderer={props.basicRenderer ?? false}
-            />
-          ) : null}
-          {visible.zoomPill ? (
-            <ZoomPill
-              x={layout.zoomPill.x}
-              y={layout.zoomPill.y}
-              label={zoomLabel}
-              items={zoomItems}
-            />
-          ) : null}
-          {selectionRect &&
-          composer &&
-          !composer.state.inline &&
-          !layout.chromeHidden &&
-          tool !== "path" &&
-          session.state.mode.type !== "path" ? (
-            <SelectionToolbar
-              rect={selectionRect}
-              shortcut={shortcut("agent.inline") ?? ""}
-              onAsk={() => composer.openInline()}
-            />
-          ) : null}
-          {composer?.state.inline && (selectionRect || composer.state.inline.phase === "sent") ? (
-            <InlinePrompt
-              composer={composer}
-              rect={selectionRect ?? { x: state.width / 2 - 180, y: 120, width: 0, height: 0 }}
-              label={scopeLabel ?? "Selection"}
-              bounds={{ width: state.width, height: state.height }}
-            />
-          ) : null}
-          {session.state.mode.type === "path" ? (
-            <button
-              type="button"
-              className="vc-resource-button vc-path-done"
-              data-primary=""
-              onClick={() => session.dispatch({ type: "finish" })}
-            >
-              Done · Enter
-            </button>
-          ) : null}
-          {props.resources ? (
-            <ResourceDialogs
-              resources={props.resources}
-              session={session}
-              design={props.design}
-              readOnly={readOnly}
-            />
-          ) : null}
-          {props.ledger ? (
-            <>
-              <LedgerLayer
-                history={props.ledger.history}
-                conflicts={props.ledger.conflicts}
-                session={session}
-                readOnly={readOnly}
-                insets={layout.canvasInsets}
-                width={state.width}
-              />
-              <HandoffDialogs
-                tokens={props.ledger.tokens}
-                exporter={props.ledger.exporter}
-                inspect={props.ledger.inspect}
-                readOnly={readOnly}
-                onOpenActivity={() => setActivityRequest((n) => n + 1)}
-                toastLeft={
-                  layout.canvasInsets.left +
-                  (state.width - layout.canvasInsets.left - layout.canvasInsets.right) / 2 -
-                  178
-                }
-              />
-            </>
-          ) : null}
-          {env ? (
-            <>
-              {banner ? (
-                <EdgeBannerView
-                  banner={banner}
-                  top={props.ledger?.conflicts?.banner() ? 80 : 44}
-                  inset={layout.canvasInsets.left}
-                  run={runEdge}
+                        ) : (
+                          <>
+                            {props.authoring &&
+                            inspected &&
+                            selectedLibrary &&
+                            (selectedLibrary.type === "image" ||
+                              ("fills" in selectedLibrary &&
+                                selectedLibrary.fills?.some((p) => p.type === "image"))) ? (
+                              <ImageActions
+                                authoring={props.authoring}
+                                address={inspected}
+                                disabled={readOnly}
+                              />
+                            ) : null}
+                            <DesignTab
+                              design={props.design}
+                              session={session}
+                              paintEditor={props.paintEditor}
+                              document={doc}
+                              readOnly={readOnly}
+                              host={designHost}
+                            />
+                          </>
+                        )
+                      }
+                      {...(props.ledger?.inspect
+                        ? { inspect: <InspectPanel inspect={props.ledger.inspect} /> }
+                        : props.slots?.inspect
+                          ? { inspect: props.slots.inspect }
+                          : {})}
+                      {...(props.slots?.activity ? { activity: props.slots.activity } : {})}
+                    />
+                  ) : (
+                    props.slots?.right
+                  )}
+                </aside>
+              ) : null}
+              {visible.bottomStrip ? (
+                <BottomStrip
+                  centerX={layout.bottomStrip.centerX}
+                  y={layout.bottomStrip.y}
+                  branch={props.branch}
+                  dirty={props.dirty ?? false}
+                  connection={props.connection}
+                  basicRenderer={props.basicRenderer ?? false}
                 />
               ) : null}
-              {typeof env.readOnly === "object" && env.readOnly ? (
-                <div className="ve-viewonly" style={{ left: layout.canvasInsets.left + 44 }}>
-                  <Icon name="lock" size={16} />
-                  View only · file is not downgraded
+              {visible.zoomPill ? (
+                <ZoomPill
+                  x={layout.zoomPill.x}
+                  y={layout.zoomPill.y}
+                  label={zoomLabel}
+                  items={zoomItems}
+                />
+              ) : null}
+              {selectionRect &&
+              composer &&
+              !composer.state.inline &&
+              !layout.chromeHidden &&
+              tool !== "path" &&
+              session.state.mode.type !== "path" ? (
+                <SelectionToolbar
+                  rect={selectionRect}
+                  shortcut={shortcut("agent.inline") ?? ""}
+                  onAsk={() => composer.openInline()}
+                />
+              ) : null}
+              {composer?.state.inline &&
+              (selectionRect || composer.state.inline.phase === "sent") ? (
+                <InlinePrompt
+                  composer={composer}
+                  rect={selectionRect ?? { x: state.width / 2 - 180, y: 120, width: 0, height: 0 }}
+                  label={scopeLabel ?? "Selection"}
+                  bounds={{ width: state.width, height: state.height }}
+                />
+              ) : null}
+              {session.state.mode.type === "path" ? (
+                <button
+                  type="button"
+                  className="vc-resource-button vc-path-done"
+                  data-primary=""
+                  onClick={() => session.dispatch({ type: "finish" })}
+                >
+                  Done · Enter
+                </button>
+              ) : null}
+              {props.resources ? (
+                <ResourceDialogs
+                  resources={props.resources}
+                  session={session}
+                  design={props.design}
+                  readOnly={readOnly}
+                />
+              ) : null}
+              {props.ledger ? (
+                <>
+                  <LedgerLayer
+                    history={props.ledger.history}
+                    conflicts={props.ledger.conflicts}
+                    session={session}
+                    readOnly={readOnly}
+                    insets={layout.canvasInsets}
+                    width={state.width}
+                  />
+                  <HandoffDialogs
+                    tokens={props.ledger.tokens}
+                    exporter={props.ledger.exporter}
+                    inspect={props.ledger.inspect}
+                    readOnly={readOnly}
+                    onOpenActivity={() => setActivityRequest((n) => n + 1)}
+                    toastLeft={
+                      layout.canvasInsets.left +
+                      (state.width - layout.canvasInsets.left - layout.canvasInsets.right) / 2 -
+                      178
+                    }
+                  />
+                </>
+              ) : null}
+              {env ? (
+                <>
+                  {banner ? (
+                    <EdgeBannerView
+                      banner={banner}
+                      top={props.ledger?.conflicts?.banner() ? 80 : 44}
+                      inset={layout.canvasInsets.left}
+                      run={runEdge}
+                    />
+                  ) : null}
+                  {typeof env.readOnly === "object" && env.readOnly ? (
+                    <div className="ve-viewonly" style={{ left: layout.canvasInsets.left + 44 }}>
+                      <Icon name="lock" size={16} />
+                      View only · file is not downgraded
+                    </div>
+                  ) : null}
+                  <EdgeDialogs
+                    env={env}
+                    ui={edgeUi}
+                    host={edge?.host as EdgeHost}
+                    file={props.fileName}
+                    notice={notice}
+                    fontsHost={fontsHost}
+                    readOnly={readOnly}
+                    run={runEdge}
+                    rejection={edge?.rejection}
+                    toastLeft={layout.bottomStrip.centerX - 41}
+                  />
+                </>
+              ) : null}
+              {shell?.palette ? <Palette palette={shell.palette} shortcut={shortcut} /> : null}
+              {settings ? (
+                <SettingsDialog
+                  settings={settings}
+                  composer={composer}
+                  {...(shell?.settingsHost ? { host: shell.settingsHost } : {})}
+                  platform={props.platform}
+                />
+              ) : null}
+              {menu ? (
+                <ContextMenu
+                  menu={menu}
+                  enabled={enabled}
+                  shortcut={shortcut}
+                  size={{ width: state.width, height: state.height }}
+                  mac={props.platform === "mac"}
+                  onClose={() => setMenu(null)}
+                  run={(command) => run(command)}
+                  readOnly={readOnly}
+                />
+              ) : null}
+              {props.authoring ? (
+                <AuthoringDialogs
+                  authoring={props.authoring}
+                  readOnly={readOnly}
+                  design={props.design}
+                />
+              ) : null}
+              {session.notice ? (
+                <div className="vc-notice" role="status" data-kind={session.notice.kind}>
+                  <span>{noticeText(session.notice)}</span>
+                  <button
+                    type="button"
+                    className="vc-iconbutton"
+                    aria-label="Dismiss"
+                    onClick={() => session.clearNotice()}
+                  >
+                    ×
+                  </button>
                 </div>
               ) : null}
-              <EdgeDialogs
-                env={env}
-                ui={edgeUi}
-                host={edge?.host as EdgeHost}
-                file={props.fileName}
-                notice={notice}
-                fontsHost={fontsHost}
-                readOnly={readOnly}
-                run={runEdge}
-                rejection={edge?.rejection}
-                toastLeft={layout.bottomStrip.centerX - 41}
-              />
-            </>
-          ) : null}
-          {shell?.palette ? <Palette palette={shell.palette} shortcut={shortcut} /> : null}
-          {settings ? (
-            <SettingsDialog
-              settings={settings}
-              composer={composer}
-              {...(shell?.settingsHost ? { host: shell.settingsHost } : {})}
-              platform={props.platform}
-            />
-          ) : null}
-          {menu ? (
-            <ContextMenu
-              menu={menu}
-              enabled={enabled}
-              shortcut={shortcut}
-              size={{ width: state.width, height: state.height }}
-              mac={props.platform === "mac"}
-              onClose={() => setMenu(null)}
-              run={(command) => run(command)}
-              readOnly={readOnly}
-            />
-          ) : null}
-          {props.authoring ? (
-            <AuthoringDialogs
-              authoring={props.authoring}
-              readOnly={readOnly}
-              design={props.design}
-            />
-          ) : null}
-          {session.notice ? (
-            <div className="vc-notice" role="status" data-kind={session.notice.kind}>
-              <span>{noticeText(session.notice)}</span>
-              <button
-                type="button"
-                className="vc-iconbutton"
-                aria-label="Dismiss"
-                onClick={() => session.clearNotice()}
-              >
-                ×
-              </button>
-            </div>
-          ) : null}
-          {slides.state.presenting ? (
-            <Presentation controller={slides} revision={snapshot.revision} />
-          ) : null}
-        </TipProvider>
-      </PortalContainer.Provider>
-    </div>
+              {slides.state.presenting ? (
+                <Presentation controller={slides} revision={snapshot.revision} />
+              ) : null}
+            </TipProvider>
+          </PortalContainer.Provider>
+        </div>
+      </DirectionProvider>
+    </LocaleContext.Provider>
   );
 }
 

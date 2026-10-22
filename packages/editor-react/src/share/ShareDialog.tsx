@@ -1,7 +1,9 @@
 "use client";
+
 import type { CollaborationController } from "@vellum/editor-core";
 import type { SharePort, ShareRequest, ShareState } from "@vellum/host-api";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { LiveShareSection } from "../collaboration/Collaboration";
 import { Icon } from "../icons/Icon";
 import "./share.css";
@@ -22,6 +24,7 @@ export function ShareDialogBody({
   busy?: boolean;
   canManage?: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const time = s.snapshot
     ? new Intl.DateTimeFormat("en-GB", {
         day: "numeric",
@@ -43,7 +46,9 @@ export function ShareDialogBody({
   }[s.state];
   return (
     <>
-      <h2 id="share-title">Share {name}</h2>
+      <h2 id="share-title">
+        {translateUi("Share")} {name}
+      </h2>
       <p role="status" data-state={s.state}>
         {status}
       </p>
@@ -135,7 +140,7 @@ export function ShareDialogBody({
             data-primary=""
             onClick={() => act({ action: "retry" })}
           >
-            Retry
+            {translateUi("Retry")}
           </button>
         )}
         {s.state === "changed" && (
@@ -201,6 +206,7 @@ export function ShareDialog({
   onClose: () => void;
   collaboration?: CollaborationController;
 }) {
+  const { t: translateUi } = useLocale();
   const [state, setState] = useState<ShareState>({ state: "not-shared" });
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(true);
@@ -302,14 +308,16 @@ export function ShareDialog({
               Delete share link
             </button>
             <button type="button" onClick={() => setConfirm(false)}>
-              Cancel
+              {translateUi("Cancel")}
             </button>
           </div>
         </>
       ) : collaboration && state.state === "shared" ? (
         <>
           <header className="vs-live-header">
-            <h2 id="share-title">Share {name}</h2>
+            <h2 id="share-title">
+              {translateUi("Share")} {name}
+            </h2>
             <p>Snapshot and live collaboration are separate.</p>
           </header>
           <section className="vs-live-snapshot">
@@ -327,7 +335,7 @@ export function ShareDialog({
                 {state.url}
               </a>
               <button type="button" disabled={busy} onClick={() => void act({ action: "status" })}>
-                Copy
+                {translateUi("Copy")}
               </button>
             </div>
             <div className="vs-live-row">
@@ -386,7 +394,7 @@ export function ShareDialog({
           <Icon name="info" size={12} />
           <p>Live access and the snapshot link are managed separately.</p>
           <button type="button" onClick={onClose}>
-            Done
+            {translateUi("Done")}
           </button>
         </footer>
       )}

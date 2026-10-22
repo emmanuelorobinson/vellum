@@ -5,6 +5,7 @@
  */
 import type { ComposerController } from "@vellum/editor-core";
 import { useLayoutEffect, useRef } from "react";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
 
@@ -27,6 +28,7 @@ export function SelectionToolbar({
   shortcut: string;
   onAsk(): void;
 }) {
+  const { t: translateUi } = useLocale();
   return (
     <div
       className="vk-seltool"
@@ -36,7 +38,7 @@ export function SelectionToolbar({
     >
       <button type="button" className="vk-seltool__ask" onClick={onAsk}>
         <Icon name="message-square" size={16} />
-        <span>Ask</span>
+        <span>{translateUi("Ask")}</span>
         <kbd className="vk-seltool__key">{shortcut}</kbd>
       </button>
     </div>
@@ -55,6 +57,7 @@ export function InlinePrompt({
   /** The window, for keeping the prompt on screen. */
   bounds: { width: number; height: number };
 }) {
+  const { t: translateUi } = useLocale();
   useStore(composer.subscribe);
   const field = useRef<HTMLTextAreaElement>(null);
   const undo = useRef<HTMLButtonElement>(null);
@@ -108,7 +111,7 @@ export function InlinePrompt({
               disabled={!inline.text.trim()}
               onClick={() => void composer.sendInline()}
             >
-              Send
+              {translateUi("Send")}
             </button>
             <span className="vk-inline__hint">Enter to send · Esc to close</span>
           </div>

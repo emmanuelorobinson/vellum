@@ -15,6 +15,7 @@ import {
   usageView,
 } from "@vellum/editor-core";
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { usePortalContainer } from "../chrome/portal";
 import { useStore } from "../hooks";
@@ -61,6 +62,7 @@ export function Composer({
   field: RefObject<HTMLTextAreaElement | null>;
 }) {
   useStore(composer.subscribe);
+  const { t } = useLocale();
   const box = useRef<HTMLDivElement>(null);
   const s = composer.state;
   const draft = composer.draft();
@@ -133,7 +135,7 @@ export function Composer({
           rows={1}
           value={draft.text}
           disabled={offline}
-          placeholder={composer.placeholder()}
+          placeholder={t(composer.placeholder())}
           aria-label="Request"
           role="combobox"
           aria-expanded={!!s.menu}
@@ -165,7 +167,7 @@ export function Composer({
               disabled={offline || s.sending || (!draft.text.trim() && !draft.chips.length)}
               onClick={() => void composer.send()}
             >
-              Send
+              {t("Send")}
             </button>
           )}
         </div>
@@ -484,12 +486,13 @@ function FooterPopover({
   disabled?: boolean;
   children: ReactNode;
 }) {
+  const { t } = useLocale();
   const container = usePortalContainer();
   const open = composer.state.surface?.type === type;
   return (
     <Popover.Root open={open} onOpenChange={(next) => composer.open(next ? { type } : null)}>
       <Popover.Trigger className={`vk-footer-button vk-footer-button--${type}`} disabled={disabled}>
-        {label}
+        {typeof label === "string" ? t(label) : label}
       </Popover.Trigger>
       <Popover.Portal container={container}>
         <Popover.Positioner
@@ -653,6 +656,7 @@ function StopButton({
   agents: readonly string[];
   actor(id: string | null | undefined): ActorView;
 }) {
+  const { t } = useLocale();
   const container = usePortalContainer();
   if (agents.length < 2)
     return (
@@ -662,13 +666,13 @@ function StopButton({
         data-stop=""
         onClick={() => void composer.stopAll()}
       >
-        Stop
+        {t("Stop")}
       </button>
     );
   return (
     <Menu.Root>
       <Menu.Trigger className="vk-send" data-stop="">
-        Stop
+        {t("Stop")}
       </Menu.Trigger>
       <Menu.Portal container={container}>
         <Menu.Positioner side="top" align="end" sideOffset={8}>

@@ -5,6 +5,12 @@
 module.exports = {
   forbidden: [
     {
+      name: "i18n-through-wrapper",
+      severity: "error",
+      from: { path: "^(apps|packages)/", pathNot: "^packages/i18n/" },
+      to: { path: "node_modules/i18next/" },
+    },
+    {
       name: "editor-core-stays-headless",
       severity: "error",
       comment: "editor-core is a controller with no React and no renderer (ARCHITECTURE §2.1).",

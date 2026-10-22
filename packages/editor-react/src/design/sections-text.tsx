@@ -15,6 +15,7 @@ import {
 } from "@vellum/editor-core";
 import type { NodePatch, TextRun } from "@vellum/types-ts";
 import { useEffect, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import type { DesignContext } from "./context";
 import { Banner, Pair, PropertyRow, Section, Segmented, SelectField, ValueField } from "./controls";
 import { SPEC } from "./specs";
@@ -68,6 +69,7 @@ const number = (f: FieldValue<number | "auto">): FieldValue<number> =>
         : { kind: "none" };
 
 export function TextSection({ ctx }: { ctx: DesignContext }) {
+  const { t: translateUi } = useLocale();
   const t = ctx.model.text;
   if (!t) return null;
   const families = new Set<string>(ctx.host.fonts ?? []);
@@ -79,7 +81,7 @@ export function TextSection({ ctx }: { ctx: DesignContext }) {
   if (font) families.add(font);
   const style = t.style.kind === "value" ? (t.style.value ?? NO_STYLE) : null;
   return (
-    <Section id="text" title="Text" density={ctx.density}>
+    <Section id="text" title={translateUi("Text")} density={ctx.density}>
       <PropertyRow label="Style">
         <SelectField
           label="Text style"

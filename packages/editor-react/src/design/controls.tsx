@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import "./design.css";
@@ -494,6 +495,7 @@ export function Section(props: {
   aside?: ReactNode;
   children?: ReactNode;
 }) {
+  const { t } = useLocale();
   const heading = `vc-section-${props.id}`;
   return (
     <section
@@ -504,7 +506,7 @@ export function Section(props: {
     >
       <div className="vc-section__head">
         <h3 className="vc-heading" id={heading}>
-          {props.title}
+          {t(props.title)}
         </h3>
         {props.actions || props.aside ? (
           <span className="vc-section__tools">
@@ -519,9 +521,10 @@ export function Section(props: {
 }
 
 export function PropertyRow(props: { label: string; children: ReactNode }) {
+  const { t } = useLocale();
   return (
     <div className="vc-prop">
-      <span className="vc-prop__label">{props.label}</span>
+      <span className="vc-prop__label">{t(props.label)}</span>
       <span className="vc-prop__control">{props.children}</span>
     </div>
   );

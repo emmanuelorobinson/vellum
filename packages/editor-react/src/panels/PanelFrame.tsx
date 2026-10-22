@@ -1,5 +1,6 @@
 import type { AgentMode, PanelTab, WorkspaceLayout } from "@vellum/editor-core";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import { useLocale } from "../accessibility/locale";
 import { Tip } from "../chrome/Tooltip";
 import { Icon } from "../icons/Icon";
 
@@ -26,6 +27,7 @@ export function PanelFrame({
   shortcut: string | null;
   children: Record<PanelTab, ReactNode>;
 }) {
+  const { t: translate, direction } = useLocale();
   const mode: AgentMode = layout.mode;
   const list = useRef<HTMLDivElement>(null);
   // An overlay opened from the strip takes focus, so Escape and the tab keys work straight away.
@@ -39,19 +41,23 @@ export function PanelFrame({
     return (
       <nav
         className="vc-bar vc-panel vc-panel--strip"
-        style={{ left: x, top: y, width, height }}
-        aria-label="Panels"
+        style={{ insetInlineStart: x, top: y, width, height }}
+        aria-label={translate("Panels")}
       >
         {TABS.map((t) => (
           <Tip
             key={t.id}
-            name={t.id === "agent" ? t.strip : t.label}
+            name={translate(t.id === "agent" ? t.strip : t.label)}
             shortcut={t.id === "agent" ? shortcut : null}
           >
             <button
               type="button"
               className="vc-iconbutton vc-panel__stripbutton"
-              aria-label={t.id === "agent" && shortcut ? `${t.strip} · ${shortcut}` : t.label}
+              aria-label={
+                t.id === "agent" && shortcut
+                  ? `${translate(t.strip)} · ${shortcut}`
+                  : translate(t.label)
+              }
               onClick={() => onTab(t.id)}
             >
               <Icon name={t.icon} size={18} />
@@ -63,9 +69,9 @@ export function PanelFrame({
   const move = (e: KeyboardEvent) => {
     const at = TABS.findIndex((t) => t.id === tab);
     const to =
-      e.key === "ArrowRight"
+      e.key === (direction === "rtl" ? "ArrowLeft" : "ArrowRight")
         ? (at + 1) % TABS.length
-        : e.key === "ArrowLeft"
+        : e.key === (direction === "rtl" ? "ArrowRight" : "ArrowLeft")
           ? (at + TABS.length - 1) % TABS.length
           : e.key === "Home"
             ? 0
@@ -82,13 +88,19 @@ export function PanelFrame({
     <section
       className="vc-bar vc-panel"
       data-mode={mode}
-      style={{ left: x, top: y, width, height }}
-      aria-label="Agent panel"
+      style={{ insetInlineStart: x, top: y, width, height }}
+      aria-label={translate("Agent panel")}
       onKeyDown={(e) => {
         if (mode === "overlay" && e.key === "Escape") onCloseOverlay();
       }}
     >
-      <div className="vc-panel__tabs" role="tablist" aria-label="Panel" ref={list} onKeyDown={move}>
+      <div
+        className="vc-panel__tabs"
+        role="tablist"
+        aria-label={translate("Panel")}
+        ref={list}
+        onKeyDown={move}
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -101,7 +113,7 @@ export function PanelFrame({
             tabIndex={tab === t.id ? 0 : -1}
             onClick={() => onTab(t.id)}
           >
-            {t.label}
+            {translate(t.label)}
           </button>
         ))}
       </div>

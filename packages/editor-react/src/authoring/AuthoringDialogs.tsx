@@ -2,6 +2,7 @@ import type { AuthoringController, DesignController } from "@vellum/editor-core"
 import { setImageFit, setPaintOpacity, updateFill, updateStrokePaint } from "@vellum/editor-core";
 import type { Paint } from "@vellum/types-ts";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
 import { ResourceDialog } from "../resources/Dialog";
@@ -16,6 +17,7 @@ export function AuthoringDialogs({
   readOnly: boolean;
   design?: DesignController | undefined;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(a.subscribe);
   const s = a.state;
   const [tab, setTab] = useState<"upload" | "stock" | "generate">("upload");
@@ -137,7 +139,7 @@ export function AuthoringDialogs({
           <label className="vx-image-property">
             <span>Model</span>
             <select
-              aria-label="Image generation model"
+              aria-label={translateUi("Image generation model")}
               value={chosen ? `${chosen.provider}/${chosen.id}` : ""}
               disabled={disabled || !models.length}
               onChange={(e) => setModel(e.target.value)}

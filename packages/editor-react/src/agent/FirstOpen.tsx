@@ -6,6 +6,7 @@ import { Popover } from "@base-ui/react/popover";
 import { copy } from "@vellum/config";
 import type { ComposerController } from "@vellum/editor-core";
 import { type RefObject, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import { ResourceDialog } from "../resources/Dialog";
@@ -22,6 +23,7 @@ export function FirstOpen({
   host: ComposerHost;
   field: RefObject<HTMLTextAreaElement | null>;
 }) {
+  const { t, direction } = useLocale();
   const container = usePortalContainer();
   const [styles, setStyles] = useState(false);
   const fill = (text: string) => {
@@ -35,16 +37,16 @@ export function FirstOpen({
   const suggestion = (icon: string, label: string, onClick?: () => void) => (
     <button type="button" className="vk-suggestion" onClick={onClick}>
       <Icon name={icon} size={16} />
-      {label}
+      {t(label)}
     </button>
   );
   return (
     <section className="vk-first" aria-labelledby="vk-first-heading">
       <h2 id="vk-first-heading" className="vk-first__heading">
-        {copy.firstOpenHeading}
+        {t(copy.firstOpenHeading)}
       </h2>
       <p className="vk-first__text">
-        Describe your idea, or point an agent at a file in your repo.
+        {t("Describe your idea, or point an agent at a file in your repo.")}
       </p>
       <div className="vk-first__suggestions">
         {suggestion("file-text", "Design from a spec", () => mention([".md"]))}
@@ -52,10 +54,14 @@ export function FirstOpen({
           <Popover.Root>
             <Popover.Trigger className="vk-suggestion">
               <Icon name="component" size={16} />
-              Start from a design system
+              {t("Start from a design system")}
             </Popover.Trigger>
             <Popover.Portal container={container}>
-              <Popover.Positioner side="right" align="start" sideOffset={8}>
+              <Popover.Positioner
+                side={direction === "rtl" ? "left" : "right"}
+                align="start"
+                sideOffset={8}
+              >
                 <Popover.Popup className="vk-popover vk-popover--menu">
                   <Popover.Title className="vk-popover__label">Design systems</Popover.Title>
                   {host.designSystems.map((d) => (
@@ -87,7 +93,7 @@ export function FirstOpen({
         {suggestion("palette", "Import tokens from CSS", () => mention([".css"]))}
         {suggestion("square-terminal", "Recreate a screen from my code", () => mention(CODE))}
       </div>
-      <p className="vk-first__hint">{copy.drawByHandHint}</p>
+      <p className="vk-first__hint">{t(copy.drawByHandHint)}</p>
       {styles && host.visualStyles ? (
         <ResourceDialog
           title="Pick a visual style"

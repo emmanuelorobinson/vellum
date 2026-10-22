@@ -32,7 +32,8 @@
     "playwright": "catalog:",
     "@playwright/test": "catalog:",
     "storybook": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "@axe-core/playwright": "4.14.0"
   },
   "dependencies": {
     "react": "catalog:",
@@ -47,6 +48,7 @@
     "@vellum/host-api": "workspace:*",
     "@vellum/host-fake": "workspace:*",
     "@vellum/host-browser": "workspace:*",
-    "@vellum/renderer-skia": "workspace:*"
+    "@vellum/renderer-skia": "workspace:*",
+    "@vellum/i18n": "workspace:*"
   }
 }

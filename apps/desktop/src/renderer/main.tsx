@@ -1,9 +1,12 @@
+import { brand } from "@vellum/config";
 import {
   createBrowserImport,
   createCommandController,
   createEditorHandlers,
   createEditorSession,
   createFigmaImport,
+  createPreferences,
+  createSettingsController,
   createWorkspace,
 } from "@vellum/editor-core";
 import {
@@ -49,7 +52,17 @@ const engine: EngineClient = {
   subscribe: () => ({ dispose() {} }),
   dispose() {},
 };
-function makeEditor() {
+const preferences = createPreferences({
+  async load() {
+    return JSON.parse(localStorage.getItem(`${brand.desktopAppId}.preferences`) ?? "null");
+  },
+  async save(values) {
+    localStorage.setItem(`${brand.desktopAppId}.preferences`, JSON.stringify(values));
+  },
+});
+void preferences.load();
+
+function makeEditor(platform: DesktopState["platform"]) {
   let node = 0;
   const session = createEditorSession({
     engine,
@@ -71,7 +84,12 @@ function makeEditor() {
       },
     }),
   );
-  return { session, workspace, controller };
+  const settings = createSettingsController({
+    preferences,
+    keys: controller.keys,
+    context: { host: "desktop", platform, focus: "outside" },
+  });
+  return { session, workspace, controller, settings };
 }
 type Editor = ReturnType<typeof makeEditor>;
 const editors = new Map<string, Editor>();
@@ -105,7 +123,7 @@ function App() {
           void editor.controller.blur();
           editors.delete(id);
         }
-      for (const id of ids) if (!editors.has(id)) editors.set(id, makeEditor());
+      for (const id of ids) if (!editors.has(id)) editors.set(id, makeEditor(state.platform));
       setState(state);
     };
     let current: DesktopState | null = null;
@@ -203,6 +221,7 @@ function App() {
         </div>
       ) : null}
       <EditorWorkspace
+        shell={{ settings: editor.settings }}
         workspace={editor.workspace}
         session={editor.session}
         controller={editor.controller}

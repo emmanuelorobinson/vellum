@@ -18,6 +18,7 @@ import {
   providerStatusLine,
 } from "@vellum/editor-core";
 import { type ReactNode, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
@@ -32,6 +33,7 @@ export function EnginePicker({
   hasTurns: boolean;
   children: ReactNode;
 }) {
+  const { t: translateUi, direction } = useLocale();
   useStore(composer.subscribe);
   const container = usePortalContainer();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -64,13 +66,15 @@ export function EnginePicker({
         <Popover.Portal container={container}>
           <Popover.Positioner
             anchor={anchor}
-            side="right"
+            side={direction === "rtl" ? "left" : "right"}
             align="start"
             sideOffset={72}
             collisionPadding={8}
           >
             <Popover.Popup className="vk-picker">
-              <Popover.Title className="vk-picker__title">Engine and model</Popover.Title>
+              <Popover.Title className="vk-picker__title">
+                {translateUi("Engine and model")}
+              </Popover.Title>
               <p className="vk-picker__group">Built-in</p>
               <div className="vk-picker__columns">
                 {columns.map((column) => (
@@ -209,6 +213,7 @@ function ProviderOption({
 
 /** Reasoning effort, where the model supports it. */
 function EffortMenu({ composer }: { composer: ComposerController }) {
+  const { t: translateUi, direction } = useLocale();
   const container = usePortalContainer();
   const effort = composer.state.choice?.effort ?? "medium";
   return (
@@ -221,10 +226,16 @@ function EffortMenu({ composer }: { composer: ComposerController }) {
         <Icon name="chevron-right" size={14} />
       </Menu.Trigger>
       <Menu.Portal container={container}>
-        <Menu.Positioner side="right" align="center" sideOffset={8}>
+        <Menu.Positioner
+          side={direction === "rtl" ? "left" : "right"}
+          align="center"
+          sideOffset={8}
+        >
           <Menu.Popup className="vk-effort">
             <Menu.Group>
-              <Menu.GroupLabel className="vk-effort__title">Reasoning effort</Menu.GroupLabel>
+              <Menu.GroupLabel className="vk-effort__title">
+                {translateUi("Reasoning effort")}
+              </Menu.GroupLabel>
               <Menu.RadioGroup
                 value={effort}
                 onValueChange={(v) => composer.setEffort(v as "low" | "medium" | "high")}

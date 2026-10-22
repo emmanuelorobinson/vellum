@@ -3,6 +3,8 @@ import {
   createCommandController,
   createEditorHandlers,
   createEditorSession,
+  createPreferences,
+  createSettingsController,
   createWorkspace,
 } from "@vellum/editor-core";
 import { EditorWorkspace, ShareDialog } from "@vellum/editor-react";
@@ -13,7 +15,11 @@ import { createRoot } from "react-dom/client";
 import "@vellum/ui-tokens/tokens.css";
 import "./theme.css";
 
-declare function acquireVsCodeApi(): { postMessage(value: unknown): void };
+declare function acquireVsCodeApi(): {
+  postMessage(value: unknown): void;
+  getState(): unknown;
+  setState(value: unknown): void;
+};
 const api = acquireVsCodeApi();
 const rootElement = document.getElementById("root");
 if (!rootElement) throw Error("missing root");
@@ -110,6 +116,24 @@ const platform = /Mac/.test(navigator.userAgent)
   : /Win/.test(navigator.userAgent)
     ? "windows"
     : "linux";
+const preferences = createPreferences({
+  async load() {
+    const saved = api.getState();
+    return saved && typeof saved === "object"
+      ? (((saved as Record<string, unknown>).preferences as Record<string, unknown>) ?? null)
+      : null;
+  },
+  async save(values) {
+    const saved = api.getState();
+    api.setState({ ...(saved && typeof saved === "object" ? saved : {}), preferences: values });
+  },
+});
+void preferences.load();
+const settings = createSettingsController({
+  preferences,
+  keys: controller.keys,
+  context: { host: "vscode", platform, focus: "outside" },
+});
 function render() {
   if (!state) return;
   const current = state;
@@ -117,6 +141,7 @@ function render() {
   root.render(
     <>
       <EditorWorkspace
+        shell={{ settings }}
         workspace={workspace}
         session={session}
         engine={engine}

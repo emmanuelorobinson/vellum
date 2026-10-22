@@ -82,3 +82,11 @@ translated. `tests/fixtures/generate.mjs` uses that package to write the test fi
 tract-onnx 0.23.9 (MIT OR Apache-2.0). They remain ordinary Cargo dependencies behind the adapter;
 no source code was copied or ported. Their dependency licence texts must accompany redistribution.
 No segmentation weights are bundled. A person must provision and review a model's licence separately.
+
+## Arabic chrome font (Prompt 70)
+
+`packages/ui-tokens/fonts/ibm-plex-sans-arabic-arabic-{400,500,600}-normal.woff2` are unmodified
+IBM Plex Sans Arabic Arabic-subset fonts from `@fontsource/ibm-plex-sans-arabic@5.3.0`
+([package archive](https://registry.npmjs.org/@fontsource/ibm-plex-sans-arabic/-/ibm-plex-sans-arabic-5.3.0.tgz)).
+Copyright 2019 IBM Corp.; SIL Open Font License 1.1, included as `IBM-Plex-Sans-Arabic-OFL.txt`.
+These are licensed font assets, not ported code. Source and checksums: `packages/ui-tokens/fonts/Arabic.md`.

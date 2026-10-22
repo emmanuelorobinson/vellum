@@ -21,6 +21,8 @@ export type AgentMode = "open" | "overlay" | "strip" | "hidden";
 export type RightMode = "docked" | "overlay" | "hidden";
 
 export interface WorkspaceState {
+  /** Chrome rectangles use logical start; canvas fit insets remain physical. */
+  direction?: "ltr" | "rtl";
   width: number;
   height: number;
   tab: PanelTab;
@@ -125,10 +127,16 @@ export function computeLayout(
       bottomStrip: shown,
       zoomPill: shown,
     },
-    canvasInsets: {
-      left: shown ? toolRail.x + toolRail.width + INSET : 0,
-      right: rightMode === "docked" ? rightWidth + INSET * 2 : 0,
-    },
+    canvasInsets:
+      state.direction === "rtl"
+        ? {
+            left: rightMode === "docked" ? rightWidth + INSET * 2 : 0,
+            right: shown ? toolRail.x + toolRail.width + INSET : 0,
+          }
+        : {
+            left: shown ? toolRail.x + toolRail.width + INSET : 0,
+            right: rightMode === "docked" ? rightWidth + INSET * 2 : 0,
+          },
   };
 }
 
@@ -165,6 +173,9 @@ export function createWorkspace() {
       return state;
     },
     layout: () => computeLayout(state, state),
+    setDirection(direction: "ltr" | "rtl") {
+      set({ direction });
+    },
     subscribe(listener: () => void): Disposable {
       listeners.add(listener);
       return {

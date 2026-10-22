@@ -1,5 +1,6 @@
 import type { ConflictController, EditorSession, HistoryController } from "@vellum/editor-core";
 import type { Node } from "@vellum/types-ts";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
 import { ResourceDialog } from "../resources/Dialog";
@@ -135,6 +136,7 @@ export function LedgerLayer({
   insets: { left: number; right: number };
   width: number;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(history?.subscribe ?? (() => ({ dispose() {} })));
   useStore(conflicts?.subscribe ?? (() => ({ dispose() {} })));
   useStore(session.subscribe);
@@ -197,7 +199,7 @@ export function LedgerLayer({
           </p>
           <div className="vl-revert__actions">
             <button type="button" className="vx-button" onClick={() => history?.cancelRevert()}>
-              Cancel
+              {translateUi("Cancel")}
             </button>
             <button
               type="button"

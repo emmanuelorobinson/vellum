@@ -1,5 +1,6 @@
 import { Tooltip } from "@base-ui/react/tooltip";
 import type { ReactElement } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "./portal";
 
 /** The design's tool tooltip: the name, then the shortcut in mono. */
@@ -14,14 +15,26 @@ export function Tip({
   children: ReactElement;
   side?: "top" | "right" | "bottom" | "left";
 }) {
+  const { t, direction } = useLocale();
   const container = usePortalContainer();
   return (
     <Tooltip.Root>
       <Tooltip.Trigger render={children} />
       <Tooltip.Portal container={container}>
-        <Tooltip.Positioner side={side} sideOffset={8}>
+        <Tooltip.Positioner
+          side={
+            direction === "rtl"
+              ? side === "right"
+                ? "left"
+                : side === "left"
+                  ? "right"
+                  : side
+              : side
+          }
+          sideOffset={8}
+        >
           <Tooltip.Popup className="vc-tooltip">
-            <span>{name}</span>
+            <span>{t(name)}</span>
             {shortcut ? <span className="vc-tooltip__key">{shortcut}</span> : null}
           </Tooltip.Popup>
         </Tooltip.Positioner>

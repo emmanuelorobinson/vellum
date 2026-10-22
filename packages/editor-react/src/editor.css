@@ -1,3 +1,27 @@
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../ui-tokens/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../ui-tokens/fonts/ibm-plex-sans-arabic-arabic-500-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../ui-tokens/fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
 /* The editor chrome. Every colour, radius, space and duration is a token from @vellum/ui-tokens (tokens.css);
    the sizes below are DESIGN.md's (rows 28, bars 40, rail 44, 8 px inset). */
 .vc-workspace {
@@ -76,7 +100,7 @@
   }
 }
 .vc-docbar {
-  left: 8px;
+  inset-inline-start: 8px;
   top: 8px;
   height: 40px;
   padding: 0 12px;
@@ -656,4 +680,102 @@
 .vc-notice[data-kind="rejected"],
 .vc-notice[data-kind="read-only"] {
   border-color: var(--chrome-attention);
+}
+
+/* Accessibility and direction: chrome mirrors through logical positioning; document coordinates do not. */
+.vc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.vc-keyboard-entry {
+  position: absolute;
+  z-index: 100;
+  inset-inline-start: 8px;
+  top: 8px;
+  padding: 8px 12px;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  transform: translateY(-200%);
+}
+.vc-keyboard-entry:focus-visible {
+  transform: none;
+}
+.vc-workspace:lang(ar) {
+  font-family: "IBM Plex Sans Arabic", var(--font-ui), system-ui, sans-serif;
+}
+.vc-workspace
+  :is(
+    .vc-mono,
+    .vc-mono-value,
+    pre,
+    code,
+    kbd,
+    input[type="number"],
+    input[inputmode="decimal"],
+    input[inputmode="numeric"],
+    input[type="url"],
+    .vd-value input,
+    .vc-zoom__button
+  ) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.vc-workspace :is(.vc-layer__name, .vc-page .vc-row__name) {
+  unicode-bidi: plaintext;
+}
+/* These are document-space overlays, not chrome; x continues to increase to the right. */
+.vc-workspace
+:is(
+  .vp-layer,
+  .vn-layer,
+  .vb-canvas-embeds,
+  .vx-canvas-authoring,
+  .vc-canvas,
+  .vs-canvas-shaders,
+  .vm-canvas-layer
+) {
+  direction: ltr;
+}
+.vc-workspace[data-animations="off"] *,
+.vc-workspace[data-animations="off"] *::before,
+.vc-workspace[data-animations="off"] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: user motion preferences override every feature animation */
+  animation: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: user motion preferences override every feature animation */
+  transition: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: user motion preferences override every feature animation */
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vc-workspace *,
+  .vc-workspace *::before,
+  .vc-workspace *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: user motion preferences override every feature animation */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: user motion preferences override every feature animation */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: user motion preferences override every feature animation */
+    scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  .vc-workspace :focus-visible {
+    outline: 2px solid Highlight;
+  }
+  .vc-bar,
+  .vc-workspace button,
+  .vc-workspace input,
+  .vc-workspace select {
+    border: 1px solid ButtonText;
+  }
+  .vc-workspace [aria-selected="true"],
+  .vc-workspace [aria-pressed="true"] {
+    outline: 1px solid Highlight;
+  }
 }

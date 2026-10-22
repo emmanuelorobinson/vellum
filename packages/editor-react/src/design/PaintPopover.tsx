@@ -29,6 +29,7 @@ import {
 } from "@vellum/editor-core";
 import type { GradientKind, Paint, Value } from "@vellum/types-ts";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import type { DesignContext } from "./context";
@@ -458,6 +459,7 @@ function ImageBody(props: {
   index: number;
   apply(fn: (p: Paint) => Paint): void;
 }) {
+  const { t: translateUi } = useLocale();
   const { ctx, paint, apply } = props;
   const isImage = paintKind(paint) === "image";
   const raw = paint as unknown as Loose;
@@ -492,7 +494,7 @@ function ImageBody(props: {
   return (
     <>
       <div className="vc-prop vc-prop--wide">
-        <span className="vc-prop__label">Image</span>
+        <span className="vc-prop__label">{translateUi("Image")}</span>
         <span className="vc-prop__control">
           <span className="vc-field" data-height="28" data-state="default">
             <span className="vc-mono-value vc-select__value">{String(raw.asset)}</span>
@@ -560,6 +562,7 @@ export function PaintPopover(props: {
   trigger: ReactNode;
   title?: string;
 }) {
+  const { t: translateUi } = useLocale();
   const container = usePortalContainer();
   const { ctx, scope, index } = props;
   const [open, setOpen] = useState(false);
@@ -668,7 +671,7 @@ export function PaintPopover(props: {
                   />
                 ) : null}
                 <Popover.Close className="vc-button vc-paint__done" data-primary="">
-                  Done
+                  {translateUi("Done")}
                 </Popover.Close>
               </>
             ) : (

@@ -8,6 +8,7 @@ import {
 } from "@vellum/editor-core";
 import type { Document, Node } from "@vellum/types-ts";
 import { type PointerEvent, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker } from "../chrome/ActorMarker";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
@@ -74,6 +75,7 @@ function CollaborationCard({
   readOnly: boolean;
   offline: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(node.content);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +187,7 @@ function CollaborationCard({
               Save {type}
             </button>
             <button type="button" className="va-link" onClick={() => setEditing(false)}>
-              Cancel
+              {translateUi("Cancel")}
             </button>
           </div>
         </>

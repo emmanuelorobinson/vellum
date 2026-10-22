@@ -1,5 +1,6 @@
 /** Framework-agnostic editor controller. No renderer, DOM, React or document mutation. */
 export const PACKAGE_NAME = "@vellum/editor-core";
+export * from "./accessibility";
 export * from "./agent";
 export * from "./assets";
 export * from "./authoring";

@@ -1,5 +1,6 @@
 import type { DesignController } from "@vellum/editor-core";
 import { type EditorSession, fontPatch, type ResourceController } from "@vellum/editor-core";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { ResourceButton as Button, ResourceDialog as Dialog } from "./Dialog";
 import { FontPickerBody, ManageFontsBody } from "./FontsDialog";
@@ -16,6 +17,7 @@ export function ResourceDialogs({
   session: EditorSession;
   readOnly: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(r.subscribe);
   const doc = r.document();
   if (!doc) return null;
@@ -112,7 +114,7 @@ export function ResourceDialogs({
                 {doc.meta.name} will become a reusable library. This action cannot be undone.
               </p>
               <div className="vc-resource-actions">
-                <Button onClick={() => r.open("libraries")}>Cancel</Button>
+                <Button onClick={() => r.open("libraries")}>{translateUi("Cancel")}</Button>
                 <Button
                   primary
                   disabled={disabled}

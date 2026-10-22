@@ -1,4 +1,7 @@
 "use client";
+
+import { useLocale } from "../accessibility/locale";
+
 import { brand } from "@vellum/config";
 import {
   type SnapshotFrame,
@@ -77,6 +80,7 @@ function SnapshotCanvas({ frame, data }: { frame: SnapshotFrame; data: ViewerSna
   );
 }
 export function ShareViewer({ id, data }: { id: string; data: ViewerSnapshot }) {
+  const { t: translateUi } = useLocale();
   const [selected, setSelected] = useState(0),
     [notice, setNotice] = useState("");
   const frame = data.bundle.frames[selected];
@@ -145,8 +149,8 @@ export function ShareViewer({ id, data }: { id: string; data: ViewerSnapshot }) 
             </p>
           )}
         </section>
-        <aside className="vv-inspect" aria-label="Inspect">
-          <h2>Inspect</h2>
+        <aside className="vv-inspect" aria-label={translateUi("Inspect")}>
+          <h2>{translateUi("Inspect")}</h2>
           <section>
             <h3>Implementation spec</h3>
             <pre>

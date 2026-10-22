@@ -1,5 +1,6 @@
 import type { SlidesController } from "@vellum/editor-core";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import "./slides.css";
 
@@ -9,6 +10,7 @@ export function SlideStrip(p: {
   onSelect(id: string, additive: boolean): void;
   readOnly: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(p.controller.subscribe);
   const drag = useRef<string | null>(null);
   const slides = p.controller.frames();
@@ -78,7 +80,7 @@ export function SlideStrip(p: {
       </div>
       <div className="vc-slide-pages">
         <select
-          aria-label="Pages"
+          aria-label={translateUi("Pages")}
           value={p.controller.page()?.id ?? ""}
           onChange={(e) => p.controller.changePage(e.target.value)}
         >
@@ -94,7 +96,7 @@ export function SlideStrip(p: {
           disabled={p.readOnly}
           onClick={() => p.controller.newPage()}
         >
-          New page → Slides
+          {translateUi("New page → Slides")}
         </button>
       </div>
     </>

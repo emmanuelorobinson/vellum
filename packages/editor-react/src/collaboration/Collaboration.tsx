@@ -5,6 +5,7 @@ import type {
 } from "@vellum/editor-core";
 import type { Participant, Role } from "@vellum/types-ts";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker } from "../chrome/ActorMarker";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
@@ -73,6 +74,7 @@ export function CollaborationToolbar({
   onShare?: () => void;
   onSettings?: () => void;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(c.subscribe);
   useStore(presence?.subscribe ?? (() => ({ dispose() {} })));
   const ref = useRef<HTMLDivElement>(null);
@@ -131,11 +133,11 @@ export function CollaborationToolbar({
       </button>
       {onShare && (
         <button type="button" className="vm-share-entry" onClick={onShare}>
-          Share
+          {translateUi("Share")}
         </button>
       )}
       {onSettings && (
-        <button type="button" onClick={onSettings} aria-label="Editor settings">
+        <button type="button" onClick={onSettings} aria-label={translateUi("Editor settings")}>
           <Icon name="settings" size={16} />
         </button>
       )}
@@ -439,6 +441,7 @@ export function CollaborationLayer({
   );
 }
 export function LiveShareSection({ controller: c }: { controller: CollaborationController }) {
+  const { t: translateUi } = useLocale();
   useStore(c.subscribe);
   useEffect(() => {
     void c.loadSharing();
@@ -560,7 +563,7 @@ export function LiveShareSection({ controller: c }: { controller: CollaborationC
                   <strong>{p.state?.name ?? "Agent"}</strong>
                   <small>Agent · {p.state?.activity || "Viewing"}</small>
                 </span>
-                <small className="vm-agent-badge">Agent</small>
+                <small className="vm-agent-badge">{translateUi("Agent")}</small>
               </div>
             ))}
           {s.owner && s.canInvite && (
@@ -634,7 +637,7 @@ export function LiveShareSection({ controller: c }: { controller: CollaborationC
             Remove access
           </button>
           <button type="button" onClick={() => setConfirm(null)}>
-            Cancel
+            {translateUi("Cancel")}
           </button>
         </div>
       )}

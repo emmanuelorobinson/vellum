@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 
 type RightTab = "design" | "inspect" | "activity";
 const TABS: readonly { id: RightTab; label: string }[] = [
@@ -18,8 +19,8 @@ export function RightPanel(props: {
   /** Each increase opens the Activity tab (a toast's "Open Activity"). */
   activityRequest?: number;
 }) {
+  const { t: translate, direction } = useLocale();
   const [tab, setTab] = useState<RightTab>("design");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new request switches the tab
   useEffect(() => {
     if (props.activityRequest) setTab("activity");
   }, [props.activityRequest]);
@@ -30,7 +31,11 @@ export function RightPanel(props: {
   };
   return (
     <>
-      <div className="vc-panel__tabs vc-right__tabs" role="tablist" aria-label="Properties">
+      <div
+        className="vc-panel__tabs vc-right__tabs"
+        role="tablist"
+        aria-label={translate("Properties")}
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -45,9 +50,9 @@ export function RightPanel(props: {
             onKeyDown={(e) => {
               const at = TABS.findIndex((x) => x.id === tab);
               const to =
-                e.key === "ArrowRight"
+                e.key === (direction === "rtl" ? "ArrowLeft" : "ArrowRight")
                   ? (at + 1) % TABS.length
-                  : e.key === "ArrowLeft"
+                  : e.key === (direction === "rtl" ? "ArrowRight" : "ArrowLeft")
                     ? (at + TABS.length - 1) % TABS.length
                     : -1;
               if (to < 0) return;
@@ -57,7 +62,7 @@ export function RightPanel(props: {
               queueMicrotask(() => document.getElementById(`vc-rtab-${next.id}`)?.focus());
             }}
           >
-            {t.label}
+            {translate(t.label)}
           </button>
         ))}
       </div>

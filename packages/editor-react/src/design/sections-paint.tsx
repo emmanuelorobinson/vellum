@@ -41,6 +41,7 @@ import {
 } from "@vellum/editor-core";
 import type { Effect, Paint, Value } from "@vellum/types-ts";
 import { type ReactNode, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import type { DesignContext } from "./context";
@@ -436,6 +437,7 @@ const change = (ctx: DesignContext, index: number, fn: (e: Effect) => Effect) =>
   ctx.edit(updateEffectAt(index, fn));
 
 function EffectPopover(props: { ctx: DesignContext; row: EffectRow; children: ReactNode }) {
+  const { t: translateUi } = useLocale();
   const container = usePortalContainer();
   const { ctx, row } = props;
   const [open, setOpen] = useState(false);
@@ -541,7 +543,7 @@ function EffectPopover(props: { ctx: DesignContext; row: EffectRow; children: Re
                     disabled={ctx.disabled}
                     onClick={() => ctx.edit(removeEffectAt(row.index))}
                   >
-                    Remove
+                    {translateUi("Remove")}
                   </TextButton>
                 </div>
               </>

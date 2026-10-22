@@ -9,6 +9,7 @@ import {
   validatePlan,
 } from "@vellum/editor-core";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { Icon } from "../icons/Icon";
 import { TurnItems } from "./Steps";
@@ -26,6 +27,7 @@ export function PlanCard({
   pageName: (id: string) => string;
   models?: string[];
 }) {
+  const { t: translateUi } = useLocale();
   const [draft, setDraft] = useState<AgentPlan>(() => view.plan!);
   const [parallel, setParallel] = useState<PlanBuild>({ count: 4, mode: "split" });
   const [editing, setEditing] = useState<number | null>(null);
@@ -181,7 +183,7 @@ export function PlanCard({
       {proposed ? (
         <>
           <fieldset disabled={pending} className="va-plan__parallel">
-            <span>Parallel</span>
+            <span>{translateUi("Parallel")}</span>
             <button
               type="button"
               className="va-button"

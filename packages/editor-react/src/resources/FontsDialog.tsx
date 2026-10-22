@@ -1,6 +1,7 @@
 import { fontUsage, type ResourceController } from "@vellum/editor-core";
 import type { Document } from "@vellum/types-ts";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ResourceButton as Button } from "./Dialog";
 export function FontPickerBody({
   resources: r,
@@ -82,6 +83,7 @@ export function ManageFontsBody({
   document: Document;
   disabled: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const [replace, setReplace] = useState<string | null>(null);
   return (
     <>
@@ -118,7 +120,7 @@ export function ManageFontsBody({
                     disabled={disabled}
                     onClick={() => r.attempt(() => r.removeFont(asset))}
                   >
-                    Remove
+                    {translateUi("Remove")}
                   </Button>
                 ))}
                 {missing ? (
@@ -162,7 +164,7 @@ export function ManageFontsBody({
           );
         })}
       <Button primary onClick={() => r.close()}>
-        Done
+        {translateUi("Done")}
       </Button>
     </>
   );

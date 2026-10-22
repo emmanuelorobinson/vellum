@@ -17,6 +17,7 @@ import {
   type TurnView,
 } from "@vellum/editor-core";
 import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { usePortalContainer } from "../chrome/portal";
 import { useStore } from "../hooks";
@@ -302,7 +303,7 @@ function Conversation({
           setLatest(follow.state.latest);
         }}
       >
-        <div className="va-turns" ref={content} aria-live="polite" aria-relevant="additions">
+        <div className="va-turns" ref={content}>
           {children}
           {turns.length === 0 && !agent.state.loading
             ? (empty ?? <p className="va-empty">{copy.composerPlaceholder}</p>)
@@ -374,6 +375,7 @@ function Turn({
   /** An external agent's session header, which takes the place of the turn's own. */
   lead: ReactNode;
 }) {
+  const { t } = useLocale();
   const external = turn.external;
   const first = actor(turn.agents[0]);
   const question = composer && !external ? composer.questionFor(turn.id) : null;
@@ -385,7 +387,9 @@ function Turn({
     >
       {turn.prompt ? (
         <div className="va-you">
-          <p className="va-you__text">{turn.prompt.text}</p>
+          <p className="va-you__text" dir="auto">
+            {turn.prompt.text}
+          </p>
           {turn.prompt.chips.length ? (
             <p className="va-you__chips vc-mono">{turn.prompt.chips.join(" · ")}</p>
           ) : null}
@@ -415,7 +419,7 @@ function Turn({
                 <span className="va-header__name">{first.name}</span>
               </>
             )}
-            <span className="va-header__state">{turn.label}</span>
+            <span className="va-header__state">{t(turn.label)}</span>
           </div>
           {turn.model ? <p className="va-model vc-mono">{turn.model}</p> : null}
         </>
@@ -444,7 +448,7 @@ function Turn({
       ) : null}
       {turn.state === "stopped" && !turn.undone ? (
         <div className="va-card">
-          <p className="va-card__title">{turn.label}</p>
+          <p className="va-card__title">{t(turn.label)}</p>
           <p className="va-prose">Everything already built is kept. Retry or undo the turn.</p>
         </div>
       ) : null}

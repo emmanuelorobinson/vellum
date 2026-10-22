@@ -1,4 +1,5 @@
 import {
+  canvasNavigate,
   type EditorSession,
   HANDLE_SIZE,
   overlayShapes,
@@ -8,7 +9,8 @@ import {
 } from "@vellum/editor-core";
 import type { Frame, Renderer } from "@vellum/renderer-api";
 import type { Value } from "@vellum/types-ts";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { drawOverlay, readPalette } from "./draw-overlay";
 import { TextEditor } from "./TextEditor";
@@ -71,6 +73,10 @@ export function CanvasHost({
   dpr = typeof devicePixelRatio === "number" ? devicePixelRatio : 1,
   wheel: wheelPrefs,
 }: CanvasHostProps) {
+  const { t } = useLocale();
+  const [keyboard, setKeyboard] = useState(false);
+  const help = useId();
+  const keyboardButton = useRef<HTMLButtonElement>(null);
   useStore(session.subscribe);
   useStore(paintEditor ? paintEditor.subscribe : NO_SUBSCRIPTION);
   const root = useRef<HTMLDivElement>(null);
@@ -224,85 +230,136 @@ export function CanvasHost({
   }, [session, wheelPrefs?.zooms, wheelPrefs?.invert]);
 
   return (
-    <div
-      ref={root}
-      className="vc-canvas"
-      role="application"
-      aria-label={label}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: the canvas is the editing surface and takes the keyboard
-      tabIndex={0}
-      data-tool={session.state.tool}
-      data-content={content && createRenderer ? "loading" : "unavailable"}
-      style={{
-        cursor: cursorFor(session.state.tool, session.state.mode.type),
-        width: size.width,
-        height: size.height,
-      }}
-      onPointerDown={(e) => {
-        if (e.button !== 0 && e.button !== 1) return;
-        e.currentTarget.focus({ preventScroll: true });
-        e.currentTarget.setPointerCapture(e.pointerId);
-        const p = point(e);
-        // A press on the canvas ends the text being typed, wherever focus was.
-        if (session.state.mode.type === "editing") session.dispatch({ type: "finish" });
-        // A mesh point or crop corner of the open fill editor is grabbed before the tools see the press.
-        if (paintEditor?.press(p)) return;
-        session.dispatch({ type: "pointerDown", point: p, ...mods(e), ...handleAt(p) });
-      }}
-      onPointerMove={(e) => {
-        alt.current = e.altKey;
-        if (paintEditor?.drag(point(e))) return;
-        if (e.altKey) session.hover(point(e));
-        session.dispatch({ type: "pointerMove", point: point(e), ...mods(e) });
-      }}
-      onPointerUp={(e) => {
-        if (!paintEditor?.release(point(e)))
-          session.dispatch({ type: "pointerUp", point: point(e), ...mods(e) });
-        if (e.currentTarget.hasPointerCapture(e.pointerId))
-          e.currentTarget.releasePointerCapture(e.pointerId);
-      }}
-      onDoubleClick={(e) =>
-        session.dispatch({
-          type: "doubleClick",
-          point: point(e),
-          ...mods(e),
-          ...handleAt(point(e)),
-        })
-      }
-    >
-      <canvas
-        ref={contentCanvas}
-        className="vc-canvas__layer"
-        width={Math.round(size.width * dpr)}
-        height={Math.round(size.height * dpr)}
-      />
-      <canvas
-        ref={overlayCanvas}
-        className="vc-canvas__layer vc-canvas__overlay"
-        width={Math.round(size.width * dpr)}
-        height={Math.round(size.height * dpr)}
-        aria-hidden
-      />
-      {session.state.selection.flatMap((id) => {
-        const item = session.sceneItem(id);
-        if (
-          item?.node.type !== "instance" ||
-          !item.node.library ||
-          !missingLibraries?.has(item.node.library)
-        )
-          return [];
-        const v = session.state.viewport;
-        return [
-          <span
-            key={id}
-            className="vc-library-badge"
-            style={{ left: item.bounds.x * v.zoom + v.x, top: item.bounds.y * v.zoom + v.y - 34 }}
-          >
-            ⚠ Missing library · cached copy
-          </span>,
-        ];
-      })}
-      <TextEditor session={session} {...(colour ? { colour } : {})} />
-    </div>
+    <>
+      <button
+        type="button"
+        ref={keyboardButton}
+        className="vc-keyboard-entry"
+        aria-pressed={keyboard}
+        onClick={() => {
+          setKeyboard((k) => !k);
+          root.current?.focus();
+        }}
+      >
+        {t(keyboard ? "Exit keyboard canvas mode" : "Keyboard canvas mode")}
+      </button>
+      <p id={help} className="vc-sr">
+        {t("Canvas keyboard help")}
+      </p>
+      <div
+        ref={root}
+        className="vc-canvas"
+        dir="ltr"
+        role="application"
+        aria-label={t(label)}
+        aria-describedby={help}
+        data-keyboard={keyboard ? "on" : "off"}
+        onKeyDown={(e) => {
+          if (!keyboard || e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey)
+            return;
+          if (e.key === "F6") {
+            e.preventDefault();
+            e.stopPropagation();
+            setKeyboard(false);
+            keyboardButton.current?.focus();
+            return;
+          }
+          const next = canvasNavigate(
+            { roots: () => session.roots(), get: (id) => session.sceneItem(id) },
+            session.state.selection,
+            e.key,
+            e.shiftKey,
+          );
+          if (next) {
+            e.preventDefault();
+            e.stopPropagation();
+            session.select(next);
+          }
+        }}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: the canvas is the editing surface and takes the keyboard
+        tabIndex={0}
+        data-tool={session.state.tool}
+        data-content={content && createRenderer ? "loading" : "unavailable"}
+        style={{
+          cursor: cursorFor(session.state.tool, session.state.mode.type),
+          width: size.width,
+          height: size.height,
+        }}
+        onPointerDown={(e) => {
+          if (e.button !== 0 && e.button !== 1) return;
+          e.currentTarget.focus({ preventScroll: true });
+          e.currentTarget.setPointerCapture(e.pointerId);
+          const p = point(e);
+          // A press on the canvas ends the text being typed, wherever focus was.
+          if (session.state.mode.type === "editing") session.dispatch({ type: "finish" });
+          // A mesh point or crop corner of the open fill editor is grabbed before the tools see the press.
+          if (paintEditor?.press(p)) return;
+          session.dispatch({ type: "pointerDown", point: p, ...mods(e), ...handleAt(p) });
+        }}
+        onPointerMove={(e) => {
+          alt.current = e.altKey;
+          if (paintEditor?.drag(point(e))) return;
+          if (e.altKey) session.hover(point(e));
+          session.dispatch({ type: "pointerMove", point: point(e), ...mods(e) });
+        }}
+        onPointerUp={(e) => {
+          if (!paintEditor?.release(point(e)))
+            session.dispatch({ type: "pointerUp", point: point(e), ...mods(e) });
+          if (e.currentTarget.hasPointerCapture(e.pointerId))
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        }}
+        onDoubleClick={(e) =>
+          session.dispatch({
+            type: "doubleClick",
+            point: point(e),
+            ...mods(e),
+            ...handleAt(point(e)),
+          })
+        }
+      >
+        <canvas
+          ref={contentCanvas}
+          className="vc-canvas__layer"
+          width={Math.round(size.width * dpr)}
+          height={Math.round(size.height * dpr)}
+        />
+        <canvas
+          ref={overlayCanvas}
+          className="vc-canvas__layer vc-canvas__overlay"
+          width={Math.round(size.width * dpr)}
+          height={Math.round(size.height * dpr)}
+          aria-hidden
+        />
+        {session.state.selection.flatMap((id) => {
+          const item = session.sceneItem(id);
+          if (
+            item?.node.type !== "instance" ||
+            !item.node.library ||
+            !missingLibraries?.has(item.node.library)
+          )
+            return [];
+          const v = session.state.viewport;
+          return [
+            <span
+              key={id}
+              className="vc-library-badge"
+              style={{ left: item.bounds.x * v.zoom + v.x, top: item.bounds.y * v.zoom + v.y - 34 }}
+            >
+              ⚠ Missing library · cached copy
+            </span>,
+          ];
+        })}
+        <TextEditor session={session} {...(colour ? { colour } : {})} />
+      </div>
+      {keyboard ? (
+        <div className="vc-sr" role="status" aria-live="polite" aria-atomic="true">
+          {session.state.selection.length
+            ? t("Selected: {{name}}", {
+                name: session.sceneItem(session.state.selection[0] as string)?.node.name ?? "",
+              })
+            : t("No selection")}
+        </div>
+      ) : null}
+    </>
   );
 }

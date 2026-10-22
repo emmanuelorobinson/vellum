@@ -1,5 +1,6 @@
 import { copy } from "@vellum/config";
 import type { HistoryController, LedgerEntry } from "@vellum/editor-core";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker } from "../chrome/ActorMarker";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
@@ -42,6 +43,7 @@ export function HistoryTab({
   /** S12: the empty ledger's one next step, Ask the agent. */
   onAsk?: () => void;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(history.subscribe);
   const s = history.state;
   const entries = history.view();
@@ -72,7 +74,7 @@ export function HistoryTab({
           >
             <option value="all">All actors</option>
             <option value="you">You</option>
-            <option value="agents">Agents</option>
+            <option value="agents">{translateUi("Agents")}</option>
             <option value="file">File</option>
           </select>
         </span>

@@ -1,5 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
 import { type PresenceController, presenceState } from "@vellum/editor-core";
+import { useLocale } from "../accessibility/locale";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
 import { ActorMarker, type ActorView } from "./ActorMarker";
@@ -21,6 +22,7 @@ export interface TopRightProps {
 }
 
 export function TopRightBar(p: TopRightProps) {
+  const { t } = useLocale();
   useStore(p.presence?.subscribe ?? (() => ({ dispose() {} })));
   const container = usePortalContainer();
   const agents = p.presence
@@ -31,18 +33,18 @@ export function TopRightBar(p: TopRightProps) {
   return (
     <div
       className="vc-bar vc-topright"
-      style={{ right: p.right }}
+      style={{ insetInlineEnd: p.right }}
       role="toolbar"
       aria-label="Presence and sharing"
     >
       <Menu.Root>
-        <Menu.Trigger className="vc-textbutton vc-topright__agents" aria-label="Agents">
+        <Menu.Trigger className="vc-textbutton vc-topright__agents" aria-label={t("Agents")}>
           <span className="vc-stack">
             {agents.map((a) => (
               <ActorMarker key={a.id} actor={a} size={16} />
             ))}
           </span>
-          <span>Agents</span>
+          <span>{t("Agents")}</span>
         </Menu.Trigger>
         <Menu.Portal container={container}>
           <Menu.Positioner side="bottom" align="end" sideOffset={8}>
@@ -112,25 +114,25 @@ export function TopRightBar(p: TopRightProps) {
       </Menu.Root>
       {p.onShare ? (
         <button type="button" className="vc-textbutton" onClick={p.onShare}>
-          Share
+          {t("Share")}
         </button>
       ) : null}
-      <Tip name="Preview" side="bottom">
+      <Tip name={t("Preview")} side="bottom">
         <button
           type="button"
           className="vc-iconbutton"
-          aria-label="Preview prototype"
+          aria-label={t("Preview prototype")}
           aria-disabled={p.onPreview ? undefined : true}
           onClick={() => p.onPreview?.()}
         >
           <Icon name="play" />
         </button>
       </Tip>
-      <Tip name="Settings" side="bottom">
+      <Tip name={t("Settings")} side="bottom">
         <button
           type="button"
           className="vc-iconbutton"
-          aria-label="Editor settings"
+          aria-label={t("Editor settings")}
           aria-disabled={p.onSettings ? undefined : true}
           onClick={() => p.onSettings?.()}
         >

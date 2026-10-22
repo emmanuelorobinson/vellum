@@ -10,6 +10,7 @@ import {
 } from "@vellum/editor-core";
 import type { Box } from "@vellum/engine-client";
 import { type CSSProperties, useEffect } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { leaseColour } from "../chrome/lease-colour";
 import { useStore } from "../hooks";
@@ -28,6 +29,7 @@ export function PresenceLayer({
   session: EditorSession;
   actors: Readonly<Record<string, ActorView>>;
 }) {
+  const { t: translateUi } = useLocale();
   useStore(presence?.subscribe ?? noStore);
   useStore(agent?.subscribe ?? noStore);
   useStore(session.subscribe);
@@ -133,7 +135,7 @@ export function PresenceLayer({
                 disabled={p.state.pending}
                 onClick={() => void p.action({ type: "stopFrame", agent: l.agent, frame: l.frame })}
               >
-                Stop
+                {translateUi("Stop")}
               </button>
             </div>
           </div>

@@ -461,7 +461,7 @@ const presence = collaboration
     })
   : null;
 if (collaborationName === "c35") session.select(["step2"]);
-const live = q.has("live") ? liveScenario(engine, session, q.get("live")!) : null;
+const live = q.has("live") ? liveScenario(engine, session, q.get("live") ?? "") : null;
 const handoffHost = new JuniperHandoff();
 const ledger = ledgerName
   ? (() => {
@@ -543,6 +543,7 @@ if (shellOn)
 const controller = createCommandController(editorHandlers);
 const preferencesHost = new FakePreferencesHost();
 const preferences = createPreferences(preferencesHost);
+if (q.has("language")) preferences.set("language", q.get("language") as string);
 const settings = shellOn
   ? createSettingsController({
       preferences,
@@ -778,6 +779,7 @@ function render() {
   root.render(
     <>
       <EditorWorkspace
+        language={q.get("language") ?? "en"}
         workspace={workspace}
         {...(presence ? { presence } : {})}
         {...(live ? { collaboration: live.controller } : {})}

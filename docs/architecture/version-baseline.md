@@ -405,3 +405,12 @@ Local campaigns used installed cargo-fuzz 0.13.2 and Rust 1.101.0-nightly (0abfe
 The security CI lane pins cargo-fuzz 0.13.2 and nightly-2026-10-02. Product Rust remains 1.99.0.
 Source SBOM generation uses existing pnpm 12.11.2 (CycloneDX 1.7) and locked Cargo metadata mapped
 to CycloneDX 1.6 without a new vendor dependency. Product dependencies and advisory policy are unchanged.
+
+## Prompt 70 local language and accessibility tooling (2026-10-22)
+
+`@vellum/i18n` owns the pinned `i18next = 26.4.2` runtime (MIT; stable package verified with
+`npm view i18next@26.4.2 version --json`). Resources are bundled, initialized synchronously and scoped
+per workspace; there is no detection or HTTP backend. The wrapper is the only package importing i18next.
+`@axe-core/playwright = 4.14.0` is test-only (stable verified with `npm view`); it runs the WCAG A/AA
+checks in Chromium without excluded rules. IBM Plex Sans Arabic assets come from Fontsource 5.3.0,
+under OFL-1.1; the fonts are bundled rather than fetched while running. See THIRD_PARTY_NOTICES.md.

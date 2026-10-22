@@ -1,0 +1,21 @@
+{
+  "name": "@vellum/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled local editor translations behind the i18next boundary.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "i18next": "26.4.2"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

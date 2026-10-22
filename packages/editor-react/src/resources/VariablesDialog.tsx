@@ -9,6 +9,7 @@ import {
 } from "@vellum/editor-core";
 import type { Document, VariableType } from "@vellum/types-ts";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ResourceButton as Button } from "./Dialog";
 export function VariablesBody({
   resources: r,
@@ -21,6 +22,7 @@ export function VariablesBody({
   disabled: boolean;
   axes?: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const [collection, setCollection] = useState<string | null>(null);
   const [add, setAdd] = useState<"variable" | "axis" | string | null>(null);
   const [name, setName] = useState("");
@@ -152,7 +154,7 @@ export function VariablesBody({
               <button type="submit" className="vc-resource-button" disabled={disabled}>
                 Add
               </button>
-              <Button onClick={() => setAdd(null)}>Cancel</Button>
+              <Button onClick={() => setAdd(null)}>{translateUi("Cancel")}</Button>
             </form>
           ) : null}
           <div className="vc-variable-scroll">

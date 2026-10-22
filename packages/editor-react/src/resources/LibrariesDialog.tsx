@@ -1,6 +1,7 @@
 import type { PasteChoices, ResourceController } from "@vellum/editor-core";
 import type { Document } from "@vellum/types-ts";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ResourceButton as Button } from "./Dialog";
 export function LibrariesBody({
   resources: r,
@@ -11,6 +12,7 @@ export function LibrariesBody({
   document: Document;
   disabled: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   return (
     <>
       <section className="vc-resource-section">
@@ -45,7 +47,7 @@ export function LibrariesBody({
                 </Button>
               )}
               <Button disabled={disabled} onClick={() => r.attempt(() => r.removeLibrary(alias))}>
-                Remove
+                {translateUi("Remove")}
               </Button>
             </div>
           );
@@ -98,6 +100,7 @@ export function PasteBody({
   resources: ResourceController;
   disabled: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const request = r.state.paste;
   const [link, setLink] = useState<boolean | null>(request?.libraryPath ? null : false);
   const [variables, setVariables] = useState<PasteChoices["variables"]>({});
@@ -137,7 +140,7 @@ export function PasteBody({
           >
             Paste as copies
           </Button>
-          <Button onClick={() => r.close()}>Cancel</Button>
+          <Button onClick={() => r.close()}>{translateUi("Cancel")}</Button>
         </div>
       </>
     );

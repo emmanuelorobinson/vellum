@@ -1,4 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
+import { useLocale } from "../accessibility/locale";
 import { Icon } from "../icons/Icon";
 import { usePortalContainer } from "./portal";
 
@@ -20,9 +21,10 @@ export function ZoomPill({
   label: string;
   items: readonly ZoomItem[];
 }) {
+  const { t } = useLocale();
   const container = usePortalContainer();
   return (
-    <div className="vc-bar vc-zoom" style={{ left: x, top: y }}>
+    <div className="vc-bar vc-zoom" style={{ insetInlineStart: x, top: y }}>
       <Menu.Root>
         <Menu.Trigger className="vc-zoom__button" aria-label={`Zoom ${label}`}>
           <span>{label}</span>
@@ -38,7 +40,7 @@ export function ZoomPill({
                   disabled={i.enabled === false}
                   onClick={i.run}
                 >
-                  <span>{i.label}</span>
+                  <span>{t(i.label)}</span>
                   <span className="vc-menu__key">{i.key ?? ""}</span>
                 </Menu.Item>
               ))}

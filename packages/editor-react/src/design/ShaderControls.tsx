@@ -10,6 +10,7 @@ import {
 import type { ShaderEffect, ShaderPaint, Uniform, Value } from "@vellum/types-ts";
 import { useEffect, useState } from "react";
 import catalog from "../../../../examples/catalog.json";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
@@ -143,6 +144,7 @@ export function ShaderControls({
   apply(v: ShaderPaint | ShaderEffect): void;
   effect?: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const controller = ctx.host.shaders;
   useStore(controller?.subscribe ?? emptySubscribe);
   const container = usePortalContainer();
@@ -278,7 +280,7 @@ export function ShaderControls({
                   </li>
                 ))}
             </ul>
-            <Dialog.Close className="vc-button">Close</Dialog.Close>
+            <Dialog.Close className="vc-button">{translateUi("Close")}</Dialog.Close>
           </Dialog.Popup>
         </Dialog.Portal>
       </Dialog.Root>

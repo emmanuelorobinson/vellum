@@ -9,6 +9,7 @@ import {
 } from "@vellum/editor-core";
 import type { Stroke, Document as VellumDocument } from "@vellum/types-ts";
 import { useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { Pair, PropertyRow, Section, SelectField, TextField, ValueField } from "../design/controls";
 import { SPEC } from "../design/specs";
 import { Icon } from "../icons/Icon";
@@ -25,6 +26,7 @@ export function ThemeSection({
   document: VellumDocument;
   disabled: boolean;
 }) {
+  const { t: translateUi } = useLocale();
   const all = design.targets();
   if (
     !Object.keys(doc.themes ?? {}).length ||
@@ -35,7 +37,7 @@ export function ThemeSection({
   const inherited = frameTheme(doc, all[0]?.item.parent ?? null, (id) => session.sceneItem(id));
   const own = (all[0]?.item.node as { theme?: Record<string, string> } | undefined)?.theme ?? {};
   return (
-    <Section id="theme" title="Theme" className="vc-theme-section">
+    <Section id="theme" title={translateUi("Theme")} className="vc-theme-section">
       {themeAxes(doc).map(([axis, values]) => {
         const choices = all.map(
           (t) => (t.item.node as { theme?: Record<string, string> }).theme?.[axis] ?? "__inherit",
@@ -86,6 +88,7 @@ export function ThemeSection({
   );
 }
 export function ScalePanel({ session, disabled }: { session: EditorSession; disabled: boolean }) {
+  const { t: translateUi } = useLocale();
   const mode = session.state.mode;
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +183,9 @@ export function ScalePanel({ session, disabled }: { session: EditorSession; disa
         >
           Apply scale
         </Button>
-        <Button onClick={() => session.dispatch({ type: "tool", tool: "move" })}>Cancel</Button>
+        <Button onClick={() => session.dispatch({ type: "tool", tool: "move" })}>
+          {translateUi("Cancel")}
+        </Button>
       </Section>
     </div>
   );

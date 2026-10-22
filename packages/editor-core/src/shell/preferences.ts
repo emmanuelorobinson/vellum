@@ -4,6 +4,9 @@
  * telemetry stays off until the person turns it on. API keys never pass through here: they live in the keychain.
  */
 
+import { LANGUAGES } from "@vellum/i18n";
+
+export { LANGUAGES } from "@vellum/i18n";
 export type Permission = "ask" | "allow";
 
 export interface Preferences {
@@ -73,11 +76,6 @@ export const TELEMETRY_DISCLOSURE: readonly string[] = [
   "Off by default",
   "If on: version, OS, renderer failures, anonymous feature counts.",
   "Never files, prompts, keys or repo paths.",
-];
-
-export const LANGUAGES: readonly { id: string; label: string }[] = [
-  { id: "en", label: "English" },
-  { id: "ar", label: "Arabic" },
 ];
 
 const oneOf = (values: readonly string[]) => (v: unknown) =>
@@ -169,7 +167,8 @@ export function createPreferences(host: PreferencesHost) {
     },
     /** Saved values it does not know, or that no longer validate, are dropped, never trusted. */
     async load() {
-      const saved = (await host.load().catch(() => null)) ?? {};
+      const loaded = await host.load().catch(() => null);
+      const saved = loaded && typeof loaded === "object" && !Array.isArray(loaded) ? loaded : {};
       const next = { ...values } as Record<string, unknown>;
       for (const key of Object.keys(checks) as PreferenceKey[])
         if (key in saved && checks[key](saved[key]) === null) next[key] = saved[key];

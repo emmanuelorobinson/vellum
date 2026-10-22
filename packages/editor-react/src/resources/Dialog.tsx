@@ -1,5 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import type { ReactNode } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import "./resources.css";
@@ -18,6 +19,7 @@ export function ResourceDialog({
   onClose(): void;
   className?: string;
 }) {
+  const { t } = useLocale();
   const container = usePortalContainer();
   return (
     <Dialog.Root
@@ -30,8 +32,8 @@ export function ResourceDialog({
         <Dialog.Backdrop className="vc-resource-backdrop" />
         <Dialog.Popup className={`vc-resource-dialog ${className}`} style={{ width }}>
           <header className="vc-resource-header">
-            <Dialog.Title>{title}</Dialog.Title>
-            <Dialog.Close className="vc-iconbutton" aria-label="Close dialog">
+            <Dialog.Title>{t(title)}</Dialog.Title>
+            <Dialog.Close className="vc-iconbutton" aria-label={t("Close dialog")}>
               <Icon name="x" />
             </Dialog.Close>
           </header>

@@ -24,6 +24,7 @@ import {
 } from "@vellum/editor-core";
 import type { Value } from "@vellum/types-ts";
 import { type ReactNode, useEffect, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { Icon } from "../icons/Icon";
 import type { DesignContext } from "./context";
@@ -347,6 +348,7 @@ function Matrix(props: { ctx: DesignContext; direction: "row" | "column"; trigge
 }
 
 export function LayoutSection({ ctx }: { ctx: DesignContext }) {
+  const { t: translateUi } = useLocale();
   const { layout, size } = ctx.model;
   const [unlinked, setUnlinked] = useState<boolean | null>(null);
   const id = ctx.session.state.selection.join(",");
@@ -447,7 +449,7 @@ export function LayoutSection({ ctx }: { ctx: DesignContext }) {
                   }}
                 >
                   <span className="vc-field__axis">Linked</span>
-                  <span className="vc-mono-value">On</span>
+                  <span className="vc-mono-value">{translateUi("On")}</span>
                 </button>
               </span>
             </Pair>
@@ -530,11 +532,12 @@ export function LayoutSection({ ctx }: { ctx: DesignContext }) {
 /* ------------------------------------------------------------------------------------ appearance */
 
 export function AppearanceSection({ ctx }: { ctx: DesignContext }) {
+  const { t: translateUi } = useLocale();
   const { opacity, radius, clip } = ctx.model.appearance;
   return (
     <Section
       id="appearance"
-      title="Appearance"
+      title={translateUi("Appearance")}
       density={ctx.density}
       actions={
         clip ? (

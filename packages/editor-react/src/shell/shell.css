@@ -144,7 +144,7 @@ button.vp-result {
 /* Settings */
 .vs-settings {
   top: 80px;
-  left: max(16px, min(224px, calc(100% - 1056px)));
+  inset-inline-start: max(16px, min(224px, calc(100% - 1056px)));
   transform: none;
   width: min(1032px, calc(100% - 32px));
   max-height: calc(100% - 104px);
@@ -545,7 +545,7 @@ button.vp-result {
 .ve-toast__close {
   position: absolute;
   top: 4px;
-  right: 4px;
+  inset-inline-end: 4px;
   opacity: 0;
 }
 .ve-toast__close:focus-visible,

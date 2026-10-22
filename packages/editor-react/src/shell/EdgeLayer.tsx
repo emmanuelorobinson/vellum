@@ -10,6 +10,7 @@ import type {
   Unreadable,
 } from "@vellum/editor-core";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { useStore } from "../hooks";
 import { Icon } from "../icons/Icon";
@@ -196,6 +197,7 @@ function UnreadableDialog({
   error: Unreadable;
   run(a: Act): void;
 }) {
+  const { t: translateUi } = useLocale();
   return (
     <ResourceDialog
       title={`${file} can’t be read`}
@@ -207,7 +209,7 @@ function UnreadableDialog({
       onClose={() => {}}
     >
       <p className="ve-where vc-mono">
-        Line {error.line} · column {error.column}
+        {translateUi("Line")} {error.line} · column {error.column}
       </p>
       <p className="ve-detail vc-mono">{error.detail ?? error.reason}</p>
       <div className="vc-resource-actions">
@@ -229,6 +231,7 @@ function UnsavedDialog({
   file: string;
   choose(c: "cancel" | "discard" | "save"): void;
 }) {
+  const { t: translateUi } = useLocale();
   return (
     <ResourceDialog
       title={`Save ${file}?`}
@@ -238,7 +241,7 @@ function UnsavedDialog({
       onClose={() => choose("cancel")}
     >
       <div className="vc-resource-actions ve-unsaved__actions">
-        <ResourceButton onClick={() => choose("cancel")}>Cancel</ResourceButton>
+        <ResourceButton onClick={() => choose("cancel")}>{translateUi("Cancel")}</ResourceButton>
         <ResourceButton onClick={() => choose("discard")}>Don’t save</ResourceButton>
         <ResourceButton primary onClick={() => choose("save")}>
           Save

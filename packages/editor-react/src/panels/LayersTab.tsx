@@ -23,6 +23,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLocale } from "../accessibility/locale";
 import { ActorMarker, type ActorView } from "../chrome/ActorMarker";
 import { Icon } from "../icons/Icon";
 
@@ -54,6 +55,7 @@ function splitName(name: string): [string, string] {
 }
 
 export function LayersTab(props: LayersTabProps) {
+  const { t, direction } = useLocale();
   const { document: doc, now, order = "document" } = props;
   const page = doc?.pages.find((p) => p.id === props.page) ?? doc?.pages[0] ?? null;
   const [expanded, setExpanded] = useState<ReadonlySet<NodeId>>(() => new Set());
@@ -222,12 +224,12 @@ export function LayersTab(props: LayersTabProps) {
       case "End":
         e.preventDefault();
         return go(rows.length - 1);
-      case "ArrowRight":
+      case direction === "rtl" ? "ArrowLeft" : "ArrowRight":
         e.preventDefault();
         if (row.expandable && !row.expanded) toggle(row.id);
         else if (row.expanded) go(i + 1);
         return;
-      case "ArrowLeft":
+      case direction === "rtl" ? "ArrowRight" : "ArrowLeft":
         e.preventDefault();
         if (row.expanded) toggle(row.id);
         else {
@@ -249,7 +251,7 @@ export function LayersTab(props: LayersTabProps) {
 
   return (
     <div className="vc-layers" data-state={rows.length ? "layers" : "empty"}>
-      <h3 className="vc-heading">Pages</h3>
+      <h3 className="vc-heading">{t("Pages")}</h3>
       {props.onNewSlides ? (
         <button
           type="button"
@@ -257,10 +259,10 @@ export function LayersTab(props: LayersTabProps) {
           disabled={props.readOnly}
           onClick={props.onNewSlides}
         >
-          New page → Slides
+          {t("New page → Slides")}
         </button>
       ) : null}
-      <div className="vc-pages" role="listbox" aria-label="Pages">
+      <div className="vc-pages" role="listbox" aria-label={t("Pages")}>
         {doc.pages.map((p) => (
           <button
             key={p.id}
@@ -276,24 +278,24 @@ export function LayersTab(props: LayersTabProps) {
           </button>
         ))}
       </div>
-      <h3 className="vc-heading">Layers</h3>
+      <h3 className="vc-heading">{t("Layers")}</h3>
       {rows.length === 0 ? (
         <div className="vc-empty">
-          <p>{copy.layersEmpty}</p>
+          <p>{t(copy.layersEmpty)}</p>
           <button
             type="button"
             className="vc-primary"
             onClick={() => props.onDrawFrame?.()}
             disabled={!props.onDrawFrame || props.readOnly}
           >
-            Draw a frame
+            {t("Draw a frame")}
           </button>
         </div>
       ) : (
         <div
           className="vc-tree"
           role="tree"
-          aria-label="Layers"
+          aria-label={t("Layers")}
           aria-multiselectable
           ref={listRef}
           data-dragging={drag ? "" : undefined}

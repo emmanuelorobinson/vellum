@@ -11,6 +11,7 @@ import {
   TELEMETRY_DISCLOSURE,
 } from "@vellum/editor-core";
 import { type ReactNode, useEffect, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { usePortalContainer } from "../chrome/portal";
 import { useStore } from "../hooks";
 import "./shell.css";
@@ -51,18 +52,20 @@ const ICON_SETS = [
 ] as const;
 
 function Row({ label, children, note }: { label: string; children: ReactNode; note?: string }) {
+  const { t } = useLocale();
   return (
     <div className="vs-row">
-      <span className="vs-row__label">{label}</span>
+      <span className="vs-row__label">{t(label)}</span>
       <span className="vs-row__control">{children}</span>
       {note ? <span className="vs-row__note">{note}</span> : null}
     </div>
   );
 }
 function Section({ title, children }: { title: string; children: ReactNode }) {
+  const { t } = useLocale();
   return (
-    <section className="vs-section" aria-label={title}>
-      <h3>{title}</h3>
+    <section className="vs-section" aria-label={t(title)}>
+      <h3>{t(title)}</h3>
       {children}
     </section>
   );
@@ -78,17 +81,18 @@ function Switch({
   onChange(on: boolean): void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={label}
+      aria-label={t(label)}
       className="vs-switch"
       disabled={disabled}
       onClick={() => onChange(!on)}
     >
-      <span className="vs-switch__word">{on ? "On" : "Off"}</span>
+      <span className="vs-switch__word">{t(on ? "On" : "Off")}</span>
     </button>
   );
 }
@@ -103,8 +107,9 @@ function Segmented<T extends string>({
   options: readonly (readonly [T, string])[];
   onChange(v: T): void;
 }) {
+  const { t } = useLocale();
   return (
-    <span className="vs-segmented" role="radiogroup" aria-label={label}>
+    <span className="vs-segmented" role="radiogroup" aria-label={t(label)}>
       {options.map(([id, text]) => (
         // biome-ignore lint/a11y/useSemanticElements: a segmented control; the radio role gives the group its arrow-key meaning
         <button
@@ -115,7 +120,7 @@ function Segmented<T extends string>({
           data-checked={value === id ? "" : undefined}
           onClick={() => onChange(id)}
         >
-          {text}
+          {t(text)}
         </button>
       ))}
     </span>
@@ -134,17 +139,18 @@ function Select<T extends string>({
   onChange(v: T): void;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <select
       className="vs-select"
-      aria-label={label}
+      aria-label={t(label)}
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as T)}
     >
       {options.map(([id, text]) => (
         <option key={id} value={id}>
-          {text}
+          {t(text)}
         </option>
       ))}
     </select>
@@ -161,6 +167,7 @@ function NumberField({
   prefKey: "canvas.nudgeSmall" | "canvas.nudgeBig";
   settings: SettingsController;
 }) {
+  const { t } = useLocale();
   const prefs = settings.preferences;
   const [text, setText] = useState(String(prefs.get(prefKey)));
   const [problem, setProblem] = useState<string | null>(null);
@@ -178,7 +185,7 @@ function NumberField({
       <input
         className="vs-input vc-mono"
         inputMode="numeric"
-        aria-label={label}
+        aria-label={t(label)}
         aria-invalid={problem ? true : undefined}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -260,7 +267,7 @@ function Shortcuts({
             <button
               type="button"
               className="vs-chord vc-mono"
-              aria-label={`Change shortcut for ${r.title}`}
+              aria-label={`Change shortcut for ${r.title} · ${capturing === r.command ? "Press keys" : label(r.chord)}`}
               disabled={r.hostConflict}
               onClick={() => {
                 setMessage(null);
@@ -340,6 +347,7 @@ export function SettingsDialog({
   useStore(settings.subscribe);
   useStore(settings.preferences.subscribe);
   useStore(composer?.subscribe ?? NO_STORE);
+  const { t } = useLocale();
   const container = usePortalContainer();
   const prefs = settings.preferences;
   const p = prefs.state;
@@ -359,7 +367,7 @@ export function SettingsDialog({
       <Dialog.Portal container={container}>
         <Dialog.Backdrop className="vc-resource-backdrop" />
         <Dialog.Popup className="vc-resource-dialog vs-settings">
-          <Dialog.Title className="vs-title">Editor settings</Dialog.Title>
+          <Dialog.Title className="vs-title">{t("Editor settings")}</Dialog.Title>
           <div className="vs-columns">
             <div className="vs-column">
               <Section title="Appearance">
@@ -608,7 +616,7 @@ export function SettingsDialog({
                             )
                           }
                         />
-                        {text}
+                        {t(text)}
                       </label>
                     ))}
                   </fieldset>
@@ -733,7 +741,7 @@ export function SettingsDialog({
           </div>
           <div className="vs-actions">
             <Dialog.Close className="vc-resource-button" data-primary="">
-              Done
+              {t("Done")}
             </Dialog.Close>
           </div>
         </Dialog.Popup>

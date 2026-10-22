@@ -8,6 +8,14 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 70 needs localization and release acceptance.** Thirteen bundled catalogs cover 127 common messages;
+  advanced descriptions/dynamic diagnostics, desktop Home and standalone account/web copy still need extraction
+  and translation. Human language review, VoiceOver/NVDA, text scaling and installed platform acceptance remain.
+  The final combined browser run has 156 behavior/WCAG passes; Arabic 1280 goldens fail at 13.19% light / 30.55%
+  dark against the unchanged 1% gate. Twenty existing design-export contrast failures and 14 Rust advisories
+  remain. Native document runtime still awaits Prompt 55. See `docs/runbooks/accessibility-i18n.md`.
+
+
 - **Prompt 69 release security acceptance remains open.** Resolve 14 existing Rust advisories and
   five pnpm advisories (two high, three moderate). Decide/enforce the intended publish approval or
   separate host capability for `vellum/share`: an initialized authenticated local client currently
@@ -4606,3 +4614,62 @@ Not passing / not claimed:
 - Installed writable hosts still await Prompt 55. No real signing/notarization, installed Electron/VS Code,
   real keychain/account/share upload, production TLS/WSS, external log retention, Windows/Linux or remote
   CI acceptance is claimed. Existing visual/contrast/release blockers remain. No commit or deployment.
+
+
+## Prompt 70 — Accessibility, local languages and RTL (implementation; acceptance open)
+
+Built:
+
+- Headless `@vellum/i18n` wrapper on pinned i18next 26.4.2; thirteen owner-approved offline catalogs with 127
+  matching keys/placeholders, workspace-local instances and English fallback. Common labels, first-open,
+  Settings and accessibility messages are wired through React context. Names, prompts, code and paths stay data.
+- Arabic chrome/conversation direction, Base UI direction, logical panel/menu placement and RTL tree/tab arrows;
+  physical canvas fit insets swap while document coordinates do not. Exact/mono values stay isolated LTR.
+  IBM Plex Sans Arabic is bundled with OFL text/hashes and included in both hosts' license output.
+- Keyboard canvas entry: sibling Tab/Shift+Tab, Enter into children, Escape to parent, original guarded nudge
+  commands; F6 exits to the entry button. Layers remains the semantic tree. Navigation does not create Ops.
+- Persistent polite completion region outside Agent: new steps/turns announce, stored history and streamed prose
+  do not. OS reduced motion and the local animation preference suppress movement; forced colors retain outlines.
+- Desktop local-storage / VS Code webview-state preferences and Settings wiring, validated corrupt-storage
+  fallback, chrome/default-canvas appearance preference. These do not supply Prompt 55's missing document ABI.
+- Native license collectors now skip nested ESM marker manifests and still require the actual package license.
+  Runbook and one append-only Fixture-RTL layout gap; no protected source, design image or tolerance changed.
+
+Validation:
+
+- TDD failures confirmed for missing keyboard/locale modules, RTL fit insets, malformed persisted values and
+  high-contrast canvas preference; final focused tests pass. Native builds initially failed on i18next's nested
+  ESM manifest, then pass with its MIT license and the font OFL included. A translation-binding/spacing regression
+  was caught and corrected; no test weakened. Overlapping browser runs lost their shared Vite server; the final
+  verification used one combined server lifecycle. Initial sandbox npm/pnpm registry access failed; permitted
+  installs/checks succeeded without changing version or signature policy.
+- `pnpm --filter @vellum/editor-core test` (2,393); `pnpm --filter @vellum/editor-react test` (316);
+  `pnpm --filter @vellum/i18n test` (1).
+- `pnpm --filter @vellum/desktop test` (29 unit + 3 packaging);
+  `pnpm --filter @vellum/extension test` (40 unit + 3 packaging).
+- `pnpm --filter @vellum/desktop build`; `pnpm --filter @vellum/extension build`;
+  `pnpm --filter @vellum/desktop type-check`; `pnpm --filter @vellum/extension type-check`.
+- `TURBO_TELEMETRY_DISABLED=1 NEXT_TELEMETRY_DISABLED=1 pnpm type-check` (34 tasks);
+  `TURBO_TELEMETRY_DISABLED=1 NEXT_TELEMETRY_DISABLED=1 node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings`.
+- `bash scripts/check-deps.sh` (Rust allowlist, bans/licenses/sources, TS); final
+  `bash scripts/check-deps.sh ts` (683 modules / 1,901 dependencies, including the i18n wrapper rule).
+- `node --test scripts/__tests__/reports.test.mjs scripts/__tests__/repo-layout.test.mjs scripts/__tests__/deps.test.mjs`
+  (18); scoped Biome over new/changed implementation files; `node scripts/copy-lint.mjs`;
+  `bash scripts/check-clean-room.sh`; `pnpm checksum`; `git diff --check`.
+
+Not passing / not claimed:
+
+- Final combined Chrome command:
+  `pnpm --filter @vellum/editor-react exec playwright test --config e2e/playwright.config.ts accessibility.spec.ts wcag.spec.ts editor.spec.ts agent.spec.ts composer.spec.ts shell.spec.ts rtl-goldens.spec.ts --workers=1`:
+  **156 pass, two Arabic goldens fail**. Passing tests include 24 axe scans (English/Arabic × four appearances ×
+  Layers/Agent/Settings, WCAG 2/2.1 A/AA with no rule exclusions) and nine new keyboard/direction/preference/
+  announcement/motion checks. Full-frame Arabic differs 13.19% light / 30.55% dark; sheets in
+  `target/screen-goldens/p70-rtl-*`. Fixture-RTL has docked chrome and different artwork; floating editor follows
+  DESIGN.md. The 1% gate remains intact.
+- `pnpm tokens:lint`: 20 existing design-export inverse-text contrast failures; `cargo deny --log-level error check`:
+  14 existing Rust advisory failures. No exception added. Existing lint warnings outside the new implementation
+  remain; no claim that every editor surface has passed an accessibility audit.
+- Thirteen catalogs are not full product translation coverage. Advanced descriptions, dynamic step wording,
+  permission/error diagnostics, desktop Home and standalone account/web surfaces still contain English fallback
+  copy. Human language review, VoiceOver/NVDA, OS text-scaling/forced-color inspection, installed native host
+  acceptance, Windows/Linux and remote CI are unverified. No commit or deployment.

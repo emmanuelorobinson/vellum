@@ -2,6 +2,7 @@
 import { copy } from "@vellum/config";
 import type { AgentController, StepView, TurnItem } from "@vellum/editor-core";
 import { useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import { Icon } from "../icons/Icon";
 import { DecidedPermission } from "./PermissionCard";
 
@@ -20,6 +21,7 @@ const STATE_WORDS = {
 } as const;
 
 export function CopyBlock({ text, label }: { text: string; label: string }) {
+  const { t } = useLocale();
   const [copied, setCopied] = useState(false);
   return (
     <div className="va-block">
@@ -27,12 +29,12 @@ export function CopyBlock({ text, label }: { text: string; label: string }) {
       <button
         type="button"
         className="va-link"
-        aria-label={`Copy ${label}`}
+        aria-label={`${t("Copy")} ${label}`}
         onClick={() => {
           void navigator.clipboard?.writeText(text).then(() => setCopied(true));
         }}
       >
-        {copied ? "Copied" : "Copy"}
+        {t(copied ? "Copied" : "Copy")}
       </button>
     </div>
   );
@@ -76,6 +78,7 @@ export function StepRow({
   agent: AgentController;
   turn: string | null;
 }) {
+  const { t: translateUi } = useLocale();
   const open = agent.expanded(step.key);
   const details = `va-step-${step.key.replace(/\W/g, "-")}`;
   // Designed steps always show their frame; a checked screenshot shows its picture when expanded.
@@ -110,7 +113,7 @@ export function StepRow({
               data-primary=""
               onClick={() => void agent.stop()}
             >
-              Stop
+              {translateUi("Stop")}
             </button>
             <button
               type="button"
@@ -227,7 +230,12 @@ export function TurnItems({
         const first = run[0] as TurnItem;
         if (first.type === "prose")
           return (
-            <p key={first.key} className="va-prose" aria-busy={first.streaming || undefined}>
+            <p
+              key={first.key}
+              className="va-prose"
+              dir="auto"
+              aria-busy={first.streaming || undefined}
+            >
               {first.text}
             </p>
           );

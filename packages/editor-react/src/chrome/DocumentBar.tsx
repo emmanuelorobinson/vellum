@@ -1,5 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
 import type { Command } from "@vellum/editor-core";
+import { useLocale } from "../accessibility/locale";
 import { Icon } from "../icons/Icon";
 import { usePortalContainer } from "./portal";
 
@@ -55,12 +56,13 @@ export function DocumentBar({
   commands: readonly Command[];
   menuCategories?: readonly string[];
 }) {
+  const { t } = useLocale();
   const container = usePortalContainer();
   return (
-    <section className="vc-bar vc-docbar" style={{ width }} aria-label="Document">
+    <section className="vc-bar vc-docbar" style={{ width }} aria-label={t("Document")}>
       <div className="vc-docbar__identity">
         <Menu.Root>
-          <Menu.Trigger className="vc-iconbutton" aria-label="Main menu">
+          <Menu.Trigger className="vc-iconbutton" aria-label={t("Main menu")}>
             <Icon name="menu" />
           </Menu.Trigger>
           <Menu.Portal container={container}>
@@ -71,9 +73,11 @@ export function DocumentBar({
             </Menu.Positioner>
           </Menu.Portal>
         </Menu.Root>
-        <span className="vc-docbar__name">{fileName}</span>
+        <span className="vc-docbar__name" dir="ltr">
+          {fileName}
+        </span>
         <span className="vc-docbar__save" data-state={saveState} role="status">
-          {SAVE_LABEL[saveState]}
+          {t(SAVE_LABEL[saveState])}
         </span>
       </div>
     </section>

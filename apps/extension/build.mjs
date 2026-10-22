@@ -110,7 +110,15 @@ for (const [source, destination] of [
   await copyFile(resolve(root, source), resolve(output, destination));
 await writeFile(resolve(output, ".vscodeignore"), "**/*.map\n");
 // Bundle licences as well as the repository's asset/port notices. Tool-only dependencies never ship.
-const notices = new Map();
+const notices = new Map([
+  [
+    "IBM Plex Sans Arabic (OFL-1.1)",
+    await readFile(
+      resolve(root, "../../packages/ui-tokens/fonts/IBM-Plex-Sans-Arabic-OFL.txt"),
+      "utf8",
+    ),
+  ],
+]);
 for (const bundle of bundles)
   for (const input of Object.keys(bundle.metafile.inputs)) {
     if (!input.includes("node_modules/")) continue;
@@ -120,6 +128,11 @@ for (const bundle of bundles)
       try {
         pkg = JSON.parse(await readFile(resolve(folder, "package.json"), "utf8"));
       } catch {
+        folder = dirname(folder);
+        continue;
+      }
+      // A nested ESM marker is not the published package manifest; continue to its licensed root.
+      if (!pkg.name || !pkg.version) {
         folder = dirname(folder);
         continue;
       }

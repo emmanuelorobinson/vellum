@@ -1,5 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
 import type { ToolId } from "@vellum/editor-core";
+import { useLocale } from "../accessibility/locale";
 import { Icon } from "../icons/Icon";
 import { usePortalContainer } from "./portal";
 import { Tip } from "./Tooltip";
@@ -54,6 +55,7 @@ function RailButton({
   props: RailProps;
   label?: string;
 }) {
+  const { t } = useLocale();
   const isTool = !!item.tool && item.tool !== "image";
   const enabled = isTool || props.enabled(item.command);
   const activate = () => {
@@ -62,11 +64,11 @@ function RailButton({
     else props.run(item.command);
   };
   return (
-    <Tip name={label ?? item.name} shortcut={props.shortcut(item.command)}>
+    <Tip name={t(label ?? item.name)} shortcut={props.shortcut(item.command)}>
       <button
         type="button"
         className="vc-rail__button"
-        aria-label={label ?? item.name}
+        aria-label={t(label ?? item.name)}
         aria-pressed={item.tool ? active : undefined}
         aria-disabled={enabled ? undefined : true}
         data-active={active ? "" : undefined}
@@ -79,24 +81,25 @@ function RailButton({
 }
 
 export function ToolRail(props: RailProps) {
+  const { t, direction } = useLocale();
   const container = usePortalContainer();
   const shapeActive = SHAPES.has(props.tool);
   const shown = SHAPE_MENU.find((s) => s.tool === props.tool) ?? (SHAPE_MENU[0] as RailItem);
   return (
     <div
       className="vc-bar vc-rail"
-      style={{ left: props.x, top: props.y }}
+      style={{ insetInlineStart: props.x, top: props.y }}
       role="toolbar"
-      aria-label="Tools"
+      aria-label={t("Tools")}
       aria-orientation="vertical"
     >
       {RAIL.map((item) =>
         item.id === "rect" ? (
           <Menu.Root key={item.id}>
-            <Tip name={shown.name} shortcut={props.shortcut(shown.command)}>
+            <Tip name={t(shown.name)} shortcut={props.shortcut(shown.command)}>
               <Menu.Trigger
                 className="vc-rail__button"
-                aria-label="Shapes"
+                aria-label={t("Shapes")}
                 data-active={shapeActive ? "" : undefined}
                 aria-pressed={shapeActive}
               >
@@ -104,7 +107,11 @@ export function ToolRail(props: RailProps) {
               </Menu.Trigger>
             </Tip>
             <Menu.Portal container={container}>
-              <Menu.Positioner side="right" align="start" sideOffset={8}>
+              <Menu.Positioner
+                side={direction === "rtl" ? "left" : "right"}
+                align="start"
+                sideOffset={8}
+              >
                 <Menu.Popup className="vc-menu">
                   {SHAPE_MENU.map((s) => (
                     <Menu.Item
@@ -113,7 +120,7 @@ export function ToolRail(props: RailProps) {
                       onClick={() => props.selectTool(s.tool as ToolId)}
                     >
                       <Icon name={s.icon} />
-                      <span>{s.name}</span>
+                      <span>{t(s.name)}</span>
                       <span className="vc-menu__key">{props.shortcut(s.command) ?? ""}</span>
                     </Menu.Item>
                   ))}
