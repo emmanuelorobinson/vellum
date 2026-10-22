@@ -1,0 +1,74 @@
+name: Paired performance regression gates
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Trusted baseline revision to measure on this same runner
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: performance-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+  VELLUM_SKIA_FROM_SOURCE: '1'
+jobs:
+  paired:
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [native, browser]
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/performance-cargo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || inputs.base_ref }}
+          path: target/performance-base
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: target/performance-base
+      - run: rustup toolchain install
+      - uses: mymindstorm/setup-emsdk@v14
+        if: matrix.lane == 'browser'
+        with:
+          version: 4.0.6
+          actions-cache-folder: emsdk-cache
+      - uses: browser-actions/setup-chrome@v2
+        if: matrix.lane == 'browser'
+        id: chrome
+        with:
+          chrome-version: 155.0.8059.39
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: performance-${{ matrix.lane }}-${{ hashFiles('scripts/skia-config.json', 'patches/skia-bindings/**') }}
+          cache-all-crates: true
+      - name: Same-machine baseline then candidate, absolute and >10% gates
+        env:
+          VELLUM_PERF_MACHINE: ${{ runner.name }}
+          VELLUM_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: node scripts/performance-pair.mjs ${{ matrix.lane }}
+      - if: always()
+        run: node scripts/spec-checksums.mjs check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paired-performance-${{ matrix.lane }}
+          path: |
+            target/performance/*.json
+            target/renderer-goldens/*results.json
+            target/renderer-goldens/performance.json
+            target/performance-base/target/performance/*.json
+            target/performance-base/target/renderer-goldens/performance.json
+          retention-days: 7

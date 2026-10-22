@@ -68,11 +68,19 @@ jobs:
         run: |
           node scripts/skia-build.mjs run --locked --release -p vellum --example renderer-goldens --target ${{ matrix.target }}
           node scripts/skia-build.mjs run --locked --release -p vellum --example renderer-budget --target ${{ matrix.target }}
+      - name: Native §12, idle RSS and absolute performance gates
+        run: |
+          node scripts/skia-build.mjs build --locked --release -p vellum --bin vellum --target ${{ matrix.target }}
+          node scripts/performance-idle.mjs target/${{ matrix.target }}/release/vellum${{ runner.os == 'Windows' && '.exe' || '' }} target/performance/native.json
+          node scripts/performance-budget.mjs target/performance/native.json
+      - if: always()
+        run: node scripts/spec-checksums.mjs check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: renderer-${{ matrix.target }}
           path: |
+            target/performance/
             target/skia-measurements/
             target/renderer-fixtures/
             target/renderer-goldens/
@@ -140,6 +148,7 @@ jobs:
             target/renderer-fixtures/
             target/renderer-goldens/
             target/shader-examples/
+            target/performance/
             target/skia-measurements/
             packages/renderer-skia/dist/
             target/screen-goldens/p62-*.png
@@ -166,7 +175,7 @@ jobs:
       - name: Hardware GPU lane (requires preinstalled Chrome, emsdk 4.0.6 and native build tools)
         run: |
           node scripts/renderer-gpu.mjs
-          node scripts/renderer-goldens.mjs
+          node scripts/renderer-goldens.mjs --budget
       - uses: actions/upload-artifact@v4
         if: always()
         with:

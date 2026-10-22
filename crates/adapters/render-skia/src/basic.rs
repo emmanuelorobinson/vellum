@@ -2,9 +2,11 @@
 use crate::{Error, Op, Renderer, Resources, raster};
 use serde::Serialize;
 use skia_safe::{self as sk, Path, Rect};
+use std::collections::BTreeMap;
 use vellum_types::{BlendMode, display::*};
 #[derive(Serialize)]
 struct Plan {
+    paths: Vec<String>,
     commands: Vec<Command>,
     simplifications: Vec<&'static str>,
 }
@@ -17,7 +19,7 @@ enum Command {
         matrix: [f32; 6],
     },
     Clip {
-        data: String,
+        data: usize,
         even_odd: bool,
     },
     Layer {
@@ -25,7 +27,7 @@ enum Command {
         blend: String,
     },
     Path {
-        data: String,
+        data: usize,
         even_odd: bool,
         paint: RenderPaint,
         bounds: [f32; 4],
@@ -41,9 +43,26 @@ enum Command {
 fn rect(r: Rect) -> [f32; 4] {
     [r.left, r.top, r.width(), r.height()]
 }
-fn path(p: &Path, brush: &crate::Brush) -> Command {
+#[derive(Default)]
+struct Geometry {
+    indices: BTreeMap<u32, usize>,
+    paths: Vec<String>,
+}
+impl Geometry {
+    fn insert(&mut self, path: &Path) -> usize {
+        let id = path.generation_id();
+        if let Some(index) = self.indices.get(&id) {
+            return *index;
+        }
+        let index = self.paths.len();
+        self.paths.push(path.to_svg());
+        self.indices.insert(id, index);
+        index
+    }
+}
+fn path(p: &Path, brush: &crate::Brush, geometry: &mut Geometry) -> Command {
     Command::Path {
-        data: p.to_svg(),
+        data: geometry.insert(p),
         even_odd: p.fill_type() == sk::PathFillType::EvenOdd,
         paint: brush.source.clone(),
         bounds: rect(brush.bounds),
@@ -136,6 +155,7 @@ pub(crate) fn plan(
     let (list, simplifications) = simplify(buffer)?;
     let scene = renderer.prepare(&list, resources)?;
     let mut commands = vec![];
+    let mut geometry = Geometry::default();
     let mut scale = 1f32;
     let mut scales = vec![];
     for op in scene.ops.iter() {
@@ -153,7 +173,7 @@ pub(crate) fn plan(
                 commands.push(Command::Transform { matrix: *m })
             }
             Op::Clip(p) => commands.push(Command::Clip {
-                data: p.to_svg(),
+                data: geometry.insert(p),
                 even_odd: p.fill_type() == sk::PathFillType::EvenOdd,
             }),
             Op::Layer { paint, .. } => {
@@ -163,7 +183,7 @@ pub(crate) fn plan(
                     blend: format!("{:?}", paint.blend_mode_or(sk::BlendMode::SrcOver)),
                 })
             }
-            Op::Path(p, b) => commands.push(path(p, b)),
+            Op::Path(p, b) => commands.push(path(p, b, &mut geometry)),
             Op::Image {
                 image,
                 clip,
@@ -205,6 +225,7 @@ pub(crate) fn plan(
         }
     }
     let bytes = serde_json::to_vec(&Plan {
+        paths: geometry.paths,
         commands,
         simplifications,
     })

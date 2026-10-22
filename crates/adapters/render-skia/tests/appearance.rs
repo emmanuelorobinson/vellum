@@ -352,3 +352,36 @@ fn advanced_exports_preserve_runtime_blends_and_filters() {
         assert!(String::from_utf8_lossy(&pdf).contains("/Count 2"));
     }
 }
+
+#[test]
+fn basic_plan_transfers_repeated_geometry_once() {
+    let r = Renderer::new().unwrap();
+    let mut l = list(solid(), vec![], BlendMode::Normal);
+    l.commands = (0..100)
+        .flat_map(|i| {
+            [
+                DrawCmd::Transform([1., 0., 0., 1., i as f32, 0.]),
+                DrawCmd::Path {
+                    shape: 0,
+                    paint: 1,
+                    stroke: None,
+                },
+            ]
+        })
+        .collect();
+    let bytes = r
+        .basic_plan(&l.to_bytes().unwrap(), &Resources::default())
+        .unwrap();
+    let plan: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(
+        plan["paths"]
+            .as_array()
+            .expect("a geometry dictionary")
+            .len(),
+        1
+    );
+    assert!(
+        bytes.len() < 40_000,
+        "shared geometry must not be expanded per instance"
+    );
+}

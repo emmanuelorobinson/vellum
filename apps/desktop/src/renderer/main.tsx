@@ -60,6 +60,10 @@ const preferences = createPreferences({
     localStorage.setItem(`${brand.desktopAppId}.preferences`, JSON.stringify(values));
   },
 });
+const syncTelemetry = () => {
+  void bridge.request({ type: "telemetry", enabled: preferences.get("telemetry") });
+};
+preferences.subscribe(syncTelemetry);
 void preferences.load();
 
 function makeEditor(platform: DesktopState["platform"]) {

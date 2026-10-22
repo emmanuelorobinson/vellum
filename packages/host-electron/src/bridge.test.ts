@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DesktopEvent, DesktopRequest } from "./bridge";
-import { createBridgeServices } from "./bridge";
+import { createBridgeServices, parseRequest } from "./bridge";
 
 describe("contextBridge Host services", () => {
   it("keeps the synchronous theme current even without a theme listener", () => {
@@ -112,4 +112,13 @@ it("starts a narrow live browser stream and stops it when disposed", async () =>
       request: { url: "file:///etc/passwd", width: 1, height: 1 },
     }),
   ).toBeNull();
+});
+
+it("allows only explicit telemetry consent booleans at the native boundary", () => {
+  expect(parseRequest({ type: "telemetry", enabled: true })).toEqual({
+    type: "telemetry",
+    enabled: true,
+  });
+  expect(parseRequest({ type: "telemetry", enabled: "true" })).toBeNull();
+  expect(parseRequest({ type: "telemetry", enabled: true, prompt: "TEST DATA" })).toBeNull();
 });

@@ -57,3 +57,12 @@ describe("daemon relay framing", () => {
     expect(() => d.end()).toThrow();
   });
 });
+
+it("allows only explicit telemetry consent booleans", () => {
+  expect(parseMessage({ type: "telemetry", enabled: true })).toEqual({
+    type: "telemetry",
+    enabled: true,
+  });
+  expect(parseMessage({ type: "telemetry", enabled: "true" })).toBeNull();
+  expect(parseMessage({ type: "telemetry", enabled: true, prompt: "TEST DATA" })).toBeNull();
+});

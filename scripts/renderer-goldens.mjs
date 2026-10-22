@@ -6,6 +6,7 @@ import { extname, resolve, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 import ts from "typescript";
 import { launchChrome } from "../spikes/renderer/web/lib/chrome.mjs";
+import { assess, summary } from "./performance-budget.mjs";
 import { comparePixels } from "./renderer-golden-compare.mjs";
 
 const root = resolve(import.meta.dirname, ".."),
@@ -44,13 +45,27 @@ window.ready=(async()=>{
  window.benchmark=async()=>{
   gpu.resize({width:1000,height:600,dpr:1});
   const frames=await Promise.all(Array.from({length:60},(_,i)=>bytes('performance-'+i+'.bin')));
-  const samples={panZoom:[],cachedTiles:[],drag:[],batch200:[]};
-  for(let i=0;i<60;i++){const start=performance.now();gpu.draw({displayList:frames[i],fonts:[],images:[],zoom:0.4+i*0.001});gl.finish();samples.panZoom.push(performance.now()-start);}
-  const frame={displayList:frames[59],fonts:[],images:[],zoom:0.459};
-  for(let i=0;i<60;i++){const start=performance.now();gpu.draw(frame);gl.finish();samples.cachedTiles.push(performance.now()-start);}
-  const drags=await Promise.all(Array.from({length:30},(_,i)=>bytes('drag-'+i+'.bin')));for(let i=0;i<30;i++){const start=performance.now();gpu.draw({displayList:drags[i],fonts:[],images:[]});gl.finish();samples.drag.push(performance.now()-start);}
-  // Display-list upload, preparation and draw only. Fetch and core ops/layout are measured separately.
-  const batches=await Promise.all(Array.from({length:30},(_,i)=>bytes('batch200-'+i+'.bin')));for(let i=0;i<30;i++){const start=performance.now();gpu.draw({displayList:batches[i],fonts:[],images:[]});gl.finish();samples.batch200.push(performance.now()-start);}
+  const drags=await Promise.all(Array.from({length:30},(_,i)=>bytes('drag-'+i+'.bin')));
+  const batches=await Promise.all(Array.from({length:30},(_,i)=>bytes('batch200-'+i+'.bin')));
+  const samples={};basic.resize({width:1000,height:600,dpr:1});
+  for(const kind of ['skia-webgl2','skia-wasm-cpu','canvas2d']) {
+   const draw=frame=>{
+    if(kind==='canvas2d'){basic.draw(frame);document.getElementById('basic').getContext('2d').getImageData(0,0,1,1);}
+    else if(kind==='skia-wasm-cpu'){
+      module._vellum_resources_clear();const upload=module._vellum_alloc(frame.displayList.length);
+      if(!upload)throw Error('CPU upload failed');module.HEAPU8.set(frame.displayList,upload);
+      try{if(module._vellum_scene(upload)!==1)throw Error('CPU scene failed');}finally{module._vellum_free(upload);}
+      const ptr=module._vellum_raster_pixels();if(!ptr)throw Error('CPU paint failed');module._vellum_free(ptr);
+    }else{gpu.draw(frame);gl.finish();}
+   };
+   for(const [metric,inputs] of Object.entries({panZoom:frames,drag:drags,batch200:batches})){
+    // Complete real paints first, not fixed sleeps. Asset fetch is outside this draw-only measurement.
+    for(let i=0;i<3;i++)draw({displayList:inputs[i],fonts:[],images:[]});
+    const values=[];
+    for(const displayList of inputs){const start=performance.now();draw({displayList,fonts:[],images:[]});values.push(performance.now()-start);}
+    samples[kind+'.'+metric]=values;
+   }
+  }
   return samples;
  };
  return {device};})();</script>`;
@@ -112,11 +127,19 @@ try {
   await chrome.cdp.send("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/` });
   await loaded;
   const info = await chrome.cdp.evaluate("window.ready");
+  await chrome.cdp.evaluate("document.fonts.ready.then(()=>true)");
   if (!software) assert.doesNotMatch(info.device, /SwiftShader|llvmpipe/i);
   for (const name of manifest) {
     const actual = await chrome.cdp.evaluate(`window.fixture(${JSON.stringify(name)})`),
       native = readFileSync(resolve(output, `${name}.rgba`)),
       basic = readFileSync(resolve(output, `${name}.basic-native.rgba`));
+    const repeated = await chrome.cdp.evaluate(`window.fixture(${JSON.stringify(name)})`);
+    for (const renderer of ["cpu", "gpu", "basic"])
+      assert.deepEqual(
+        actual[renderer],
+        repeated[renderer],
+        `${name}/${renderer}: nondeterministic paint`,
+      );
     results[name] = { simplifications: actual.simplifications };
     for (const renderer of ["cpu", "gpu", "basic"]) {
       const pixels = Uint8Array.from(actual[renderer]),
@@ -136,21 +159,15 @@ try {
       }
     }
   }
-  await chrome.cdp.evaluate("window.contract()");
   writeFileSync(
     resolve(output, software ? "browser-software-results.json" : "browser-results.json"),
     JSON.stringify({ device: info.device, results, failures }, null, 2),
   );
   const samples = await chrome.cdp.evaluate("window.benchmark()");
-  const performance = {};
-  for (const [name, values] of Object.entries(samples)) {
-    values.sort((a, b) => a - b);
-    performance[name] = {
-      p50: values[Math.floor(values.length * 0.5)],
-      p95: values[Math.floor(values.length * 0.95)],
-      max: Math.max(...values),
-    };
-  }
+  await chrome.cdp.evaluate("window.contract()");
+  const performance = Object.fromEntries(
+    Object.entries(samples).map(([name, values]) => [name, summary(values)]),
+  );
   const bundle = {
     bytes: readFileSync(resolve(root, "packages/renderer-skia/dist/vellum_editor.wasm")).length,
     gzipBytes: gzipSync(
@@ -163,6 +180,14 @@ try {
   bundle.loaderGzipBytes = gzipSync(
     readFileSync(resolve(root, "packages/renderer-skia/dist/vellum-editor.js")),
   ).length;
+  const budgetsReport = {
+    machine: process.env.VELLUM_PERF_MACHINE ?? info.device,
+    lane: "browser",
+    adapters: ["skia-webgl2", "skia-wasm-cpu", "canvas2d"],
+    metrics: { ...performance, wasmGzip: summary([bundle.gzipBytes]) },
+  };
+  writeFileSync(resolve(output, "performance.json"), JSON.stringify(budgetsReport, null, 2));
+  if (process.argv.includes("--budget")) failures.push(...assess(budgetsReport));
   const report = { device: info.device, results, performance, bundle, failures };
   writeFileSync(
     resolve(output, software ? "browser-software-results.json" : "browser-results.json"),

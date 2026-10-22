@@ -55,7 +55,9 @@
     "doc-api:gen": "node scripts/doc-api-gen.mjs",
     "doc-api:check": "node scripts/doc-api-gen.mjs --check",
     "parity:check": "node scripts/parity.mjs",
-    "test:model-providers": "node scripts/model-providers.mjs"
+    "test:model-providers": "node scripts/model-providers.mjs",
+    "performance:native": "node scripts/performance.mjs native",
+    "performance:browser": "node scripts/performance.mjs browser"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

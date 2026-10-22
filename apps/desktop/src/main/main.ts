@@ -17,6 +17,7 @@ import {
   parseRequest,
 } from "@vellum/host-electron/bridge";
 import type { ClientId } from "@vellum/host-vscode/mcp-config";
+import { editorReporter } from "@vellum/telemetry";
 import {
   app,
   BrowserWindow,
@@ -68,6 +69,7 @@ let nextId = 0;
 const windows = new Map<
   number,
   {
+    telemetry?: ReturnType<typeof editorReporter>;
     window: BrowserWindow;
     folder: string | null;
     relay: DaemonProcess | null;
@@ -484,6 +486,9 @@ function installMenu(entry: WindowEntry) {
 }
 async function request(entry: WindowEntry, value: DesktopRequest): Promise<unknown> {
   switch (value.type) {
+    case "telemetry":
+      entry.telemetry?.consent(value.enabled);
+      return;
     case "home":
     case "signin":
     case "editor":
@@ -787,6 +792,16 @@ function createWindow(folder: string | null): WindowEntry {
   });
   const entry: WindowEntry = {
     window,
+    telemetry: editorReporter({
+      endpoint: process.env.VELLUM_TELEMETRY_ORIGIN,
+      version: app.getVersion(),
+      os:
+        process.platform === "darwin"
+          ? "macos"
+          : process.platform === "win32"
+            ? "windows"
+            : "linux",
+    }),
     folder,
     relay: new DaemonProcess(
       binary,
@@ -889,6 +904,7 @@ function createWindow(folder: string | null): WindowEntry {
       });
   });
   window.on("closed", () => {
+    entry.telemetry?.dispose();
     for (const watch of browserWatches.get(entry)?.values() ?? []) watch.dispose();
     browserWatches.delete(entry);
     windows.delete(contentsId);

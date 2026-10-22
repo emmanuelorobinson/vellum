@@ -18,6 +18,13 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Anonymous telemetry: off by default. Shows the exact payload fields. No account required.
+    Telemetry {
+        #[arg(value_parser = ["on","off","status"], default_value="status")]
+        action: String,
+        #[arg(long)]
+        origin: Option<String>,
+    },
     /// Configure non-secret image settings; restart the daemon after changing them.
     AssetSettings {
         #[arg(long)]
@@ -102,7 +109,38 @@ fn execute(cli: Cli) -> std::io::Result<ExitCode> {
         .map(std::path::Path::to_path_buf)
         .unwrap_or_else(|| dir.path().to_path_buf());
     let out = vellum::cli::commands::Output { json: cli.json };
+    if !matches!(
+        &cli.command,
+        Command::Telemetry { .. } | Command::Daemon { .. }
+    ) {
+        vellum::telemetry::emit(&state, vellum_telemetry_http::Event::CliStarted);
+    }
     match cli.command {
+        Command::Telemetry { action, origin } => {
+            let mut settings = vellum::telemetry::load(&state);
+            if action != "status" {
+                settings.enabled = action == "on";
+                if origin.is_some() {
+                    settings.origin = origin;
+                }
+                vellum::telemetry::save(&state, &settings)?;
+            }
+            let disclosure = format!(
+                "Telemetry {}. If on: version, OS and anonymous CLI/daemon start counts. Never files, prompts, keys or repo paths.",
+                if settings.enabled { "on" } else { "off" }
+            );
+            out.result(
+                "telemetry",
+                serde_json::json!({
+                    "enabled":settings.enabled,"origin":settings.origin,
+                    "fields":["event","version","os","count"],
+                    "events":["cli_started","daemon_started"],"count":1,
+                    "excluded":["files","prompts","keys","repo paths"]
+                }),
+                &disclosure,
+            )?;
+            Ok(ExitCode::SUCCESS)
+        }
         Command::AssetSettings {
             provider,
             endpoint,
@@ -186,13 +224,16 @@ fn execute(cli: Cli) -> std::io::Result<ExitCode> {
             listen,
             allow_origin,
             ..
-        } => vellum_ipc_local::run(DaemonConfig {
-            dir,
-            listen,
-            allowed_origins: allow_origin,
-            handler: vellum::daemon::production::handler(state),
-        })
-        .map(|()| ExitCode::SUCCESS),
+        } => {
+            vellum::telemetry::emit(&state, vellum_telemetry_http::Event::DaemonStarted);
+            vellum_ipc_local::run(DaemonConfig {
+                dir,
+                listen,
+                allowed_origins: allow_origin,
+                handler: vellum::daemon::production::handler(state),
+            })
+            .map(|()| ExitCode::SUCCESS)
+        }
     }
 }
 fn main() -> ExitCode {

@@ -51,7 +51,8 @@
     "@vellum/types-ts": "workspace:*",
     "@vellum/ui-tokens": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "@vellum/telemetry": "workspace:*"
   },
   "contributes": {
     "customEditors": [

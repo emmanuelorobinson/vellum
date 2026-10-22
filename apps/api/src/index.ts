@@ -5,6 +5,7 @@ import { identifier, type JobQueue, validateJob } from "@vellum/jobs";
 import { decodeBundle, type ShareService, ShareUnavailable, zipBundle } from "@vellum/storage";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import type { observability } from "./observability";
 export const PACKAGE_NAME = "@vellum/api";
 function credentialHeaders(raw: Headers): Headers {
   const headers = new Headers(raw);
@@ -12,6 +13,7 @@ function credentialHeaders(raw: Headers): Headers {
   return headers;
 }
 export function createApi(ports: {
+  telemetry?: ReturnType<typeof observability>;
   shares?: ShareService;
   auth: Auth;
   billing: Billing;
@@ -35,6 +37,7 @@ export function createApi(ports: {
       !["GET", "HEAD", "OPTIONS"].includes(c.req.method) &&
       !c.req.path.startsWith("/api/auth/") &&
       c.req.path !== "/v1/billing/webhook" &&
+      c.req.path !== "/v1/telemetry" &&
       !c.req.header("authorization")
     ) {
       if (c.req.header("origin") !== ports.accountOrigin)
@@ -42,12 +45,24 @@ export function createApi(ports: {
     }
     await next();
   });
-  app.onError(
-    () =>
-      new Response(JSON.stringify({ error: "Cloud service unavailable" }), {
-        status: 503,
-        headers: { "content-type": "application/json", "cache-control": "no-store" },
-      }),
+  app.onError(() => {
+    ports.telemetry?.event("cloud_failed");
+    return new Response(JSON.stringify({ error: "Cloud service unavailable" }), {
+      status: 503,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
+    });
+  });
+  app.post(
+    "/v1/telemetry",
+    bodyLimit({ maxSize: 1024, onError: (c) => c.json({ accepted: false }, 413) }),
+    async (c) => {
+      try {
+        const accepted = ports.telemetry?.accept(await c.req.json()) ?? false;
+        return c.json({ accepted }, accepted ? 202 : 400);
+      } catch {
+        return c.json({ accepted: false }, 400);
+      }
+    },
   );
   app.on(["GET", "POST"], "/api/auth/*", (c) => ports.auth.handler(c.req.raw));
   app.get("/v1/me", async (c) => {

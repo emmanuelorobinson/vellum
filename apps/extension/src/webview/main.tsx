@@ -128,6 +128,9 @@ const preferences = createPreferences({
     api.setState({ ...(saved && typeof saved === "object" ? saved : {}), preferences: values });
   },
 });
+preferences.subscribe(() =>
+  api.postMessage({ type: "telemetry", enabled: preferences.get("telemetry") }),
+);
 void preferences.load();
 const settings = createSettingsController({
   preferences,

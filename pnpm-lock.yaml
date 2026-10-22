@@ -320,6 +320,9 @@ importers:
       '@vellum/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@vellum/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       hono:
         specifier: 4.13.13
         version: 4.13.13
@@ -360,6 +363,9 @@ importers:
       '@vellum/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@vellum/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       '@vellum/ui-tokens':
         specifier: workspace:*
         version: link:../../packages/ui-tokens
@@ -433,6 +439,9 @@ importers:
       '@vellum/host-vscode':
         specifier: workspace:*
         version: link:../../packages/host-vscode
+      '@vellum/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       '@vellum/types-ts':
         specifier: workspace:*
         version: link:../../packages/types-ts

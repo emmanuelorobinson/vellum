@@ -1,3 +1,4 @@
+import { observability } from "./observability";
 // TEST DATA. In-process Hono requests with injected cloud boundaries.
 
 import type { Auth } from "@vellum/auth";
@@ -6,7 +7,7 @@ import { MemoryJobQueue } from "@vellum/jobs";
 import { expect, it, vi } from "vitest";
 import { createApi } from "./index";
 
-const setup = () => {
+const setup = (telemetry?: ReturnType<typeof observability>) => {
   const auth: Auth = {
     handler: vi.fn(async () => new Response("auth")),
     getSession: async (h) =>
@@ -32,6 +33,7 @@ const setup = () => {
     jobs,
     authorizeInput,
     app: createApi({
+      telemetry,
       auth,
       billing,
       jobs,
@@ -111,4 +113,42 @@ it("never falls back to cookies when a bearer header is supplied", async () => {
     headers: { authorization: "Bearer invalid", cookie: "session=valid" },
   });
   expect(result.status).toBe(401);
+});
+
+it("telemetry relay needs no account and never forwards request context", async () => {
+  const fetcher = vi.fn(
+    async (_url: string, _init?: RequestInit) => new Response("", { status: 202 }),
+  );
+  const t = observability(
+    {
+      VELLUM_TELEMETRY: "true",
+      VELLUM_POSTHOG_ORIGIN: "https://ph.example",
+      VELLUM_POSTHOG_TOKEN: "TEST DATA project",
+    },
+    { newId: () => "0123456789abcdef0123456789abcdef", clock: () => 0, fetch: fetcher },
+  );
+  const { app } = setup(t);
+  const response = await app.request("/v1/telemetry", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      cookie: "TEST DATA canary",
+      authorization: "TEST DATA canary",
+    },
+    body: JSON.stringify({
+      event: "editor_opened",
+      version: "0.0.0",
+      os: "macos",
+      prompt: "TEST DATA canary",
+      url: "/repo/private",
+    }),
+  });
+  expect(response.status).toBe(202);
+  await t.flush();
+  expect(fetcher).toHaveBeenCalledOnce();
+  expect(JSON.stringify(fetcher.mock.calls)).not.toMatch(/canary|private|cookie|authorization/);
+  expect(
+    (await app.request("/v1/telemetry", { method: "POST", body: "x".repeat(1025) })).status,
+  ).toBe(413);
+  t.dispose();
 });

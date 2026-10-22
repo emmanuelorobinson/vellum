@@ -19,6 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             scene: &scene,
         };
         let rgba = renderer.rgba(&page)?;
+        if rgba != renderer.rgba(&page)? {
+            return Err(format!("nondeterministic native paint: {name}").into());
+        }
         fs::write(out.join(format!("{name}.bin")), &bytes)?;
         fs::write(out.join(format!("{name}.rgba")), &rgba)?;
         fs::write(out.join(format!("{name}.png")), renderer.png(&page)?)?;
@@ -89,10 +92,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..60 {
         let pan = i as f32 * 0.3;
         let zoom = 0.4 + i as f32 * 0.001;
-        fs::write(
-            out.join(format!("performance-{i}.bin")),
-            render_scenes::many_nodes(5000, pan, zoom).to_bytes()?,
-        )?;
+        let bytes = render_scenes::many_nodes(5000, pan, zoom).to_bytes()?;
+        if i == 0 {
+            fs::write(
+                out.join("performance.basic.json"),
+                renderer.basic_plan(&bytes, &Resources::default())?,
+            )?;
+        }
+        fs::write(out.join(format!("performance-{i}.bin")), bytes)?;
     }
     for i in 0..30 {
         let mut l = render_scenes::many_nodes(5000, 0., 1.);

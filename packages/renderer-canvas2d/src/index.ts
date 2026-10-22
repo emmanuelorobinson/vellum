@@ -14,9 +14,9 @@ type Rect = [number, number, number, number];
 export type BasicCommand =
   | { op: "save" | "restore" }
   | { op: "transform"; matrix: Matrix }
-  | { op: "clip"; data: string; even_odd: boolean }
+  | { op: "clip"; data: string | number; even_odd: boolean }
   | { op: "layer"; opacity: number; blend: string }
-  | { op: "path"; data: string; even_odd: boolean; paint: RenderPaint; bounds: Rect }
+  | { op: "path"; data: string | number; even_odd: boolean; paint: RenderPaint; bounds: Rect }
   | {
       op: "image";
       pixels: number[];
@@ -26,6 +26,8 @@ export type BasicCommand =
       opacity: number;
     };
 export interface BasicScene {
+  /** Geometry dictionary from the compiler; legacy inline SVG data remains readable. */
+  paths?: readonly string[];
   commands: BasicCommand[];
   simplifications: readonly string[];
 }
@@ -84,6 +86,21 @@ function render(scene: BasicScene, width: number, height: number): OffscreenCanv
   type Clip = { path: Path2D; rule: CanvasFillRule; matrix: Matrix };
   let clips: Clip[] = [];
   const stack: (() => void)[] = [];
+  const geometry = new Map<string | number, Path2D>();
+  const path = (key: string | number) => {
+    let value = geometry.get(key);
+    if (value) return value;
+    const data =
+      typeof key === "string"
+        ? key
+        : Number.isInteger(key) && key >= 0
+          ? scene.paths?.[key]
+          : undefined;
+    if (typeof data !== "string") throw new Error("Invalid basic geometry reference");
+    value = new Path2D(data);
+    geometry.set(key, value);
+    return value;
+  };
   for (const command of scene.commands) {
     switch (command.op) {
       case "save": {
@@ -111,10 +128,10 @@ function render(scene: BasicScene, width: number, height: number): OffscreenCanv
         ctx.setTransform(...matrix);
         break;
       case "clip": {
-        const path = new Path2D(command.data),
+        const clipPath = path(command.data),
           rule = command.even_odd ? "evenodd" : "nonzero";
-        ctx.clip(path, rule);
-        clips = [...clips, { path, rule, matrix }];
+        ctx.clip(clipPath, rule);
+        clips = [...clips, { path: clipPath, rule, matrix }];
         break;
       }
       case "layer": {
@@ -145,7 +162,7 @@ function render(scene: BasicScene, width: number, height: number): OffscreenCanv
       }
       case "path":
         ctx.fillStyle = paint(ctx, command.paint, command.bounds);
-        ctx.fill(new Path2D(command.data), command.even_odd ? "evenodd" : "nonzero");
+        ctx.fill(path(command.data), command.even_odd ? "evenodd" : "nonzero");
         break;
       case "image": {
         const image = context(...command.size);

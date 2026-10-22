@@ -36,7 +36,8 @@ vendor diagnostics. Requests are bounded and never replayed after disconnect.
 `vellum.matchEditorColours` is off by default. All four VS Code theme kinds map to the existing token
 appearances. Matching changes neutral chrome surfaces/text only, leaving canvas semantic tokens alone.
 The webview uses editor-core's existing VS Code shortcut policy; the manifest adds no global keybindings.
-Secrets and telemetry settings do not travel in the bridge.
+Secrets and collector configuration stay in the native host. Prompt 71 adds only an explicit telemetry
+consent boolean to the bridge; the webview has no collector URL, key or network access.
 
 ## Document lifecycle boundary
 

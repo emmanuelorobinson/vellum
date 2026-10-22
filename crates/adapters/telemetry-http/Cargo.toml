@@ -1,0 +1,14 @@
+[package]
+name = "vellum-telemetry-http"
+description = "Opt-in allowlisted telemetry relay transport. No content or credential fields."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "json"] }
+tokio = { version = "=1.53.2", features = ["rt", "net", "time"] }
+[lints]
+workspace = true

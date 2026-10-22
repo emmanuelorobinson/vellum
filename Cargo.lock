@@ -5543,6 +5543,7 @@ dependencies = [
  "vellum-sessions-sqlite",
  "vellum-shader-sksl",
  "vellum-sync-ws",
+ "vellum-telemetry-http",
  "vellum-testkit",
  "vellum-text-parley",
  "vellum-types",
@@ -6052,6 +6053,16 @@ dependencies = [
  "vellum-contracts",
  "vellum-core",
  "vellum-types",
+]
+
+[[package]]
+name = "vellum-telemetry-http"
+version = "0.0.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

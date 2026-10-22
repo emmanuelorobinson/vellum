@@ -37,7 +37,8 @@
     "electron-updater": "6.8.9",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@vellum/storage": "workspace:*"
+    "@vellum/storage": "workspace:*",
+    "@vellum/telemetry": "workspace:*"
   },
   "license": "Apache-2.0"
 }

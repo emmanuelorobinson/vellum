@@ -13,6 +13,7 @@ export function appearance(kind: number): Appearance {
   }
 }
 export type WebviewMessage =
+  | { type: "telemetry"; enabled: boolean }
   | { type: "share"; requestId: number; request: ShareRequest }
   | { type: "shareCopy" }
   | { type: "shareOpen" }
@@ -25,6 +26,8 @@ export function parseMessage(value: unknown): WebviewMessage | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
   const keys = Object.keys(v).sort().join(",");
+  if (keys === "enabled,type" && v.type === "telemetry" && typeof v.enabled === "boolean")
+    return { type: "telemetry", enabled: v.enabled };
   if (keys === "type" && (v.type === "shareCopy" || v.type === "shareOpen"))
     return { type: v.type };
   if (

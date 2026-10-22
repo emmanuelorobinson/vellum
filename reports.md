@@ -8,6 +8,12 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 71 needs performance and deployment acceptance.** Full native rebuild pan/drag/batch and Canvas2D
+  remain over §12; gates are red at their original limits. Open (107.93 ms), idle RSS (47.66 MiB), Skia draw
+  timings and WASM gzip (1,953,527 bytes) pass locally. Finish P55's live host path, optimize the failing
+  pipelines, then run M1/Windows and paired CI. Provision/review real PostHog/Sentry delivery/retention and
+  installed-host consent; all reporting remains off by default. See `docs/runbooks/performance-observability.md`.
+
 - **Prompt 70 needs localization and release acceptance.** Thirteen bundled catalogs cover 127 common messages;
   advanced descriptions/dynamic diagnostics, desktop Home and standalone account/web copy still need extraction
   and translation. Human language review, VoiceOver/NVDA, text scaling and installed platform acceptance remain.
@@ -4673,3 +4679,80 @@ Not passing / not claimed:
   permission/error diagnostics, desktop Home and standalone account/web surfaces still contain English fallback
   copy. Human language review, VoiceOver/NVDA, OS text-scaling/forced-color inspection, installed native host
   acceptance, Windows/Linux and remote CI are unverified. No commit or deployment.
+
+## Prompt 71 — Performance and observability (implementation; budget acceptance open)
+
+Built release-only native and browser measurements, absolute §12 gates, a 2.4 MiB single-module gzip cap,
+and an added under-128 MiB empty-daemon RSS gate (ADR-031). Missing/invalid measurements fail closed.
+Native JSON/directory open, Loro agent Ops, Taffy, Parley, Rstar, filesystem/IPC and Skia/Basic participate;
+the 2 MiB fixture has 5,000 drawable children including 500 text nodes. Browser covers WebGL2, WASM CPU
+and Canvas2D. CI adds six-target absolute gates and sequential same-runner base/candidate >10% gates.
+No recorded baseline or golden is automatically updated. Paired remote CI has not run.
+
+Native pan/drag/batch timings include full resolve/layout/list/raster rebuilds; browser timings cover
+already-built display lists. These are explicitly separate boundaries, not installed-host first-paint or
+input-to-frame acceptance. P55's missing document ABI still prevents that acceptance. Service adapters'
+contract lanes remain separate; network/mock latencies and the unimplemented Vello shell are not claimed
+as frame-rate evidence. See `docs/runbooks/performance-observability.md`.
+
+Telemetry is off by default. Added fixed-schema opt-in transport, native editor boolean-consent bridges,
+CLI `telemetry status/on/off`, separate native consent state and a bounded unauthenticated cloud relay.
+Cloud operators separately configure PostHog/Sentry through server configuration. Reconstructed events
+contain fixed names, version, OS and count=1; no content, prompts, paths, request context, identities or keys.
+No automatic SDK hooks, persistent analytics id, retry or disk queue. Opt-out aborts pending editor sends;
+VS Code's opt-out wins. No collector or real account was contacted. Missing collector plus explicit cloud
+opt-in fails clearly; invalid URL errors are reconstructed so their `input` property cannot leak credentials.
+
+TDD confirmed missing gates/telemetry, consent-boundary refusals, CLI disclosure, body-limit error handling,
+URL-error payload leakage and repeated geometry transfer. Fixed each without weakening original tests.
+Renderer preparation now shares immutable shape resources per list; Basic plans use an indexed geometry
+dictionary and reuse Path2D per frame, retaining old inline-plan reading and atomic refusal. The shared
+5,000-shape Basic plan is 797,117 bytes with one path definition. This derived ABI ships with its rebuilt
+WASM; it is not a document format change. Full Basic performance still fails.
+
+Reference study (no code ported): Penpot waits for the first render and mocked assets; its playground isolates
+rendering. Vellum waits for its own module/resources/readback and repeats every golden paint to detect
+nondeterminism, preserving its own fixture bytes/tolerances. Sibling Outpost uses fixed metric names and no raw
+logs; Vellum retains that principle with its own event schema. Context7/installed docs informed PostHog/Sentry
+HTTP envelopes, reqwest, Skia identity and Turborepo environment handling. No design/specification changed.
+
+Passed commands (Node 24/pnpm 12 via PATH `/private/tmp/vellum-p56-bin`, telemetry disabled, Rust 1.99,
+macOS ARM64; Rust target `target/prompt63-verification` where shown):
+
+- `pnpm --filter @vellum/telemetry --filter @vellum/renderer-canvas2d --filter @vellum/host-electron --filter @vellum/api --filter @vellum/extension --filter @vellum/desktop test`;
+  final focused reruns: telemetry 8, API 11 (four tagged integration tests skipped); renderer 4,
+  host-electron 7, extension 41 + 3 packaging, desktop 29 + 3 packaging.
+- `CARGO_TARGET_DIR=target/prompt63-verification cargo test --offline -p vellum-telemetry-http` (2);
+  `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum --test telemetry_cli` (1);
+  same wrapper with `test --offline -p vellum-render-skia --test appearance --test renderer --test cache` (23).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum -p vellum-render-skia -p vellum-telemetry-http --all-targets -- -D warnings`.
+- `pnpm type-check` (34 tasks), final `pnpm --filter @vellum/telemetry --filter @vellum/api type-check`;
+  `pnpm --filter @vellum/desktop build`; `pnpm --filter @vellum/extension build`.
+- Release wrapper `run --offline --release -p vellum --example renderer-fixtures -- target/renderer-fixtures`,
+  `--example renderer-goldens`, `--example renderer-budget`, and `build --offline --release -p vellum --bin vellum`.
+  `node scripts/performance-idle.mjs target/prompt63-verification/release/vellum target/performance/native.json`.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs build --offline --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten` (permitted SDK cache access).
+- `node --test scripts/__tests__/performance.test.mjs scripts/__tests__/reports.test.mjs scripts/__tests__/repo-layout.test.mjs scripts/__tests__/deps.test.mjs` (23);
+  `bash scripts/check-deps.sh` (Rust allowlist, bans/licenses/sources, TS: 686 modules/1,908 edges).
+  Scoped Biome, rustfmt, actionlint on both workflows, clean-room, copy-lint, `pnpm checksum`, `git diff --check`.
+
+Not passing / not claimed:
+
+- Final native gate: 2 MiB open passes at 107.93 ms p95; directory open 87.11 ms; idle RSS passes at
+  49,971,200 bytes (47.66 MiB). Full native pipeline pan/zoom 120.24 ms, drag 115.81 ms and batch 134.36 ms
+  exceed §12. Native Basic also fails pan/drag/batch (115.11/123.98/224.78 ms). Gates remain unchanged.
+- `node scripts/renderer-goldens.mjs --software --budget`: **31 goldens and repeat paints pass, three performance
+  gates fail**. WebGL2 pan/drag/batch p95 2.8/4.0/0.2 ms; WASM CPU 12.6/11.5/7.8 ms; Canvas2D
+  3,044.6/3,357.7/121.9 ms. WASM gzip passes at 1,953,527 bytes. Diagnostic before/after GPU pan improves
+  3.8→2.8 ms and Basic pan 3,410.4→3,044.6 ms; concurrent checks/noisy CPU tails mean these are not paired
+  regression acceptance. Reports stay in `target/performance/` and `target/renderer-goldens/`.
+- Direct permitted `cargo deny --log-level error check` still fails on 14 existing advisories; no ignore added.
+  Initial sandbox attempts could not bind sockets/read process counters or lock the SDK/advisory caches;
+  permitted native/browser/build/deny retries resolved the environment restrictions. No approval rejection.
+  Default pnpm PATH initially failed registry identity validation. The verified shim and permitted install
+  pass supply-chain validation; install ends nonzero for existing unapproved dependency build scripts.
+  No approval/signature policy was bypassed. Host builds succeed with installed dependencies.
+- Real collector delivery/retention, installed Electron/VS Code consent acceptance, M1/mid-range Windows
+  hardware and Windows/Linux native lanes, paired baseline CI and remote CI remain unverified. Default
+  no-egress is covered structurally/in injected tests; no full network-blocked installed-host or new whole-repo
+  canary campaign is claimed. No commit, deployment, cloud provisioning or production credential changed.

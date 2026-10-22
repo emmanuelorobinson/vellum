@@ -245,6 +245,7 @@ impl Renderer {
             }
         }
         let mut ops = vec![];
+        let mut shapes = BTreeMap::new();
         let mut shader_errors = vec![];
         let mut pending_effects = BTreeMap::new();
         for (at, cmd) in list.commands.iter().enumerate() {
@@ -288,7 +289,7 @@ impl Renderer {
                     }
                 }
                 DrawCmd::Clip { shape } => {
-                    ops.push(Op::Clip(geometry::shape(get_shape(list, *shape))?))
+                    ops.push(Op::Clip(prepared_shape(list, *shape, &mut shapes)?))
                 }
                 DrawCmd::Path {
                     shape,
@@ -296,7 +297,7 @@ impl Renderer {
                     stroke,
                 } => {
                     let descriptor = get_shape(list, *shape);
-                    let path = geometry::shape(descriptor)?;
+                    let path = prepared_shape(list, *shape, &mut shapes)?;
                     let paint = get_paint(list, *paint);
                     let path = if let Some(i) = stroke {
                         stroke_path(&path, descriptor, get_stroke(list, *i))?
@@ -311,7 +312,8 @@ impl Renderer {
                             ops.push(Op::Restore);
                         }
                         _ => {
-                            let mut bounds = geometry::shape(descriptor)?.compute_tight_bounds();
+                            let mut bounds =
+                                prepared_shape(list, *shape, &mut shapes)?.compute_tight_bounds();
                             if bounds.width() == 0. || bounds.height() == 0. {
                                 bounds = path.compute_tight_bounds();
                             }
@@ -523,6 +525,20 @@ pub(crate) fn encode_image(image: &Image) -> Result<Vec<u8>, Error> {
 }
 pub(crate) fn matrix(m: [f32; 6]) -> sk::Matrix {
     sk::Matrix::new_all(m[0], m[2], m[4], m[1], m[3], m[5], 0., 0., 1.)
+}
+// Geometry is immutable within a validated display list. Keep one native path per resource,
+// including its generation id, so repeated instances do not rebuild curves or expand fallback SVG.
+fn prepared_shape(
+    list: &DisplayList,
+    index: u32,
+    shapes: &mut BTreeMap<u32, Path>,
+) -> Result<Path, Error> {
+    if let Some(path) = shapes.get(&index) {
+        return Ok(path.clone());
+    }
+    let path = geometry::shape(get_shape(list, index))?;
+    shapes.insert(index, path.clone());
+    Ok(path)
 }
 fn get_shape(list: &DisplayList, i: u32) -> &Shape {
     let Resource::Shape(s) = &list.resources[i as usize] else {

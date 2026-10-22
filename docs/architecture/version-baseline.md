@@ -414,3 +414,10 @@ per workspace; there is no detection or HTTP backend. The wrapper is the only pa
 `@axe-core/playwright = 4.14.0` is test-only (stable verified with `npm view`); it runs the WCAG A/AA
 checks in Chromium without excluded rules. IBM Plex Sans Arabic assets come from Fontsource 5.3.0,
 under OFL-1.1; the fonts are bundled rather than fetched while running. See THIRD_PARTY_NOTICES.md.
+
+## Prompt 71 — observability transport
+
+`vellum-telemetry-http` reuses the existing exact reqwest 0.13.5 and tokio 1.53.2 transport pins behind a
+new adapter boundary; no new vendor version. `@vellum/telemetry` uses the documented PostHog capture and
+Sentry envelope HTTP protocols with injected fetch, without SDK auto-instrumentation or new JS vendors.
+ADR-031 records the 2.4 MiB single-module gzip cap, 128 MiB idle RSS gate and paired regression method.

@@ -72,6 +72,7 @@ export interface DesktopState {
   account?: AccountState;
 }
 export type DesktopRequest =
+  | { type: "telemetry"; enabled: boolean }
   | { type: "browserCapture"; request: BrowserRequest }
   | { type: "browserWatch"; id: string; request: BrowserRequest }
   | { type: "browserStop"; id: string }
@@ -126,6 +127,8 @@ export function parseRequest(value: unknown): DesktopRequest | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
   const keys = Object.keys(v).sort().join(",");
+  if (keys === "enabled,type" && v.type === "telemetry" && typeof v.enabled === "boolean")
+    return { type: "telemetry", enabled: v.enabled };
   if (
     keys === "type" &&
     [

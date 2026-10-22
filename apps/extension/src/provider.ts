@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { brand } from "@vellum/config";
+import { editorReporter } from "@vellum/telemetry";
 import * as vscode from "vscode";
 import { DesignDocument, type DocumentRuntime, type FilePort } from "./document";
 import type { DaemonProcess } from "./relay";
@@ -129,12 +130,26 @@ export class DesignEditorProvider
     };
     this.panels.set(panel, document);
     this.active = document;
+    const telemetry = editorReporter({
+      endpoint: process.env.VELLUM_TELEMETRY_ORIGIN,
+      version: this.context.extension.packageJSON.version,
+      os:
+        process.platform === "darwin"
+          ? "macos"
+          : process.platform === "win32"
+            ? "windows"
+            : "linux",
+    });
     let ready = false;
     let shareUrl: string | undefined;
     const message = panel.webview.onDidReceiveMessage(async (raw: unknown) => {
       const value = parseMessage(raw);
       if (!value) return;
       try {
+        if (value.type === "telemetry") {
+          telemetry.consent(value.enabled && vscode.env.isTelemetryEnabled);
+          return;
+        }
         if (value.type === "ready") {
           ready = true;
           this.readyPanels.add(panel);
@@ -186,6 +201,9 @@ export class DesignEditorProvider
         await this.send(panel, document, "host-request-failed");
       }
     });
+    const telemetryChange = vscode.env.onDidChangeTelemetryEnabled((on) => {
+      if (!on) telemetry.consent(false);
+    });
     const theme = vscode.window.onDidChangeActiveColorTheme(() => {
       if (ready) void this.send(panel, document);
     });
@@ -199,6 +217,8 @@ export class DesignEditorProvider
     panel.onDidDispose(() => {
       this.panels.delete(panel);
       this.readyPanels.delete(panel);
+      telemetryChange.dispose();
+      telemetry.dispose();
       message.dispose();
       theme.dispose();
       config.dispose();
