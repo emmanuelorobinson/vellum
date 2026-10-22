@@ -1,7 +1,5 @@
 "use client";
 
-import { useLocale } from "../accessibility/locale";
-
 import { brand } from "@vellum/config";
 import {
   type SnapshotFrame,
@@ -11,6 +9,7 @@ import {
 import type { Renderer } from "@vellum/renderer-api";
 import { createRenderer, type ModuleFactory } from "@vellum/renderer-skia";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "../accessibility/locale";
 import "./share.css";
 
 function SnapshotCanvas({ frame, data }: { frame: SnapshotFrame; data: ViewerSnapshot }) {
@@ -22,7 +21,7 @@ function SnapshotCanvas({ frame, data }: { frame: SnapshotFrame; data: ViewerSna
     const host = snapshotHost(data.bundle, (t) => navigator.clipboard.writeText(t));
     const load = async () => {
       try {
-        const moduleUrl = "/engine/vellum-editor.js";
+        const moduleUrl = "/engine/vellum-viewer.js";
         const module = (await import(/* webpackIgnore: true */ moduleUrl)) as {
           default: ModuleFactory;
         };

@@ -115,7 +115,7 @@ fn archive_entries_have_unique_safe_names_and_correct_dimensions() {
     assert_eq!(zip.len(), 2);
     for i in 0..2 {
         let mut file = zip.by_index(i).unwrap();
-        assert!(!file.name().contains('/'));
+        assert!(!file.name().unwrap().contains('/'));
         let mut b = vec![];
         file.read_to_end(&mut b).unwrap();
         assert_eq!(

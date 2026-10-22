@@ -238,7 +238,7 @@ impl Tool for Execute {
             },
             ExecuteContext {
                 ids,
-                services: ctx.docs().services(),
+                services: ctx.docs().services_for(&path, &before),
                 guard: &mut guard,
                 now,
             },

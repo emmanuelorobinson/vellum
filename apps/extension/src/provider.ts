@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { brand } from "@vellum/config";
+import { DaemonRuntime } from "@vellum/host-api";
 import { editorReporter } from "@vellum/telemetry";
 import * as vscode from "vscode";
 import { DesignDocument, type DocumentRuntime, type FilePort } from "./document";
@@ -10,8 +11,8 @@ export const VIEW_TYPE = "vellum.design";
 export interface RuntimeFactory {
   open(uri: vscode.Uri, bytes: Uint8Array): Promise<DocumentRuntime>;
 }
-/** Until the compiled core exports the document ABI and editor ownership can be registered over IPC,
- * the host can preserve and inspect original bytes only. It must never grant itself write authority. */
+/** Without the daemon nobody can say who owns the file (guide §7 Ownership), so it opens read-only: the host
+ * keeps the original bytes and the webview's engine shows them. It never grants itself write authority. */
 export class ReadonlyRuntime implements DocumentRuntime {
   readonly editable = false;
   revision = 0;
@@ -51,17 +52,48 @@ export class DesignEditorProvider
   private readyPanels = new Set<vscode.WebviewPanel>();
   private opened = new vscode.EventEmitter<vscode.Uri>();
   readonly onDidOpenDocument = this.opened.event;
+  /** Panels whose engine is a live replica at the daemon (ADR-033). */
+  private livePanels = new Set<vscode.WebviewPanel>();
   get status() {
-    return { editors: this.panels.size, ready: this.readyPanels.size };
+    return { editors: this.panels.size, ready: this.readyPanels.size, live: this.livePanels.size };
   }
+  private readonly factory: RuntimeFactory;
+  /** The editor module and its fonts, read once from the extension's own files. */
+  private engineFiles: Promise<{ wasm: Uint8Array; fonts: Uint8Array[] }> | undefined;
+  /** What each document's file held when it opened: a read-only webview draws it. */
+  private originals = new WeakMap<DesignDocument, Uint8Array>();
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly daemon: DaemonProcess,
     private readonly files: FilePort,
-    private readonly factory: RuntimeFactory = {
-      open: async (_uri, bytes) => new ReadonlyRuntime(bytes),
-    },
-  ) {}
+    factory?: RuntimeFactory,
+    /** This installation's device (a ULID): people are known by the device they edit from. */
+    private readonly device = "",
+  ) {
+    // The daemon's engine holds a file on disk (ADR-033); anything else, or no daemon, opens read-only.
+    this.factory = factory ?? {
+      open: async (uri, bytes) => {
+        if (uri.scheme === "file" && this.device)
+          try {
+            return await DaemonRuntime.open((p) => this.daemon.editor(p), uri.fsPath, this.device);
+          } catch {
+            /* No daemon, a file outside the workspace, or one it cannot read: read-only below. */
+          }
+        return new ReadonlyRuntime(bytes);
+      },
+    };
+  }
+  private loadEngineFiles() {
+    const at = (name: string) =>
+      vscode.workspace.fs.readFile(
+        vscode.Uri.joinPath(this.context.extensionUri, "dist", "webview", "engine", name),
+      );
+    this.engineFiles ??= Promise.all([at("vellum_editor.wasm"), at("InterVariable.ttf")]).then(
+      // Copies with their own buffers: a view into a shared one does not survive postMessage.
+      ([wasm, inter]) => ({ wasm: new Uint8Array(wasm), fonts: [new Uint8Array(inter)] }),
+    );
+    return this.engineFiles;
+  }
 
   async openCustomDocument(
     uri: vscode.Uri,
@@ -71,7 +103,16 @@ export class DesignEditorProvider
     if (token.isCancellationRequested) throw new vscode.CancellationError();
     const bytes = open.untitledDocumentData ?? (await this.files.read(uri.toString()));
     const runtime = await this.factory.open(uri, bytes);
-    const lifecycle = new DesignDocument(uri.toString(), runtime, this.files, bytes);
+    // After the host writes the file itself (Save), the daemon reads it back as the saved state.
+    const files: FilePort = {
+      ...this.files,
+      writeAtomic: async (target, data) => {
+        await this.files.writeAtomic(target, data);
+        if (target === uri.toString() && runtime instanceof DaemonRuntime) await runtime.written();
+      },
+    };
+    const lifecycle = new DesignDocument(uri.toString(), runtime, files, bytes);
+    this.originals.set(lifecycle, bytes);
     try {
       if (open.backupId)
         await lifecycle.restore(open.backupId, () => token.isCancellationRequested);
@@ -142,6 +183,8 @@ export class DesignEditorProvider
     });
     let ready = false;
     let shareUrl: string | undefined;
+    const runtime = document.lifecycle.runtime;
+    const panelEditor = runtime instanceof DaemonRuntime ? runtime.newPanel() : null;
     const message = panel.webview.onDidReceiveMessage(async (raw: unknown) => {
       const value = parseMessage(raw);
       if (!value) return;
@@ -154,6 +197,42 @@ export class DesignEditorProvider
           ready = true;
           this.readyPanels.add(panel);
           await this.send(panel, document);
+          return;
+        }
+        if (value.type === "engineLoad") {
+          const { wasm, fonts } = await this.loadEngineFiles();
+          const original = this.originals.get(document.lifecycle);
+          await panel.webview.postMessage({
+            type: "engineModule",
+            wasm,
+            fonts,
+            live: panelEditor !== null,
+            device: this.device,
+            path: document.uri.fsPath || document.uri.path,
+            // A read-only file is shown from its bytes; a live one comes from the daemon's engine.
+            file: panelEditor ? null : (original ?? null),
+          });
+          return;
+        }
+        if (value.type === "engine") {
+          try {
+            if (!panelEditor || !(runtime instanceof DaemonRuntime)) throw Error("read-only");
+            const result = await runtime.relay(panelEditor, value.action, value.params);
+            if (value.action === "open") this.livePanels.add(panel);
+            if (value.action === "close") this.livePanels.delete(panel);
+            await panel.webview.postMessage({
+              type: "engine",
+              requestId: value.requestId,
+              ok: true,
+              result,
+            });
+          } catch {
+            await panel.webview.postMessage({
+              type: "engine",
+              requestId: value.requestId,
+              ok: false,
+            });
+          }
           return;
         }
         if (value.type === "shareOpen") {
@@ -215,8 +294,11 @@ export class DesignEditorProvider
       if (panel.active) this.active = document;
     });
     panel.onDidDispose(() => {
+      if (panelEditor && runtime instanceof DaemonRuntime)
+        void runtime.relay(panelEditor, "close", {}).catch(() => {});
       this.panels.delete(panel);
       this.readyPanels.delete(panel);
+      this.livePanels.delete(panel);
       telemetryChange.dispose();
       telemetry.dispose();
       message.dispose();
@@ -254,8 +336,9 @@ export class DesignEditorProvider
         .get("matchEditorColours", false),
       dirty: document.lifecycle.dirty,
       daemon: this.daemon.connected,
-      editable: false,
-      problem: problem ?? "document-runtime-unavailable",
+      editable: document.lifecycle.runtime.editable,
+      problem:
+        problem ?? (document.lifecycle.runtime.editable ? "" : "document-runtime-unavailable"),
     });
   }
   private async broadcast(document: CustomDocument, problem?: string) {

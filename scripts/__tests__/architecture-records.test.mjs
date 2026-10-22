@@ -1,5 +1,6 @@
-// ADR-000 (guide §6.1 and Prompt 2): the six verified deltas from ARCHITECTURE.md are recorded as Proposed,
-// each naming the prompt that confirms or rejects it and the ADR that prompt will write.
+// ADR-000 (guide §6.1 and Prompt 2): the six verified deltas from ARCHITECTURE.md start as Proposed, each
+// naming the prompt that confirms or rejects it and the ADR that prompt will write. Once that prompt's ADR
+// accepts a delta, its status says "Accepted by <that ADR>" (the owner's synchronization of 2026-10-16).
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { test } from "node:test";
@@ -27,12 +28,16 @@ test("ADR-000 exists under docs/architecture/decisions/", () => {
   assert.ok(existsSync(at(ADR)), `${ADR} is missing`);
 });
 
-test("ADR-000 records D1 to D6 as Proposed, each with its confirming prompt and revisit condition", () => {
+test("ADR-000 records D1 to D6 as Proposed or accepted by their ADR, each with its confirming prompt and revisit condition", () => {
   const text = read(ADR);
   for (const [id, { prompt, adr }] of Object.entries(CONFIRMED_BY)) {
     const section = sectionFor(text, id);
     assert.ok(section, `ADR-000 has no "## ${id}" section`);
-    assert.match(section, /Status:\s*Proposed/, `${id} must be Proposed`);
+    const status = section.match(/Status:\s*(.*)/)?.[1] ?? "";
+    assert.ok(
+      /^Proposed\b/.test(status) || status.startsWith(`Accepted by ${adr}`),
+      `${id} must be Proposed or "Accepted by ${adr}", not "${status}"`,
+    );
     assert.match(section, prompt, `${id} must name its confirming prompt`);
     assert.match(section, new RegExp(adr), `${id} must name ${adr}`);
     assert.match(

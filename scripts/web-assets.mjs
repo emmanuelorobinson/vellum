@@ -1,4 +1,4 @@
-/** Publish only the built shared WASM renderer and licensed fonts, never repo files or design assets. */
+/** Publish only the built WASM viewer (renderer) and licensed fonts, never repo files or design assets. */
 import { copyFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -7,7 +7,8 @@ if (!["web", "account"].includes(app)) throw Error("Expected web or account");
 const root = resolve(import.meta.dirname, "..");
 for (const dir of ["engine", "fonts"])
   await mkdir(resolve(root, `apps/${app}/public/${dir}`), { recursive: true });
-for (const file of ["vellum-editor.js", "vellum_editor.wasm"])
+// Share pages draw only: the viewer module, without the document engine (ADR-033).
+for (const file of ["vellum-viewer.js", "vellum_viewer.wasm"])
   await copyFile(
     resolve(root, `packages/renderer-skia/dist/${file}`),
     resolve(root, `apps/${app}/public/engine/${file}`),

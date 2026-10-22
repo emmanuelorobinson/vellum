@@ -249,7 +249,7 @@ test.describe("Agent tab", () => {
     ["claude-code", "Fixture complete", "26k tokens"],
     [
       "codex",
-      "I’ll locate the attached canvas state tool and call it once.Fixture complete",
+      "I’ll locate the attached canvas state tool and call it once.\n\nFixture complete",
       "54k tokens",
     ],
   ] as const)

@@ -1,7 +1,8 @@
-//! Local pixel processing only: bounded decoding, ONNX segmentation, and vtracer tracing.
+//! Local pixel processing only: bounded decoding, ONNX segmentation, and vtracer-style tracing.
 use image::{ImageFormat, ImageReader, RgbaImage, imageops::FilterType};
 use std::{io::Cursor, path::Path};
 use vellum_core::ports::*;
+mod trace;
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 const MAX_PIXELS: u64 = 16 * 1024 * 1024;
 fn decode(bytes: &[u8]) -> Result<RgbaImage, ImageWorkError> {
@@ -75,18 +76,12 @@ impl ImageOps for LocalImageOps {
         if image.width() as u64 * image.height() as u64 > 1024 * 1024 {
             return Err(ImageWorkError::InvalidInput);
         }
-        let config = vtracer::Config {
-            filter_speckle: 0,
-            ..Default::default()
-        };
-        let input = vtracer::ColorImage {
+        let input = visioncortex::ColorImage {
             width: image.width() as usize,
             height: image.height() as usize,
             pixels: image.into_raw(),
         };
-        let svg = vtracer::convert(input, config)
-            .map_err(|_| ImageWorkError::InvalidOutput)?
-            .to_string();
+        let svg = trace::trace(input).map_err(|_| ImageWorkError::InvalidOutput)?;
         if svg.len() > 16 * 1024 * 1024 {
             return Err(ImageWorkError::InvalidOutput);
         }

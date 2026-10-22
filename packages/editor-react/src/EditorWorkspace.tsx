@@ -880,6 +880,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
                         zooms: prefs["canvas.wheelZooms"],
                         invert: prefs["canvas.invertZoom"],
                       },
+                      pixelGrid: prefs["canvas.pixelGrid"],
                     }
                   : {})}
                 {...(props.componentRoots ? { componentRoots: props.componentRoots } : {})}

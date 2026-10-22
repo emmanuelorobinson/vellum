@@ -144,4 +144,12 @@ impl DocStore for LoroDocStore {
     fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError> {
         self.import_checked(payload, None)
     }
+
+    fn import_updates_as(
+        &mut self,
+        payload: &SyncPayload,
+        actor: &Actor,
+    ) -> Result<ChangeSet, SyncError> {
+        self.import_checked(payload, Some(actor))
+    }
 }

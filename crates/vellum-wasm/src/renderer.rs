@@ -262,3 +262,18 @@ pub extern "C" fn vellum_zoom(zoom: f32) -> u32 {
         Ok(())
     })
 }
+
+/// Transfer buffers for the engine's exports (`abi.rs`): one table for the whole module, so JS frees any
+/// buffer with `vellum_free` whichever export made it.
+#[cfg(feature = "engine")]
+pub(crate) fn take_buffer(p: usize) -> Result<Vec<u8>, String> {
+    STATE.with_borrow_mut(|s| take(s, p))
+}
+#[cfg(feature = "engine")]
+pub(crate) fn give_buffer(bytes: Vec<u8>) -> usize {
+    STATE.with_borrow_mut(|s| buffer(s, bytes))
+}
+#[cfg(feature = "engine")]
+pub(crate) fn set_error(error: String) {
+    STATE.with_borrow_mut(|s| s.error = error);
+}

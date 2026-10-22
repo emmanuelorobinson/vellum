@@ -1,12 +1,16 @@
 # Desktop shell (Prompt 57)
 
 The shell opens one window per canonical folder, with document tabs inside the shared editor workspace.
-It currently opens documents read-only: the compiled document ABI and daemon EditorLink wire protocol are
-still missing (Prompt 55). No TypeScript document store, synthetic canvas, or alternate save path is used.
+Each tab is a live replica of the daemon's engine (ADR-033): the main process attaches the file to its window's
+daemon connection in the background (`DaemonRuntime`), then hands the tab the editor WASM module, Inter and its
+start; the renderer's engine pushes the person's edits and pulls agents' changes. File → Save (⌘S) asks the
+daemon to write the engine's document; dirty state follows the engine's revision; Undo/Redo in the Edit menu
+reach the tab's editor. A tab opens read-only when the daemon cannot hold the file. No TypeScript document store.
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
 node apps/desktop/node_modules/electron/install.js
+pnpm wasm:build
 node scripts/skia-build.mjs build -p vellum
 pnpm --filter @vellum/desktop dev
 ```

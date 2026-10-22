@@ -1,28 +1,27 @@
 import { brand } from "@vellum/config";
 import {
   createBrowserImport,
-  createCommandController,
-  createEditorHandlers,
-  createEditorSession,
   createFigmaImport,
   createPreferences,
   createSettingsController,
-  createWorkspace,
 } from "@vellum/editor-core";
 import {
   BrowserImportPanel,
+  createLiveEditor,
   EditorWorkspace,
   FigmaImportPanel,
+  type LiveEditor,
   ShareDialog,
 } from "@vellum/editor-react";
-import type { EngineClient, EngineSnapshot } from "@vellum/engine-client";
-import { type SharePort, shareState } from "@vellum/host-api";
+import { EditorReplica, openReplica, type SharePort, shareState } from "@vellum/host-api";
 import { createElectronHost } from "@vellum/host-electron";
 import {
   createBridgeServices,
   createDesktopBrowser,
   type DesktopState,
 } from "@vellum/host-electron/bridge";
+import { type EngineModule, isEngineModule, WasmDocumentEngine } from "@vellum/renderer-skia";
+import createEditor from "@vellum/renderer-skia/editor-module";
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Home } from "./Home";
@@ -31,27 +30,6 @@ import "@vellum/ui-tokens/tokens.css";
 import "./style.css";
 
 const bridge = window.vellumDesktop;
-const snapshot: EngineSnapshot = { revision: 0, document: null, readOnly: true };
-/** Explicit unavailable runtime. There is no TS document store or synthetic scene in the host. */
-const engine: EngineClient = {
-  state: "ready",
-  snapshot: () => snapshot,
-  scene: {
-    get: () => undefined,
-    roots: () => [],
-    hitPoint: () => null,
-    hitRect: () => [],
-    snap: () => ({ offset: { x: 0, y: 0 }, guides: [] }),
-    toParent: (_address, point) => point,
-    toLocal: (_address, point) => point,
-    path: () => null,
-  },
-  apply: () => ({ status: "rejected", reason: "unavailable" }),
-  undo: () => ({ status: "rejected", reason: "unavailable" }),
-  redo: () => ({ status: "rejected", reason: "unavailable" }),
-  subscribe: () => ({ dispose() {} }),
-  dispose() {},
-};
 const preferences = createPreferences({
   async load() {
     return JSON.parse(localStorage.getItem(`${brand.desktopAppId}.preferences`) ?? "null");
@@ -66,37 +44,90 @@ const syncTelemetry = () => {
 preferences.subscribe(syncTelemetry);
 void preferences.load();
 
-function makeEditor(platform: DesktopState["platform"]) {
-  let node = 0;
-  const session = createEditorSession({
-    engine,
-    device: "desktop",
-    page: "unavailable",
-    nextNodeId: () => `unavailable${++node}`,
-    createNode: () => {
-      throw Error("document engine unavailable");
-    },
-    viewportSize: () => ({ width: innerWidth, height: innerHeight }),
+interface EngineLoad {
+  wasm: Uint8Array;
+  fonts: Uint8Array[];
+  live: boolean;
+  device: string;
+  path: string;
+  file: Uint8Array | null;
+}
+interface Editor {
+  live: LiveEditor;
+  replica: EditorReplica | null;
+  settings: ReturnType<typeof createSettingsController>;
+}
+/** One editor module for the window; each tab is an engine in it (ADR-033). */
+let moduleLoad: Promise<EngineModule> | undefined;
+function loadModule(wasm: Uint8Array) {
+  moduleLoad ??= createEditor({
+    canvas: document.createElement("canvas"),
+    noInitialRun: true,
+    wasmBinary: wasm,
+    locateFile: (path) => path,
+  }).then((module) => {
+    if (!isEngineModule(module)) throw Error("The editor module has no document engine");
+    return module;
   });
-  const workspace = createWorkspace();
-  const controller = createCommandController(
-    createEditorHandlers({
-      workspace,
-      session,
-      pauseAll: async () => {
-        await bridge.request({ type: "pauseAll" });
-      },
-    }),
-  );
+  return moduleLoad;
+}
+async function makeEditor(tab: string, platform: DesktopState["platform"]): Promise<Editor> {
+  const reply = await bridge.request({ type: "engineLoad", tab });
+  if (!reply.ok || !reply.value) throw Error("The document engine could not start");
+  const load = reply.value as EngineLoad;
+  const module = await loadModule(load.wasm);
+  let replica: EditorReplica | null = null;
+  let engine: WasmDocumentEngine;
+  if (load.live) {
+    const wire = async (
+      action: "open" | "push" | "pull" | "close",
+      params: Record<string, string>,
+    ) => {
+      const answer = await bridge.request({ type: "engine", tab, action, params });
+      if (!answer.ok) throw Error("The daemon refused the request");
+      return answer.value as Record<string, unknown>;
+    };
+    const start = await openReplica(wire);
+    engine = WasmDocumentEngine.open(module, {
+      file: start.genesis,
+      updates: start.updates,
+      path: load.path,
+      readOnly: false,
+      fonts: load.fonts,
+    });
+    const live = engine;
+    replica = new EditorReplica(engine, wire, {
+      // Edits the daemon did not take stay on screen; no more are made until the file is reopened.
+      onFailure: () => live.setReadOnly(true),
+    });
+    engine.subscribe(() => void replica?.push());
+    replica.start();
+  } else {
+    if (!load.file) throw Error("No file to show");
+    engine = WasmDocumentEngine.open(module, {
+      file: load.file,
+      path: load.path,
+      readOnly: true,
+      fonts: load.fonts,
+    });
+  }
+  const live = createLiveEditor({
+    module,
+    engine,
+    device: load.device || "01JA0000000000000000000000",
+    pauseAll: () => void bridge.request({ type: "pauseAll" }),
+    preferences,
+  });
   const settings = createSettingsController({
     preferences,
-    keys: controller.keys,
+    keys: live.controller.keys,
     context: { host: "desktop", platform, focus: "outside" },
   });
-  return { session, workspace, controller, settings };
+  return { live, replica, settings };
 }
-type Editor = ReturnType<typeof makeEditor>;
 const editors = new Map<string, Editor>();
+const loading = new Set<string>();
+const failed = new Set<string>();
 const element = document.getElementById("root");
 if (!element) throw Error("missing root");
 const root = createRoot(element);
@@ -124,10 +155,32 @@ function App() {
       const ids = new Set(state.tabs.map((t) => t.id));
       for (const [id, editor] of editors)
         if (!ids.has(id)) {
-          void editor.controller.blur();
+          void editor.live.controller.blur();
+          void editor.replica?.close();
+          editor.live.dispose();
           editors.delete(id);
         }
-      for (const id of ids) if (!editors.has(id)) editors.set(id, makeEditor(state.platform));
+      for (const id of ids)
+        if (!editors.has(id) && !loading.has(id) && !failed.has(id)) {
+          loading.add(id);
+          makeEditor(id, state.platform).then(
+            (editor) => {
+              loading.delete(id);
+              if (!current?.tabs.some((t) => t.id === id)) {
+                void editor.replica?.close();
+                editor.live.dispose();
+                return;
+              }
+              editors.set(id, editor);
+              setState((s) => (s ? { ...s } : s));
+            },
+            () => {
+              loading.delete(id);
+              failed.add(id);
+              setState((s) => (s ? { ...s } : s));
+            },
+          );
+        }
       setState(state);
     };
     let current: DesktopState | null = null;
@@ -138,7 +191,7 @@ function App() {
       }
       if (event.type === "command" && current?.active) {
         if (event.command === "file.importBrowser") setImporting(true);
-        else void editors.get(current.active)?.controller.execute(event.command);
+        else void editors.get(current.active)?.live.controller.execute(event.command);
       }
     });
     void bridge.request({ type: "state" }).then((result) => {
@@ -164,8 +217,23 @@ function App() {
   if (!state) return null;
   const tab = state.tabs.find((t) => t.id === state.active);
   const editor = tab ? editors.get(tab.id) : null;
-  if (!tab || !editor || (state.page && state.page !== "editor") || state.recovery)
+  if (!tab || (state.page && state.page !== "editor") || state.recovery)
     return <Home state={state} bridge={bridge} />;
+  if (!editor)
+    return (
+      <main
+        className="desktop-problem"
+        data-platform={state.platform}
+        role="status"
+        aria-busy={!failed.has(tab.id)}
+      >
+        {state.platform === "mac" && <div className="desktop-titlebar-drag" aria-hidden="true" />}
+        <DocumentTabs state={state} bridge={bridge} />
+        {failed.has(tab.id) && <p>⊘ The document engine could not start</p>}
+      </main>
+    );
+  const live = editor.live;
+  const readOnly = live.client.snapshot().readOnly;
   if (!sharePorts.current.has(tab.id))
     sharePorts.current.set(tab.id, {
       request: async (request) => {
@@ -226,12 +294,16 @@ function App() {
       ) : null}
       <EditorWorkspace
         shell={{ settings: editor.settings }}
-        workspace={editor.workspace}
-        session={editor.session}
-        controller={editor.controller}
-        engine={engine}
+        workspace={live.workspace}
+        session={live.session}
+        controller={live.controller}
+        engine={live.client}
+        design={live.design}
+        paintEditor={live.paintEditor}
+        content={live.content}
+        createRenderer={live.createRenderer}
         browser={browserImport.current.host.browser}
-        device="desktop"
+        device={live.device}
         host="desktop"
         platform={state.platform}
         appearance={state.appearance}
@@ -239,12 +311,12 @@ function App() {
         saveState={tab.dirty ? "unsaved" : "saved"}
         dirty={tab.dirty}
         branch={null}
-        connection={state.daemon ? { mode: "headless" } : { mode: "offline" }}
+        connection={state.daemon && !readOnly ? { mode: "headless" } : { mode: "offline" }}
         agents={[]}
         actors={{}}
         recent={{}}
         now={() => Date.now()}
-        nextNodeId={() => "unavailable"}
+        nextNodeId={live.nextNodeId}
         assets={{
           libraries: [],
           iconSets: [],
@@ -265,13 +337,10 @@ function App() {
               <DocumentTabs state={state} bridge={bridge} />
             </>
           ),
-          agent: (
+          agent: readOnly ? (
             <div className="desktop-problem" role="status">
-              <p>⊘ Document engine unavailable</p>
-              <p>
-                This build opens files as read-only. The compiled document engine and live editor
-                connection are not available.
-              </p>
+              <p>⊘ Read-only</p>
+              <p>The daemon is not holding this file, so it opens read-only.</p>
               <button type="button" onClick={() => void request("openFiles")}>
                 Open files…
               </button>
@@ -282,7 +351,7 @@ function App() {
               )}
               {problem && <p role="alert">The action could not be completed.</p>}
             </div>
-          ),
+          ) : undefined,
         }}
       />
       {sharing && (

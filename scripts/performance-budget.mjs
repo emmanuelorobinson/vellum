@@ -6,7 +6,10 @@ export const budgets = Object.freeze({
   panZoom: 1000 / 60,
   drag: 16,
   batch200: 100,
+  // vellum-viewer: the renderer the share pages load over the network (ADR-031).
   wasmGzip: 2.4 * 1024 * 1024,
+  // vellum-editor: renderer plus the document engine, loaded from disk by the hosts (ADR-033).
+  editorWasmGzip: 6.5 * 1024 * 1024,
   idleRss: 128 * 1024 * 1024,
 });
 export const adapters = Object.freeze({
@@ -62,6 +65,7 @@ export function assess(report, baseline, absolute = true) {
         ]
       : [
           "wasmGzip",
+          "editorWasmGzip",
           ...adapters.browser.flatMap((a) =>
             ["panZoom", "drag", "batch200"].map((m) => `${a}.${m}`),
           ),
@@ -76,7 +80,7 @@ export function assess(report, baseline, absolute = true) {
     if (
       !v ||
       !Number.isInteger(v.samples) ||
-      v.samples < (key === "wasmGzip" ? 1 : 20) ||
+      v.samples < (key.endsWith("asmGzip") ? 1 : 20) ||
       ![v.p50, v.p95, v.max].every((n) => Number.isFinite(n) && n >= 0) ||
       v.p50 > v.p95 ||
       v.p95 > v.max ||

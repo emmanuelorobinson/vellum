@@ -1,10 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { type FSWatcher, watch } from "node:fs";
-import { readFile, realpath, stat } from "node:fs/promises";
+import { readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import { brand } from "@vellum/config";
-import { externalUrl } from "@vellum/host-api";
+import { DaemonRuntime, externalUrl } from "@vellum/host-api";
 import { accountRunner, NativeAccount } from "@vellum/host-api/native-account";
 import { DaemonProcess } from "@vellum/host-api/native-relay";
 import type { AgentSettings, RecoveryView } from "@vellum/host-electron/bridge";
@@ -89,6 +89,49 @@ let library: DesktopLibrary;
 let draftDirectory: string;
 let notifications = false;
 let updates = new Updates(null, app.getVersion());
+/**
+ * Open files held by the daemon's engine (ADR-033): one host editor per file on its window's daemon connection,
+ * and one more for the tab's own engine in the renderer. A file without one (no daemon) is read-only.
+ */
+const runtimes = new Map<
+  string,
+  { runtime: DaemonRuntime; saved: number; panels: Map<string, string> }
+>();
+/** Daemon attaches still in flight, by path. */
+const attaching = new Map<string, Promise<void>>();
+/** This installation's device (a ULID in user data): people are known by the device they edit from. */
+let device = "";
+async function desktopDevice(): Promise<string> {
+  const file = join(app.getPath("userData"), "device");
+  const saved = await readFile(file, "utf8").catch(() => "");
+  if (/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(saved.trim())) return saved.trim();
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  let time = Date.now();
+  let head = "";
+  for (let i = 0; i < 10; i++) {
+    head = alphabet[time % 32] + head;
+    time = Math.floor(time / 32);
+  }
+  const id = head + [...randomBytes(16)].map((b) => alphabet[b % 32]).join("");
+  await writeFile(file, id, { mode: 0o600 });
+  return id;
+}
+function windowFor(path: string) {
+  for (const entry of windows.values()) {
+    if (!entry.folder || !entry.relay) continue;
+    const root = model.folderPath(entry.folder);
+    if (path.startsWith(root.endsWith("/") ? root : `${root}/`)) return entry;
+  }
+  return undefined;
+}
+function tabOf(path: string) {
+  for (const entry of windows.values()) {
+    if (!entry.folder) continue;
+    for (const tab of model.state(entry.folder).tabs)
+      if (model.path(entry.folder, tab.id) === path) return { entry, folder: entry.folder, tab };
+  }
+  return undefined;
+}
 const model = new FolderWindows({
   canonical: realpath,
   folderOf: dirname,
@@ -98,13 +141,50 @@ const model = new FolderWindows({
     async open(path) {
       const info = await stat(path);
       if (!info.isFile() || info.size > 16 * 1024 * 1024) throw Error("invalid");
-      // No document ABI exists yet. Do not parse JSON into a second system of record.
+      const relay = windowFor(path)?.relay;
+      // The tab opens at once; the daemon attaches behind it (a cold daemon takes seconds to start), and the
+      // tab's engine waits for that before it decides between live and read-only.
+      if (relay && device)
+        attaching.set(
+          path,
+          DaemonRuntime.open((p) => relay.editor(p), path, device).then(
+            (runtime) => {
+              if (!tabOf(path)) {
+                runtime.dispose();
+                return;
+              }
+              const held = { runtime, saved: runtime.revision, panels: new Map<string, string>() };
+              runtimes.set(path, held);
+              runtime.subscribe(({ revision }) => {
+                const at = tabOf(path);
+                if (!at) return;
+                model.update(at.folder, at.tab.id, {
+                  dirty: revision !== held.saved,
+                  running: false,
+                });
+                push(at.entry);
+              });
+              const at = tabOf(path);
+              if (at) push(at.entry);
+            },
+            () => {
+              /* No daemon, or a file it cannot read: read-only. */
+            },
+          ),
+        );
       return { dirty: false, running: false };
     },
-    async save() {
-      throw Error("read-only");
+    async save(path) {
+      const held = runtimes.get(path);
+      if (!held) throw Error("read-only");
+      held.saved = (await held.runtime.save()).revision;
     },
-    async close() {},
+    async close(path) {
+      attaching.delete(path);
+      const held = runtimes.get(path);
+      runtimes.delete(path);
+      await held?.runtime.close();
+    },
   },
 });
 type WindowEntry = NonNullable<ReturnType<typeof windows.get>>;
@@ -124,7 +204,11 @@ function state(entry: WindowEntry): DesktopState {
     platform:
       process.platform === "darwin" ? "mac" : process.platform === "win32" ? "windows" : "linux",
     daemon: entry.relay?.connected ?? false,
-    problem: "document-runtime-unavailable",
+    problem: (() => {
+      const active = entry.folder ? model.state(entry.folder).active : null;
+      const path = active && entry.folder ? model.path(entry.folder, active) : null;
+      return path && runtimes.has(path) ? "" : "document-runtime-unavailable";
+    })(),
     home: library?.view(),
     welcome: !entry.folder && !library?.view().files.length,
     page: entry.page,
@@ -297,12 +381,7 @@ async function newDraft(from: WindowEntry) {
   pushAll();
 }
 async function closeKnown(path: string) {
-  const relay = new DaemonProcess(binary, dirname(path), runDir, "vellum-desktop");
-  try {
-    await relay.recovery(path, "closeHeadless");
-  } finally {
-    relay.dispose();
-  }
+  // Tabs first: their editors hold the file at the daemon until they close (ADR-033).
   for (const entry of windows.values()) {
     if (!entry.folder) continue;
     for (const tab of model.state(entry.folder).tabs)
@@ -311,6 +390,12 @@ async function closeKnown(path: string) {
         if (model.state(entry.folder).tabs.some((t) => t.id === tab.id))
           throw Error("close cancelled");
       }
+  }
+  const relay = new DaemonProcess(binary, dirname(path), runDir, "vellum-desktop");
+  try {
+    await relay.recovery(path, "closeHeadless");
+  } finally {
+    relay.dispose();
   }
 }
 async function closeTab(entry: WindowEntry, tab: string) {
@@ -401,6 +486,17 @@ async function action(entry: WindowEntry, item: MenuAction) {
       case "file.new":
         await newFile(entry);
         break;
+      case "file.save": {
+        const active = state(entry).active;
+        if (!active || !entry.folder) break;
+        const path = model.path(entry.folder, active);
+        const held = runtimes.get(path);
+        if (!held) break;
+        held.saved = (await held.runtime.save()).revision;
+        model.update(entry.folder, active, { dirty: false, running: false });
+        push(entry);
+        break;
+      }
       case "file.saveAs": {
         const active = state(entry).active;
         const item =
@@ -440,10 +536,12 @@ async function action(entry: WindowEntry, item: MenuAction) {
 }
 function nativeMenu(entry: WindowEntry): MenuItemConstructorOptions[] {
   const s = state(entry);
+  const activePath = s.active && entry.folder ? model.path(entry.folder, s.active) : null;
   return menuModel({
     hasFolder: entry.folder !== null,
     hasDocument: s.active !== null,
     daemon: s.daemon,
+    editable: activePath !== null && runtimes.has(activePath),
     draft:
       !!s.active &&
       library
@@ -731,6 +829,37 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
       if (!entry.relay) throw Error("offline");
       return entry.relay.share(path, value.request);
     }
+    case "engineLoad": {
+      const path = model.path(requiredFolder(entry), value.tab);
+      const pending = attaching.get(path);
+      if (pending)
+        await Promise.race([pending, new Promise((resolve) => setTimeout(resolve, 20_000))]);
+      const held = runtimes.get(path);
+      const engine = (name: string) => readFile(join(__dirname, "../engine", name));
+      const [wasm, inter] = await Promise.all([
+        engine("vellum_editor.wasm"),
+        engine("InterVariable.ttf"),
+      ]);
+      if (held && !held.panels.has(value.tab)) held.panels.set(value.tab, held.runtime.newPanel());
+      return {
+        wasm: new Uint8Array(wasm),
+        fonts: [new Uint8Array(inter)],
+        live: held !== undefined,
+        device,
+        path,
+        // A read-only file is shown from its bytes; a live one comes from the daemon's engine.
+        file: held ? null : new Uint8Array(await readFile(path)),
+      };
+    }
+    case "engine": {
+      const path = model.path(requiredFolder(entry), value.tab);
+      const held = runtimes.get(path);
+      const panel = held?.panels.get(value.tab);
+      if (!held || !panel) throw Error("read-only");
+      const reply = await held.runtime.relay(panel, value.action, value.params);
+      if (value.action === "close") held.panels.delete(value.tab);
+      return reply;
+    }
     case "readDocument": {
       const path = model.path(requiredFolder(entry), value.tab);
       if ((await realpath(path)) !== path) throw Error("invalid");
@@ -1009,6 +1138,7 @@ else {
         userData ? join(app.getPath("userData"), "local") : join(homedir(), ".vellum"),
       );
       draftDirectory = await privateDirectory(join(base, "drafts"));
+      device = await desktopDevice();
       library = new DesktopLibrary({
         load: async () =>
           recoverDraftIndex(

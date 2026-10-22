@@ -11,7 +11,7 @@
 //
 // Every set is converted to SVG path data (circles, rects, lines and polylines become paths), so the app needs no
 // SVG parser to draw an icon. Licences are recorded in each file and in THIRD_PARTY_NOTICES.md.
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 

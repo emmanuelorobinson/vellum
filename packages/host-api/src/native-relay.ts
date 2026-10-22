@@ -109,8 +109,11 @@ export class DaemonProcess {
           if (!request) continue;
           clearTimeout(request.timer);
           this.pending.delete(v.id);
-          if (v.error) request.reject(Error("daemon request failed"));
-          else request.resolve(v.result);
+          if (v.error) {
+            // The daemon's own message (never forwarded to a webview; hosts show their own copy).
+            const message = (v.error as { message?: unknown }).message;
+            request.reject(Error(typeof message === "string" ? message : "daemon request failed"));
+          } else request.resolve(v.result);
         }
       } catch {
         fail();
@@ -167,6 +170,14 @@ export class DaemonProcess {
       arguments: { path, create: true },
     })) as { isError?: boolean };
     if (reply?.isError !== false) throw Error("document creation failed");
+  }
+  /** The daemon's `vellum/editor` host method (ADR-033): an editor's replica of a document. */
+  async editor(params: Record<string, string>): Promise<Record<string, unknown>> {
+    await this.connect();
+    const result = await this.request("vellum/editor", params);
+    if (!result || typeof result !== "object" || Array.isArray(result))
+      throw Error("invalid editor reply");
+    return result as Record<string, unknown>;
   }
   async pauseAll(): Promise<void> {
     await this.connect();

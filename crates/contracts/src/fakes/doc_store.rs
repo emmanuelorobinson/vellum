@@ -299,6 +299,24 @@ impl DocStore for InMemoryDocStore {
     }
 
     fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError> {
+        self.import(payload, None)
+    }
+
+    fn import_updates_as(
+        &mut self,
+        payload: &SyncPayload,
+        actor: &Actor,
+    ) -> Result<ChangeSet, SyncError> {
+        self.import(payload, Some(actor))
+    }
+}
+
+impl InMemoryDocStore {
+    fn import(
+        &mut self,
+        payload: &SyncPayload,
+        actor: Option<&Actor>,
+    ) -> Result<ChangeSet, SyncError> {
         if payload.adapter != self.adapter_id() {
             return Err(SyncError::AdapterMismatch {
                 expected: self.adapter_id().into(),
@@ -313,6 +331,11 @@ impl DocStore for InMemoryDocStore {
         for entry in wire.entries {
             if entry.seq <= seen.get(&entry.peer).copied().unwrap_or(0) {
                 continue;
+            }
+            if actor.is_some_and(|a| *a != entry.origin.actor) {
+                return Err(SyncError::Malformed(
+                    "a change was written by someone else".into(),
+                ));
             }
             for step in entry.steps.iter().cloned() {
                 edits.push(

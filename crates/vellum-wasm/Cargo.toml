@@ -15,7 +15,35 @@ vellum-types = { path = "../vellum-types" }
 [lints]
 workspace = true
 
+[features]
+# The document engine (ADR-033). `vellum-editor` (VS Code and desktop) has it; `vellum-viewer` (the share
+# pages served over the network) is built with --no-default-features and draws display lists only.
+default = ["engine"]
+engine = [
+  "dep:vellum-core",
+  "dep:serde",
+  "dep:serde_json",
+  "dep:vellum-codec-json",
+  "dep:vellum-doc-loro",
+  "dep:vellum-index-rstar",
+  "dep:vellum-layout-taffy",
+  "dep:vellum-text-parley",
+]
+
+# The document engine (ADR-033). Left out of wasm32-unknown-unknown, which keeps only the import-free version
+# exports (Loro there pulls wasm-bindgen); natively it builds so its tests run with `cargo test`.
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dependencies]
+vellum-core = { path = "../vellum-core", optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+vellum-codec-json = { path = "../adapters/codec-json", optional = true }
+vellum-doc-loro = { path = "../adapters/doc-loro", optional = true }
+vellum-index-rstar = { path = "../adapters/index-rstar", optional = true }
+vellum-layout-taffy = { path = "../adapters/layout-taffy", optional = true }
+vellum-text-parley = { path = "../adapters/text-parley", optional = true }
+
 [target.'cfg(target_os = "emscripten")'.dependencies]
+# The renderer needs these in both modules.
 vellum-core = { path = "../vellum-core" }
 serde_json.workspace = true
 vellum-render-skia = { path = "../adapters/render-skia" }
@@ -23,3 +51,7 @@ vellum-render-skia = { path = "../adapters/render-skia" }
 [[bin]]
 name = "vellum-editor"
 path = "src/main.rs"
+
+[[bin]]
+name = "vellum-viewer"
+path = "src/viewer.rs"

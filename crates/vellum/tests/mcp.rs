@@ -743,3 +743,175 @@ fn host_recovery_is_initialized_scoped_metadata_and_not_an_agent_tool() {
             .contains("vellum/recovery")
     );
 }
+
+#[test]
+fn host_editors_replicate_the_daemons_engine_over_updates() {
+    use vellum_contracts::fakes::{InMemoryDocStore, SequentialIds};
+    use vellum_contracts::samples::{alice, rename};
+    use vellum_core::base64;
+    use vellum_core::ports::{DocStore, SyncPayload};
+    let mut server = server();
+    let editor =
+        |server: &mut McpServer, conn, params: Value| rpc(server, conn, 9, "vellum/editor", params);
+    let open = json!({"action":"open","path":"/design/app.vellum","editor":"tab-1",
+        "device":"01JA0000000000000000000A11"});
+    assert_eq!(
+        editor(&mut server, 1, open.clone())["error"]["code"],
+        -32002
+    );
+    server.opened(1, Some("/design".to_owned()));
+    rpc(
+        &mut server,
+        1,
+        1,
+        "initialize",
+        json!({"protocolVersion":"2025-11-25","clientInfo":{"name":"TEST DATA host"}}),
+    );
+    for params in [
+        json!({"action":"open","path":"/elsewhere/app.vellum","editor":"tab-1","device":"01JA0000000000000000000A11"}),
+        json!({"action":"open","path":"/design/app.vellum","editor":"tab 1","device":"01JA0000000000000000000A11"}),
+        json!({"action":"open","path":"/design/app.vellum","editor":"tab-1","device":"not a device"}),
+        json!({"action":"wipe","path":"/design/app.vellum","editor":"tab-1"}),
+    ] {
+        assert_eq!(editor(&mut server, 1, params)["error"]["code"], -32602);
+    }
+    let opened = editor(&mut server, 1, open)["result"].clone();
+    assert_eq!(opened["role"], "writer");
+    assert_eq!(opened["recovery"], Value::Null);
+    let genesis: vellum_types::Document =
+        serde_json::from_str(opened["genesis"].as_str().unwrap()).unwrap();
+    let mut replica = InMemoryDocStore::new(&genesis, 21);
+    let payload = |b64: &Value, store: &dyn DocStore| SyncPayload {
+        adapter: store.adapter_id().into(),
+        bytes: base64::decode(b64.as_str().unwrap()).unwrap(),
+    };
+    replica
+        .import_updates(&payload(&opened["updates"], &replica))
+        .unwrap();
+    // A person edit travels up as an update.
+    let before = replica.cursor();
+    vellum_core::ops::apply(
+        &mut replica,
+        &mut SequentialIds::new(),
+        vellum_core::ops::Transaction::new(
+            vellum_types::Origin::new(alice()),
+            vec![rename("frameHero1", "Renamed in the editor")],
+        ),
+    )
+    .unwrap();
+    let up = base64::encode(&replica.export_updates(&before).bytes);
+    let pushed = editor(
+        &mut server,
+        1,
+        json!({"action":"push","path":"/design/app.vellum","editor":"tab-1","updates":up}),
+    );
+    assert_eq!(pushed["result"]["changed"], true, "{pushed}");
+    // Another connection cannot push as this editor.
+    server.opened(2, Some("/design".to_owned()));
+    rpc(
+        &mut server,
+        2,
+        1,
+        "initialize",
+        json!({"protocolVersion":"2025-11-25","clientInfo":{"name":"TEST DATA other"}}),
+    );
+    assert!(
+        editor(
+            &mut server,
+            2,
+            json!({"action":"push","path":"/design/app.vellum","editor":"tab-1","updates":up})
+        )
+        .get("error")
+        .is_some()
+    );
+    // An agent's write is pulled back down, and the file waits for the editor's save.
+    call(
+        &mut server,
+        "open_document",
+        json!({"path": "/design/app.vellum"}),
+    );
+    let write = call(
+        &mut server,
+        "update_nodes",
+        json!({"updates": [{"id": "frameHero1", "set": {"name": "Renamed by an agent"}}]}),
+    );
+    assert_eq!(write["result"]["isError"], false, "{write}");
+    let cursor = base64::encode(&replica.cursor().0);
+    let pulled = editor(
+        &mut server,
+        1,
+        json!({"action":"pull","path":"/design/app.vellum","editor":"tab-1","cursor":cursor}),
+    )["result"]
+        .clone();
+    replica
+        .import_updates(&payload(&pulled["updates"], &replica))
+        .unwrap();
+    assert_eq!(
+        vellum_contracts::samples::find(&replica.snapshot(), "frameHero1")
+            .unwrap()
+            .name(),
+        "Renamed by an agent"
+    );
+    // The host's Save, snapshot and revert go through the daemon's engine.
+    let snapshot = editor(
+        &mut server,
+        1,
+        json!({"action":"snapshot","path":"/design/app.vellum","editor":"tab-1"}),
+    )["result"]
+        .clone();
+    let bytes = base64::decode(snapshot["bytes"].as_str().unwrap()).unwrap();
+    assert!(String::from_utf8_lossy(&bytes).contains("Renamed by an agent"));
+    let reverted = editor(
+        &mut server,
+        1,
+        json!({"action":"revert","path":"/design/app.vellum","editor":"tab-1"}),
+    );
+    assert!(
+        reverted["result"]["revision"].as_u64().unwrap() > snapshot["revision"].as_u64().unwrap(),
+        "{reverted}"
+    );
+    assert_eq!(
+        editor(
+            &mut server,
+            1,
+            json!({"action":"replace","path":"/design/app.vellum","editor":"tab-1","bytes":"","reason":"nonsense"})
+        )["error"]["code"],
+        -32602,
+        "an unknown reason is refused"
+    );
+    assert_eq!(
+        editor(
+            &mut server,
+            1,
+            json!({"action":"replace","path":"/design/app.vellum","editor":"tab-1","bytes":"","reason":"recovery"})
+        )["error"]["code"],
+        -32000,
+        "an empty backup cannot be read"
+    );
+    assert!(
+        editor(
+            &mut server,
+            1,
+            json!({"action":"save","path":"/design/app.vellum","editor":"tab-1"})
+        )["result"]["revision"]
+            .is_u64()
+    );
+    // Closing the connection lets go of its editors: the unsaved work goes with them.
+    server.closed(1);
+    assert!(server.documents().writer("/design/app.vellum").is_none());
+    assert!(
+        editor(
+            &mut server,
+            2,
+            json!({"action":"pull","path":"/design/app.vellum","editor":"tab-1","cursor":""})
+        )
+        .get("error")
+        .is_some(),
+        "an editor that is gone cannot be pulled for"
+    );
+    assert!(
+        !rpc(&mut server, 2, 5, "tools/list", json!({}))
+            .to_string()
+            .contains("vellum/editor")
+    );
+}

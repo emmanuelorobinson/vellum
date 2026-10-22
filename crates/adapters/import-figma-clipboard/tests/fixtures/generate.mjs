@@ -7,11 +7,12 @@
 // The schema below is written from memory of the names and shapes Figma uses; it is not Figma's own file. The
 // importer reads the schema a paste carries and goes by field and enum names, so a real paste with more fields
 // reads the same way. Nothing here has been checked against a live paste (see reports.md).
-import { createRequire } from "node:module";
+
 import { writeFileSync } from "node:fs";
-import { deflateRawSync } from "node:zlib";
+import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deflateRawSync } from "node:zlib";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const kiwi = createRequire(import.meta.url)(resolve(process.argv[2] ?? "package/kiwi.js"));

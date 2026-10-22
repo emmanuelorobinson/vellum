@@ -110,17 +110,7 @@ impl Default for ParleyFonts {
 impl ParleyFonts {
     /// Available offline on every host; no implicit system enumeration or network access.
     pub fn new() -> Self {
-        let fonts = Self {
-            state: Rc::new(RefCell::new(State {
-                cx: FontContext {
-                    collection: collection(),
-                    source_cache: Default::default(),
-                },
-                families: vec![],
-                faces: vec![],
-                loaded: Default::default(),
-            })),
-        };
+        let fonts = Self::empty();
         fonts
             .register(
                 FontTier::Bundled,
@@ -134,6 +124,21 @@ impl ParleyFonts {
             )
             .expect("bundled emoji is valid");
         fonts
+    }
+    /// A registry with no fonts at all, for a host that supplies the bundled faces as bytes itself (the browser
+    /// editor loads them next to the engine instead of compiling ten megabytes of fonts into it).
+    pub fn empty() -> Self {
+        Self {
+            state: Rc::new(RefCell::new(State {
+                cx: FontContext {
+                    collection: collection(),
+                    source_cache: Default::default(),
+                },
+                families: vec![],
+                faces: vec![],
+                loaded: Default::default(),
+            })),
+        }
     }
     /// Register a single-family SFNT (all weights in a collection are allowed). Metadata comes from
     /// the font. Browser WOFF/WOFF2 decoding and reading document/cache/system files belong to hosts.

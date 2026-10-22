@@ -21,6 +21,6 @@
   "dependencies": {
     "@vellum/host-api": "workspace:*",
     "jsonc-parser": "3.3.1",
-    "smol-toml": "1.4.2"
+    "smol-toml": "1.9.1"
   }
 }

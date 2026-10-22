@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 use vellum_ipc_local::RpcHandler;
 use vellum_types::brand;
 
-use crate::daemon::Documents;
+use crate::daemon::{Documents, EditorId, Role};
 use crate::sessions::SessionLog;
 use crate::tools::{Client, Registry, Session, Step, ToolCtx, ToolError};
 
@@ -70,6 +70,9 @@ pub struct McpServer {
     cli_runs: BTreeMap<u64, cli::Run>,
     shares: Option<crate::daemon::share::Uploads>,
     permissions: Option<PermissionHost>,
+    /// The editors each host connection opened (ADR-033), by document path and host-chosen name. A connection
+    /// acts only for its own editors; closing it closes them.
+    editors: BTreeMap<u64, Vec<(String, String)>>,
 }
 
 impl McpServer {
@@ -84,6 +87,7 @@ impl McpServer {
             cli_runs: BTreeMap::new(),
             shares: None,
             permissions: None,
+            editors: BTreeMap::new(),
         }
     }
 
@@ -446,6 +450,152 @@ impl McpServer {
         }
     }
 
+    /// An editor's replica of a document (ADR-033): open, push its person's updates, pull everyone else's, record
+    /// its save, close. Host-only, outside the agent tool registry. Editors are named per connection, so one
+    /// connection never acts for another's editor.
+    fn host_editor(&mut self, conn: u64, params: &Value) -> Result<Value, (i64, String)> {
+        use vellum_core::base64;
+        use vellum_core::ports::{SyncCursor, SyncPayload};
+        let invalid = || {
+            (
+                -32602,
+                "Editors need a design path in the host workspace, an editor name and a supported action"
+                    .to_owned(),
+            )
+        };
+        if self.client(conn).is_none() {
+            return Err((-32002, "Initialize the host connection first".to_owned()));
+        }
+        let object = params.as_object().ok_or_else(invalid)?;
+        let text = |key: &str| object.get(key).and_then(Value::as_str).ok_or_else(invalid);
+        let (action, path, name) = (text("action")?, text("path")?, text("editor")?);
+        let extra: &[&str] = match action {
+            "open" => &["device"],
+            "push" => &["updates"],
+            "pull" => &["cursor"],
+            "replace" => &["bytes", "reason"],
+            "saved" | "close" | "snapshot" | "save" | "revert" => &[],
+            _ => return Err(invalid()),
+        };
+        let root = self.sessions.get(&conn).and_then(|s| s.cwd.as_ref());
+        if !scoped_design(root, path)
+            || name.is_empty()
+            || name.len() > 64
+            || !name
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            || object.len() != 3 + extra.len()
+            || extra.iter().any(|k| !object.contains_key(*k))
+        {
+            return Err(invalid());
+        }
+        let id = EditorId(format!("{conn}/{name}"));
+        let mine = self
+            .editors
+            .get(&conn)
+            .is_some_and(|list| list.iter().any(|(p, n)| p == path && n == name));
+        if action != "open" && !mine {
+            return Err((-32000, "This editor is not open".to_owned()));
+        }
+        let failed = |e: vellum_core::ports::TargetError| (-32000, e.to_string());
+        match action {
+            "open" => {
+                let device = vellum_types::DeviceId::new(text("device")?).map_err(|_| invalid())?;
+                let (start, recovery) = self
+                    .docs
+                    .attach_editor(path, id, vellum_types::Actor::Person { device })
+                    .map_err(failed)?;
+                if !mine {
+                    self.editors
+                        .entry(conn)
+                        .or_default()
+                        .push((path.to_owned(), name.to_owned()));
+                }
+                let genesis = vellum_codec_json::JsonCodec::new()
+                    .encode(&start.genesis)
+                    .map_err(|e| (-32000, e.to_string()))?;
+                let revision = self.docs.editor_revision(path).map_err(failed)?;
+                Ok(json!({
+                    "revision": revision,
+                    "role": if start.role == Role::Writer { "writer" } else { "attached" },
+                    "adapter": start.updates.adapter,
+                    "genesis": String::from_utf8_lossy(&genesis),
+                    "updates": base64::encode(&start.updates.bytes),
+                    "recovery": recovery.map(|r| json!({"savedAt": r.saved_at.0})),
+                }))
+            }
+            "push" => {
+                let bytes = base64::decode(text("updates")?).ok_or_else(invalid)?;
+                let adapter = self.docs.editor_adapter(path).map_err(failed)?;
+                let changes = self
+                    .docs
+                    .editor_push(
+                        path,
+                        &id,
+                        &SyncPayload {
+                            adapter: adapter.into(),
+                            bytes,
+                        },
+                    )
+                    .map_err(failed)?;
+                let revision = self.docs.editor_revision(path).map_err(failed)?;
+                Ok(json!({"changed": !changes.is_empty(), "revision": revision}))
+            }
+            "pull" => {
+                let cursor = SyncCursor(base64::decode(text("cursor")?).ok_or_else(invalid)?);
+                let updates = self.docs.editor_pull(path, &cursor).map_err(failed)?;
+                let revision = self.docs.editor_revision(path).map_err(failed)?;
+                Ok(json!({"updates": base64::encode(&updates.bytes), "revision": revision}))
+            }
+            "saved" => {
+                self.docs.editor_wrote(path).map_err(failed)?;
+                Ok(json!({"done": true}))
+            }
+            "snapshot" => {
+                let (revision, doc) = self.docs.editor_snapshot(path).map_err(failed)?;
+                let bytes = vellum_codec_json::JsonCodec::new()
+                    .encode(&doc)
+                    .map_err(|e| (-32000, e.to_string()))?;
+                Ok(json!({"revision": revision, "bytes": base64::encode(&bytes)}))
+            }
+            "revert" => {
+                let revision = self.docs.editor_revert(path).map_err(failed)?;
+                Ok(json!({"revision": revision}))
+            }
+            "save" => {
+                self.docs.save(path).map_err(failed)?;
+                let revision = self.docs.editor_revision(path).map_err(failed)?;
+                Ok(json!({"revision": revision}))
+            }
+            "replace" => {
+                let revision = match text("reason")? {
+                    "recovery" => {
+                        let bytes = base64::decode(text("bytes")?).ok_or_else(invalid)?;
+                        let doc = vellum_codec_json::decode(&bytes)
+                            .map_err(|e| (-32000, e.to_string()))?;
+                        self.docs
+                            .editor_replace(path, &doc, crate::daemon::Replace::Recovery)
+                    }
+                    // The daemon's watcher merges external changes itself; the host only learns where it is.
+                    "external" => {
+                        self.docs.poll();
+                        self.docs.editor_revision(path)
+                    }
+                    _ => return Err(invalid()),
+                }
+                .map_err(failed)?;
+                Ok(json!({"revision": revision}))
+            }
+            _ => {
+                self.docs.detach_editor(path, &id);
+                if let Some(list) = self.editors.get_mut(&conn) {
+                    list.retain(|(p, n)| !(p == path && n == name));
+                }
+                Ok(json!({"done": true}))
+            }
+        }
+    }
+
     /// Native CLI lifecycle actions stay outside the agent tool registry. Resolve through the same
     /// session scope and document target as tool calls; no direct document-store access.
     fn cli_action(&mut self, conn: u64, params: &Value) -> Result<Value, (i64, String)> {
@@ -505,6 +655,7 @@ impl McpServer {
             "vellum/cli" => self.cli_action(conn, &params),
             "vellum/hostState" => self.host_state(conn, &params),
             "vellum/recovery" => self.host_recovery(conn, &params),
+            "vellum/editor" => self.host_editor(conn, &params),
             "initialize" => self.initialize(conn, &params).map_err(|m| (-32602, m)),
             "ping" => Ok(json!({})),
             // Host control is separate from the agent tool registry. The local authenticated connection
@@ -576,7 +727,23 @@ impl RpcHandler for McpServer {
     }
 
     fn closed(&mut self, conn: u64) {
+        for (path, name) in self.editors.remove(&conn).unwrap_or_default() {
+            self.docs
+                .detach_editor(&path, &EditorId(format!("{conn}/{name}")));
+        }
         self.cli_disconnected(conn);
         self.sessions.remove(&conn);
     }
+}
+
+/// A `.vellum` path inside the host connection's workspace, with no `.` or `..` parts.
+fn scoped_design(root: Option<&PathBuf>, path: &str) -> bool {
+    use std::path::{Component, Path};
+    let p = Path::new(path);
+    p.is_absolute()
+        && p.extension().is_some_and(|e| e == "vellum")
+        && !p
+            .components()
+            .any(|c| matches!(c, Component::ParentDir | Component::CurDir))
+        && root.is_some_and(|r| p.starts_with(r))
 }

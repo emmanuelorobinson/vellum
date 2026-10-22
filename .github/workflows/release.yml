@@ -67,7 +67,7 @@ jobs:
       - name: Fresh source-only renderer (no binary cache restored)
         env:
           CARGO_TARGET_DIR: target/release-wasm-${{ github.run_id }}-${{ github.run_attempt }}
-        run: node scripts/skia-build.mjs build --locked --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten
+        run: node scripts/skia-build.mjs build --locked --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten && node scripts/skia-build.mjs build --locked --release -p vellum-wasm --no-default-features --bin vellum-viewer --target wasm32-unknown-emscripten
       - run: node scripts/spec-checksums.mjs check
       - uses: actions/attest-build-provenance@v2
         with:

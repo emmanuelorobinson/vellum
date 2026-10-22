@@ -165,6 +165,7 @@ test("the baseline records every reference repository at the SHA scripts/refs.ts
 const PRERELEASE_EXCEPTIONS = [
   "@polka/url@1.0.0-next.29", // C24: via sirv ← @vitest/browser ← @storybook/addon-vitest
   "gensync@1.0.0-beta.2", // C25: owner-approved exact exception, via Babel ← React Storybook's docgen
+  "postject@1.0.0-alpha.6", // C27: no stable release exists, via electron-builder's Windows signing
 ];
 
 test("no lockfile pins a prerelease version", () => {

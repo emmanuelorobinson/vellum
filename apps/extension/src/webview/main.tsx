@@ -1,16 +1,23 @@
-/** The product editor bundle in a VS Code webview. No socket, file path or credential enters this module. */
+/** The product editor bundle in a VS Code webview. No socket, file path or credential enters this module: the
+ * host relays the panel's own editor at the daemon (ADR-033) and hands over the engine module's bytes. */
+import { createPreferences, createSettingsController } from "@vellum/editor-core";
 import {
-  createCommandController,
-  createEditorHandlers,
-  createEditorSession,
-  createPreferences,
-  createSettingsController,
-  createWorkspace,
-} from "@vellum/editor-core";
-import { EditorWorkspace, ShareDialog } from "@vellum/editor-react";
-import type { EngineClient, EngineSnapshot } from "@vellum/engine-client";
+  createLiveEditor,
+  EditorWorkspace,
+  type LiveEditor,
+  ShareDialog,
+} from "@vellum/editor-react";
 import type { Appearance } from "@vellum/host-api";
-import { type SharePort, type ShareState, shareState } from "@vellum/host-api";
+import {
+  EditorReplica,
+  type EditorWire,
+  openReplica,
+  type SharePort,
+  type ShareState,
+  shareState,
+} from "@vellum/host-api";
+import { isEngineModule, WasmDocumentEngine } from "@vellum/renderer-skia";
+import createEditor from "@vellum/renderer-skia/editor-module";
 import { createRoot } from "react-dom/client";
 import "@vellum/ui-tokens/tokens.css";
 import "./theme.css";
@@ -25,44 +32,86 @@ const rootElement = document.getElementById("root");
 if (!rootElement) throw Error("missing root");
 const root = createRoot(rootElement);
 const send = (command: string) => api.postMessage({ type: "command", command });
-// Fail closed while the compiled document ABI and live-editor IPC are unavailable. This is an unavailable
-// engine, not a TypeScript DocStore. Never present source JSON as validated engine state or invent geometry.
-const snapshot: EngineSnapshot = { revision: 0, document: null, readOnly: true };
-const engine: EngineClient = {
-  state: "ready",
-  snapshot: () => snapshot,
-  scene: {
-    get: () => undefined,
-    roots: () => [],
-    hitPoint: () => null,
-    hitRect: () => [],
-    snap: () => ({ offset: { x: 0, y: 0 }, guides: [] }),
-    toParent: (_address, point) => point,
-    toLocal: (_address, point) => point,
-    path: () => null,
-  },
-  apply: () => ({ status: "rejected", reason: "unavailable" }),
-  undo: () => ({ status: "rejected", reason: "unavailable" }),
-  redo: () => ({ status: "rejected", reason: "unavailable" }),
-  subscribe: () => ({ dispose() {} }),
-  dispose() {},
-};
-let nextId = 0;
-const device = "vscode";
-const session = createEditorSession({
-  engine,
-  device,
-  page: "unavailable",
-  nextNodeId: () => `unavailable${++nextId}`,
-  createNode: () => {
-    throw Error("document engine unavailable");
-  },
-  viewportSize: () => ({ width: innerWidth, height: innerHeight }),
-});
-const workspace = createWorkspace();
-const controller = createCommandController(
-  createEditorHandlers({ workspace, session, pauseAll: () => send("pauseAll") }),
-);
+
+interface EngineModuleMessage {
+  type: "engineModule";
+  wasm: Uint8Array;
+  fonts: Uint8Array[];
+  live: boolean;
+  device: string;
+  path: string;
+  file: Uint8Array | null;
+}
+let editor: LiveEditor | null = null;
+let replica: EditorReplica | null = null;
+/** Why the engine could not start or stopped syncing; the panel shows it with Open as text. */
+let engineProblem: string | null = null;
+
+// The panel's editor at the daemon, one request at a time, answered by the host.
+let engineSequence = 0;
+const enginePending = new Map<
+  number,
+  (reply: { ok: boolean; result?: Record<string, unknown> }) => void
+>();
+const wire: EditorWire = (action, params) =>
+  new Promise((resolve, reject) => {
+    const requestId = ++engineSequence;
+    enginePending.set(requestId, (reply) =>
+      reply.ok && reply.result
+        ? resolve(reply.result)
+        : reject(Error("The daemon refused the request")),
+    );
+    api.postMessage({ type: "engine", requestId, action, params });
+  });
+
+async function startEngine(message: EngineModuleMessage) {
+  const module = await createEditor({
+    canvas: document.createElement("canvas"),
+    noInitialRun: true,
+    wasmBinary: message.wasm,
+    locateFile: (path) => path,
+  });
+  if (!isEngineModule(module)) throw Error("The editor module has no document engine");
+  let engine: WasmDocumentEngine;
+  if (message.live) {
+    const start = await openReplica(wire);
+    engine = WasmDocumentEngine.open(module, {
+      file: start.genesis,
+      updates: start.updates,
+      path: message.path,
+      readOnly: false,
+      fonts: message.fonts,
+    });
+    replica = new EditorReplica(engine, wire, {
+      onFailure: () => {
+        // Edits the daemon did not take are kept on screen, but no more are made until the file is reopened.
+        engineProblem = "sync-failed";
+        engine.setReadOnly(true);
+        render();
+      },
+    });
+    engine.subscribe(() => void replica?.push());
+    replica.start();
+  } else {
+    if (!message.file) throw Error("No file to show");
+    engine = WasmDocumentEngine.open(module, {
+      file: message.file,
+      path: message.path,
+      readOnly: true,
+      fonts: message.fonts,
+    });
+  }
+  editor = createLiveEditor({
+    module,
+    engine,
+    device: message.device || "01JA0000000000000000000000",
+    viewportSize: () => ({ width: innerWidth, height: innerHeight }),
+    pauseAll: () => send("pauseAll"),
+    preferences,
+  });
+  render();
+}
+addEventListener("beforeunload", () => void replica?.close());
 interface State {
   type: "state";
   fileName: string;
@@ -132,24 +181,46 @@ preferences.subscribe(() =>
   api.postMessage({ type: "telemetry", enabled: preferences.get("telemetry") }),
 );
 void preferences.load();
-const settings = createSettingsController({
-  preferences,
-  keys: controller.keys,
-  context: { host: "vscode", platform, focus: "outside" },
-});
+let settings: ReturnType<typeof createSettingsController> | null = null;
 function render() {
   if (!state) return;
   const current = state;
-  workspace.resize({ width: innerWidth, height: innerHeight });
+  if (!editor) {
+    root.render(
+      <div className="vellum-host-problem" role="status">
+        {engineProblem ? (
+          <>
+            <p>⊘ The document engine could not start</p>
+            <button type="button" onClick={() => send("openAsText")}>
+              Open as text
+            </button>
+          </>
+        ) : null}
+      </div>,
+    );
+    return;
+  }
+  const live = editor;
+  settings ??= createSettingsController({
+    preferences,
+    keys: live.controller.keys,
+    context: { host: "vscode", platform, focus: "outside" },
+  });
+  live.workspace.resize({ width: innerWidth, height: innerHeight });
+  const readOnly = live.client.snapshot().readOnly;
   root.render(
     <>
       <EditorWorkspace
         shell={{ settings }}
-        workspace={workspace}
-        session={session}
-        engine={engine}
-        controller={controller}
-        device={device}
+        workspace={live.workspace}
+        session={live.session}
+        engine={live.client}
+        controller={live.controller}
+        design={live.design}
+        paintEditor={live.paintEditor}
+        content={live.content}
+        createRenderer={live.createRenderer}
+        device={live.device}
         host="vscode"
         platform={platform}
         appearance={current.appearance}
@@ -157,12 +228,12 @@ function render() {
         dirty={current.dirty}
         saveState={current.dirty ? "unsaved" : "saved"}
         branch={null}
-        connection={current.daemon ? { mode: "headless" } : { mode: "offline" }}
+        connection={current.daemon && !readOnly ? { mode: "headless" } : { mode: "offline" }}
         agents={[]}
         actors={{}}
         recent={{}}
         now={() => Date.now()}
-        nextNodeId={() => `unavailable${++nextId}`}
+        nextNodeId={live.nextNodeId}
         assets={{
           libraries: [],
           iconSets: [],
@@ -170,28 +241,30 @@ function render() {
           visualStyles: [],
           designSystems: [],
         }}
-        slots={{
-          agent: (
-            <div className="vellum-host-problem" role="status">
-              <p>⊘ Document engine unavailable</p>
-              <p>
-                This build opens files as read-only. The compiled document engine and live editor
-                connection are not available.
-              </p>
-              <button type="button" onClick={() => send("openAsText")}>
-                Open as text
-              </button>
-              {!current.daemon && (
-                <button type="button" onClick={() => send("restartDaemon")}>
-                  Restart daemon
-                </button>
-              )}
-              {current.problem !== "document-runtime-unavailable" && (
-                <p>File or host state changed. Reopen the file as text to inspect it.</p>
-              )}
-            </div>
-          ),
-        }}
+        slots={
+          readOnly
+            ? {
+                agent: (
+                  <div className="vellum-host-problem" role="status">
+                    <p>⊘ Read-only</p>
+                    <p>
+                      {engineProblem === "sync-failed"
+                        ? "The daemon stopped taking this editor's changes. Reopen the file to keep editing."
+                        : "The daemon is not running, so this file opens read-only."}
+                    </p>
+                    <button type="button" onClick={() => send("openAsText")}>
+                      Open as text
+                    </button>
+                    {!current.daemon && (
+                      <button type="button" onClick={() => send("restartDaemon")}>
+                        Restart daemon
+                      </button>
+                    )}
+                  </div>
+                ),
+              }
+            : undefined
+        }
         onShare={() => {
           sharing = true;
           render();
@@ -213,6 +286,21 @@ function render() {
   );
 }
 window.addEventListener("message", (event: MessageEvent<unknown>) => {
+  const value = event.data as { type?: string; requestId?: number; ok?: boolean; result?: unknown };
+  if (value?.type === "engine" && typeof value.requestId === "number") {
+    const resolve = enginePending.get(value.requestId);
+    enginePending.delete(value.requestId);
+    resolve?.({ ok: value.ok === true, result: value.result as Record<string, unknown> });
+    return;
+  }
+  if (value?.type === "engineModule" && !editor) {
+    startEngine(value as EngineModuleMessage).catch(() => {
+      engineProblem = "engine-start-failed";
+      render();
+    });
+  }
+});
+window.addEventListener("message", (event: MessageEvent<unknown>) => {
   if (!event.data || typeof event.data !== "object") return;
   const value = event.data as State;
   if (
@@ -228,3 +316,4 @@ window.addEventListener("message", (event: MessageEvent<unknown>) => {
 });
 window.addEventListener("resize", render);
 api.postMessage({ type: "ready" });
+api.postMessage({ type: "engineLoad" });

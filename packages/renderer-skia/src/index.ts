@@ -47,18 +47,31 @@ export interface SkiaModule {
 export type ModuleFactory = (options: {
   canvas: HTMLCanvasElement;
   noInitialRun: boolean;
+  /** The module's bytes, when the host hands them over instead of the page fetching them (VS Code webviews). */
+  wasmBinary?: Uint8Array;
+  locateFile?: (path: string) => string;
 }) => Promise<SkiaModule>;
 export async function createRenderer(
   canvas: HTMLCanvasElement,
   factory: ModuleFactory,
   viewport: Viewport = { width: canvas.width, height: canvas.height, dpr: 1 },
 ): Promise<Renderer> {
+  checkViewport(viewport);
+  return createRendererWith(canvas, await factory({ canvas, noInitialRun: true }), viewport);
+}
+/** A renderer on a module that is already loaded (the editor's, which also holds the document engine). */
+export function createRendererWith(
+  canvas: HTMLCanvasElement,
+  module: SkiaModule,
+  viewport: Viewport = { width: canvas.width, height: canvas.height, dpr: 1 },
+): Renderer {
   const size = checkViewport(viewport);
-  const module = await factory({ canvas, noInitialRun: true });
   if (module._vellum_display_list_version() !== DISPLAY_LIST_VERSION)
     throw new Error("Renderer display-list version mismatch");
   return new SkiaRenderer(canvas, module, size);
 }
+export * from "./engine";
+
 class SkiaRenderer implements Renderer {
   state: RendererState = "ready";
   private handle = 0;

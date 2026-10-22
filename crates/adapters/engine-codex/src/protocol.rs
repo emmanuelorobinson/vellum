@@ -267,6 +267,8 @@ pub(crate) struct Decoder {
     turn: Option<String>,
     partial: BTreeSet<String>,
     completed: BTreeSet<String>,
+    /// The agent message the last text came from.
+    message: Option<String>,
     usage: Option<ModelUsage>,
     rounds: u32,
     tools: Vec<BridgeTool>,
@@ -299,6 +301,7 @@ impl Decoder {
             turn: None,
             partial: BTreeSet::new(),
             completed: BTreeSet::new(),
+            message: None,
             usage: None,
             rounds: 0,
             tools: vec![],
@@ -345,14 +348,21 @@ impl Decoder {
         }
         Ok(out)
     }
-    fn append(&mut self, text: &str, out: &mut Decoded) -> Result<(), EngineError> {
+    /// Appends text of the agent message `item`. Separate messages are separate paragraphs.
+    fn append(&mut self, item: &str, text: &str, out: &mut Decoded) -> Result<(), EngineError> {
+        let text = if self.message.as_deref() != Some(item) && !self.text.is_empty() {
+            format!("\n\n{text}")
+        } else {
+            text.to_owned()
+        };
+        self.message = Some(item.to_owned());
         if self.text.len().saturating_add(text.len())
             > (self.request.limits.max_output_tokens as usize).saturating_mul(32)
         {
             return Err(EngineError::Model(ModelError::Limit));
         }
-        self.text.push_str(text);
-        out.events.push(TurnEvent::Text(text.into()));
+        self.text.push_str(&text);
+        out.events.push(TurnEvent::Text(text));
         Ok(())
     }
     fn fail(&mut self, error: &Value, out: &mut Decoded) {
@@ -491,7 +501,7 @@ impl Decoder {
             "item/agentMessage/delta" => {
                 let id = p["itemId"].as_str().ok_or_else(protocol)?;
                 self.partial.insert(id.into());
-                self.append(p["delta"].as_str().ok_or_else(protocol)?, out)?;
+                self.append(id, p["delta"].as_str().ok_or_else(protocol)?, out)?;
             }
             "item/reasoning/summaryTextDelta" | "item/reasoning/textDelta" => out.events.push(
                 TurnEvent::Reasoning(p["delta"].as_str().ok_or_else(protocol)?.into()),
@@ -501,7 +511,7 @@ impl Decoder {
                 if item["type"] == "agentMessage" {
                     let id = item["id"].as_str().ok_or_else(protocol)?;
                     if self.completed.insert(id.into()) && !self.partial.contains(id) {
-                        self.append(item["text"].as_str().ok_or_else(protocol)?, out)?;
+                        self.append(id, item["text"].as_str().ok_or_else(protocol)?, out)?;
                     }
                 }
             }
@@ -542,7 +552,7 @@ impl Decoder {
                 let id = item["id"].as_str().ok_or_else(protocol)?;
                 if self.completed.insert(id.into()) {
                     if item["type"] == "agent_message" {
-                        self.append(item["text"].as_str().ok_or_else(protocol)?, out)?;
+                        self.append(id, item["text"].as_str().ok_or_else(protocol)?, out)?;
                     } else if item["type"] == "reasoning" {
                         out.events.push(TurnEvent::Reasoning(
                             item["text"].as_str().ok_or_else(protocol)?.into(),

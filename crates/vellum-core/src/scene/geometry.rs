@@ -25,6 +25,22 @@ impl Affine {
             b * k + d * l + f,
         ])
     }
+    /// The transform that undoes this one; None when it squashes the plane flat.
+    pub fn invert(self) -> Option<Self> {
+        let [a, b, c, d, e, f] = self.0;
+        let det = a * d - b * c;
+        if det == 0. || !det.is_finite() {
+            return None;
+        }
+        Some(Self([
+            d / det,
+            -b / det,
+            -c / det,
+            a / det,
+            (c * f - d * e) / det,
+            (b * e - a * f) / det,
+        ]))
+    }
     pub fn local(r: Rect, rotation: f64, flip_x: bool, flip_y: bool) -> Self {
         let (sin, cos) = rotation.to_radians().sin_cos();
         let sx = if flip_x { -1. } else { 1. };

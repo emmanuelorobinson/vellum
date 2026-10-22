@@ -16,8 +16,9 @@ describe("webview boundary", () => {
     });
     expect(html).toContain("default-src 'none'");
     expect(html).toContain("connect-src 'none'");
-    expect(html).toContain("script-src 'nonce-abc'");
-    expect(html).not.toContain("unsafe-eval");
+    expect(html).toContain("script-src 'nonce-abc' 'wasm-unsafe-eval'");
+    // WebAssembly may compile (the document engine); JavaScript eval stays off.
+    expect(html).not.toContain("'unsafe-eval'");
     expect(html).toContain("&lt;bad&gt;&quot;");
     expect(html).not.toContain("<bad>");
   });
@@ -30,6 +31,16 @@ describe("webview boundary", () => {
       { type: "readFile", path: "/secret" },
       { type: "ready", token: "secret" },
       { type: "command", command: "workbench.action.terminal.new" },
+    ])
+      expect(parseMessage(value)).toBeNull();
+    expect(parseMessage({ type: "engineLoad" })).toEqual({ type: "engineLoad" });
+    expect(
+      parseMessage({ type: "engine", requestId: 3, action: "pull", params: { cursor: "AA==" } }),
+    ).toEqual({ type: "engine", requestId: 3, action: "pull", params: { cursor: "AA==" } });
+    for (const value of [
+      { type: "engine", requestId: 3, action: "save", params: {} },
+      { type: "engine", requestId: 3, action: "open", params: { path: "/elsewhere.vellum" } },
+      { type: "engine", requestId: 0, action: "pull", params: { cursor: "" } },
     ])
       expect(parseMessage(value)).toBeNull();
     expect(parseMessage({ type: "command", command: "pauseAll" })).toEqual({

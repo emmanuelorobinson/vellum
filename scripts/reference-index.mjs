@@ -57,14 +57,21 @@ export function expandBraces(token) {
 const dirOf = (path) => (posix.dirname(path) === "." ? "" : posix.dirname(path));
 
 // Finds `rel` the way the guide means it: relative to the directory of the previous path in the same
-// row, walking up its ancestors, and finally the repository root. Returns { path, isDir } or null.
+// row, walking up its ancestors, and finally the repository root. A bare Rust file named inside a crate
+// directory (R3's `scripts/gentest/` (`main.rs`)) is also looked for in that crate's `src/`.
+// Returns { path, isDir } or null.
 function locate(repoDir, prevDir, rel) {
   const target = rel.replace(/\/$/, "");
+  const inCrate = target.endsWith(".rs") && !target.includes("/");
   let base = prevDir;
   for (;;) {
-    const candidate = posix.join(base, target);
-    const stat = statSync(join(repoDir, candidate), { throwIfNoEntry: false });
-    if (stat) return { path: candidate, isDir: stat.isDirectory() };
+    for (const candidate of [
+      posix.join(base, target),
+      ...(inCrate ? [posix.join(base, "src", target)] : []),
+    ]) {
+      const stat = statSync(join(repoDir, candidate), { throwIfNoEntry: false });
+      if (stat) return { path: candidate, isDir: stat.isDirectory() };
+    }
     if (base === "") return null;
     base = dirOf(base);
   }

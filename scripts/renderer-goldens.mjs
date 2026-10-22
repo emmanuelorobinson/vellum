@@ -168,11 +168,13 @@ try {
   const performance = Object.fromEntries(
     Object.entries(samples).map(([name, values]) => [name, summary(values)]),
   );
+  const wasm = (name) => readFileSync(resolve(root, `packages/renderer-skia/dist/${name}.wasm`));
+  // The viewer is what the share pages download; the editor adds the document engine (ADR-033).
   const bundle = {
-    bytes: readFileSync(resolve(root, "packages/renderer-skia/dist/vellum_editor.wasm")).length,
-    gzipBytes: gzipSync(
-      readFileSync(resolve(root, "packages/renderer-skia/dist/vellum_editor.wasm")),
-    ).length,
+    bytes: wasm("vellum_viewer").length,
+    gzipBytes: gzipSync(wasm("vellum_viewer")).length,
+    editorBytes: wasm("vellum_editor").length,
+    editorGzipBytes: gzipSync(wasm("vellum_editor")).length,
   };
   bundle.loaderBytes = readFileSync(
     resolve(root, "packages/renderer-skia/dist/vellum-editor.js"),
@@ -184,7 +186,11 @@ try {
     machine: process.env.VELLUM_PERF_MACHINE ?? info.device,
     lane: "browser",
     adapters: ["skia-webgl2", "skia-wasm-cpu", "canvas2d"],
-    metrics: { ...performance, wasmGzip: summary([bundle.gzipBytes]) },
+    metrics: {
+      ...performance,
+      wasmGzip: summary([bundle.gzipBytes]),
+      editorWasmGzip: summary([bundle.editorGzipBytes]),
+    },
   };
   writeFileSync(resolve(output, "performance.json"), JSON.stringify(budgetsReport, null, 2));
   if (process.argv.includes("--budget")) failures.push(...assess(budgetsReport));

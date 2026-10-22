@@ -33,10 +33,23 @@ for (const [entry, file, platform] of [
       target: "es2023",
       loader: { ".woff2": "file", ".ttf": "file" },
       assetNames: "assets/[name]-[hash]",
-      define: { "process.env.NODE_ENV": '"production"' },
+      // The renderer's emscripten loader gets the module bytes from the main process; its URL is the page.
+      define: {
+        "process.env.NODE_ENV": '"production"',
+        ...(platform === "browser" ? { "import.meta.url": "location.href" } : {}),
+      },
     }),
   );
 }
+// The document engine (ADR-033): the editor module and its fonts, read by the main process for each tab.
+// Built by `pnpm wasm:build`.
+await mkdir(resolve(output, "engine"), { recursive: true });
+for (const [from, to] of [
+  ["../../packages/renderer-skia/dist/vellum_editor.wasm", "vellum_editor.wasm"],
+  ["../../crates/adapters/text-parley/fonts/InterVariable.ttf", "InterVariable.ttf"],
+  ["../../crates/adapters/text-parley/fonts/OFL.txt", "Inter-OFL.txt"],
+])
+  await copyFile(resolve(root, from), resolve(output, "engine", to));
 await writeFile(
   resolve(output, "renderer/index.html"),
   '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="editor.css"><title>Desktop</title></head><body><div id="root"></div><script src="editor.js"></script></body></html>',

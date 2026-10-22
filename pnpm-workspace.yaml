@@ -11,7 +11,7 @@ catalog:
   # TypeScript 7 is the guide's first choice, but dependency-cruiser 18.5.0 cannot read it and cruises zero
   # modules (version-baseline.md C3), so the repo uses the newest 5.x until that changes.
   typescript: 5.9.3
-  vitest: 5.0.3
+  vitest: 5.0.5
   # Follows the Node runtime (.nvmrc: 24), not the newest Node major (version-baseline C2).
   "@types/node": 24.19.2
   "@types/react": 19.3.0
@@ -22,8 +22,8 @@ catalog:
   next: 16.4.0
   electron: 44.7.0
   # Storybook (set up in Prompt 43 with create-storybook 10.6.2; version-baseline.md C15). Exact pins, no ranges.
-  "@vitest/browser-playwright": 5.0.3
-  "@vitest/coverage-v8": 5.0.3
+  "@vitest/browser-playwright": 5.0.5
+  "@vitest/coverage-v8": 5.0.5
   storybook: 10.6.2
   "@storybook/html-vite": 10.6.2
   "@storybook/react-vite": 10.6.2

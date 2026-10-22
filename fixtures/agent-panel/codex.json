@@ -97,7 +97,7 @@
           {
             "parts": [
               {
-                "text": "I’ll locate the attached canvas state tool and call it once.Fixture complete"
+                "text": "I’ll locate the attached canvas state tool and call it once.\n\nFixture complete"
               }
             ],
             "role": "assistant"
@@ -141,7 +141,7 @@
       "type": "text"
     },
     {
-      "text": "Fixture complete",
+      "text": "\n\nFixture complete",
       "type": "text"
     }
   ],

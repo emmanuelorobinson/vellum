@@ -74,6 +74,8 @@ struct Entry {
     parent: Option<NodeIdPath>,
     top: NodeIdPath,
     transform: Affine,
+    /// The world box around the occurrence's own transformed box, ignoring clipping and visibility.
+    world: Rect,
     polygon: Polygon,
     clip: Option<Polygon>,
     bounds: Option<Rect>,
@@ -81,6 +83,17 @@ struct Entry {
     locked: bool,
     selectable: bool,
     z: usize,
+}
+/// What an editor knows about one occurrence: where it is on the canvas and whether a person can pick it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Occurrence {
+    pub parent: Option<NodeIdPath>,
+    /// The world box around its transformed box, before clipping; hidden occurrences keep theirs.
+    pub bounds: Rect,
+    pub visible: bool,
+    /// Locked here or by an ancestor.
+    pub locked: bool,
+    pub selectable: bool,
 }
 /// One scene per active page. Reconciliation scans prepared nodes; only changed envelopes reach the index.
 pub struct Scene<S> {
@@ -150,10 +163,13 @@ impl<S: SpatialIndex> Scene<S> {
             if bounds.is_some_and(|r| !r.is_valid()) {
                 return Err(SceneError::InvalidGeometry(n.address.clone()));
             }
+            let world = geometry::bounds(&own)
+                .ok_or_else(|| SceneError::InvalidGeometry(n.address.clone()))?;
             let entry = Entry {
                 parent: n.parent.clone(),
                 top: parent.map_or_else(|| n.address.clone(), |p| p.top.clone()),
                 transform,
+                world,
                 polygon: polygon.clone(),
                 clip: if n.clip {
                     Some({
@@ -222,6 +238,40 @@ impl<S: SpatialIndex> Scene<S> {
         }
         self.entries = next;
         Ok(())
+    }
+    /// An occurrence, as an editor needs it.
+    pub fn occurrence(&self, address: &NodeIdPath) -> Option<Occurrence> {
+        self.entries.get(address).map(|e| Occurrence {
+            parent: e.parent.clone(),
+            bounds: e.world,
+            visible: e.visible,
+            locked: e.locked,
+            selectable: e.selectable,
+        })
+    }
+    /// Top-level occurrences, back to front.
+    pub fn roots(&self) -> Vec<NodeIdPath> {
+        self.ordered(|e| e.parent.is_none())
+    }
+    /// An occurrence's children, back to front.
+    pub fn children(&self, address: &NodeIdPath) -> Vec<NodeIdPath> {
+        self.ordered(|e| e.parent.as_ref() == Some(address))
+    }
+    fn ordered(&self, keep: impl Fn(&Entry) -> bool) -> Vec<NodeIdPath> {
+        let mut found = self
+            .entries
+            .iter()
+            .filter(|(_, e)| keep(e))
+            .map(|(id, e)| (e.z, id.clone()))
+            .collect::<Vec<_>>();
+        found.sort_by_key(|e| e.0);
+        found.into_iter().map(|e| e.1).collect()
+    }
+    /// A world point in the occurrence's own box (before its rotation and flips), which is also where its
+    /// children are positioned. None for an unknown occurrence or a box squashed flat.
+    pub fn to_local(&self, address: &NodeIdPath, p: Point) -> Option<Point> {
+        let inverse = self.entries.get(address)?.transform.invert()?;
+        Some(inverse.point(p))
     }
     /// Frontmost eligible box; deep selection follows paint order, rather than globally preferring depth.
     pub fn hit_point(&self, p: Point, depth: HitDepth) -> Option<NodeIdPath> {

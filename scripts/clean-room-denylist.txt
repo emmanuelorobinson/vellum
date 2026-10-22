@@ -4,4 +4,13 @@
 # Human-maintained. Add distinctive strings that must never appear in this repository: code, prompts, skill
 # text, API wording or asset names copied from pen.dev, or from Penpot (MPL-2.0) or tldraw (commercial).
 # Pick strings that are distinctive, not common words, so the check does not fire on ordinary prose.
-# The list is empty until a person adds entries: nothing here is taken from the sources it protects against.
+# Entries are package, type and namespace identifiers that only appear in code taken from those projects;
+# product names stay allowed because the docs name them. pen.dev's execute-API names are not listed: the
+# design MCP tooling (scripts/lib/pen-queries.mjs) has to call that API.
+@tldraw/
+TLShapeUtil
+TLBaseShape
+penpot/frontend
+(ns app.
+app.common.geom
+app.main.data

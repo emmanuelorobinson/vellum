@@ -5,7 +5,9 @@ import {
   browserRequest,
   externalUrl,
   type HostServices,
+  type PanelAction,
   PortError,
+  panelRequest,
   type ShareRequest,
   shareRequest,
   type ThemeInfo,
@@ -61,7 +63,8 @@ export interface DesktopState {
   appearance: ThemeInfo["appearance"];
   platform: "mac" | "windows" | "linux";
   daemon: boolean;
-  problem: "document-runtime-unavailable" | "offline" | "failed";
+  /** Empty while the active tab is a live replica of the daemon's engine (ADR-033). */
+  problem: "" | "document-runtime-unavailable" | "offline" | "failed";
   home?: HomeData;
   page?: "home" | "agents" | "signin" | "editor";
   welcome?: boolean;
@@ -107,6 +110,10 @@ export type DesktopRequest =
   | { type: "recovery"; id: string; action: "save" | "saveAs" | "discard" | "cancel" }
   | { type: "notifications"; enabled: boolean }
   | { type: "activate" | "close" | "readDocument"; tab: string }
+  /** The editor module, fonts and the tab's live or read-only start (ADR-033). */
+  | { type: "engineLoad"; tab: string }
+  /** The tab's own editor at the daemon. */
+  | { type: "engine"; tab: string; action: PanelAction; params: Record<string, string> }
   | { type: "menu"; category: MenuCategory }
   | { type: "external"; url: string }
   | { type: "clipboardWrite"; text: string };
@@ -127,6 +134,13 @@ export function parseRequest(value: unknown): DesktopRequest | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
   const keys = Object.keys(v).sort().join(",");
+  const tab = typeof v.tab === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(v.tab);
+  if (keys === "tab,type" && v.type === "engineLoad" && tab)
+    return { type: "engineLoad", tab: v.tab as string };
+  if (keys === "action,params,tab,type" && v.type === "engine" && tab) {
+    const request = panelRequest(v.action, v.params);
+    if (request) return { type: "engine", tab: v.tab as string, ...request };
+  }
   if (keys === "enabled,type" && v.type === "telemetry" && typeof v.enabled === "boolean")
     return { type: "telemetry", enabled: v.enabled };
   if (

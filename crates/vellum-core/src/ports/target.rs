@@ -38,6 +38,8 @@ pub enum TargetError {
     Render(String),
     /// A claim or release of a frame was refused.
     Lease(LeaseRefused),
+    /// An editor's updates could not join the engine (damaged, another document's, or not its person's).
+    Sync(super::SyncError),
 }
 
 impl fmt::Display for TargetError {
@@ -49,6 +51,7 @@ impl fmt::Display for TargetError {
             Self::File(e) => e.fmt(f),
             Self::Render(why) => write!(f, "Could not render: {why}"),
             Self::Lease(why) => why.fmt(f),
+            Self::Sync(why) => why.fmt(f),
         }
     }
 }

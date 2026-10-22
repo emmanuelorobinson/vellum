@@ -139,7 +139,7 @@ impl Tool for SnapshotLayout {
             .collect();
         let report = ctx
             .docs()
-            .services()
+            .services_for(&path, &doc)
             .layout(&doc, &target)
             .map_err(scene_error)?;
         // The report covers the whole page the target is on; keep what is inside the target.
@@ -331,7 +331,7 @@ impl Tool for Screenshot {
                 .any(|n| !vellum_core::shaders::sources(n).is_empty() || has_shader(n.children()))
         }
         if doc.pages.iter().any(|p| has_shader(&p.children)) {
-            let services = ctx.docs().services();
+            let services = ctx.docs().services_for(&path, &doc);
             let scene = ctx
                 .docs()
                 .export_scene(&path, &doc, std::slice::from_ref(&node))
@@ -353,7 +353,7 @@ impl Tool for Screenshot {
                 json!({"document":path,"node":node,"scale":scale,"image":{"mime":"image/png","base64":vellum_core::base64::encode(&bytes),"width":width,"height":height}}),
             );
         }
-        let image = ctx.target(&path)?.render(&node, scale)?;
+        let image = ctx.docs().render(&path, &node, scale)?;
         let image = to_json(&image).map_err(scene_error)?;
         Ok(json!({"document": path, "node": node, "scale": scale, "image": image}))
     }
@@ -388,7 +388,7 @@ pub(crate) fn free_space(
         size["reserved"] = json!(reserved);
     }
     let rect = docs
-        .services()
+        .services_for(path, doc)
         .read(
             Method::FindSpace,
             doc,

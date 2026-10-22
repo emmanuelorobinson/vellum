@@ -2,6 +2,8 @@
 export const PACKAGE_NAME = "@vellum/host-api";
 
 export * from "./browser";
+export * from "./daemon-runtime";
+export * from "./editor-replica";
 export * from "./host";
 export * from "./live-sharing";
 export * from "./services";

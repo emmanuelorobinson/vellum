@@ -1,13 +1,19 @@
-# VS Code host (Prompt 55, incomplete)
+# VS Code host (Prompt 55; document runtime per ADR-033)
 
 The extension registers `vellum.design` for `.vellum` and `.lib.vellum`, uses the existing React editor
 bundle, and exposes New Design File, Toggle Design / Text View, Open Welcome File and Pause All Agents.
 
-**This is not an editable editor yet.** The compiled WASM module exports the renderer but no document
-operations. The daemon's `EditorLink` is an in-process trait with no remote editor implementation.
-Consequently the product runtime is read-only, the canvas cannot render document content, and the Agent
-panel explains the missing engine with Open as text. No fake engine, JavaScript document mutations or
-unregistered second writer are used to make editing appear to work. Do not release this build as Prompt 55 complete.
+**Editing.** Each webview runs the editor WASM module (`vellum-editor`, engine plus renderer) as a replica of the
+daemon's engine (ADR-033). The host reads `dist/webview/engine/vellum_editor.wasm` and Inter and posts them to
+the webview, which opens its own editor at the daemon through the host relay (`vellum/editor`), applies the
+person's edits locally and pushes them, and pulls agents' and other editors' changes every 250 ms. The
+document's `DaemonRuntime` (`@vellum/host-api`) answers VS Code's save, save as, revert, backup and hot-exit
+callbacks from the daemon's engine; dirty state follows the engine's revision.
+
+A file opens **read-only** (the webview draws it from its bytes, with Open as text) when the daemon is
+unreachable, when the file is outside the window's workspace folder (the daemon scopes editors to the host's
+workspace), or when the file cannot be read as a document. A push the daemon refuses makes the editor read-only
+and says so; reopening the file starts a fresh replica.
 
 ## Build and run
 
@@ -54,15 +60,9 @@ registers save/save-as/revert/backup callbacks, and waits for each webview's rea
 notifications currently use content-change events. They are not a substitute for core's per-person undo;
 full native undo integration must be validated with the real runtime.
 
-Still required for acceptance:
-
-- Implement the compiled document/scene/ContentSource ABI and its EngineClient bindings.
-- Implement live editor registration, routing, follower updates and promotion over daemon IPC; prove
-  that headless tools and every editor share one writer, including across extension hosts.
-- Compose the runtime into the provider/webview; serve the feature ports left open by Prompts 49–54.
-- Run real edit/save/revert, hot-exit restore, external git checkout as Actor::File Ops, attached-editor
-  updates and native keyboard-conflict tests. Current runtime-boundary tests do not prove those flows.
-- Complete pixel acceptance with the existing named design references after the document runtime is live.
+Still open: library documents and script outputs in the browser scene, image fills and document fonts in
+frames, and the feature ports of Prompts 49–54 (agent feed, presence, ledger). Pixel acceptance of the named
+design references, Windows/Linux and remote CI remain.
 
 ## Tests
 
@@ -72,9 +72,10 @@ apps/extension/node_modules/.bin/tsc --noEmit -p apps/extension
 node scripts/skia-build.mjs test -p vellum --test mcp
 ```
 
-The `vscode` lane is a **host smoke**, not full Prompt 55 acceptance. It checks registration, a library
-file, the actual webview ready handshake under CSP, text/design toggle, split opening, and a successful
-Pause All acknowledgement from a newly started test daemon. It needs a desktop session, the native
+The `vscode` lane checks registration, a library file, the webview ready handshake under CSP, live editing
+(the webview's engine opens its replica, an agent's change through the CLI makes the document dirty, Save writes
+it), text/design toggle, split opening, and a Pause All acknowledgement from a newly started test daemon. It opens
+a workspace folder, since the daemon holds only files inside the host's workspace. It needs a desktop session, the native
 binary, and VS Code >=1.140. Without a supplied executable, test-electron downloads 1.140.0 (network).
 
 ```sh

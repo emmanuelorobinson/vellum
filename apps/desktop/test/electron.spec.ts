@@ -8,12 +8,13 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { _electron, type ElectronApplication } from "playwright";
 
@@ -86,17 +87,63 @@ test("@electron folder windows, tabs, native menus and sidecar", async () => {
     "aria-selected",
     "true",
   );
+  // The active tab's engine loads first (the tab bar moves into the editor once it has).
+  await expect(page.locator("[data-content]").first()).toHaveAttribute("data-content", "ready", {
+    timeout: 30_000,
+  });
   await page.getByRole("tab", { name: /a.vellum/ }).click();
   await expect(page.getByRole("tab", { name: /a.vellum/ })).toHaveAttribute(
     "aria-selected",
     "true",
   );
-  await expect(
-    page.getByRole("status").filter({ hasText: "Document engine unavailable" }),
-  ).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => window.vellumDesktop.request({ type: "daemon" })))
+    .poll(() => page.evaluate(() => window.vellumDesktop.request({ type: "daemon" })), {
+      timeout: 20_000,
+    })
     .toEqual({ ok: true, value: true });
+  // The tab's engine is a live replica of the daemon's (ADR-033): the canvas draws, an agent's change
+  // arrives as unsaved work, and Save writes it.
+  await expect(page.locator("[data-content]").first()).toHaveAttribute("data-content", "ready", {
+    timeout: 30_000,
+  });
+  const tabState = () =>
+    page.evaluate(async () => {
+      const reply = await window.vellumDesktop.request({ type: "state" });
+      if (!reply.ok) throw Error("missing state");
+      const state = reply.value as {
+        problem: string;
+        active: string;
+        tabs: { id: string; dirty: boolean }[];
+      };
+      return {
+        problem: state.problem,
+        dirty: state.tabs.find((t) => t.id === state.active)?.dirty,
+      };
+    });
+  await expect.poll(tabState).toEqual({ problem: "", dirty: false });
+  // The canonical path: macOS temporary folders are reached through a /var symlink.
+  const file = await realpath(join(directory, "one", "a.vellum"));
+  const { spawnSync } = await import("node:child_process");
+  const agent = spawnSync(
+    resolve("dist/bin", process.platform === "win32" ? "vellum.exe" : "vellum"),
+    [
+      "--run-dir",
+      join(directory, "run"),
+      "tool",
+      "update_nodes",
+      "--document",
+      file,
+      "--updates",
+      JSON.stringify([{ id: "frame00001", set: { name: "By an agent" } }]),
+    ],
+    { cwd: dirname(file), encoding: "utf8" },
+  );
+  expect(agent.status, agent.stderr).toBe(0);
+  await expect.poll(tabState).toEqual({ problem: "", dirty: true });
+  expect(await readFile(file, "utf8")).not.toContain("By an agent");
+  await menu("file.save");
+  await expect.poll(() => readFile(file, "utf8")).toContain("By an agent");
+  await expect.poll(tabState).toEqual({ problem: "", dirty: false });
   await expect(
     page.evaluate(() => window.vellumDesktop.request({ type: "pauseAll" })),
   ).resolves.toEqual({ ok: true });
@@ -213,6 +260,10 @@ test("@electron tab keyboard navigation and changed-file capability revocation",
   await menu("file.open");
   const second = page.getByRole("tab", { name: /b.vellum/ });
   await expect(second).toHaveAttribute("aria-selected", "true");
+  // Tabs move into the editor once its engine has loaded; navigate after that.
+  await expect(page.locator("[data-content]").first()).toHaveAttribute("data-content", "ready", {
+    timeout: 30_000,
+  });
   await second.focus();
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("tab", { name: /a.vellum/ })).toBeFocused();
@@ -663,6 +714,9 @@ test("@electron share dialog reads daemon dependencies and closes without starti
   if (!page) throw Error("Missing folder window");
   await dialog([join(directory, "one", "a.vellum")]);
   await menu("file.open");
+  await expect(page.locator("[data-content]").first()).toHaveAttribute("data-content", "ready", {
+    timeout: 30_000,
+  });
   await page.getByRole("button", { name: "Share", exact: true }).click();
   const shareDialog = page.getByRole("dialog", { name: "Share a.vellum" });
   await expect(shareDialog).toBeVisible();

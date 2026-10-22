@@ -68,6 +68,18 @@ for (const cwd of [base, root]) {
       "wasm32-unknown-emscripten",
     ]);
     run(cwd, "scripts/skia-build.mjs", [
+      "build",
+      "--locked",
+      "--release",
+      "-p",
+      "vellum-wasm",
+      "--no-default-features",
+      "--bin",
+      "vellum-viewer",
+      "--target",
+      "wasm32-unknown-emscripten",
+    ]);
+    run(cwd, "scripts/skia-build.mjs", [
       "run",
       "--locked",
       "--release",

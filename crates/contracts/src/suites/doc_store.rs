@@ -1018,6 +1018,26 @@ fn sync<S: DocStore>(make: &impl Fn(&Document, u64) -> S) {
     );
     assert_eq!(right.snapshot(), left.snapshot());
 
+    // An editor pushing its person's edits: accepted only when every change it adds carries that actor.
+    let mut checked = make(&document(), 4);
+    assert!(
+        matches!(
+            checked.import_updates_as(&payload, &bob()),
+            Err(SyncError::Malformed(_))
+        ),
+        "DocStore: updates were accepted as another actor's"
+    );
+    assert_eq!(
+        checked.snapshot(),
+        document(),
+        "DocStore: a refused import changed the document"
+    );
+    let as_alice = checked
+        .import_updates_as(&payload, &a)
+        .expect("import as the actor who wrote them");
+    assert_eq!(ids(&as_alice.inserted), ["synced0001"]);
+    assert_eq!(checked.snapshot(), left.snapshot());
+
     // Everything from nothing, into a store that started from the same document.
     let mut third = make(&document(), 3);
     third

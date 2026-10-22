@@ -13,6 +13,8 @@ table is for copied or adapted source only.
 
 | Goose | block/goose | crates/goose/src/providers/codex.rs | 3bd852002903e016ff30947e973f76e2fcfcf90f | Apache-2.0 | crates/adapters/engine-codex/src/protocol.rs |
 
+| vtracer | visioncortex/vtracer | cmdapp/src/converter.rs | 8acb6bd911e160a55cd8a5503cfac54550a429f8 | MIT | crates/adapters/image-ops/src/trace.rs |
+
 The Goose Apache-2.0 license is bundled at `crates/adapters/engine-claude-code/notices/Goose-Apache-2.0.txt`
 and applies to both installed-engine adaptations.
 
@@ -49,7 +51,7 @@ They are test inputs only and are not shipped. These are licensed font files, no
 
 ## TLS root certificate data (Prompt 32)
 
-`webpki-root-certs` 1.0.9 (via reqwest/rustls-platform-verifier) includes root-certificate data under
+`webpki-root-certs` 1.0.10 (via reqwest/rustls-platform-verifier) includes root-certificate data under
 CDLA-Permissive-2.0. The agreement is preserved in
 `crates/adapters/model-http/notices/CDLA-Permissive-2.0.txt` and must accompany redistributed data.
 This is dependency data, not ported project code. Cargo-deny permits only this exact package/version.
@@ -78,9 +80,11 @@ translated. `tests/fixtures/generate.mjs` uses that package to write the test fi
 
 ## Image processing dependencies (Prompt 66)
 
-`vellum-image-ops` links image 0.25.10 (MIT OR Apache-2.0), vtracer 0.6.5 (MIT OR Apache-2.0) and
-tract-onnx 0.23.9 (MIT OR Apache-2.0). They remain ordinary Cargo dependencies behind the adapter;
-no source code was copied or ported. Their dependency licence texts must accompany redistribution.
+`vellum-image-ops` links image 0.25.10 (MIT OR Apache-2.0), visioncortex 0.8.8 (MIT OR Apache-2.0) and
+tract-onnx 0.23.9 (MIT OR Apache-2.0). They remain ordinary Cargo dependencies behind the adapter.
+`src/trace.rs` adapts vtracer 0.6.5's colour converter (dual MIT/Apache-2.0, used under MIT; the table
+above, licence text in `crates/adapters/image-ops/notices/vtracer-MIT.txt`), so vtracer's command-line
+dependencies are no longer linked. Their dependency licence texts must accompany redistribution.
 No segmentation weights are bundled. A person must provision and review a model's licence separately.
 
 ## Arabic chrome font (Prompt 70)

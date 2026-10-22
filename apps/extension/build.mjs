@@ -59,7 +59,9 @@ bundles.push(
     jsx: "automatic",
     loader: { ".woff2": "file" },
     assetNames: "assets/[name]-[hash]",
-    define: { "process.env.NODE_ENV": '"production"' },
+    // The emscripten loader is an ES module; in this bundle the host hands it the WASM bytes, and its
+    // script URL is the webview page.
+    define: { "process.env.NODE_ENV": '"production"', "import.meta.url": "location.href" },
     metafile: true,
   }),
 );
@@ -67,6 +69,15 @@ await copyFile(
   resolve(root, "../../fixtures/documents/shapes.vellum"),
   resolve(output, "dist/welcome.vellum"),
 );
+// The document engine (ADR-033): the editor module and the faces it shapes text with, handed to each webview
+// by the host. Built by `pnpm wasm:build`; without it the editor cannot start.
+await mkdir(resolve(output, "dist/webview/engine"), { recursive: true });
+for (const [from, to] of [
+  ["../../packages/renderer-skia/dist/vellum_editor.wasm", "vellum_editor.wasm"],
+  ["../../crates/adapters/text-parley/fonts/InterVariable.ttf", "InterVariable.ttf"],
+  ["../../crates/adapters/text-parley/fonts/OFL.txt", "Inter-OFL.txt"],
+])
+  await copyFile(resolve(root, from), resolve(output, "dist/webview/engine", to));
 const arg = (name) => {
   const at = process.argv.indexOf(name);
   return at < 0 ? undefined : process.argv[at + 1];

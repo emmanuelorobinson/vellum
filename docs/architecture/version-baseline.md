@@ -78,7 +78,7 @@
 | i18next | 26.4.3 | 26.x | not yet used | copy and locale work (Prompt 70) |
 | Biome | 2.5.15 | 2.5.x | root devDependencies (`@biomejs/biome`) | latest stable patch |
 | dependency-cruiser | 18.5.0 | 18.5.x | root devDependencies | C10 and C3 |
-| Vitest | 5.0.3 | 5.0.x | `pnpm-workspace.yaml` catalog | latest stable patch |
+| Vitest | 5.0.5 | 5.0.x | `pnpm-workspace.yaml` catalog | latest stable patch |
 | Playwright | 1.64.1 | 1.64.x | `pnpm-workspace.yaml` catalog (`playwright`) | Storybook story tests (Prompt 43, C24); `@playwright/test` in `@vellum/editor-react` for the browser tests (Prompt 46, C26) |
 | Storybook | 10.6.2 | 10.6.x | `pnpm-workspace.yaml` catalog | `@vellum/ui-tokens` stories (Prompt 43, C24) |
 
@@ -242,7 +242,7 @@ edited.
   -- --type html --builder vite --disable-telemetry`, then pinned exactly through the catalog: storybook,
   `@storybook/html-vite`, `@storybook/addon-vitest`, `@storybook/addon-a11y`, `@storybook/addon-docs` 10.6.2 (newest
   patch of the 10.6 line; the baseline had resolved 10.6.1), `@chromatic-com/storybook` 5.5.1, playwright 1.64.1
-  (newest 1.64 patch), Vite 8.3.4, `@vitest/browser-playwright` and `@vitest/coverage-v8` 5.0.3 (match Vitest).
+  (newest 1.64 patch), Vite 8.3.4, `@vitest/browser-playwright` and `@vitest/coverage-v8` 5.0.5 (match Vitest; 5.0.5 since 2026-10-22 for GHSA advisories in `@vitest/browser`/`@vitest/ui`).
   Telemetry is off in `.storybook/main.ts`. One transitive prerelease is allowed by name:
   `@polka/url@1.0.0-next.29` (via sirv ← `@vitest/browser` ← `@storybook/addon-vitest`), because that package has
   never published a stable version; the lockfile test fails on any other. pnpm skips esbuild's install script
@@ -257,6 +257,19 @@ edited.
   browser story tests. The standard dependencies are retained; the version test allows only that
   exact name/version in addition to C24's prior exception. No direct prerelease dependency is added.
 
+- **C27: postject transitive prerelease** (2026-10-22, decided for the owner). `postject@1.0.0-alpha.6`
+  reaches the lockfile through `@electron/windows-sign` ← electron-winstaller ← electron-builder
+  (`@vellum/desktop`'s Windows packaging). postject has never published a stable version; 1.0.0-alpha.6 is
+  its latest. It runs only at packaging time, never in the shipped app. The version test allows this exact
+  name/version alongside C24 and C25; no direct prerelease dependency is added.
+- **C28: dependency advisories** (2026-10-22, decided for the owner). `rustls-webpki` 0.103.16 and
+  `webpki-root-certs` 1.0.10 fix RUSTSEC-2026-0382/0383 (the CDLA exception pin follows). `zip` =9.0.5
+  replaces 4.6.1 in `vellum-export-raster` and `vellum` (RUSTSEC-2026-0367/0368/0369 are extraction bugs; Vellum
+  only writes archives). vtracer's converter is ported into `vellum-image-ops` over `visioncortex` =0.8.8, which
+  removes `adler`, `ansi_term` and `atty`. Six unmaintained-only notices have no maintained replacement upstream
+  and are ignored in `deny.toml` with reasons: `bitmaps`, `im`, `sized-chunks` (loro-internal, still present in
+  loro 1.17.0) and `zbus_names`, `zvariant`, `zvariant_derive` (keyring 4.2.0's Linux secret-service chain).
+  Vulnerability advisories are never ignored.
 
 ## Installed engines (Prompt 36)
 
@@ -303,7 +316,7 @@ The shared tokio/libc/windows-sys versions already used by Prompt 36 are reused;
 
 ## Prompt 56 client setup and packaging tooling
 
-- `jsonc-parser` 3.3.1 (MIT) and `smol-toml` 1.4.2 (BSD-3-Clause) are confined to the native
+- `jsonc-parser` 3.3.1 (MIT) and `smol-toml` 1.9.1 (BSD-3-Clause; 1.4.2 until 2026-10-22, advisories) are confined to the native
   `host-vscode` adapter. JSONC edits preserve other entries/comments; TOML is parsed for validation
   and only an exact managed block is removed. The extension bundle selects the parser's ESM entry,
   because bundling its UMD dynamic requires failed in the real extension host.
@@ -385,7 +398,7 @@ reference code ported, no cloud service deployed. Current advisory failures rema
 | Adapter dependency | Exact pin | Scope |
 |---|---|---|
 | image | 0.25.10 | Bounded PNG/JPEG/WebP decode and PNG encoding inside image-ops |
-| vtracer | 0.6.5 | Stable tracing API inside image-ops; deprecated transitive packages remain advisory failures |
+| visioncortex | 0.8.8 | Tracing core inside image-ops; vtracer 0.6.5's converter is ported (2026-10-22) so its clap 2 / image 0.23 chain and their three advisories are gone |
 | tract-onnx | 0.23.9 | Stable self-contained CPU inference inside image-ops, transformers disabled |
 
 The experimental prerelease ONNX wrapper was removed. No prerelease or advisory exception was added.

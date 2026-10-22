@@ -65,3 +65,25 @@ fn native_onnx_inference() {
         "foreground follows red-channel fixture model"
     );
 }
+
+#[test]
+fn tracing_artwork_with_transparency_is_deterministic() {
+    // Transparent pixels are keyed out with a colour the image does not use; the choice must not vary.
+    let mut px = Vec::new();
+    for y in 0..16u8 {
+        for x in 0..16u8 {
+            px.extend(if (4..12).contains(&x) && (4..12).contains(&y) {
+                [255, 0, 0, 255]
+            } else {
+                [0, 0, 0, 0]
+            });
+        }
+    }
+    let png = encode_png(16, 16, &px).unwrap();
+    let ops = LocalImageOps::new(None);
+    let first = ops.trace(&png).unwrap();
+    assert!(first.contains("<path"), "{first}");
+    for _ in 0..4 {
+        assert_eq!(ops.trace(&png).unwrap(), first);
+    }
+}

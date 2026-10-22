@@ -280,3 +280,14 @@ fn bundled_emoji_fallback_needs_no_host_fonts() {
             .any(|r| r.font == emoji)
     );
 }
+
+#[test]
+fn an_empty_registry_reports_missing_fonts_instead_of_shaping() {
+    let engine = ParleyText::new(ParleyFonts::empty());
+    let l = engine.layout(&text("TEST DATA"), 100.);
+    assert_eq!((l.width, l.height), (0.0, 0.0));
+    assert!(matches!(
+        l.problems.as_slice(),
+        [TextProblem::MissingFont { requested, .. }] if requested == "Inter"
+    ));
+}

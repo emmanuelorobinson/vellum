@@ -80,6 +80,10 @@ test("browser measures every shipped renderer; size and idle RSS have hard caps"
   };
   assert.match(assess(r).join("\n"), /wasmGzip.*budget/);
   assert.match(assess(r).join("\n"), /canvas2d.panZoom.*missing/);
+  // The editor module carries the document engine and has its own cap (ADR-033).
+  assert.match(assess(r).join("\n"), /editorWasmGzip: missing/);
+  r.metrics.editorWasmGzip = summary([7 * 1024 * 1024]);
+  assert.match(assess(r).join("\n"), /editorWasmGzip.*budget/);
 });
 test("a fixed candidate is allowed when the baseline exceeded an absolute budget", () => {
   const base = measurements();

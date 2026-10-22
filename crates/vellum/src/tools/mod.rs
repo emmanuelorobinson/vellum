@@ -210,7 +210,7 @@ impl From<TargetError> for ToolError {
             TargetError::Write(WriteError::Rejected(_))
             | TargetError::ReadOnly
             | TargetError::Lease(_) => Self::new(ErrorKind::Refused, message),
-            TargetError::Gone => Self::new(ErrorKind::Document, message),
+            TargetError::Gone | TargetError::Sync(_) => Self::new(ErrorKind::Document, message),
             TargetError::File(FileError::Fs(FsError::NotFound(_))) => Self::not_found(message),
             TargetError::File(_) => Self::new(ErrorKind::Document, message),
             TargetError::Render(_) => Self::new(ErrorKind::Render, message),

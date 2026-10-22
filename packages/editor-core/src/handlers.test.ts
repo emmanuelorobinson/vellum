@@ -288,3 +288,29 @@ describe("component commands", () => {
     expect(design.takeRequest()).toBeNull();
   });
 });
+
+describe("pixel grid shortcuts", () => {
+  it("⌘' shows the pixel grid and ⇧⌘' snaps to it, through the person's preferences", async () => {
+    const { workspace, session } = fixture();
+    expect(createEditorHandlers({ workspace, session })["view.pixelGrid"]).toBeUndefined();
+    const values: Record<string, boolean> = {
+      "canvas.pixelGrid": false,
+      "canvas.snapPixelGrid": false,
+    };
+    const preferences = {
+      get: (key: string) => values[key],
+      set: (key: string, value: boolean) => {
+        values[key] = value;
+        return { ok: true } as const;
+      },
+    };
+    const controller = createCommandController(
+      createEditorHandlers({ workspace, session, preferences: preferences as never }),
+    );
+    await controller.execute("view.pixelGrid");
+    await controller.execute("view.snapPixelGrid");
+    expect(values).toEqual({ "canvas.pixelGrid": true, "canvas.snapPixelGrid": true });
+    await controller.execute("view.pixelGrid");
+    expect(values["canvas.pixelGrid"]).toBe(false);
+  });
+});

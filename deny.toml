@@ -20,7 +20,17 @@ all-features = true
 feature-depth = 1
 
 [advisories]
-ignore = []
+# Unmaintained-only notices with no maintained replacement upstream (decided for the owner, 2026-10-22;
+# docs/architecture/version-baseline.md C28). Vulnerabilities are never ignored. Revisit on every Loro or
+# keyring upgrade; drop an entry as soon as its chain no longer pulls the crate.
+ignore = [
+  { id = "RUSTSEC-2026-0247", reason = "bitmaps via loro-internal (im); loro 1.17.0 still depends on im 15" },
+  { id = "RUSTSEC-2026-0248", reason = "im via loro-internal; loro 1.17.0 still depends on it" },
+  { id = "RUSTSEC-2026-0251", reason = "sized-chunks via loro-internal (im); loro 1.17.0 still depends on im 15" },
+  { id = "RUSTSEC-2026-0370", reason = "zvariant via keyring 4.2.0 (latest) Linux secret-service chain" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names via keyring 4.2.0 (latest) Linux secret-service chain" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive via keyring 4.2.0 (latest) Linux secret-service chain" },
+]
 
 [licenses]
 # The owner selected Apache-2.0 (Prompt 56 follow-up). Keep dependencies compatible with that choice;
@@ -41,7 +51,7 @@ allow = [
   "MPL-2.0",
 ]
 # Mozilla root certificate data, read/reviewed under ADR-023; retain its agreement on redistribution.
-exceptions = [{ crate = "webpki-root-certs@=1.0.9", allow = ["CDLA-Permissive-2.0"] }]
+exceptions = [{ crate = "webpki-root-certs@=1.0.10", allow = ["CDLA-Permissive-2.0"] }]
 
 [licenses.private]
 # Workspace crates are publish = false and carry no licence field.
@@ -65,7 +75,7 @@ deny = [
   { crate = "tungstenite", wrappers = ["vellum-sync-ws", "tokio-tungstenite", "async-tungstenite"], reason = "ADR-027 WebSocket protocol stays inside the transport adapter, including native acceptance clients" },
   { crate = "object_store", wrappers = ["vellum-assets-s3"], reason = "ADR-027 private S3 snapshot adapter only" },
   { crate = "chromiumoxide", wrappers = ["vellum-browser-cdp"], reason = "ADR-028 managed browser behind BrowserPort only" },
-  { crate = "vtracer", wrappers = ["vellum-image-ops"], reason = "ADR-029 local tracing only" },
+  { crate = "visioncortex", wrappers = ["vellum-image-ops"], reason = "ADR-029 local tracing only (vtracer converter ported into image-ops)" },
   { crate = "tract-onnx", wrappers = ["vellum-image-ops"], reason = "ADR-029 local segmentation only" },
   { crate = "loro", wrappers = ["vellum-doc-loro"], reason = "Loro sits behind DocStore (Invariant 5)" },
   { crate = "taffy", wrappers = ["vellum-layout-taffy"], reason = "layout goes through the LayoutEngine port" },

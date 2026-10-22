@@ -48,13 +48,34 @@ impl TextEngine for ParleyText {
         }
         let whole = text.text();
         let mut state = self.fonts.state.borrow_mut();
-        let bundled = state
+        // A registry made with `ParleyFonts::empty` has no Inter until the host registers it: until then text
+        // takes no space and says which fonts are missing, rather than shaping with whatever is there.
+        let Some(bundled) = state
             .families
             .iter()
             .find(|f| f.tier == FontTier::Bundled && f.name == "Inter")
-            .expect("bundled font")
-            .alias
-            .clone();
+            .map(|f| f.alias.clone())
+        else {
+            let mut at = 0;
+            return TextLayout {
+                width: 0.0,
+                height: 0.0,
+                lines: vec![],
+                problems: text
+                    .runs
+                    .iter()
+                    .map(|run| {
+                        let range = at..at + run.text.len();
+                        at = range.end;
+                        TextProblem::MissingFont {
+                            requested: run.family.clone(),
+                            substitute: "Inter".into(),
+                            range,
+                        }
+                    })
+                    .collect(),
+            };
+        };
         let mut problems = vec![];
         let mut stacks = Vec::new();
         let mut at = 0;

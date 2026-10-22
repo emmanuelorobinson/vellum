@@ -214,7 +214,7 @@ describe("installed-engine transcripts (Prompts 36–37)", () => {
     ["claude-code", "Fixture complete", "sonnet"],
     [
       "codex",
-      "I’ll locate the attached canvas state tool and call it once.Fixture complete",
+      "I’ll locate the attached canvas state tool and call it once.\n\nFixture complete",
       "fixture-model",
     ],
   ] as const)

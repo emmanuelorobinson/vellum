@@ -23,6 +23,8 @@ const sandbox = await mkdtemp(
 );
 const runDir = resolve(sandbox, "run");
 await mkdir(resolve(sandbox, "home"), { recursive: true });
+// A workspace folder: the daemon holds files inside the host's workspace (ADR-033).
+await mkdir(resolve(sandbox, "workspace"), { recursive: true });
 await mkdir(resolve(sandbox, "user-data/User"), { recursive: true });
 await writeFile(
   resolve(sandbox, "user-data/User/settings.json"),
@@ -32,6 +34,11 @@ try {
   await runTests({
     extensionTestsEnv: {
       VELLUM_RUN_DIR: runDir,
+      VELLUM_TEST_BINARY: resolve(
+        root,
+        "dist/package/bin",
+        process.platform === "win32" ? "vellum.exe" : "vellum",
+      ),
       VELLUM_CLIENT_HOME: resolve(sandbox, "home"),
       CODEX_HOME: resolve(sandbox, "home/.codex"),
       XDG_CONFIG_HOME: resolve(sandbox, "home/.config"),
@@ -52,6 +59,7 @@ try {
       "--skip-welcome",
       "--skip-release-notes",
       "--disable-workspace-trust",
+      resolve(sandbox, "workspace"),
     ],
   });
 } finally {

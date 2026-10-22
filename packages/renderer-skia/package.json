@@ -8,6 +8,10 @@
     ".": "./src/index.ts",
     "./module": {
       "types": "./src/module.d.ts",
+      "default": "./dist/vellum-viewer.js"
+    },
+    "./editor-module": {
+      "types": "./src/module.d.ts",
       "default": "./dist/vellum-editor.js"
     }
   },
@@ -16,7 +20,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@vellum/renderer-api": "workspace:*"
+    "@vellum/renderer-api": "workspace:*",
+    "@vellum/engine-client": "workspace:*",
+    "@vellum/types-ts": "workspace:*"
   },
   "devDependencies": {
     "@vellum/contracts": "workspace:*",

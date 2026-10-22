@@ -50,7 +50,7 @@
     "cargo:build": "node scripts/skia-build.mjs build --workspace",
     "cargo:check": "node scripts/skia-build.mjs check --workspace --all-targets",
     "cargo:test": "node scripts/skia-build.mjs test --workspace",
-    "wasm:build": "node scripts/skia-build.mjs build --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten",
+    "wasm:build": "node scripts/skia-build.mjs build --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten && node scripts/skia-build.mjs build --release -p vellum-wasm --no-default-features --bin vellum-viewer --target wasm32-unknown-emscripten",
     "lint:ts": "biome check . && node scripts/copy-lint.mjs && node scripts/token-lint.mjs",
     "lint:rust": "node scripts/skia-build.mjs clippy --workspace --all-targets -- -D warnings",
     "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\"",

@@ -241,4 +241,17 @@ pub trait DocStore {
     fn export_updates(&self, since: &SyncCursor) -> SyncPayload;
     /// Merges updates from another store. Importing the same payload twice changes nothing the second time.
     fn import_updates(&mut self, payload: &SyncPayload) -> Result<ChangeSet, SyncError>;
+    /// Like [`Self::import_updates`] for updates one actor sent (an editor pushing its person's edits): every
+    /// change the payload adds must carry `actor`'s origin, or nothing is imported. A store that cannot tell who
+    /// wrote a change refuses.
+    fn import_updates_as(
+        &mut self,
+        payload: &SyncPayload,
+        actor: &Actor,
+    ) -> Result<ChangeSet, SyncError> {
+        let _ = (payload, actor);
+        Err(SyncError::Malformed(
+            "this store cannot check who wrote updates".into(),
+        ))
+    }
 }

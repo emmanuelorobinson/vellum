@@ -110,6 +110,13 @@ function main() {
       throw new Error(`emsdk ${config.emsdk} required: ${emsdkEnv.stderr}`);
     Object.assign(env, JSON.parse(emsdkEnv.stdout));
     env.EMCC_CFLAGS = config.emscriptenCflags;
+    // One module per page load: whole-program optimization keeps the editor's engine and renderer small
+    // (ADR-033). Native builds keep the default release profile.
+    env.CARGO_PROFILE_RELEASE_LTO ??= "fat";
+    env.CARGO_PROFILE_RELEASE_CODEGEN_UNITS ??= "1";
+    // The editor module carries the document engine; size-optimized Rust keeps it near 6 MiB gzipped, where
+    // speed-optimized is near 7.5. The viewer keeps the default speed optimization its frame budgets assume.
+    if (args.includes("vellum-editor")) env.CARGO_PROFILE_RELEASE_OPT_LEVEL ??= "s";
     env.AR_wasm32_unknown_emscripten = "emar";
     // rquickjs has no bundled emscripten bindings. Bindgen needs the target headers and
     // visible declarations (emscripten otherwise hides JS_ToCStringLen2 from bindgen).
@@ -155,8 +162,13 @@ function main() {
     const source = join(buildRoot, target, profile);
     const output = join(root, "packages/renderer-skia/dist");
     mkdirSync(output, { recursive: true });
-    for (const file of ["vellum-editor.js", "vellum_editor.wasm"])
-      writeFileSync(join(output, file), readFileSync(join(source, file)));
+    // vellum-editor: engine and renderer (hosts); vellum-viewer: renderer only (share pages). ADR-033.
+    const binAt = args.indexOf("--bin");
+    const bins = binAt < 0 ? ["vellum-editor", "vellum-viewer"] : [args[binAt + 1]];
+    for (const bin of bins)
+      for (const file of [`${bin}.js`, `${bin.replaceAll("-", "_")}.wasm`])
+        if (existsSync(join(source, file)))
+          writeFileSync(join(output, file), readFileSync(join(source, file)));
   }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

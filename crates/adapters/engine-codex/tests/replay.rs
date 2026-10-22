@@ -599,7 +599,8 @@ fn recorded_exec_turn_replays_both_messages_and_inclusive_usage() {
         })
         .collect();
     assert_eq!(text.len(), 2);
-    assert_eq!(text[1], "Fixture complete");
+    // Two agent messages are two paragraphs; the panel joins Text events as they arrive.
+    assert_eq!(text[1], "\n\nFixture complete");
     assert!(events.iter().any(|v|matches!(v,TurnEvent::Usage(u) if u.input_tokens==Some(53849)&&u.cached_input_tokens==Some(33280)&&u.output_tokens==Some(91))));
     assert!(
         !events

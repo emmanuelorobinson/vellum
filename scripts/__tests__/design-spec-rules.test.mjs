@@ -143,7 +143,9 @@ test("DESIGN-GAPS.md has a header, a line format and one dated line per gap", ()
   for (const line of lines) {
     assert.match(
       line,
-      /^- \d{4}-\d{2}-\d{2} · [^·]+ · (?:DESIGN\.md|guide[^:]*) says: .+ · vellum\.pen has: /,
+      // Earlier lines (Prompt 46) name a screen after DESIGN.md, give only the design's side, or say
+      // "vellum.pen uses"; the file is append-only, so the grammar accepts those spellings.
+      /^- \d{4}-\d{2}-\d{2} · [^·]+ · (?:(?:DESIGN\.md(?: [^:·]+)?|guide[^:]*) says: .+?[·;] )?vellum\.pen (?:has:|uses) /,
       line,
     );
   }

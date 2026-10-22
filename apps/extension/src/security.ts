@@ -1,5 +1,5 @@
 import type { Appearance } from "@vellum/host-api";
-import { type ShareRequest, shareRequest } from "@vellum/host-api";
+import { type PanelAction, panelRequest, type ShareRequest, shareRequest } from "@vellum/host-api";
 export function appearance(kind: number): Appearance {
   switch (kind) {
     case 1:
@@ -18,6 +18,10 @@ export type WebviewMessage =
   | { type: "shareCopy" }
   | { type: "shareOpen" }
   | { type: "ready" }
+  /** The editor module, fonts and (for a read-only file) the file's bytes. */
+  | { type: "engineLoad" }
+  /** The panel's own editor at the daemon (ADR-033). */
+  | { type: "engine"; requestId: number; action: PanelAction; params: Record<string, string> }
   | {
       type: "command";
       command: "save" | "openAsText" | "pauseAll" | "restartDaemon" | "connectAgents";
@@ -39,6 +43,16 @@ export function parseMessage(value: unknown): WebviewMessage | null {
   )
     return v as WebviewMessage;
   if (keys === "type" && v.type === "ready") return { type: "ready" };
+  if (keys === "type" && v.type === "engineLoad") return { type: "engineLoad" };
+  if (
+    keys === "action,params,requestId,type" &&
+    v.type === "engine" &&
+    Number.isSafeInteger(v.requestId) &&
+    Number(v.requestId) > 0
+  ) {
+    const request = panelRequest(v.action, v.params);
+    if (request) return { type: "engine", requestId: Number(v.requestId), ...request };
+  }
   if (
     keys === "command,type" &&
     v.type === "command" &&
@@ -63,5 +77,5 @@ export function webviewHtml(options: {
   const { source, script, style, nonce, title } = Object.fromEntries(
     Object.entries(options).map(([k, v]) => [k, htmlEscape(v)]),
   ) as typeof options;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; script-src 'nonce-${nonce}'; style-src ${source}; style-src-attr 'unsafe-inline'; img-src ${source} data: blob:; font-src ${source}; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="${style}"><title>${title}</title></head><body><div id="root"></div><script nonce="${nonce}" src="${script}"></script></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval'; style-src ${source}; style-src-attr 'unsafe-inline'; img-src ${source} data: blob:; font-src ${source}; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="${style}"><title>${title}</title></head><body><div id="root"></div><script nonce="${nonce}" src="${script}"></script></body></html>`;
 }

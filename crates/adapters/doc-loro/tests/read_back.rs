@@ -60,6 +60,14 @@ impl DocStore for Checked {
         let result = self.0.import_updates(payload);
         self.check(result)
     }
+    fn import_updates_as(
+        &mut self,
+        payload: &SyncPayload,
+        actor: &Actor,
+    ) -> Result<ChangeSet, SyncError> {
+        let result = self.0.import_updates_as(payload, actor);
+        self.check(result)
+    }
 }
 
 fn checked(doc: &Document, peer: u64) -> Checked {

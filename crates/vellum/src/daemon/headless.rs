@@ -11,10 +11,12 @@ use vellum_core::files::SingleFile;
 use vellum_core::guard::{AgentControl, GuardState, LeaseChange, WriteError, apply_guarded};
 use vellum_core::ops::{self, Applied, Inputs, Transaction};
 use vellum_core::ports::{
-    Clock, Codec, DocStore, DocumentFiles, DocumentTarget, FileError, FileSystem, IdGen, Loaded,
-    ScriptValue, TargetError, TargetMode, TurnUndone,
+    ChangeSet, Clock, Codec, DocStore, DocumentFiles, DocumentTarget, FileError, FileSystem, IdGen,
+    Loaded, ScriptValue, SyncCursor, SyncPayload, TargetError, TargetMode, TurnUndone,
 };
 use vellum_types::{Actor, AgentId, Document, NodeId, TurnId};
+
+use super::live::{EditorId, Role};
 
 /// A document at a path of a file system: one file, or a folder in the directory format.
 #[derive(Clone)]
@@ -64,7 +66,9 @@ pub struct Engine {
     pub clock: Arc<dyn Clock>,
 }
 
-/// The daemon's own engine holding one file.
+/// The daemon's own engine holding one file. Editors that open the file are replicas of this engine (ADR-033):
+/// they start from its genesis document and its updates, push their person's edits and pull everyone else's.
+/// While one is attached the target does not save on its own: the editor's Save writes the file.
 pub struct HeadlessTarget {
     file: DocFile,
     engine: Engine,
@@ -73,6 +77,23 @@ pub struct HeadlessTarget {
     saved: Document,
     /// The last save failed; the next transaction or `save` tries again.
     failed: bool,
+    /// The document the store was opened on. Replicas start from it, so their updates line up with ours.
+    genesis: Document,
+    /// The editors replicating this engine, in the order they opened, with the person each one edits as.
+    editors: Vec<(EditorId, Actor)>,
+    /// Counts the engine's changes, whoever made them: hosts compare it with the revision they last saved.
+    revision: u64,
+}
+
+/// What an editor needs to start its replica.
+#[derive(Debug, Clone)]
+pub struct EditorStart {
+    /// The first editor is the writer; the others attach. Both edit the same engine.
+    pub role: Role,
+    /// The document the daemon's store was opened on.
+    pub genesis: Document,
+    /// Everything since the genesis document: the engine as it is now, unsaved changes included.
+    pub updates: SyncPayload,
 }
 
 impl HeadlessTarget {
@@ -94,8 +115,87 @@ impl HeadlessTarget {
             file,
             engine,
             guard: GuardState::default(),
+            genesis: saved.clone(),
             saved,
             failed: false,
+            editors: Vec::new(),
+            revision: 0,
+        }
+    }
+
+    /// An editor opens the file. It edits as `actor`; opening again keeps its place.
+    pub fn attach(&mut self, editor: EditorId, actor: Actor) -> EditorStart {
+        let role = match self.editors.iter().position(|(id, _)| *id == editor) {
+            Some(0) => Role::Writer,
+            Some(_) => Role::Attached,
+            None if self.editors.is_empty() => {
+                self.editors.push((editor, actor));
+                Role::Writer
+            }
+            None => {
+                self.editors.push((editor, actor));
+                Role::Attached
+            }
+        };
+        EditorStart {
+            role,
+            genesis: self.genesis.clone(),
+            updates: self.engine.store.export_updates(&SyncCursor::empty()),
+        }
+    }
+
+    /// An editor closed the file. Returns whether any editor is left.
+    pub fn detach(&mut self, editor: &EditorId) -> bool {
+        self.editors.retain(|(id, _)| id != editor);
+        !self.editors.is_empty()
+    }
+
+    /// How many changes the engine has taken (transactions, editors' updates, undone turns).
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    /// The editors replicating this engine, writer first.
+    pub fn editors(&self) -> impl Iterator<Item = &EditorId> {
+        self.editors.iter().map(|(id, _)| id)
+    }
+
+    /// An editor's person edited: their changes, and only theirs, join the engine.
+    pub fn push(
+        &mut self,
+        editor: &EditorId,
+        updates: &SyncPayload,
+    ) -> Result<ChangeSet, TargetError> {
+        let (_, actor) = self
+            .editors
+            .iter()
+            .find(|(id, _)| id == editor)
+            .ok_or(TargetError::Gone)?;
+        let changes = self
+            .engine
+            .store
+            .import_updates_as(updates, actor)
+            .map_err(TargetError::Sync)?;
+        if !changes.is_empty() {
+            self.revision += 1;
+        }
+        Ok(changes)
+    }
+
+    /// The sync adapter of the engine's store.
+    pub fn adapter_id(&self) -> &'static str {
+        self.engine.store.adapter_id()
+    }
+
+    /// What an editor whose replica has seen `since` is missing.
+    pub fn pull(&self, since: &SyncCursor) -> SyncPayload {
+        self.engine.store.export_updates(since)
+    }
+
+    /// Saves after a change unless an editor holds the file; then its Save writes.
+    fn autosave(&mut self) {
+        if self.editors.is_empty() {
+            let _ = self.save();
         }
     }
 
@@ -116,6 +216,7 @@ impl HeadlessTarget {
 
     fn apply(&mut self, tx: Transaction) -> Result<Applied, TargetError> {
         let now = self.engine.clock.now();
+        self.revision += 1;
         Ok(apply_guarded(
             &mut *self.engine.store,
             &mut *self.engine.ids,
@@ -135,7 +236,7 @@ impl HeadlessTarget {
     ) -> Result<Applied, TargetError> {
         let applied = self.apply(tx)?;
         self.saved = file;
-        if self.engine.store.snapshot() != self.saved {
+        if self.editors.is_empty() && self.engine.store.snapshot() != self.saved {
             // The merge kept something the file does not have (a conflict node): write it.
             self.save()?;
         }
@@ -150,7 +251,11 @@ impl HeadlessTarget {
 
 impl DocumentTarget for HeadlessTarget {
     fn mode(&self) -> TargetMode {
-        TargetMode::Headless
+        if self.editors.is_empty() {
+            TargetMode::Headless
+        } else {
+            TargetMode::Live
+        }
     }
 
     fn snapshot(&mut self) -> Result<Document, TargetError> {
@@ -161,7 +266,7 @@ impl DocumentTarget for HeadlessTarget {
         let applied = self.apply(tx)?;
         // Applied but not saved is a save failure, not a refused transaction: the change stays in the engine
         // and the next save retries (guide §10.3, save_failed).
-        let _ = self.save();
+        self.autosave();
         Ok(applied)
     }
 
@@ -205,8 +310,9 @@ impl DocumentTarget for HeadlessTarget {
         let undone = ops::undo_turn(&mut *self.engine.store, turn, by)
             .map_err(|e| TargetError::Write(WriteError::Invalid(e)))?;
         if undone != TurnUndone::Nothing {
+            self.revision += 1;
             // As after a transaction: a failed save is retried, the undo stands.
-            let _ = self.save();
+            self.autosave();
         }
         Ok(undone)
     }

@@ -12,6 +12,8 @@ export function menuModel(state: {
   hasDocument: boolean;
   daemon: boolean;
   draft?: boolean;
+  /** The active tab is a live replica of the daemon's engine (ADR-033). */
+  editable?: boolean;
 }): { label: MenuCategory; items: MenuAction[] }[] {
   const file: MenuAction[] = [
     { id: "home", label: "Home", enabled: true },
@@ -39,7 +41,12 @@ export function menuModel(state: {
       command: "file.importBrowser",
       enabled: state.hasDocument,
     },
-    { id: "file.save", label: "Save", accelerator: "CommandOrControl+S", enabled: false },
+    {
+      id: "file.save",
+      label: "Save",
+      accelerator: "CommandOrControl+S",
+      enabled: state.editable === true,
+    },
     {
       id: "file.saveAs",
       label: "Save As…",
@@ -75,8 +82,17 @@ export function menuModel(state: {
   const groups: Record<MenuCategory, MenuAction[]> = {
     File: file,
     Edit: [
-      action("edit.undo", "Undo your changes", "CommandOrControl+Z"),
-      action("edit.redo", "Redo your changes", "CommandOrControl+Shift+Z"),
+      // The person's own undo, in the tab's engine (Invariant 3).
+      {
+        ...action("edit.undo", "Undo your changes", "CommandOrControl+Z"),
+        command: "edit.undo",
+        enabled: state.editable === true,
+      },
+      {
+        ...action("edit.redo", "Redo your changes", "CommandOrControl+Shift+Z"),
+        command: "edit.redo",
+        enabled: state.editable === true,
+      },
       action("edit.cut", "Cut"),
       action("edit.copy", "Copy"),
       action("edit.paste", "Paste"),

@@ -191,9 +191,10 @@ mod sessions {
         assert!(png.starts_with(b"\x89PNG"), "the thumbnail is a PNG");
         assert_eq!(recorded[2].outcome, StepOutcome::Done);
         assert_eq!(recorded[2].detail["thumbnail"]["node"], "frameFoot1");
+        // The Footer holds a note: notes are left out of pictures, so the frame still gets its thumbnail.
         assert!(
-            recorded[2].thumbnail.is_none(),
-            "an undrawable frame has no picture"
+            recorded[2].thumbnail.is_some(),
+            "a frame with a note is drawn without it"
         );
         assert_eq!(recorded[3].outcome, StepOutcome::Failed);
         assert!(

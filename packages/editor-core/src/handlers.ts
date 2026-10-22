@@ -30,9 +30,21 @@ export function createEditorHandlers(deps: {
   palette?: PaletteController;
   /** Pause all agents (⇧⌘.): the presence controller's `action({ type: "pauseAll" })`. */
   pauseAll?: () => void;
+  /** The person's preferences: ⌘' and ⇧⌘' turn the pixel grid and snapping to it on and off. */
+  preferences?: {
+    get(key: "canvas.pixelGrid" | "canvas.snapPixelGrid"): boolean;
+    set(key: "canvas.pixelGrid" | "canvas.snapPixelGrid", value: boolean): unknown;
+  };
 }): Record<string, Handler> {
-  const { workspace, session, design, agent, composer, exporter, palette, pauseAll } = deps;
+  const { workspace, session, design, agent, composer, exporter, palette, pauseAll, preferences } =
+    deps;
   const handlers: Record<string, Handler> = {};
+  if (preferences)
+    for (const [command, key] of [
+      ["view.pixelGrid", "canvas.pixelGrid"],
+      ["view.snapPixelGrid", "canvas.snapPixelGrid"],
+    ] as const)
+      handlers[command] = () => void preferences.set(key, !preferences.get(key));
   if (palette) handlers["palette.open"] = () => palette.open();
   if (pauseAll) handlers["agent.pauseAll"] = () => pauseAll();
   if (exporter) {

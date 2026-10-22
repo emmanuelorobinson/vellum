@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { chmod, mkdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -76,11 +77,17 @@ export function activate(context: vscode.ExtensionContext): {
         listener({ appearance: appearance(theme.kind) }),
       ),
   });
-  const provider = new DesignEditorProvider(context, daemon, {
-    ...files,
-    read: (uri) => host.readFile(uri),
-    writeAtomic: (uri, bytes) => host.writeFile(uri, bytes),
-  });
+  const provider = new DesignEditorProvider(
+    context,
+    daemon,
+    {
+      ...files,
+      read: (uri) => host.readFile(uri),
+      writeAtomic: (uri, bytes) => host.writeFile(uri, bytes),
+    },
+    undefined,
+    deviceId(context),
+  );
   const stableBinary = join(
     context.globalStorageUri.fsPath,
     "bin",
@@ -202,3 +209,23 @@ export function activate(context: vscode.ExtensionContext): {
   };
 }
 export function deactivate(): void {}
+
+/** This installation's device: a ULID kept in global state. A person is known by the device they edit from. */
+function deviceId(context: vscode.ExtensionContext): string {
+  const saved = context.globalState.get<string>("vellum.device");
+  if (saved && /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(saved)) return saved;
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  let time = Date.now();
+  let head = "";
+  for (let i = 0; i < 10; i++) {
+    head = alphabet[time % 32] + head;
+    time = Math.floor(time / 32);
+  }
+  const tail = [...randomBytes(16)]
+    .slice(0, 16)
+    .map((b) => alphabet[b % 32])
+    .join("");
+  const id = head + tail;
+  void context.globalState.update("vellum.device", id);
+  return id;
+}

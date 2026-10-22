@@ -9,7 +9,7 @@ publish.workspace = true
 [dependencies]
 vellum-core = { path = "../../vellum-core" }
 image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
-vtracer = "=0.6.5"
+visioncortex = { version = "=0.8.8", default-features = false }
 tract-onnx = { version = "=0.23.9", default-features = false }
 
 [lints]

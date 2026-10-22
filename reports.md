@@ -6,7 +6,16 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 ## Needs a person
 
-Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
+Open items, newest first. Remove an item when it is done and say so in the prompt's entry. Resolved items
+are moved to `addressed-reports.md`.
+
+- **2026-10-22 follow-up: see `addressed-reports.md`.** Prompt 55's document runtime, contrast/token gaps,
+  advisories, script tests and several Prompt 29/49/54 items are resolved there. Items below that mention
+  "Prompt 55's missing document ABI/EditorLink" now refer only to what ADR-033 lists as not done: browser
+  libraries/script outputs, image fills and document fonts in browser frames, and the editor feature ports of
+  Prompts 49–54 (agent feed, presence, ledger hosts). Still open: braces/sprintf-js pnpm advisories (no patch),
+  files outside the host workspace open read-only by design, and everything needing people, credentials,
+  signing, other platforms or remote CI. The older entries below were not yet pruned item by item.
 
 - **Prompt 72 machinery is implemented; release remains blocked.** Finish the prior native-host,
   permission, Stop, parity, visual and performance acceptance, 17 unaccepted token/spec gaps, 20 contrast
@@ -4839,3 +4848,22 @@ Not passing / not claimed:
   delivery, six signing runners, remote/GPU/installed-engine/installed-host lanes, installer upgrade/rollback,
   and a new full-session canary campaign were not exercised. Prior P55 native ABI, security, parity,
   UI/RTL/contrast and performance blockers remain. No commit, PR, production credential, deployment or release.
+
+## 2026-10-22 follow-up (owner: "complete what is open, decide for me")
+
+Built ADR-033 (live editor replicas, editor/viewer WASM modules), per-document daemon scene services,
+annotation-free screenshots, pixel grid, Codex paragraph fix, exporter contrast fix and token re-export,
+advisory fixes, script/Biome/clean-room fixes. Details and decisions: `addressed-reports.md`, ADR-033,
+version-baseline C27/C28.
+
+Passed: `cargo test -p vellum` (full; one expectation updated where notes became drawable), `-p vellum-wasm`,
+`-p vellum-doc-loro`, `-p vellum-contracts`, `-p vellum-image-ops`, `-p vellum-engine-codex`, index-rstar scene;
+workspace clippy `-D warnings`; `cargo fmt --check`; `cargo deny check`; `bash scripts/check-deps.sh`;
+`pnpm type-check` (34); editor-core 2,396 and editor-react 316 unit tests; extension 45; desktop 29 + packaging;
+host-api 32; `engine.spec.ts` 4 and `agent.spec.ts` 8 in Chrome; VS Code Insiders smoke with live editing;
+Electron functional tests (10 of 10 non-design after fixes); script suite 237/0; token lint/check; copy-lint;
+clean-room.
+
+Not verified / not done: Electron `@design` goldens remain red against the 1% gate (pre-existing); the WASM
+modules were last rebuilt before the final display-list change (rebuild with `pnpm wasm:build`); feature ports of
+Prompts 49–54 are still unserved by hosts; Windows/Linux and remote CI not run. Nothing committed.

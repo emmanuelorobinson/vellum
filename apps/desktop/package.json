@@ -38,7 +38,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "@vellum/storage": "workspace:*",
-    "@vellum/telemetry": "workspace:*"
+    "@vellum/telemetry": "workspace:*",
+    "@vellum/renderer-skia": "workspace:*"
   },
   "license": "Apache-2.0"
 }

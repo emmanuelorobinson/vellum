@@ -757,18 +757,14 @@ fn screenshot_returns_a_png_the_agent_can_see() {
 }
 
 #[test]
-fn screenshot_of_a_frame_with_a_node_the_renderer_cannot_draw_names_that_node() {
+fn screenshot_of_a_frame_leaves_out_notes_context_and_prompts() {
     let mut rig = Rig::scene();
     rig.ok("open_document", json!({"path": PATH}));
-    // The Hero holds a context node, which has no drawing yet (reports.md, Prompt 29).
-    let error = rig
-        .call("screenshot", json!({"node": "frameHero1"}))
-        .unwrap_err();
-    assert_eq!(error.kind(), ErrorKind::Render);
-    assert!(
-        error.message().contains("ctxHero001") && error.message().contains("context"),
-        "{error}"
-    );
+    // The Hero holds a context node and the Footer a note: annotations the editor draws as overlays, not design.
+    for frame in ["frameHero1", "frameFoot1"] {
+        let out = rig.ok("screenshot", json!({"node": frame}));
+        assert_eq!(out["image"]["mime"], "image/png", "{frame}");
+    }
 }
 
 #[test]

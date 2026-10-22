@@ -641,3 +641,45 @@ fn tiny_nonzero_clips_are_not_empty_and_large_radii_do_not_overflow() {
         Some(id("r"))
     );
 }
+#[test]
+fn editor_queries_give_world_boxes_order_and_local_coordinates() {
+    let mut rotated = node("a/r", Some("a"), Rect::new(10., 0., 20., 10.));
+    rotated.rotation = 90.;
+    let mut hidden = node("h", None, Rect::new(0., 0., 5., 5.));
+    hidden.visible = false;
+    let nodes = [
+        node("a", None, Rect::new(100., 50., 200., 100.)),
+        node("a/b", Some("a"), Rect::new(5., 5., 20., 20.)),
+        rotated,
+        hidden,
+    ];
+    let s = make(&nodes);
+    assert_eq!(s.roots(), vec![id("a"), id("h")], "back to front");
+    assert_eq!(s.children(&id("a")), vec![id("a/b"), id("a/r")]);
+    let b = s.occurrence(&id("a/b")).unwrap();
+    assert_eq!(b.parent, Some(id("a")));
+    assert_eq!(b.bounds, Rect::new(105., 55., 20., 20.));
+    assert!(b.visible && !b.locked && b.selectable);
+    // A box rotated a quarter turn about its centre: its world box is the same size, turned.
+    let r = s.occurrence(&id("a/r")).unwrap().bounds;
+    assert!(
+        (r.x - 115.).abs() < 1e-9 && (r.y - 45.).abs() < 1e-9,
+        "{r:?}"
+    );
+    assert!((r.width - 10.).abs() < 1e-9 && (r.height - 20.).abs() < 1e-9);
+    // An invisible occurrence still has a box: the editor shows it in Layers and can select it there.
+    assert_eq!(
+        s.occurrence(&id("h")).unwrap().bounds,
+        Rect::new(0., 0., 5., 5.)
+    );
+    assert!(!s.occurrence(&id("h")).unwrap().visible);
+    // World to an occurrence's own box, and to the box its children are positioned in.
+    let local = s.to_local(&id("a/b"), p(110., 60.)).unwrap();
+    assert!((local.x - 5.).abs() < 1e-9 && (local.y - 5.).abs() < 1e-9);
+    let turned = s.to_local(&id("a/r"), p(115., 45.)).unwrap();
+    assert!(
+        (turned.x - 0.).abs() < 1e-9 && (turned.y - 10.).abs() < 1e-9,
+        "{turned:?}"
+    );
+    assert_eq!(s.to_local(&id("missing"), p(0., 0.)), None);
+}

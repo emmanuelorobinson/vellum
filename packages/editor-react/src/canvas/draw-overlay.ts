@@ -9,6 +9,8 @@ export interface OverlayPalette {
   text: string;
   secondary: string;
   attention: string;
+  /** The pixel grid's lines. */
+  grid: string;
 }
 export function readPalette(el: Element): OverlayPalette {
   const css = getComputedStyle(el);
@@ -21,6 +23,7 @@ export function readPalette(el: Element): OverlayPalette {
     text: v("--chrome-text"),
     secondary: v("--chrome-secondary"),
     attention: v("--chrome-attention"),
+    grid: v("--chrome-separator"),
   };
 }
 
@@ -58,10 +61,29 @@ export function drawOverlay(
   shapes: readonly OverlayShape[],
   palette: OverlayPalette,
   dpr: number,
+  /** Settings → Canvas → Show pixel grid, from 800%: lines between model pixels, under everything else. */
+  grid?: { x: readonly number[]; y: readonly number[] } | null,
 ) {
   ctx.save();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
+  if (grid) {
+    const width = ctx.canvas.width / dpr,
+      height = ctx.canvas.height / dpr;
+    ctx.strokeStyle = palette.grid;
+    ctx.lineWidth = 1 / dpr;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    for (const x of grid.x) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+    for (const y of grid.y) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+    }
+    ctx.stroke();
+  }
   for (const s of shapes) {
     switch (s.kind) {
       case "outline": {

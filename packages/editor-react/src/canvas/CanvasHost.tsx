@@ -4,6 +4,7 @@ import {
   HANDLE_SIZE,
   overlayShapes,
   type PaintEditor,
+  pixelGridLines,
   type SelectedItem,
   zoomAbout,
 } from "@vellum/editor-core";
@@ -45,6 +46,8 @@ export interface CanvasHostProps {
   dpr?: number;
   /** Settings → Canvas: a plain scroll wheel zooms, and the zoom direction can be flipped. */
   wheel?: { zooms: boolean; invert: boolean };
+  /** Settings → Canvas → Show pixel grid (drawn from 800%). */
+  pixelGrid?: boolean;
 }
 
 const cursorFor = (tool: string, mode: string) =>
@@ -72,6 +75,7 @@ export function CanvasHost({
   label = "Canvas",
   dpr = typeof devicePixelRatio === "number" ? devicePixelRatio : 1,
   wheel: wheelPrefs,
+  pixelGrid = false,
 }: CanvasHostProps) {
   const { t } = useLocale();
   const [keyboard, setKeyboard] = useState(false);
@@ -173,7 +177,13 @@ export function CanvasHost({
     const canvas = overlayCanvas.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    drawOverlay(ctx, shapes, readPalette(canvas), dpr);
+    drawOverlay(
+      ctx,
+      shapes,
+      readPalette(canvas),
+      dpr,
+      pixelGrid ? pixelGridLines(session.state.viewport, size) : null,
+    );
   });
 
   /** A press on an overlay handle carries what it grabbed: a path point or handle, or a scale corner. */

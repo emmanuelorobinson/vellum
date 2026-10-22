@@ -16,12 +16,12 @@ use vellum_core::merge::merge;
 use vellum_core::ops::{Applied, Transaction};
 use vellum_core::plans::Placeholder;
 use vellum_core::ports::{
-    Clock, Codec, DocStore, DocumentTarget, FileError, FileSystem, FileWatcher, FsError, IdGen,
-    ScriptRuntime, TargetError, TargetMode, Timestamp,
+    ChangeSet, Clock, Codec, DocStore, DocumentTarget, FileError, FileSystem, FileWatcher, FsError,
+    IdGen, ScriptRuntime, ScriptValue, SyncCursor, SyncPayload, TargetError, TargetMode, Timestamp,
 };
 use vellum_types::{Actor, AgentId, Document, FileReason, NodeId, Origin};
 
-use super::headless::{DocFile, Engine, HeadlessTarget};
+use super::headless::{DocFile, EditorStart, Engine, HeadlessTarget};
 use super::live::{EditorId, EditorLink, LiveTarget, Role};
 use super::recovery::{RECOVERY_INTERVAL_MS, Recovery, RecoveryCopy};
 use super::view::{DocumentView, EditorView, LeaseInfo, Paused};
@@ -36,6 +36,17 @@ pub type ExportServices = fn(
 ) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError>;
 
 pub type MakeStore = Box<dyn Fn(&Document) -> Box<dyn DocStore>>;
+
+/// Successful script outputs by document path and script node, as the resolver takes them.
+pub type ScriptOutputs = BTreeMap<(String, NodeId), vellum_core::script_nodes::Output>;
+
+/// Scene services for one document: its fonts, its libraries from disk and its script outputs.
+pub type DocumentServices = fn(
+    &Document,
+    Arc<dyn FileSystem>,
+    &str,
+    ScriptOutputs,
+) -> Result<Rc<dyn Services>, vellum_core::ports::ExportError>;
 
 /// Everything the daemon plugs in. Tests use fakes; the binary uses the real adapters.
 pub struct Env {
@@ -55,6 +66,8 @@ pub struct Env {
     pub services: Rc<dyn Services>,
     /// Fresh document-scoped fonts and library resources for export. None uses the supplied scene.
     pub export_services: Option<ExportServices>,
+    /// Scene services for one document (layout, free space, screenshots). None uses `services` for all.
+    pub document_services: Option<DocumentServices>,
     /// The sandbox `execute` scripts run in; none in a build without one.
     pub scripts: Option<Rc<dyn ScriptRuntime>>,
     /// Random bits for the ids of agents and sessions (ULIDs).
@@ -105,6 +118,15 @@ pub enum External {
     Missing,
     /// The change could not be applied: the merge or the target refused it.
     Refused(String),
+}
+
+/// How a host replaces an editor's document (`Documents::editor_replace`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Replace {
+    /// Back to the file on disk.
+    Revert,
+    /// A backup's content, as unsaved work.
+    Recovery,
 }
 
 /// The holder of a file.
@@ -159,6 +181,8 @@ pub struct Documents {
     image_ops: Option<Rc<dyn vellum_core::ports::ImageOps>>,
     image_generator: Option<Rc<dyn vellum_core::ports::ImageGenerator>>,
     image_model: Option<String>,
+    /// Each document's scene services, with the document they were made for.
+    scenes: RefCell<BTreeMap<String, (Document, Rc<dyn Services>)>>,
 }
 
 /// An external client's `spawn_agents` call, for the host that runs helper agents.
@@ -225,6 +249,7 @@ impl Documents {
             image_ops: None,
             image_generator: None,
             image_model: None,
+            scenes: RefCell::new(BTreeMap::new()),
         }
     }
 
@@ -518,6 +543,114 @@ impl Documents {
         self.env.services.clone()
     }
 
+    /// Scene services for the document at `path` as it is now (`doc`): its own fonts, the libraries it imports
+    /// read from disk, and its script nodes' outputs from the sandbox. Reused until the document changes; the
+    /// shared services when this daemon has no per-document scene, or the document's cannot be made.
+    pub fn services_for(&self, path: &str, doc: &Document) -> Rc<dyn Services> {
+        if let Some((seen, services)) = self.scenes.borrow().get(path)
+            && seen == doc
+        {
+            return services.clone();
+        }
+        let Some(make) = self.env.document_services else {
+            return self.env.services.clone();
+        };
+        let Ok((fs, inner)) = (self.env.locate)(path) else {
+            return self.env.services.clone();
+        };
+        let outputs = self.script_outputs(&*fs, &inner, doc);
+        match make(doc, fs, &inner, outputs) {
+            Ok(services) => {
+                self.scenes
+                    .borrow_mut()
+                    .insert(path.to_owned(), (doc.clone(), services.clone()));
+                services
+            }
+            Err(_) => self.env.services.clone(),
+        }
+    }
+
+    /// The outputs of the document's script nodes, run in the sandbox on their source files. A script that is
+    /// missing or fails has no output, which the resolver reports on that node.
+    fn script_outputs(&self, fs: &dyn FileSystem, path: &str, doc: &Document) -> ScriptOutputs {
+        let mut outputs = ScriptOutputs::new();
+        let Some(runtime) = self.env.scripts.clone() else {
+            return outputs;
+        };
+        fn scripts(nodes: &[vellum_types::Node], out: &mut Vec<vellum_types::Node>) {
+            for node in nodes {
+                if matches!(node, vellum_types::Node::Script(_)) {
+                    out.push(node.clone());
+                }
+                scripts(node.children(), out);
+            }
+        }
+        let mut found = vec![];
+        for page in &doc.pages {
+            scripts(&page.children, &mut found);
+        }
+        let dir = path.rsplit_once('/').map_or("", |(dir, _)| dir);
+        let mut ids = self.tool_ids();
+        for node in found.into_iter().take(32) {
+            let vellum_types::Node::Script(script) = &node else {
+                continue;
+            };
+            if script.src.starts_with('/') || script.src.split('/').any(|p| p == "..") {
+                continue;
+            }
+            let file = if dir.is_empty() {
+                script.src.clone()
+            } else {
+                format!("{dir}/{}", script.src)
+            };
+            let Ok(bytes) = fs.read(&file) else { continue };
+            let Ok(source) = String::from_utf8(bytes) else {
+                continue;
+            };
+            if let Ok(output) = vellum_core::script_nodes::evaluate(
+                &*runtime,
+                doc,
+                &node,
+                &source,
+                &Default::default(),
+                &mut ids,
+            ) {
+                outputs.insert((path.to_owned(), node.id().clone()), output);
+            }
+        }
+        outputs
+    }
+
+    /// Draws `target` (a page or node id) of the document at `path` at `scale`, as `screenshot` returns it. A
+    /// file the daemon's engine holds is drawn with its own scene; one an in-process editor link holds asks that
+    /// editor.
+    pub fn render(
+        &mut self,
+        path: &str,
+        target: &str,
+        scale: f64,
+    ) -> Result<ScriptValue, TargetError> {
+        let doc = self.target(path)?.snapshot()?;
+        if matches!(
+            self.open.get(path).map(|e| &e.holder),
+            Some(Holder::Live(_))
+        ) {
+            return self.target(path)?.render(target, scale);
+        }
+        let options = ScriptValue::Map(
+            [("scale".to_owned(), ScriptValue::Number(scale))]
+                .into_iter()
+                .collect(),
+        );
+        self.services_for(path, &doc)
+            .read(
+                vellum_core::doc_api::Method::Screenshot,
+                &doc,
+                &[ScriptValue::Text(target.to_owned()), options],
+            )
+            .map_err(|e| TargetError::Render(e.to_string()))
+    }
+
     /// Prepare an export from the current snapshot, resolving only canvas-owned asset references. No
     /// arbitrary paths or URLs are accepted and nothing is written. Assets are hash-verified by FsAssets.
     pub fn export_scene(
@@ -662,7 +795,141 @@ impl Documents {
     pub fn writer(&self, path: &str) -> Option<&EditorId> {
         match &self.open.get(path)?.holder {
             Holder::Live(live) => Some(live.writer()),
-            Holder::Headless(_) => None,
+            Holder::Headless(target) => target.editors().next(),
+        }
+    }
+
+    fn replicated(&mut self, path: &str) -> Result<&mut HeadlessTarget, TargetError> {
+        match self.open.get_mut(path).map(|e| &mut e.holder) {
+            Some(Holder::Headless(target)) => Ok(target),
+            // An in-process editor link holds the file (tests of ADR-020's forwarding target).
+            Some(Holder::Live(_)) => Err(TargetError::ReadOnly),
+            None => Err(TargetError::Gone),
+        }
+    }
+
+    /// An editor opens `path` as a replica of the daemon's engine (ADR-033); its person edits as `actor`. The
+    /// first editor is the writer and later ones attach, but all of them edit the one engine through updates.
+    pub fn attach_editor(
+        &mut self,
+        path: &str,
+        editor: EditorId,
+        actor: Actor,
+    ) -> Result<(EditorStart, Option<RecoveryCopy>), TargetError> {
+        self.drop_lost(path);
+        if !self.open.contains_key(path) {
+            self.load(path)?;
+        }
+        let recovery = self.recovery.find(path);
+        let target = self.replicated(path)?;
+        // Anything a failed save left behind is written now, or the editor would open over it.
+        if target.editors().next().is_none() && target.is_dirty()? {
+            target.save()?;
+        }
+        let start = target.attach(editor, actor);
+        self.sync_headless(path)?;
+        Ok((start, recovery))
+    }
+
+    /// An editor's person edited `path`: `updates` join the engine when every change in them is that person's.
+    pub fn editor_push(
+        &mut self,
+        path: &str,
+        editor: &EditorId,
+        updates: &SyncPayload,
+    ) -> Result<ChangeSet, TargetError> {
+        self.replicated(path)?.push(editor, updates)
+    }
+
+    /// The engine's revision and document, for a host's Save As, backup or dirty check.
+    pub fn editor_snapshot(&mut self, path: &str) -> Result<(u64, Document), TargetError> {
+        let target = self.replicated(path)?;
+        Ok((target.revision(), target.snapshot()?))
+    }
+
+    pub fn editor_revision(&mut self, path: &str) -> Result<u64, TargetError> {
+        Ok(self.replicated(path)?.revision())
+    }
+
+    /// A host puts `doc` in place of the engine's document: as one change by the file (Revert, which also makes
+    /// it the saved state) or by a recovery copy (unsaved work coming back). Answers the new revision.
+    pub fn editor_replace(
+        &mut self,
+        path: &str,
+        doc: &Document,
+        replace: Replace,
+    ) -> Result<u64, TargetError> {
+        let target = self.replicated(path)?;
+        let ops = diff(&target.snapshot()?, doc)
+            .map_err(|e| TargetError::Write(vellum_core::guard::WriteError::Invalid(e)))?;
+        match replace {
+            Replace::Revert => {
+                if ops.is_empty() {
+                    target.file_is(doc.clone());
+                } else {
+                    target.apply_from_file(
+                        Transaction::new(file_actor(FileReason::ExternalChange), ops),
+                        doc.clone(),
+                    )?;
+                }
+                let revision = target.revision();
+                self.editor_saved(path, doc)?;
+                Ok(revision)
+            }
+            Replace::Recovery => {
+                if !ops.is_empty() {
+                    target.transact(Transaction::new(file_actor(FileReason::Recovery), ops))?;
+                }
+                Ok(target.revision())
+            }
+        }
+    }
+
+    /// Revert: the engine goes back to what the file on disk holds now.
+    pub fn editor_revert(&mut self, path: &str) -> Result<u64, TargetError> {
+        let file = self.open.get(path).ok_or(TargetError::Gone)?.file.clone();
+        let doc = file.read()?.document;
+        self.editor_replace(path, &doc, Replace::Revert)
+    }
+
+    /// The sync adapter of `path`'s engine, which an editor's updates must come from.
+    pub fn editor_adapter(&mut self, path: &str) -> Result<&'static str, TargetError> {
+        Ok(self.replicated(path)?.adapter_id())
+    }
+
+    /// What a replica that has seen `since` lacks: agents', other editors' and the file's changes.
+    pub fn editor_pull(
+        &mut self,
+        path: &str,
+        since: &SyncCursor,
+    ) -> Result<SyncPayload, TargetError> {
+        Ok(self.replicated(path)?.pull(since))
+    }
+
+    /// The editor's host wrote `path` (its Save). The daemon reads what is there now: that is the file, the
+    /// watcher's report of the write is ignored, and the backup goes.
+    pub fn editor_wrote(&mut self, path: &str) -> Result<(), TargetError> {
+        let file = self.open.get(path).ok_or(TargetError::Gone)?.file.clone();
+        let loaded = file.read()?;
+        self.replicated(path)?.file_is(loaded.document.clone());
+        self.editor_saved(path, &loaded.document)?;
+        Ok(())
+    }
+
+    /// An editor closed `path`. When it was the last one and the person did not save, the unsaved work is
+    /// dropped with the engine (the next tool call opens the file again); otherwise the daemon goes back to
+    /// saving agents' changes itself.
+    pub fn detach_editor(&mut self, path: &str, editor: &EditorId) {
+        let Ok(target) = self.replicated(path) else {
+            return;
+        };
+        if target.detach(editor) {
+            return;
+        }
+        if target.is_dirty().unwrap_or(true) {
+            self.open.remove(path);
+            self.watcher.unwatch(path);
+            let _ = self.recovery.discard(path);
         }
     }
 
@@ -782,11 +1049,10 @@ impl Documents {
         ) {
             return !self.open.contains_key(path);
         }
-        if self
-            .open
-            .get_mut(path)
-            .is_some_and(|entry| holder_target(&mut entry.holder).is_dirty().unwrap_or(true))
-        {
+        if self.open.get_mut(path).is_some_and(|entry| {
+            matches!(&entry.holder, Holder::Headless(t) if t.editors().next().is_some())
+                || holder_target(&mut entry.holder).is_dirty().unwrap_or(true)
+        }) {
             return false;
         }
         self.open.remove(path);
@@ -923,8 +1189,11 @@ impl Documents {
         let paths: Vec<String> = self.open.keys().cloned().collect();
         for path in paths {
             let entry = self.open.get_mut(&path).expect("present");
-            let Holder::Live(live) = &mut entry.holder else {
-                continue;
+            let live: &mut dyn DocumentTarget = match &mut entry.holder {
+                Holder::Live(live) => live,
+                // A replicated engine holds unsaved work only while an editor is attached.
+                Holder::Headless(target) if target.editors().next().is_some() => &mut **target,
+                Holder::Headless(_) => continue,
             };
             if entry
                 .copied_at

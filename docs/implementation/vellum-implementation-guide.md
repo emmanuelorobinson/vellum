@@ -1205,7 +1205,7 @@ Read: ARCHITECTURE §4.3; guide §9 (quantization), Invariant 5.
 - quantization idempotent
 
 ## FINAL
-cargo test -p codec-json · fuzz target skeleton for the decoder
+cargo test -p vellum-codec-json · fuzz target skeleton for the decoder
 ```
 
 ---
@@ -1225,7 +1225,7 @@ Read: ARCHITECTURE §2 (whole), §3.1, §3.4 (trait sketches).
 - check-deps enforced for vellum-core
 
 ## FINAL
-cargo test -p vellum-core -p contracts · deps:check
+cargo test -p vellum-core -p vellum-contracts · deps:check
 ```
 
 ---
@@ -1269,7 +1269,7 @@ Read: ARCHITECTURE §4.1 notes, §5; DESIGN.md C16, C29, C38.
 - every op: valid case, each invalid case, inverse
 
 ## FINAL
-cargo test ops:: · fixtures for scale and slots
+cargo test -p vellum-core ops:: · fixtures for scale and slots
 ```
 
 ---
@@ -1289,7 +1289,7 @@ Read: guide Invariant 4, §10.2; ARCHITECTURE §5 (Guard), §7.5.
 - exhaustive table tests over actor kinds × lease states × pause states
 
 ## FINAL
-cargo test guard:: lease::
+cargo test -p vellum-core -- guard:: lease::
 ```
 
 ---
@@ -1311,7 +1311,7 @@ refs/loro/context/{tree-events,loro-js-tree-diff}.md; ARCHITECTURE §4.2; guide 
 - Invariant 3 property test: 3 actors interleaved, random undos
 
 ## FINAL
-cargo test -p doc-loro · contract suite
+cargo test -p vellum-doc-loro · contract suite
 ```
 
 ---
@@ -1331,7 +1331,7 @@ DESIGN.md C22.
 - fuzz target for merge inputs
 
 ## FINAL
-cargo test diff:: merge:: · fuzz smoke
+cargo test -p vellum-core -- diff:: merge:: · fuzz smoke
 ```
 
 ---
@@ -1371,7 +1371,7 @@ Read: ARCHITECTURE §4.1 (overrides, slots), §4.4; DESIGN.md C16, C29, C36, S14
 - fixtures for every §7.4 parity row about components, slots and libraries
 
 ## FINAL
-cargo test resolver::components resolver::libraries
+cargo test -p vellum-core -- resolver::components resolver::libraries
 ```
 
 ---
@@ -1408,7 +1408,7 @@ refs/penpot/render-wasm/docs/texts.md; DESIGN.md C14, C37, S03.
 - TextEngine contract suite; text fixtures from Prompt 5
 
 ## FINAL
-cargo test -p text-parley · text fixtures
+cargo test -p vellum-text-parley · text fixtures
 ```
 
 ---
@@ -1444,7 +1444,7 @@ Read: ARCHITECTURE §3.2 (DrawCmd), §5 (Layout check, Display list).
   DISPLAY_LIST_VERSION; deterministic bytes for the same input
 
 ## FINAL
-cargo test layout_check:: display_list::
+cargo test -p vellum-core -- layout_check:: display_list::
 ```
 
 ---
@@ -1472,7 +1472,7 @@ Choose between:
 Recommended default: B, with A kept as the fallback path that the binaries workflow itself uses.
 Decide with measurements, and record in ADR-010:
 - cold and cached build times per target (macOS arm64/x64, Windows x64/arm64, Linux x64/arm64)
-- local dev experience: time from fresh clone to `cargo test -p render-skia`
+- local dev experience: time from fresh clone to `cargo test -p vellum-render-skia`
 - CI minutes per PR under each option
 - archive sizes; where they're hosted; how checksums are verified before use
 - how the macOS 27 bindings patch is applied and when it's removed (see below)
@@ -1592,7 +1592,7 @@ Script nodes:
   in undo); Convert to layers = one transaction; errors carry an excerpt for the node
 
 ## FINAL
-cargo test script_nodes:: doc_api:: · header parser fuzz target
+cargo test --workspace -- script_nodes:: doc_api:: · header parser fuzz target
 ```
 
 ---
@@ -1762,7 +1762,7 @@ refs/goose/crates/goose/src/session/{session_manager,session_naming}.rs; guide �
 ADR-006-sessions.
 
 ## FINAL
-cargo test sessions:: turns::
+cargo test --workspace -- sessions:: turns::
 ```
 
 ---
@@ -1884,7 +1884,7 @@ Read: ARCHITECTURE §3.5; DESIGN.md C19, C20; W3C DTCG spec.
 - tools: get_spec, import_tokens, export_tokens
 
 ## FINAL
-cargo test tokens:: spec::
+cargo test --workspace -- tokens:: spec::
 ```
 
 ---

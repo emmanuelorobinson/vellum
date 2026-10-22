@@ -97,6 +97,9 @@ export const TOKENS_END = "@@vellum-tokens-end";
 
 // A foreground can be backed by an earlier sibling (for example an initial over a disc).
 // Only opaque, unrotated, covering simple shapes qualify; all other pairs keep the ancestor check.
+// A disc backs a single character when it covers the centre of the character's line (the design
+// draws some initials left-aligned or offset in a box larger than the disc) and is at least the font
+// size tall.
 export function tokenBackdrop(node, ctx, paints, variables) {
   let child = ctx;
   for (let parent = ctx.parentCtx; parent; child = parent, parent = parent.parentCtx) {
@@ -107,23 +110,24 @@ export function tokenBackdrop(node, ctx, paints, variables) {
       const paint = siblings[i];
       const b = paint.bounds,
         t = child.bounds;
-      if (
-        paint.rotation ||
-        !b ||
-        !t ||
+      if (paint.rotation || !b || !t) continue;
+      if (paint.type === "ellipse") {
+        if (
+          node.type !== "text" ||
+          typeof node.content !== "string" ||
+          [...node.content].length !== 1 ||
+          !(node.fontSize <= b.height)
+        )
+          continue;
+        const line = Math.min(t.height, node.fontSize * (node.lineHeight || 1.2));
+        const dx = (t.x + t.width / 2 - (b.x + b.width / 2)) / (b.width / 2);
+        const dy = (t.y + line / 2 - (b.y + b.height / 2)) / (b.height / 2);
+        if (dx * dx + dy * dy > 1) continue;
+      } else if (
         b.x > t.x ||
         b.y > t.y ||
         b.x + b.width < t.x + t.width ||
         b.y + b.height < t.y + t.height
-      )
-        continue;
-      if (
-        paint.type === "ellipse" &&
-        (node.type !== "text" ||
-          typeof node.content !== "string" ||
-          [...node.content].length !== 1 ||
-          node.textAlign !== "center" ||
-          node.fontSize > b.height)
       )
         continue;
       const value = paint.fill?.startsWith("$")

@@ -95,3 +95,37 @@ test("unrelated, transparent, rotated or small siblings never mask a failing pai
     "$chrome/panel",
   );
 });
+test("an initial drawn left-aligned or offset on its disc still uses the disc", () => {
+  // vellum.pen's comment pins and member markers: a fixed-width, left-aligned "2" in a 26x15 box over a
+  // 26 px disc, and a centred "2" in a 30 px box over a 30 px disc inset by 4 px. The glyph sits on the disc.
+  const disc = (b) => new Map([["marker", [{ type: "ellipse", fill: "$chrome/text", bounds: b }]]]);
+  const left = { type: "text", content: "2", fontSize: 11, lineHeight: 1.4 };
+  assert.equal(
+    tokenBackdrop(
+      left,
+      { ...ctx, bounds: { x: 0, y: 0, width: 26, height: 15 } },
+      disc({ x: 0, y: 0, width: 26, height: 26 }),
+      variables,
+    ),
+    "$chrome/text",
+  );
+  assert.equal(
+    tokenBackdrop(
+      { ...text, content: "2" },
+      { ...ctx, bounds: { x: 0, y: 0, width: 30, height: 30 } },
+      disc({ x: 4, y: 4, width: 30, height: 30 }),
+      variables,
+    ),
+    "$chrome/text",
+  );
+  // A line whose centre is off the disc keeps the ancestor.
+  assert.equal(
+    tokenBackdrop(
+      left,
+      { ...ctx, bounds: { x: 0, y: 0, width: 26, height: 15 } },
+      disc({ x: 20, y: 0, width: 26, height: 26 }),
+      variables,
+    ),
+    "$chrome/panel",
+  );
+});

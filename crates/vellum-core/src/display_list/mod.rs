@@ -406,7 +406,14 @@ impl Builder<'_> {
         }) {
             self.out.painted.push(r.address.clone());
         }
-        if shape.is_none() && !matches!(n, Node::Text(_) | Node::Group(_)) {
+        // Notes, context and prompts are annotations: the editor draws them as overlays, and exports and
+        // screenshots leave them out (reports.md, Prompt 29, decided 2026-10-22).
+        if shape.is_none()
+            && !matches!(
+                n,
+                Node::Text(_) | Node::Group(_) | Node::Note(_) | Node::Context(_) | Node::Prompt(_)
+            )
+        {
             self.out.problems.push(Problem::UnsupportedNode {
                 node: r.address.clone(),
                 kind: n.kind(),

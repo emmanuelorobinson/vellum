@@ -387,6 +387,7 @@ pub fn documents(state: &Path) -> std::io::Result<Documents> {
         ids: Box::new(|| Box::new(RandomIds)),
         services: scene_services(),
         export_services: Some(export_services),
+        document_services: Some(snapshot_services),
         scripts: script_runtime(),
         entropy: Box::new(entropy),
     };

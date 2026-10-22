@@ -51,8 +51,22 @@ describe("extension activation", () => {
       extensionPath: "/extension",
       globalStorageUri: { fsPath: "/storage" },
       subscriptions: [],
+      globalState: new (class {
+        values = new Map<string, unknown>();
+        get(key: string) {
+          return this.values.get(key);
+        }
+        async update(key: string, value: unknown) {
+          this.values.set(key, value);
+        }
+      })(),
     } as unknown as ExtensionContext;
     activate(context);
+    // The installation's device is a ULID, made once and kept.
+    const device = (context.globalState as unknown as { values: Map<string, string> }).values.get(
+      "vellum.device",
+    );
+    expect(device).toMatch(/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/);
     expect(mock.provider).toHaveBeenCalledWith("vellum.design", expect.anything(), {
       supportsMultipleEditorsPerDocument: true,
     });

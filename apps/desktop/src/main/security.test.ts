@@ -23,6 +23,9 @@ describe("desktop renderer boundary", () => {
     }
     expect(trustedSender({ senderFrame: null, sender: { mainFrame: frame } })).toBe(false);
     expect(CSP).toContain("connect-src 'none'");
+    // The document engine compiles WebAssembly; JavaScript eval stays off.
+    expect(CSP).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(CSP).not.toContain("'unsafe-eval'");
     expect(CSP).toContain("frame-src 'none'");
   });
   it("serves only bundled assets, with no filesystem or credential routes", () => {

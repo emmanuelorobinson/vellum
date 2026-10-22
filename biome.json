@@ -18,7 +18,11 @@
       "!fixtures/layout-oracle/expected",
       "!fixtures/text/prompt5.json",
       "!crates/vellum/tests/snapshots",
-      "!crates/adapters/icons/data"
+      "!crates/adapters/icons/data",
+      "!fixtures/agent-panel",
+      "!fixtures/security/prompt-injection.json",
+      "!fixtures/browser",
+      "!examples/scripts"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

@@ -18,5 +18,12 @@ pub extern "C" fn vellum_format_version() -> u32 {
 pub extern "C" fn vellum_display_list_version() -> u32 {
     vellum_types::display::DISPLAY_LIST_VERSION
 }
+#[cfg(all(feature = "engine", target_os = "emscripten"))]
+mod abi;
+#[cfg(all(
+    feature = "engine",
+    not(all(target_arch = "wasm32", target_os = "unknown"))
+))]
+pub mod engine;
 #[cfg(target_os = "emscripten")]
 mod renderer;
