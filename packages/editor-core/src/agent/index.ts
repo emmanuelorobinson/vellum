@@ -1,6 +1,7 @@
 export * from "./collaboration";
 export * from "./composer";
 export * from "./controller";
+export * from "./daemon-feed";
 export * from "./engines";
 export * from "./fake";
 export * from "./feed";

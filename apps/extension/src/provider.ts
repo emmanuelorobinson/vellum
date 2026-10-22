@@ -235,6 +235,30 @@ export class DesignEditorProvider
           }
           return;
         }
+        if (value.type === "agentFeed") {
+          try {
+            if (document.uri.scheme !== "file") throw Error("not a file");
+            const result = await this.daemon.agentFeed({
+              action: value.action,
+              path: document.uri.fsPath,
+              ...value.params,
+              ...(value.action === "undoTurn" ? { device: this.device } : {}),
+            });
+            await panel.webview.postMessage({
+              type: "agentFeed",
+              requestId: value.requestId,
+              ok: true,
+              result,
+            });
+          } catch {
+            await panel.webview.postMessage({
+              type: "agentFeed",
+              requestId: value.requestId,
+              ok: false,
+            });
+          }
+          return;
+        }
         if (value.type === "shareOpen") {
           if (shareUrl) await vscode.env.openExternal(vscode.Uri.parse(shareUrl, true));
           return;

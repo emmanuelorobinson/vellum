@@ -4,6 +4,7 @@ import {
   createFigmaImport,
   createPreferences,
   createSettingsController,
+  DaemonAgentFeed,
 } from "@vellum/editor-core";
 import {
   BrowserImportPanel,
@@ -45,8 +46,6 @@ preferences.subscribe(syncTelemetry);
 void preferences.load();
 
 interface EngineLoad {
-  wasm: Uint8Array;
-  fonts: Uint8Array[];
   live: boolean;
   device: string;
   path: string;
@@ -58,16 +57,22 @@ interface Editor {
   settings: ReturnType<typeof createSettingsController>;
 }
 /** One editor module for the window; each tab is an engine in it (ADR-033). */
-let moduleLoad: Promise<EngineModule> | undefined;
-function loadModule(wasm: Uint8Array) {
-  moduleLoad ??= createEditor({
-    canvas: document.createElement("canvas"),
-    noInitialRun: true,
-    wasmBinary: wasm,
-    locateFile: (path) => path,
-  }).then((module) => {
+let moduleLoad: Promise<{ module: EngineModule; fonts: Uint8Array[] }> | undefined;
+function loadModule() {
+  moduleLoad ??= bridge.request({ type: "engineModule" }).then(async (reply) => {
+    if (!reply.ok || !reply.value) throw Error("The document engine could not start");
+    const { wasm, fonts } = reply.value as { wasm: Uint8Array; fonts: Uint8Array[] };
+    const module = await createEditor({
+      canvas: document.createElement("canvas"),
+      noInitialRun: true,
+      wasmBinary: wasm,
+      locateFile: (path) => path,
+    });
     if (!isEngineModule(module)) throw Error("The editor module has no document engine");
-    return module;
+    return { module, fonts };
+  });
+  moduleLoad.catch(() => {
+    moduleLoad = undefined;
   });
   return moduleLoad;
 }
@@ -75,7 +80,7 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
   const reply = await bridge.request({ type: "engineLoad", tab });
   if (!reply.ok || !reply.value) throw Error("The document engine could not start");
   const load = reply.value as EngineLoad;
-  const module = await loadModule(load.wasm);
+  const { module, fonts } = await loadModule();
   let replica: EditorReplica | null = null;
   let engine: WasmDocumentEngine;
   if (load.live) {
@@ -93,7 +98,7 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
       updates: start.updates,
       path: load.path,
       readOnly: false,
-      fonts: load.fonts,
+      fonts,
     });
     const live = engine;
     replica = new EditorReplica(engine, wire, {
@@ -108,7 +113,7 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
       file: load.file,
       path: load.path,
       readOnly: true,
-      fonts: load.fonts,
+      fonts,
     });
   }
   const live = createLiveEditor({
@@ -116,6 +121,23 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
     engine,
     device: load.device || "01JA0000000000000000000000",
     pauseAll: () => void bridge.request({ type: "pauseAll" }),
+    ...(load.device
+      ? {
+          agentFeed: new DaemonAgentFeed(
+            async (action, params) => {
+              const reply = await bridge.request({
+                type: "agentFeed",
+                tab,
+                action: action as never,
+                params: params as Record<string, string | number>,
+              });
+              if (!reply.ok) throw Error("The agent feed is unavailable");
+              return reply.value;
+            },
+            { device: load.device as never },
+          ),
+        }
+      : {}),
     preferences,
   });
   const settings = createSettingsController({
@@ -160,7 +182,8 @@ function App() {
           editor.live.dispose();
           editors.delete(id);
         }
-      for (const id of ids)
+      // A tab's engine starts when the tab is first shown, not when it opens.
+      for (const id of state.active ? [state.active] : [])
         if (!editors.has(id) && !loading.has(id) && !failed.has(id)) {
           loading.add(id);
           makeEditor(id, state.platform).then(
@@ -300,6 +323,7 @@ function App() {
         engine={live.client}
         design={live.design}
         paintEditor={live.paintEditor}
+        {...(live.agent ? { agent: live.agent } : {})}
         content={live.content}
         createRenderer={live.createRenderer}
         browser={browserImport.current.host.browser}

@@ -1,6 +1,6 @@
 // TEST DATA: a scripted feed; the transcripts are fixtures/agent-panel/*.json, made by the Prompt 36–37 engines.
 import { copy } from "@vellum/config";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import claudeCode from "../../../../fixtures/agent-panel/claude-code.json";
 import codex from "../../../../fixtures/agent-panel/codex.json";
 import { createAgentController } from "./controller";
@@ -253,4 +253,18 @@ describe("installed-engine transcripts (Prompts 36–37)", () => {
       expect(t?.items).toEqual([{ type: "prose", key: "p:0", text: prose, streaming: false }]);
       expect(t?.footerLines[1]).toMatch(/ · \d+k tokens$/);
     });
+});
+
+describe("a session that starts while the panel is open", () => {
+  it("opens when nothing is open yet, and never replaces the one the person is reading", async () => {
+    const feed = new FakeAgentFeed([], { [S1]: twoTurns(), [S2]: [] });
+    const c = createAgentController({ feed, now: () => 0, timeZone: "UTC" });
+    await c.load();
+    expect(c.state.current).toBeNull();
+    feed.emit({ type: "sessions", sessions: [info(S2)] });
+    await vi.waitFor(() => expect(c.state.current).toBe(S2));
+    feed.emit({ type: "sessions", sessions: [info(S1, { updatedAt: 99 }), info(S2)] });
+    await Promise.resolve();
+    expect(c.state.current).toBe(S2);
+  });
 });

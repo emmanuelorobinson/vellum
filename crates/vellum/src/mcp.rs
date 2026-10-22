@@ -450,6 +450,144 @@ impl McpServer {
         }
     }
 
+    /// The Agent tab's feed for one document: its sessions, their events since a point, a step's picture, and the
+    /// person's controls (remove a session, undo a turn, stop its agent). Host-only, outside the agent tool
+    /// registry; scoped to the connection's workspace like `vellum/editor`.
+    fn host_agent_feed(&mut self, conn: u64, params: &Value) -> Result<Value, (i64, String)> {
+        use vellum_core::ports::{EventBody, EventSeq, ImageRef, SessionKind};
+        use vellum_core::sessions::{body_to_json, origin_to_json};
+        let invalid = || {
+            (
+                -32602,
+                "The agent feed needs a design path in the host workspace and a supported action"
+                    .to_owned(),
+            )
+        };
+        let unavailable = || (-32000, "Sessions are unavailable".to_owned());
+        if self.client(conn).is_none() {
+            return Err((-32002, "Initialize the host connection first".to_owned()));
+        }
+        let object = params.as_object().ok_or_else(invalid)?;
+        let text = |key: &str| object.get(key).and_then(Value::as_str).ok_or_else(invalid);
+        let action = text("action")?;
+        let path = text("path")?;
+        let root = self
+            .sessions
+            .get(&conn)
+            .and_then(|s| s.cwd.clone())
+            .or_else(|| self.default_cwd.clone());
+        if !scoped_design(root.as_ref(), path) {
+            return Err(invalid());
+        }
+        let log = self.log.as_ref().ok_or_else(unavailable)?;
+        let metas = log
+            .metadata(std::path::Path::new(path))
+            .map_err(|_| unavailable())?;
+        if action == "sessions" {
+            let connected: std::collections::BTreeSet<_> = self
+                .sessions
+                .values()
+                .filter_map(|s| s.agent().cloned())
+                .collect();
+            let mut rows = vec![];
+            for meta in &metas {
+                let recent = log
+                    .store()
+                    .events(&meta.id, Some(EventSeq(meta.events.saturating_sub(100))))
+                    .map_err(|_| unavailable())?;
+                let state = recent.iter().rev().find_map(|e| match &e.body {
+                    EventBody::Turn(change) => Some(change.to.as_str()),
+                    _ => None,
+                });
+                let (kind, external) = match &meta.kind {
+                    SessionKind::Engine { engine } => {
+                        (json!({"type":"engine","engine":engine}), false)
+                    }
+                    SessionKind::External { client } => {
+                        (json!({"type":"external","client":client}), true)
+                    }
+                };
+                let mut row = json!({
+                    "id": meta.id.as_str(), "kind": kind, "agent": meta.agent.as_str(),
+                    "title": meta.title, "createdAt": meta.created_at.0, "updatedAt": meta.updated_at.0,
+                    "state": state, "agents": 1,
+                });
+                if external {
+                    row["connected"] = json!(connected.contains(&meta.agent));
+                }
+                rows.push(row);
+            }
+            rows.sort_by_key(|r| std::cmp::Reverse(r["updatedAt"].as_i64().unwrap_or(0)));
+            return Ok(Value::Array(rows));
+        }
+        if action == "image" {
+            let hash = ImageRef::new(text("hash")?).ok_or_else(invalid)?;
+            let bytes = log
+                .store()
+                .image(&hash)
+                .map_err(|_| unavailable())?
+                .ok_or((-32000, "No such picture".to_owned()))?;
+            return Ok(json!({"mime":"image/png","base64":vellum_core::base64::encode(&bytes)}));
+        }
+        let meta = metas
+            .iter()
+            .find(|m| Some(m.id.as_str()) == object.get("session").and_then(Value::as_str))
+            .ok_or((-32000, "No such session for this document".to_owned()))?
+            .clone();
+        match action {
+            "events" => {
+                let since = object.get("since").and_then(Value::as_u64).unwrap_or(0);
+                let events = log
+                    .store()
+                    .events(&meta.id, Some(EventSeq(since)))
+                    .map_err(|_| unavailable())?;
+                Ok(Value::Array(
+                    events
+                        .iter()
+                        .filter(|e| e.seq.0 > since)
+                        .map(|e| {
+                            json!({"seq": e.seq.0, "at": e.at.0, "origin": origin_to_json(&e.origin),
+                                   "body": body_to_json(&e.body)})
+                        })
+                        .collect(),
+                ))
+            }
+            "remove" => {
+                log.store().delete(&meta.id).map_err(|_| unavailable())?;
+                Ok(json!({"done": true}))
+            }
+            "stop" => {
+                self.docs
+                    .control_all(&vellum_core::guard::AgentControl::Stop(meta.agent));
+                Ok(json!({"done": true}))
+            }
+            "undoTurn" => {
+                let device = vellum_types::DeviceId::new(text("device")?).map_err(|_| invalid())?;
+                let turn = match object.get("turn").and_then(Value::as_str) {
+                    Some(turn) => vellum_types::TurnId::new(turn).map_err(|_| invalid())?,
+                    None => log
+                        .store()
+                        .events(&meta.id, None)
+                        .map_err(|_| unavailable())?
+                        .iter()
+                        .rev()
+                        .find_map(|e| match &e.body {
+                            EventBody::Turn(change) => Some(change.turn.clone()),
+                            _ => None,
+                        })
+                        .ok_or((-32000, "The session has no turn to undo".to_owned()))?,
+                };
+                let undone = self
+                    .docs
+                    .target(path)
+                    .and_then(|t| t.undo_turn(&turn, &vellum_types::Actor::Person { device }))
+                    .map_err(|e| (-32000, e.to_string()))?;
+                Ok(json!({"undone": undone != vellum_core::ports::TurnUndone::Nothing}))
+            }
+            _ => Err(invalid()),
+        }
+    }
+
     /// An editor's replica of a document (ADR-033): open, push its person's updates, pull everyone else's, record
     /// its save, close. Host-only, outside the agent tool registry. Editors are named per connection, so one
     /// connection never acts for another's editor.
@@ -656,6 +794,7 @@ impl McpServer {
             "vellum/hostState" => self.host_state(conn, &params),
             "vellum/recovery" => self.host_recovery(conn, &params),
             "vellum/editor" => self.host_editor(conn, &params),
+            "vellum/agentFeed" => self.host_agent_feed(conn, &params),
             "initialize" => self.initialize(conn, &params).map_err(|m| (-32602, m)),
             "ping" => Ok(json!({})),
             // Host control is separate from the agent tool registry. The local authenticated connection

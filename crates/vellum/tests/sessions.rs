@@ -97,6 +97,88 @@ mod sessions {
         );
     }
 
+    #[test]
+    fn the_agent_feed_lists_sessions_streams_events_and_removes_them() {
+        let mut server = server();
+        rpc(
+            &mut server,
+            1,
+            "initialize",
+            json!({"protocolVersion":"2025-11-25", "clientInfo":{"name":"Claude Code"}}),
+        );
+        call(
+            &mut server,
+            "open_document",
+            json!({"path":"design/app.vellum"}),
+        );
+        call(
+            &mut server,
+            "insert_nodes",
+            json!({"parent": "pageHome01", "nodes": [{"type": "rect", "width": 40, "height": 20}]}),
+        );
+        let feed =
+            |server: &mut McpServer, params: Value| rpc(server, 11, "vellum/agentFeed", params);
+        let path = "/work/a/design/app.vellum";
+        let sessions =
+            feed(&mut server, json!({"action":"sessions","path":path}))["result"].clone();
+        let rows = sessions.as_array().expect("sessions");
+        assert_eq!(rows.len(), 1, "{sessions}");
+        assert_eq!(
+            rows[0]["kind"],
+            json!({"type":"external","client":"Claude Code"})
+        );
+        assert_eq!(rows[0]["title"], "Claude Code");
+        assert_eq!(rows[0]["state"], Value::Null);
+        assert_eq!(rows[0]["connected"], true, "its MCP connection is open");
+        let id = rows[0]["id"].as_str().unwrap().to_owned();
+        let events = feed(
+            &mut server,
+            json!({"action":"events","path":path,"session":id,"since":0}),
+        )["result"]
+            .clone();
+        let events = events.as_array().unwrap();
+        assert!(events.len() >= 2, "{events:?}");
+        assert_eq!(events[0]["seq"], 1);
+        assert_eq!(events[1]["body"]["type"], "step");
+        let last = events.last().unwrap()["seq"].as_u64().unwrap();
+        let none = feed(
+            &mut server,
+            json!({"action":"events","path":path,"session":id,"since":last}),
+        );
+        assert_eq!(none["result"], json!([]), "only what is new");
+        // A session of another document is not reachable through this path.
+        assert_eq!(
+            feed(
+                &mut server,
+                json!({"action":"events","path":"/work/a/other.vellum","session":id,"since":0})
+            )["error"]["code"],
+            -32000
+        );
+        assert_eq!(
+            feed(
+                &mut server,
+                json!({"action":"sessions","path":"/elsewhere/x.vellum"})
+            )["error"]["code"],
+            -32602
+        );
+        assert_eq!(
+            feed(
+                &mut server,
+                json!({"action":"remove","path":path,"session":id})
+            )["result"],
+            json!({"done": true})
+        );
+        assert_eq!(
+            feed(&mut server, json!({"action":"sessions","path":path}))["result"],
+            json!([])
+        );
+        assert!(
+            !rpc(&mut server, 12, "tools/list", json!({}))
+                .to_string()
+                .contains("agentFeed")
+        );
+    }
+
     fn steps(store: &dyn SessionStore, id: &SessionId) -> Vec<StepRecord> {
         store
             .events(id, None)

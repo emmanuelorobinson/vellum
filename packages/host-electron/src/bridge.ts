@@ -1,4 +1,6 @@
 import {
+  type AgentFeedAction,
+  agentFeedRequest,
   type BrowserCapture,
   type BrowserPort,
   type BrowserRequest,
@@ -110,10 +112,19 @@ export type DesktopRequest =
   | { type: "recovery"; id: string; action: "save" | "saveAs" | "discard" | "cancel" }
   | { type: "notifications"; enabled: boolean }
   | { type: "activate" | "close" | "readDocument"; tab: string }
-  /** The editor module, fonts and the tab's live or read-only start (ADR-033). */
+  /** The editor module and its fonts, once per window (ADR-033). */
+  | { type: "engineModule" }
+  /** The tab's live or read-only start. */
   | { type: "engineLoad"; tab: string }
   /** The tab's own editor at the daemon. */
   | { type: "engine"; tab: string; action: PanelAction; params: Record<string, string> }
+  /** The Agent tab's sessions for the tab's document (`vellum/agentFeed`). */
+  | {
+      type: "agentFeed";
+      tab: string;
+      action: AgentFeedAction;
+      params: Record<string, string | number>;
+    }
   | { type: "menu"; category: MenuCategory }
   | { type: "external"; url: string }
   | { type: "clipboardWrite"; text: string };
@@ -135,11 +146,16 @@ export function parseRequest(value: unknown): DesktopRequest | null {
   const v = value as Record<string, unknown>;
   const keys = Object.keys(v).sort().join(",");
   const tab = typeof v.tab === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(v.tab);
+  if (keys === "type" && v.type === "engineModule") return { type: "engineModule" };
   if (keys === "tab,type" && v.type === "engineLoad" && tab)
     return { type: "engineLoad", tab: v.tab as string };
   if (keys === "action,params,tab,type" && v.type === "engine" && tab) {
     const request = panelRequest(v.action, v.params);
     if (request) return { type: "engine", tab: v.tab as string, ...request };
+  }
+  if (keys === "action,params,tab,type" && v.type === "agentFeed" && tab) {
+    const request = agentFeedRequest(v.action, v.params);
+    if (request) return { type: "agentFeed", tab: v.tab as string, ...request };
   }
   if (keys === "enabled,type" && v.type === "telemetry" && typeof v.enabled === "boolean")
     return { type: "telemetry", enabled: v.enabled };

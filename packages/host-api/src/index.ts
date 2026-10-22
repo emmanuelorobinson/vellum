@@ -1,6 +1,7 @@
 /** Ports shared by editor compositions. Native credentials and sockets never cross this boundary. */
 export const PACKAGE_NAME = "@vellum/host-api";
 
+export * from "./agent-feed";
 export * from "./browser";
 export * from "./daemon-runtime";
 export * from "./editor-replica";

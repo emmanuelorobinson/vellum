@@ -1,5 +1,12 @@
 import type { Appearance } from "@vellum/host-api";
-import { type PanelAction, panelRequest, type ShareRequest, shareRequest } from "@vellum/host-api";
+import {
+  type AgentFeedAction,
+  agentFeedRequest,
+  type PanelAction,
+  panelRequest,
+  type ShareRequest,
+  shareRequest,
+} from "@vellum/host-api";
 export function appearance(kind: number): Appearance {
   switch (kind) {
     case 1:
@@ -22,6 +29,13 @@ export type WebviewMessage =
   | { type: "engineLoad" }
   /** The panel's own editor at the daemon (ADR-033). */
   | { type: "engine"; requestId: number; action: PanelAction; params: Record<string, string> }
+  /** The Agent tab's sessions for this document (`vellum/agentFeed`). */
+  | {
+      type: "agentFeed";
+      requestId: number;
+      action: AgentFeedAction;
+      params: Record<string, string | number>;
+    }
   | {
       type: "command";
       command: "save" | "openAsText" | "pauseAll" | "restartDaemon" | "connectAgents";
@@ -52,6 +66,15 @@ export function parseMessage(value: unknown): WebviewMessage | null {
   ) {
     const request = panelRequest(v.action, v.params);
     if (request) return { type: "engine", requestId: Number(v.requestId), ...request };
+  }
+  if (
+    keys === "action,params,requestId,type" &&
+    v.type === "agentFeed" &&
+    Number.isSafeInteger(v.requestId) &&
+    Number(v.requestId) > 0
+  ) {
+    const request = agentFeedRequest(v.action, v.params);
+    if (request) return { type: "agentFeed", requestId: Number(v.requestId), ...request };
   }
   if (
     keys === "command,type" &&

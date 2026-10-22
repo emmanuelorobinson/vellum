@@ -179,6 +179,11 @@ export class DaemonProcess {
       throw Error("invalid editor reply");
     return result as Record<string, unknown>;
   }
+  /** The daemon's `vellum/agentFeed` host method: the Agent tab's sessions for one document. */
+  async agentFeed(params: Record<string, unknown>): Promise<unknown> {
+    await this.connect();
+    return this.request("vellum/agentFeed", params);
+  }
   async pauseAll(): Promise<void> {
     await this.connect();
     const result = (await this.request("vellum/pauseAll", {})) as { paused?: boolean };

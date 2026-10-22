@@ -91,11 +91,20 @@ test("@electron folder windows, tabs, native menus and sidecar", async () => {
   await expect(page.locator("[data-content]").first()).toHaveAttribute("data-content", "ready", {
     timeout: 30_000,
   });
-  await page.getByRole("tab", { name: /a.vellum/ }).click();
-  await expect(page.getByRole("tab", { name: /a.vellum/ })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  // Selecting a tab swaps in its editor while its engine loads, so the tab bar is checked once that settles;
+  // the main process's state is what the click changes.
+  const tab = page.getByRole("tab", { name: /a.vellum/ });
+  const id = (await tab.getAttribute("id"))?.replace(/^tab-/, "");
+  await tab.click();
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const state = await window.vellumDesktop.request({ type: "state" });
+        return state.ok ? (state.value as { active?: string }).active : undefined;
+      }),
+    )
+    .toBe(id);
+  await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
   await expect
     .poll(() => page.evaluate(() => window.vellumDesktop.request({ type: "daemon" })), {
       timeout: 20_000,
@@ -140,6 +149,23 @@ test("@electron folder windows, tabs, native menus and sidecar", async () => {
   );
   expect(agent.status, agent.stderr).toBe(0);
   await expect.poll(tabState).toEqual({ problem: "", dirty: true });
+  // The agent's session reaches the Agent tab through the daemon's session store.
+  const sessions = await page.evaluate(async () => {
+    const state = await window.vellumDesktop.request({ type: "state" });
+    if (!state.ok) throw Error("missing state");
+    const active = (state.value as { active: string }).active;
+    const reply = await window.vellumDesktop.request({
+      type: "agentFeed",
+      tab: active,
+      action: "sessions",
+      params: {},
+    });
+    return reply.ok ? (reply.value as { title: string }[]) : [];
+  });
+  expect(sessions.length).toBeGreaterThan(0);
+  await expect(page.getByText(sessions[0]?.title ?? "", { exact: false }).first()).toBeVisible({
+    timeout: 10_000,
+  });
   expect(await readFile(file, "utf8")).not.toContain("By an agent");
   await menu("file.save");
   await expect.poll(() => readFile(file, "utf8")).toContain("By an agent");

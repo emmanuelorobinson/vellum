@@ -829,27 +829,38 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
       if (!entry.relay) throw Error("offline");
       return entry.relay.share(path, value.request);
     }
+    case "engineModule": {
+      const engine = (name: string) => readFile(join(__dirname, "../engine", name));
+      const [wasm, inter] = await Promise.all([
+        engine("vellum_editor.wasm"),
+        engine("InterVariable.ttf"),
+      ]);
+      return { wasm: new Uint8Array(wasm), fonts: [new Uint8Array(inter)] };
+    }
     case "engineLoad": {
       const path = model.path(requiredFolder(entry), value.tab);
       const pending = attaching.get(path);
       if (pending)
         await Promise.race([pending, new Promise((resolve) => setTimeout(resolve, 20_000))]);
       const held = runtimes.get(path);
-      const engine = (name: string) => readFile(join(__dirname, "../engine", name));
-      const [wasm, inter] = await Promise.all([
-        engine("vellum_editor.wasm"),
-        engine("InterVariable.ttf"),
-      ]);
       if (held && !held.panels.has(value.tab)) held.panels.set(value.tab, held.runtime.newPanel());
       return {
-        wasm: new Uint8Array(wasm),
-        fonts: [new Uint8Array(inter)],
         live: held !== undefined,
         device,
         path,
         // A read-only file is shown from its bytes; a live one comes from the daemon's engine.
         file: held ? null : new Uint8Array(await readFile(path)),
       };
+    }
+    case "agentFeed": {
+      const path = model.path(requiredFolder(entry), value.tab);
+      if (!entry.relay) throw Error("offline");
+      return entry.relay.agentFeed({
+        action: value.action,
+        path,
+        ...value.params,
+        ...(value.action === "undoTurn" ? { device } : {}),
+      });
     }
     case "engine": {
       const path = model.path(requiredFolder(entry), value.tab);

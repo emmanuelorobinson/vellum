@@ -80,6 +80,10 @@ export function createAgentController(deps: AgentControllerDeps) {
   const onUpdate = (u: FeedUpdate) => {
     if (u.type === "sessions") {
       change({ sessions: u.sessions });
+      // A session that starts while nothing is open (an agent connected after the panel loaded) opens, as on
+      // load; one the person is reading is never replaced.
+      const newest = [...u.sessions].sort((a, b) => b.updatedAt - a.updatedAt)[0];
+      if (!state.current && newest) void attempt(() => open(newest.id));
       return;
     }
     // Questions, usage, engines and settings are the composer's.

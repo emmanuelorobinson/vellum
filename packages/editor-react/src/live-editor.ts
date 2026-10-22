@@ -4,6 +4,8 @@
  * and canvas to it. Host-specific services (daemon sync, files, agents) are added by the host.
  */
 import {
+  type AgentFeed,
+  createAgentController,
   createCommandController,
   createDefaultNode,
   createDesignController,
@@ -30,6 +32,8 @@ export interface LiveEditorOptions {
   fonts?: readonly string[];
   viewportSize?: () => { width: number; height: number };
   pauseAll?: () => void;
+  /** The Agent tab's sessions (the daemon's session store); without it the tab is the host's slot. */
+  agentFeed?: AgentFeed;
   /** The person's preferences, for the canvas shortcuts that change them (pixel grid). */
   preferences?: Parameters<typeof createEditorHandlers>[0]["preferences"];
 }
@@ -67,6 +71,17 @@ export function createLiveEditor(options: LiveEditorOptions) {
       preferences: options.preferences,
     }),
   );
+  const agent = options.agentFeed
+    ? createAgentController({
+        feed: options.agentFeed,
+        now: () => Date.now(),
+        onZoomTo: (node) => {
+          if (client.scene.get(node)) session.select([node]);
+        },
+        nameOf: (node) => client.scene.get(node)?.node.name ?? null,
+      })
+    : undefined;
+  void agent?.load();
   const createRenderer: RendererFactory = (canvas) =>
     createRendererWith(canvas, module, {
       width: Math.max(canvas.clientWidth, 1),
@@ -81,6 +96,7 @@ export function createLiveEditor(options: LiveEditorOptions) {
     controller,
     design,
     paintEditor,
+    agent,
     content: engine.content,
     createRenderer,
     nextNodeId: () => engine.nextId(),

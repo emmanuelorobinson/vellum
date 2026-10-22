@@ -1,6 +1,6 @@
 /** The product editor bundle in a VS Code webview. No socket, file path or credential enters this module: the
  * host relays the panel's own editor at the daemon (ADR-033) and hands over the engine module's bytes. */
-import { createPreferences, createSettingsController } from "@vellum/editor-core";
+import { createPreferences, createSettingsController, DaemonAgentFeed } from "@vellum/editor-core";
 import {
   createLiveEditor,
   EditorWorkspace,
@@ -64,6 +64,18 @@ const wire: EditorWire = (action, params) =>
     api.postMessage({ type: "engine", requestId, action, params });
   });
 
+// The Agent tab's sessions, relayed by the host to the daemon for this document.
+let feedSequence = 0;
+const feedPending = new Map<number, (reply: { ok: boolean; result?: unknown }) => void>();
+const feedCall = (action: string, params: Record<string, unknown>) =>
+  new Promise<unknown>((resolve, reject) => {
+    const requestId = ++feedSequence;
+    feedPending.set(requestId, (reply) =>
+      reply.ok ? resolve(reply.result) : reject(Error("The agent feed is unavailable")),
+    );
+    api.postMessage({ type: "agentFeed", requestId, action, params });
+  });
+
 async function startEngine(message: EngineModuleMessage) {
   const module = await createEditor({
     canvas: document.createElement("canvas"),
@@ -107,6 +119,9 @@ async function startEngine(message: EngineModuleMessage) {
     device: message.device || "01JA0000000000000000000000",
     viewportSize: () => ({ width: innerWidth, height: innerHeight }),
     pauseAll: () => send("pauseAll"),
+    ...(message.device
+      ? { agentFeed: new DaemonAgentFeed(feedCall, { device: message.device as never }) }
+      : {}),
     preferences,
   });
   render();
@@ -218,6 +233,7 @@ function render() {
         controller={live.controller}
         design={live.design}
         paintEditor={live.paintEditor}
+        {...(live.agent ? { agent: live.agent } : {})}
         content={live.content}
         createRenderer={live.createRenderer}
         device={live.device}
@@ -287,6 +303,12 @@ function render() {
 }
 window.addEventListener("message", (event: MessageEvent<unknown>) => {
   const value = event.data as { type?: string; requestId?: number; ok?: boolean; result?: unknown };
+  if (value?.type === "agentFeed" && typeof value.requestId === "number") {
+    const resolve = feedPending.get(value.requestId);
+    feedPending.delete(value.requestId);
+    resolve?.({ ok: value.ok === true, result: value.result });
+    return;
+  }
   if (value?.type === "engine" && typeof value.requestId === "number") {
     const resolve = enginePending.get(value.requestId);
     enginePending.delete(value.requestId);
