@@ -123,6 +123,18 @@ make it pass. Preserve unrelated changes. Tests that need a GPU, Chrome, VS Code
 engine or the network are tagged and say what they need. Scripts that belong to a later prompt exit
 non-zero with "not implemented yet" rather than pretending to pass.
 
+## Build artifact cleanup
+
+- Check `du -sh target` and available disk space before large builds and after verification.
+- After each task's verification, run `pnpm clean` once no agent is building or testing and the output
+  is no longer needed. Also clear verified, ignored build output the script misses: nested Rust
+  `target/` directories in spikes and fuzz harnesses, Storybook output and Playwright test results.
+  Use `node scripts/clean.mjs --dry-run` to review the standard cleanup first.
+- Preserve source, generated source, fixtures, specifications, `node_modules/`, `refs/` and
+  `.design-cache/`, plus artifacts needed by running services or pending verification. Never delete
+  directories merely because they are named `build`. Report what was cleared, what was retained and why,
+  and the observed disk-space change. Do not leave unused build output accumulating between tasks.
+
 ## Reports
 
 `reports.md` is the running hand-off for the person who owns the repo.
