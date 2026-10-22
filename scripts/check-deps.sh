@@ -92,7 +92,7 @@ check_deny() {
     echo "check-deps: cargo-deny is not installed (cargo install cargo-deny --locked --version 0.20.2)" >&2
     return 1
   fi
-  cargo deny --manifest-path "$root/Cargo.toml" --config "$root/deny.toml" check bans licenses sources
+  cargo deny --manifest-path "$root/Cargo.toml" --config "$root/deny.toml" check bans licenses sources || return 1
   echo "check-deps: deny: bans, licences and sources pass"
 }
 

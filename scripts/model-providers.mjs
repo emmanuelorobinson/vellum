@@ -21,12 +21,37 @@ try {
     ["test", ...offline, "-p", "vellum-testkit", "--test", "providers", "--", "--include-ignored"],
     { cwd: root, env, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
   );
-  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  const session = process.argv.includes("--session")
+    ? spawnSync(
+        process.execPath,
+        [
+          "scripts/skia-build.mjs",
+          "test",
+          ...offline,
+          "--locked",
+          "-p",
+          "vellum",
+          "--test",
+          "engine",
+          "scripted_session_canary",
+          "--",
+          "--ignored",
+        ],
+        { cwd: root, env, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+      )
+    : { status: 0 };
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}${session.stdout ?? ""}${session.stderr ?? ""}`;
   writeFileSync(join(artifacts, "tests.log"), output);
   // Never print a leaked credential, even when a test fails.
   process.stdout.write(output.replaceAll(env.VELLUM_CANARY_API_KEY, "[redacted]"));
-  const roots = [root, artifacts];
-  if (existsSync(join(homedir(), ".vellum"))) roots.push(join(homedir(), ".vellum"));
+  const testsPassed =
+    !result.error && !session.error && result.status === 0 && session.status === 0;
+  const roots = testsPassed ? [root, artifacts] : [artifacts];
+  if (testsPassed && existsSync(join(homedir(), ".vellum"))) roots.push(join(homedir(), ".vellum"));
+  if (!testsPassed)
+    process.stderr.write(
+      "canary: tests failed; only test artifacts will be scanned, full coverage is not claimed\n",
+    );
   const scan = spawnSync(
     "cargo",
     [
@@ -42,7 +67,15 @@ try {
     ],
     { cwd: root, env, stdio: "inherit" },
   );
-  process.exitCode = result.error || scan.error || result.status !== 0 || scan.status !== 0 ? 1 : 0;
+  process.exitCode =
+    result.error ||
+    session.error ||
+    scan.error ||
+    result.status !== 0 ||
+    session.status !== 0 ||
+    scan.status !== 0
+      ? 1
+      : 0;
 } finally {
   rmSync(artifacts, { recursive: true, force: true });
 }

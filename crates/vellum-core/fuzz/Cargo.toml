@@ -8,7 +8,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4"
+libfuzzer-sys = "=0.4.13"
 serde_json = "1"
 vellum-core = { path = ".." }
 vellum-types = { path = "../../vellum-types" }
@@ -22,6 +22,13 @@ bench = false
 
 # Its own workspace: a fuzz build needs nightly and must not join the product graph.
 [workspace]
+
+[[bin]]
+name = "op_application"
+path = "fuzz_targets/op_application.rs"
+test = false
+doc = false
+bench = false
 
 [[bin]]
 name = "script_header"

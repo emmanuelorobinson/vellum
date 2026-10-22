@@ -397,3 +397,11 @@ The experimental prerelease ONNX wrapper was removed. No prerelease or advisory 
 `cargo info`; default features off: no clock, parallel parser, network or font/image engine).
 It parses only bounded bytes produced by Skia to correct fractional MediaBox sizes. Rendering stays
 on the existing Skia path at 72 dpi; no foreign PDF input or vendor code is ported.
+
+## Prompt 69 security tooling (2026-10-22)
+
+Fuzz-only workspaces pin `libfuzzer-sys = 0.4.13`; it does not join the product dependency graph.
+Local campaigns used installed cargo-fuzz 0.13.2 and Rust 1.101.0-nightly (0abfedbc7, 2026-10-02).
+The security CI lane pins cargo-fuzz 0.13.2 and nightly-2026-10-02. Product Rust remains 1.99.0.
+Source SBOM generation uses existing pnpm 12.11.2 (CycloneDX 1.7) and locked Cargo metadata mapped
+to CycloneDX 1.6 without a new vendor dependency. Product dependencies and advisory policy are unchanged.

@@ -8,8 +8,16 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4"
+libfuzzer-sys = "=0.4.13"
 vellum-codec-json = { path = ".." }
+vellum-core = { path = "../../../vellum-core" }
+
+[[bin]]
+name = "merge_driver"
+path = "fuzz_targets/merge_driver.rs"
+test = false
+doc = false
+bench = false
 
 [[bin]]
 name = "decode"

@@ -238,6 +238,9 @@ impl Turn<'_> {
         let system = self.engine.pack.system(&self.request.skills);
 
         let mut ask = vec![ChatPart::Text(self.request.prompt.clone())];
+        if !self.request.skills.is_empty() {
+            ask.push(ChatPart::Text(pack::skill_catalog(&self.request.skills)));
+        }
         ask.extend(
             self.request
                 .images

@@ -3,7 +3,7 @@
 // and vendor SDKs behind the wrapper packages. Each negative case runs against a scratch workspace whose
 // vendor crates are path stubs, so nothing here needs the network.
 import assert from "node:assert/strict";
-import { copyFileSync, mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { at, bash, discard, put, run, scratch } from "./helpers.mjs";
@@ -64,6 +64,21 @@ const AUTH_IMPORT =
 test("the real repository satisfies the Rust dependency allowlist", () => {
   const result = bash("check-deps.sh", ["rust"]);
   assert.equal(result.status, 0, result.output);
+});
+
+test("cargo-deny failure propagates instead of printing success", () => {
+  const root = scratch("deny-exit");
+  try {
+    put(root, "bin/cargo", '#!/bin/sh\nif [ "$2" = "--version" ]; then exit 0; fi\nexit 42\n');
+    chmodSync(join(root, "bin/cargo"), 0o755);
+    const result = bash("check-deps.sh", ["deny", "--root", root], {
+      env: { ...process.env, PATH: `${join(root, "bin")}:${process.env.PATH}` },
+    });
+    assert.notEqual(result.status, 0, "a failed policy check must fail the gate");
+    assert.doesNotMatch(result.output, /sources pass/);
+  } finally {
+    discard(root);
+  }
 });
 
 test("the real repository satisfies the dependency-cruiser rules", () => {

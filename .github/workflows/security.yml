@@ -1,0 +1,82 @@
+name: Security release gates
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * 1"
+permissions:
+  contents: read
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+jobs:
+  boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm install --frozen-lockfile
+      - run: cargo fetch --locked
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
+      - run: pnpm security:check
+      - if: always()
+        run: pnpm security:sbom
+      - if: always()
+        run: pnpm checksum
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-checks-and-source-sboms
+          path: target/security
+          retention-days: 7
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: rustup toolchain install nightly-2026-10-02 --profile minimal
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz@0.13.2
+      - run: node scripts/security.mjs fuzz nightly-2026-10-02
+      - if: always()
+        run: node scripts/spec-checksums.mjs check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-fuzz-regressions
+          path: target/security
+          retention-days: 7
+  canary:
+    name: Scripted session canary (loopback and native CPU renderer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+      - run: rustup toolchain install
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang libclang-dev libgl1-mesa-dev
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm security:canary
+      - if: always()
+        run: pnpm checksum

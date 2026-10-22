@@ -10,6 +10,10 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "security:check": "node scripts/security.mjs check",
+    "security:fuzz": "node scripts/security.mjs fuzz",
+    "security:sbom": "node scripts/security.mjs sbom",
+    "security:canary": "node scripts/model-providers.mjs --session",
     "dev": "turbo run dev",
     "build": "turbo run //#cargo:build //#wasm:build build",
     "lint": "turbo run //#lint:ts //#lint:rust",

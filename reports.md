@@ -8,6 +8,14 @@ to update it at the end of each prompt. Newest prompt last. Keep entries short a
 
 Open items, newest first. Remove an item when it is done and say so in the prompt's entry.
 
+- **Prompt 69 release security acceptance remains open.** Resolve 14 existing Rust advisories and
+  five pnpm advisories (two high, three moderate). Decide/enforce the intended publish approval or
+  separate host capability for `vellum/share`: an initialized authenticated local client currently
+  shares that interface authority. Real signing/keychain/cloud provisioning, Windows/Linux installed
+  acceptance and remote CI remain unverified. The unchanged pnpm lock also contains
+  `postject@1.0.0-alpha.6`, failing the existing prerelease guard. See `docs/architecture/threat-model.md` and
+  `docs/runbooks/security.md`; no advisory ignore or permission bypass was added.
+
 - **Prompt 68 needs native-host and visual acceptance.** Attach the live document ABI/EditorLink from
   Prompt 55 and the revision-checked slide renderer/PDF destination callbacks in desktop/extension.
   C32 strip comparisons remain 1.057% light / 1.036% dark; actions 7.238% / 6.452%, above the unchanged
@@ -4517,3 +4525,84 @@ Not passing / unverified:
 
 Playwright's Vite/Chromium processes close after tests. Generated PDF/PNG/comparison/WASM outputs and
 build caches remain under target for review; no credentials, user design file or external service changed.
+
+## Prompt 69
+
+Built the explicitly requested `docs/architecture/threat-model.md`, a sourced boundary/resource map and
+security checklist/runbook. A fresh-context read-only architecture reviewer checked actual consumers;
+parent verified source anchors. This is not a completed vulnerability audit or release acceptance.
+No design/specification, advisory exception, product dependency or user credential was changed.
+
+Fixed two TDD-confirmed failures: configured skill metadata was interpolated into system instructions,
+and `check-deps.sh deny` printed success/returned zero after cargo-deny failed. Skill metadata now travels
+as escaped user-message JSON, with a static content/permission policy on normal and summary requests.
+Shipped prompt pack is version 2; context-node authorship is explicitly unverified. Seven original hostile
+content cases cover notes/context, skill metadata/body, libraries, tool results and summaries. Scripted
+models verify structural/provenance/dispatch behavior, not immunity of arbitrary live models.
+
+Added byte merge-driver, op-application and daemon-frame cargo-fuzz targets beside existing decoder,
+semantic merge and header targets. Frame fuzzing compiles the production reader; fixed op regression
+checks input immutability, invalid-tail atomic refusal, validity, edit replay and exact inverse. All six
+sanitizer targets passed a seed-69 bounded 1,000-execution/20-second smoke campaign (not exhaustive).
+Fuzz-only libfuzzer-sys is exactly 0.4.13; CI pins cargo-fuzz 0.13.2/nightly-2026-10-02. No new product vendor.
+
+Added fail-closed check/fuzz/SBOM commands and a least-privilege CI workflow. Source CycloneDX inventories
+contain 675 resolved Cargo packages/edges and 1,004 pnpm components. They are not binary attestations.
+Extended the canary runner with a real builtin/stub-provider turn, provider-key echo scrubbing, SQLite
+messages/cache/steps, recorded allowed export write and denied network request, export and rendered share
+bundle. It uses a fake SecretStore/document filesystem and prompts; no real keychain/cloud upload.
+The session and final whole-repo/home canary scan pass with zero persisted credential bytes, including
+the 204 GB build tree. Disposable session artifacts were removed after the scan.
+
+Reference study (no code ported): Goose's prompt manager assembles extras and sanitizes Unicode tags;
+its compactor retains tool-result boundaries. Vellum keeps explicit prompt packs/typed tool results,
+moves skill metadata out of system authority and leaves authorization in Rust. Codex's stdio/UDS bridge
+uses OS socket access; Vellum keeps its own private hello/DACL implementation. rquickjs provides the
+memory/interrupt hooks already used by Vellum's adapter. Sibling Outpost has explicit Electron flag/CSP
+checks; Vellum's existing stricter sender/asset controls were retained.
+
+Passed commands (telemetry disabled; Node 24/pnpm 12 through `/private/tmp/vellum-p56-bin`, Rust 1.99,
+macOS ARM64; local sanitizer nightly 1.101.0-nightly/0abfedbc7):
+
+- `CARGO_TARGET_DIR=target/prompt63-verification cargo test --offline -p vellum-engine-builtin --test engine`
+  (15); `cargo test --offline -p vellum-core --test security_fuzz -p vellum-ipc-local --lib` with the same
+  target (328 core, op corpus, seven IPC tests). `security:check`'s Rust and host boundary groups pass:
+  desktop 29 plus three packaging tests, extension 40 plus packaging tests; tagged tests remain tagged.
+- `CARGO_NET_OFFLINE=true VELLUM_FUZZ_RUNS=1000 node scripts/security.mjs fuzz` (six ASan targets;
+  execution cap is now the optional CLI integer, default unchanged). Native macOS symbolizer warnings
+  did not fail the campaigns. Logs/corpora/failures stay under `target/security`/`target/security-fuzz`.
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/ipc.mjs --offline` (10 actual IPC tests);
+  `CARGO_TARGET_DIR=target/prompt63-verification node scripts/script-sandbox.mjs --offline`
+  (native/WASM escape/limit contracts and 10 deterministic fixtures).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/model-providers.mjs --offline --session`
+  (17 provider tests, the complete scripted native session and full repo/artifacts/existing ~/.vellum
+  scan, zero canary hits; permitted loopback/native access, no real credential or account).
+- `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs test --offline -p vellum --test engine --test permissions --test share --test exports`
+  (24 ordinary tests; tagged engine tests skipped); same wrapper with `--test engine a_single_frame_request -- --ignored`
+  passes the existing loopback scenario after the catalog assertion update.
+- `CARGO_TARGET_DIR=target/prompt63-verification cargo clippy --offline -p vellum-engine-builtin -p vellum-ipc-local -p vellum-core --all-targets -- -D warnings`;
+  `CARGO_TARGET_DIR=target/prompt63-verification node scripts/skia-build.mjs clippy --offline -p vellum --test engine -- -D warnings`.
+- `pnpm type-check` (33 tasks); `node scripts/security.mjs sbom`; dependency rules (Rust/TS and direct
+  bans/licenses/sources); `node --test scripts/__tests__/deps.test.mjs scripts/__tests__/security.test.mjs`
+  (11); reports/repo-layout checks also pass. Scoped Biome (no warnings), rustfmt, actionlint,
+  clean-room, copy-lint, `pnpm checksum` and `git diff --check` pass.
+
+Not passing / not claimed:
+
+- `pnpm security:check` correctly returns nonzero: its sandbox audit attempts cannot acquire the Cargo
+  advisory lock/reach npm. Permitted direct `cargo deny --log-level error check` reaches the database
+  and fails on 14 existing advisories; permitted `pnpm audit --json --audit-level low` reports five
+  (two high/three moderate: smol-toml, braces, sprintf-js). No lockfile/ignore/severity relaxation.
+- `node --test scripts/__tests__/version-baseline.test.mjs scripts/__tests__/reports.test.mjs` has seven
+  passes and one existing failure: unchanged `postject@1.0.0-alpha.6` in pnpm-lock.yaml. No guard weakened.
+- Initial loopback/IPC tests were sandbox-blocked. Permitted IPC retry passes. Canary fixture trials
+  caught an invalid ULID and placeholder/missing-font share input; the final dedicated self-contained
+  fixture fixes those test inputs without weakening production export or the original engine scenario.
+  Failed trials do not count as full canary coverage; their scanners were stopped and temporary outputs removed.
+- `vellum/share` checks initialized authenticated client state, not a distinct person/host capability.
+  Ordinary StdFs follows symlinks; share collection has separate stronger restrictions. The model
+  documents these real boundaries, explicit CI env versus native keychain credentials, and optional
+  server environment secrets. No host-only or physical-repo-confinement guarantee is inferred.
+- Installed writable hosts still await Prompt 55. No real signing/notarization, installed Electron/VS Code,
+  real keychain/account/share upload, production TLS/WSS, external log retention, Windows/Linux or remote
+  CI acceptance is claimed. Existing visual/contrast/release blockers remain. No commit or deployment.

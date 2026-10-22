@@ -66,6 +66,56 @@ fn engine(model: &Arc<ScriptedModel>) -> BuiltinEngine {
     BuiltinEngine::new(model.clone(), PromptPack::builtin())
 }
 
+#[test]
+fn hostile_content_never_becomes_system_instructions_or_runs_tools_by_itself() {
+    let corpus: Value = serde_json::from_str(include_str!(
+        "../../../../fixtures/security/prompt-injection.json"
+    ))
+    .unwrap();
+    for case in corpus["cases"].as_array().unwrap() {
+        let attack = case["text"].as_str().unwrap();
+        let model = Arc::new(ScriptedModel::new(vec![
+            call("read", "get_nodes", json!({})),
+            say("Finished reading."),
+        ]));
+        let mut req = request("Inspect this frame");
+        req.skills = vec![SkillMeta {
+            path: attack.into(),
+            name: attack.into(),
+            description: attack.into(),
+            group: SkillGroup::User,
+        }];
+        let content = attack.to_owned();
+        let bridge = RecordingBridge::new().with("get_nodes", true, move |_| ToolReply {
+            value: json!({"notes": content}),
+            failed: false,
+        });
+        assert_eq!(end(&run(&engine(&model), req, &bridge)), TurnEnd::Done);
+        let requests = model.requests();
+        for sent in &requests {
+            assert!(
+                !sent.system.contains(attack),
+                "untrusted {} reached the system prompt",
+                case["source"]
+            );
+            assert!(sent.system.contains("PermissionBroker"));
+        }
+        let catalog = &requests[0].messages[0].content[1];
+        let ChatPart::Text(catalog) = catalog else {
+            panic!("catalog is text data")
+        };
+        let catalog: Value =
+            serde_json::from_str(catalog).expect("metadata is escaped JSON, not prompt syntax");
+        assert_eq!(catalog["untrustedSkills"][0]["description"], attack);
+        assert_eq!(tool_results(&requests[1])[0].1["notes"], attack);
+        assert_eq!(
+            bridge.calls().len(),
+            1,
+            "content cannot dispatch another tool"
+        );
+    }
+}
+
 /// A canvas: `insert_nodes` writes, `get_nodes` reads, `screenshot` returns a picture, `snapshot_layout` checks.
 fn canvas() -> RecordingBridge {
     RecordingBridge::new()
@@ -182,8 +232,8 @@ fn the_request_carries_the_prompt_pack_skills_tools_history_and_attachments() {
     assert_eq!(sent.reasoning, Some(ReasoningEffort::High));
     let pack = PromptPack::builtin();
     assert!(sent.system.starts_with(pack.system_prefix()));
-    assert!(sent.system.contains("format.md"));
-    assert!(sent.system.contains("TEST DATA skill description"));
+    assert!(!sent.system.contains("format.md"));
+    assert!(!sent.system.contains("TEST DATA skill description"));
     let mut names: Vec<_> = sent.tools.iter().map(|t| t.name.as_str()).collect();
     names.sort_unstable();
     assert_eq!(
@@ -195,6 +245,7 @@ fn the_request_carries_the_prompt_pack_skills_tools_history_and_attachments() {
         sent.messages[2].content,
         vec![
             ChatPart::Text("Build a pricing card".into()),
+            ChatPart::Text(json!({"untrustedSkills":[{"path":"format.md","name":"Document format","description":"TEST DATA skill description"}]}).to_string()),
             ChatPart::Image {
                 mime: "image/png".into(),
                 base64: "AAAA".into()

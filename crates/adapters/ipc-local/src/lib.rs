@@ -1,5 +1,7 @@
 //! Native boundary for private IPC and process lifecycle. No document mutation happens here.
 mod client;
+mod framing;
+use framing::frame;
 mod interrupt;
 mod private;
 mod server;
@@ -13,7 +15,7 @@ pub use server::{DaemonConfig, run};
 
 use serde_json::Value;
 use std::{io, time::Duration};
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 const MAX_FRAME: usize = 1024 * 1024;
 const DEADLINE: Duration = Duration::from_secs(3);
@@ -32,33 +34,6 @@ fn invalid(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
-// Bounded incremental framing: read_line would allocate without limit before it can be checked.
-async fn frame<R: AsyncBufRead + Unpin>(
-    reader: &mut R,
-    limit: usize,
-) -> io::Result<Option<Vec<u8>>> {
-    let mut out = Vec::new();
-    loop {
-        let buf = reader.fill_buf().await?;
-        if buf.is_empty() {
-            return if out.is_empty() {
-                Ok(None)
-            } else {
-                Err(invalid("truncated frame"))
-            };
-        }
-        let end = buf.iter().position(|b| *b == b'\n').map(|n| n + 1);
-        let count = end.unwrap_or(buf.len());
-        if out.len() + count > limit {
-            return Err(invalid("frame too large"));
-        }
-        out.extend_from_slice(&buf[..count]);
-        reader.consume(count);
-        if end.is_some() {
-            return Ok(Some(out));
-        }
-    }
-}
 async fn send<W: AsyncWrite + Unpin>(
     writer: &mut W,
     value: &impl serde::Serialize,

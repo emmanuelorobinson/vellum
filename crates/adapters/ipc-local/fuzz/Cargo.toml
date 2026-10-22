@@ -1,0 +1,19 @@
+[package]
+name = "vellum-ipc-local-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+[package.metadata]
+cargo-fuzz = true
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+tokio = { version = "=1.53.2", features = ["rt", "io-util"] }
+serde_json = "1"
+vellum-types = { path = "../../../vellum-types" }
+[[bin]]
+name = "daemon_frames"
+path = "fuzz_targets/daemon_frames.rs"
+test = false
+doc = false
+bench = false
+[workspace]
