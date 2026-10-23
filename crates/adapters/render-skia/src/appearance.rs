@@ -298,14 +298,30 @@ pub(crate) fn mask_backdrops(
                 } else {
                     Rect::default()
                 };
+                let failed = errors.len();
                 let (filter, backdrop) = effects(&pending[&at], bounds, resources, errors)?;
+                // A filtered layer is bounded by its content, so its filters do not run over the whole
+                // viewport. A shader effect (one that compiled; a failed one leaves its input as it was) and a
+                // backdrop may draw where the content is transparent; they keep the whole layer.
+                let shaders = pending[&at]
+                    .iter()
+                    .filter(|e| matches!(e, RenderEffect::Shader { .. }))
+                    .count();
+                let content =
+                    if filter.is_some() && backdrop.is_none() && errors.len() - failed == shaders {
+                        content_bounds(ops, at, pending, &current)
+                    } else {
+                        None
+                    };
                 if let Op::Layer {
                     paint,
                     backdrop: target,
+                    bounds,
                 } = &mut ops[at]
                 {
                     paint.set_image_filter(filter);
                     *target = backdrop;
+                    *bounds = content;
                 }
                 let Op::Layer { backdrop, .. } = &ops[at] else {
                     unreachable!()
@@ -338,6 +354,91 @@ pub(crate) fn mask_backdrops(
         }
     }
     Ok(())
+}
+/// Conservative bounds of what the layer at `at` draws, in the layer's own space (`current` is its matrix), from
+/// each drawing's fast bounds (strokes included) in device space. None when a nested layer has effects of its
+/// own (they reach past their content) or a drawing cannot be bounded.
+fn content_bounds(
+    ops: &[crate::Op],
+    at: usize,
+    pending: &std::collections::BTreeMap<usize, Vec<RenderEffect>>,
+    current: &sk::Matrix,
+) -> Option<Rect> {
+    use crate::Op;
+    let mut m = *current;
+    let mut clip: Option<Rect> = None;
+    let mut stack = Vec::new();
+    let mut out: Option<Rect> = None;
+    let mut add = |r: Rect, m: &sk::Matrix, clip: &Option<Rect>| {
+        let mut r = m.map_rect(r).0;
+        if let Some(c) = clip
+            && !r.intersect(c)
+        {
+            return;
+        }
+        out = Some(out.map_or(r, |o| Rect::join2(o, r)));
+    };
+    // What a paint can cover past its geometry: half a stroke, longer at miters and square caps.
+    let fast = |paint: &Paint, r: Rect| {
+        if paint.path_effect().is_some()
+            || paint.mask_filter().is_some()
+            || paint.image_filter().is_some()
+        {
+            return None;
+        }
+        if paint.style() == sk::PaintStyle::Fill {
+            return Some(r);
+        }
+        let reach = paint.stroke_miter().max(std::f32::consts::SQRT_2);
+        let half = (paint.stroke_width() / 2.).max(0.5) * reach;
+        Some(r.with_outset((half, half)))
+    };
+    for (index, op) in ops.iter().enumerate().skip(at + 1) {
+        match op {
+            Op::Layer { .. } if pending.get(&index).is_some_and(|e| !e.is_empty()) => return None,
+            Op::Save | Op::Layer { .. } => stack.push((m, clip)),
+            Op::Restore => {
+                let Some((saved, c)) = stack.pop() else { break };
+                m = saved;
+                clip = c;
+            }
+            Op::Transform(v) => m = matrix(*v),
+            Op::Clip(p) => {
+                let r = m.map_rect(p.bounds()).0;
+                clip = Some(match clip {
+                    Some(mut c) => {
+                        if !c.intersect(r) {
+                            c = Rect::default();
+                        }
+                        c
+                    }
+                    None => r,
+                });
+            }
+            Op::Path(p, brush) => add(fast(brush, p.bounds().with_outset((1., 1.)))?, &m, &clip),
+            Op::Image { clip: r, .. } => add(*r, &m, &clip),
+            Op::Glyphs(g, brush) => {
+                let mut boxes = vec![Rect::default(); g.ids.len()];
+                g.font.get_bounds(&g.ids, &mut boxes, None);
+                for (b, pos) in boxes.iter().zip(&g.positions) {
+                    add(
+                        fast(brush, b.with_offset(*pos).with_outset((1., 1.)))?,
+                        &m,
+                        &clip,
+                    );
+                }
+                for r in &g.decorations {
+                    add(fast(brush, *r)?, &m, &clip);
+                }
+            }
+        }
+    }
+    // Anti-aliased edges reach a pixel past the geometry. A layer that draws nothing has nothing to filter.
+    let Some(device) = out else {
+        return Some(Rect::default());
+    };
+    let device = device.with_outset((2., 2.));
+    Some(current.invert()?.map_rect(device).0)
 }
 fn coverage(ops: &[crate::Op], inverse: &sk::Matrix) -> Result<sk::Path, Error> {
     use crate::Op;

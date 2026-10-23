@@ -11,17 +11,23 @@ Current open items only. Resolved items, decisions taken for the owner and every
 
 ### Engineering still open (an agent can do these)
 
-- **Editor feature ports in the hosts (Prompts 49–54).** VS Code and the desktop now edit through the daemon
-  (ADR-033), but nothing serves the Agent tab feed and composer, presence and leases, the History ledger and
-  hand-off panels, the shell's palette/settings hosts or the authoring hosts. They stay empty or greyed.
+- **Editor feature ports in the hosts (Prompts 49–54).** VS Code and the desktop edit through the daemon
+  (ADR-033) and the Agent tab shows the daemon's sessions (`vellum/agentFeed`), but composer send and provider
+  setup, presence and leases, the History ledger and hand-off panels, the shell's palette/settings hosts and the
+  authoring hosts are not served. They stay empty or greyed.
 - **Browser engine gaps (ADR-033).** Library documents, image fills, document fonts and script outputs are not
   given to the editor's WASM engine yet; library instances show as missing and image fills draw empty.
 - **Visual acceptance.** Screen goldens from Prompts 46–70 (and the Electron `@design` goldens) exceed the
   unchanged 1% gate, mostly text rasterisation. Sheets in `target/screen-goldens/`.
 - **Performance budgets (Prompt 71).** Native full-pipeline pan/zoom, drag and 200-op batch and the Canvas2D
-  fallback exceed §12; open, idle RSS, Skia draw and both WASM size gates pass.
+  fallback exceed §12; open, idle RSS, Skia draw and both WASM size gates pass. In the browser, a frame with any
+  shadow or blur still rasterizes the whole viewport on the CPU (ADR-017): about 150–400 ms per changed frame at
+  1280×720 for `shapes.vellum`, more at 2× pixel ratio. GPU-native effects need to pass the goldens first.
 - **Localization coverage (Prompt 70).** 127 common messages in 13 catalogs; advanced descriptions, dynamic
   diagnostics, desktop Home and the account/web copy still fall back to English.
+- **Electron tests leak daemons.** Eight `vellum` daemons from earlier desktop test runs were still running in
+  temporary run directories (some three days old); `afterEach` closes the app but not every daemon it started.
+  Stopped by hand on 2026-10-23.
 - **pnpm advisories without a patched release:** `braces` (via ovsx/secretlint) and `sprintf-js` (via
   electron-builder), both packaging-time tooling.
 
@@ -218,4 +224,22 @@ clean-room.
 
 Not verified / not done: Electron `@design` goldens remain red against the 1% gate (pre-existing); both WASM modules were rebuilt on 2026-10-23 (editor 6.27 MB, viewer 1.90 MB gzipped) and `engine.spec.ts`
 passes on them; feature ports of
-Prompts 49–54 are still unserved by hosts; Windows/Linux and remote CI not run. Nothing committed.
+Prompts 49–54 are still unserved by hosts; Windows/Linux and remote CI not run. Committed by the owner as
+9c6b0c4 and f65eb81 (agent feed).
+
+## 2026-10-23 follow-up
+
+Fixed the cause of the flaky desktop folder test: canvas frames with shadows blocked the renderer for 1–5 s,
+because filtered layers had no bounds and their filters ran over the whole viewport on the CPU. Filtered layers
+are now bounded by their content (`render-skia` `content_bounds`); pixels are unchanged. Also fixed two
+pre-existing test faults (desktop share test lacked the fixture's shader file; a Figma import locator matched
+hidden text). Details: `addressed-reports.md`.
+
+Passed: `cargo test -p vellum-render-skia`, `-p vellum-wasm`; clippy `-D warnings` on both; native renderer
+goldens (`renderer-fixtures`, `renderer-goldens`, no recording); `node scripts/renderer-goldens.mjs` and
+`--software` (no failures); `pnpm --filter @vellum/renderer-skia test`; editor-react `engine`, `resources` and
+the Figma progress spec; Electron non-design suite 10 of 10 (folder test 5 of 5 in a row).
+
+Not done / still red (pre-existing, unchanged without this fix): Electron `@design` A01–A06 goldens; editor-react
+C30/C31 and C33 design comparisons. WASM rebuilt: editor module 6.32 MB gzipped (gate 6.5 MiB). `pnpm clean`
+afterwards (target was 54 GB; free space 355 → 407 GiB). Not committed.

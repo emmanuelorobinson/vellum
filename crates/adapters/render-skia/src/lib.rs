@@ -65,6 +65,9 @@ pub(crate) enum Op {
     Layer {
         paint: Paint,
         backdrop: Option<sk::ImageFilter>,
+        /// The layer's content bounds in its own space, when it is filtered and they are known. Without them a
+        /// filter runs over the whole viewport.
+        bounds: Option<Rect>,
     },
     Path(Path, Brush),
     Glyphs(fonts::Glyphs, Brush),
@@ -276,6 +279,7 @@ impl Renderer {
                     ops.push(Op::Layer {
                         paint,
                         backdrop: None,
+                        bounds: None,
                     });
                 }
                 DrawCmd::Effect { .. } => {
@@ -467,8 +471,17 @@ impl Scene {
                 Op::Clip(p) => {
                     canvas.clip_path(p, None, true);
                 }
-                Op::Layer { paint, backdrop } => {
+                Op::Layer {
+                    paint,
+                    backdrop,
+                    bounds,
+                } => {
                     let rec = sk::canvas::SaveLayerRec::default().paint(paint);
+                    let rec = if let Some(bounds) = bounds {
+                        rec.bounds(bounds)
+                    } else {
+                        rec
+                    };
                     canvas.save_layer(&if let Some(filter) = backdrop {
                         rec.backdrop(filter)
                     } else {

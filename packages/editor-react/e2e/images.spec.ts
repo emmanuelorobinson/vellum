@@ -25,7 +25,8 @@ test("generates a marked image and exposes local image actions", async ({ page }
 test("Figma progress ends in the actual report", async ({ page }) => {
   await page.goto("/images.html?figma");
   await page.getByRole("button", { name: "Import as layers", exact: true }).click();
-  await expect(page.getByText("12 frames · 284 layers", { exact: false })).toBeVisible();
+  // The summary line; the same words wait in the collapsed report below it.
+  await expect(page.getByText("Imported 12 frames · 284 layers", { exact: true })).toBeVisible();
   await page.getByText("View report", { exact: true }).click();
   await expect(page.locator("pre")).toContainText("Smart Animate");
 });

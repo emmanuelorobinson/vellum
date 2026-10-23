@@ -3,7 +3,9 @@ use skia_safe::{Paint, Path, PathFillType, Rect};
 use vellum_core::export::svg::{self, Command};
 pub(crate) fn write(page: &Page<'_>) -> Result<String, Error> {
     if page.scene.ops.iter().any(|op| match op {
-        Op::Layer { paint, backdrop } => {
+        Op::Layer {
+            paint, backdrop, ..
+        } => {
             backdrop.is_some()
                 || paint.image_filter().is_some()
                 || paint.as_blend_mode() != Some(skia_safe::BlendMode::SrcOver)

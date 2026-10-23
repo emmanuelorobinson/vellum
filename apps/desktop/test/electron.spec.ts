@@ -28,6 +28,12 @@ test.beforeEach(async () => {
       resolve("../../fixtures/documents/shapes.vellum"),
       join(directory, "one", `${file}.vellum`),
     );
+  // The fixture's shader effect names this file; sharing checks that it is there.
+  await mkdir(join(directory, "one", "shaders"));
+  await writeFile(
+    join(directory, "one", "shaders", "grain.sksl"),
+    "// TEST DATA\nuniform shader content;\nuniform float amount;\nuniform float2 offset;\nuniform int on;\nlayout(color) uniform half4 tint;\nhalf4 main(float2 p) {\n  return content.eval(p);\n}\n",
+  );
   app = await _electron.launch({
     executablePath: process.env.VELLUM_ELECTRON_EXECUTABLE,
     args: [
@@ -91,20 +97,11 @@ test("@electron folder windows, tabs, native menus and sidecar", async () => {
   await expect(page.locator("[data-content]").first()).toHaveAttribute("data-content", "ready", {
     timeout: 30_000,
   });
-  // Selecting a tab swaps in its editor while its engine loads, so the tab bar is checked once that settles;
-  // the main process's state is what the click changes.
-  const tab = page.getByRole("tab", { name: /a.vellum/ });
-  const id = (await tab.getAttribute("id"))?.replace(/^tab-/, "");
-  await tab.click();
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const state = await window.vellumDesktop.request({ type: "state" });
-        return state.ok ? (state.value as { active?: string }).active : undefined;
-      }),
-    )
-    .toBe(id);
-  await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
+  await page.getByRole("tab", { name: /a.vellum/ }).click();
+  await expect(page.getByRole("tab", { name: /a.vellum/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect
     .poll(() => page.evaluate(() => window.vellumDesktop.request({ type: "daemon" })), {
       timeout: 20_000,

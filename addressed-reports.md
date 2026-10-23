@@ -3,6 +3,23 @@
 Items moved out of `reports.md` "Needs a person" once resolved. Newest first. Decisions marked
 "decided for the owner" were delegated by the owner on 2026-10-22.
 
+## 2026-10-23 follow-up session
+
+- **Agent tab feed unserved in the hosts (part of "Editor feature ports", Prompts 49–50).** Done, committed in
+  f65eb81: `vellum/agentFeed` (sessions, events since a sequence, images, remove, undo turn, stop), scoped to the
+  host's workspace; `DaemonAgentFeed` drives the Agent tab in VS Code and the desktop. Composer send and
+  provider setup still report unavailable (left in `reports.md`).
+- **Desktop folder test flaky (40–100% failing at the tab click).** Root cause was not the click: each canvas frame
+  of `shapes.vellum` blocked the renderer for 1–5 s. ADR-017 rasterizes filtered scenes on the CPU, and every
+  filtered layer was saved without bounds, so its shadow and blur filters ran over the whole viewport. Filtered
+  layers are now bounded by their content's conservative device bounds; native goldens (no pixel over 2) and
+  browser CPU/GPU/software goldens are unchanged. Measured in Chrome at 1280×720: a drop shadow went from about
+  1,000 ms to 150–240 ms per frame, the full fixture from about 2,200 ms to 280–400 ms. The test passes 5 of 5.
+- **Desktop share test failing (pre-existing).** The fixture's shader effect names `shaders/grain.sksl`, which
+  the test never created, so sharing correctly reported a missing file. The test now writes a TEST DATA shader.
+- **`Figma progress ends in the actual report` failing (pre-existing).** The locator also matched the collapsed
+  report; it now matches the visible summary exactly.
+
 ## 2026-10-22 follow-up session
 
 - **Prompt 55 document runtime (was: VS Code host opens read-only; WASM had no document ABI; no EditorLink wire).**
@@ -46,6 +63,8 @@ Further decisions: a newer-format file is refused with a banner (no lenient read
 save relies on recovery copies; library-to-document through `SetShell` stays allowed (it is what a checkout
 does); C15's per-point radius stays disabled with its reason; the working-step ring stays neutral (token lint
 unchanged); the fuzz targets and reference clones stay local-only.
+2026-10-23: a filtered layer is bounded by its content unless a compiled shader effect or a backdrop may draw
+past it (those keep the whole layer); ADR-017's CPU raster of filtered scenes otherwise stays as decided.
 
 ## Archive: the previous "Needs a person" list and every prompt entry (verbatim, 2026-10-22)
 

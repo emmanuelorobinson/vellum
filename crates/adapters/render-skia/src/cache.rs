@@ -58,9 +58,9 @@ pub(crate) fn draw(scene: &Scene, canvas: &Canvas, zoom: f32, cache: &RefCell<Dr
     let picture = picture.clone();
     // Only whole, isolated viewport scenes are tiled; backdrop-dependent subframes retain pictures.
     let filtered = scene.ops.iter().any(|op| match op {
-        crate::Op::Layer { paint, backdrop } => {
-            paint.image_filter().is_some() || backdrop.is_some()
-        }
+        crate::Op::Layer {
+            paint, backdrop, ..
+        } => paint.image_filter().is_some() || backdrop.is_some(),
         _ => false,
     });
     if filtered
