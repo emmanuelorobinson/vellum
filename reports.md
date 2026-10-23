@@ -11,6 +11,11 @@ Current open items only. Resolved items, decisions taken for the owner and every
 
 ### Engineering still open (an agent can do these)
 
+- **Docs and icon checks (2026-10-23).** The brand-token check reads Markdown only, so a stray `{{brand}}` in an
+  `app/*.tsx` string got through once (fixed by hand); extend the check to TSX. The extension build needs
+  `@vellum/renderer-skia`'s `dist/vellum-editor.js` from the wasm pipeline, which this checkout has not built.
+  `apps/web` and `apps/account` were type-checked on the new Next pin, not built. Root `pnpm exec biome check .`
+  fails on six `packages/editor-core` files that are unchanged from HEAD.
 - **Editor feature ports in the hosts (Prompts 49–54).** VS Code and the desktop edit through the daemon
   (ADR-033) and the Agent tab shows the daemon's sessions (`vellum/agentFeed`), but composer send and provider
   setup, presence and leases, the History ledger and hand-off panels, the shell's palette/settings hosts and the
@@ -40,7 +45,15 @@ Current open items only. Resolved items, decisions taken for the owner and every
 
 ### Needs a person
 
-- **Release provisioning (Prompt 72, `docs/runbooks/release.md`).** Version, app icon, signing and notarization
+- **Docs site and icons (2026-10-23).** Approve the icon as drafted (the brand mark on a white tile; see the last
+  entry) or choose another container. Decide the Activity Bar icon (the Lucide frame glyph stays for now), whether the
+  editor gets a logo, attribution for `apps/docs/lib/content-cache.mjs` (adapted from the Outpost project, which has no
+  licence file), the docs site's hosting, public address and versioning, and whether `pnpm install` may run the five
+  ignored build scripts (`@vscode/vsce-sign`, `electron-winstaller`, `esbuild`, `keytar`, `msgpackr-extract`) through
+  `pnpm approve-builds` or `allowBuilds`. The installs here used `--config.strict-dep-builds=false`; CI runs
+  `pnpm install --frozen-lockfile`, and a fresh CI install was not tested.
+- **Release provisioning (Prompt 72, `docs/runbooks/release.md`).** Version, app icon sign-off (drafted 2026-10-23),
+  signing and notarization
   identities, Windows publisher, registry/namespace ownership, protected environments, six signing runners,
   HTTPS update feed and Ed25519 key, scoped update hosting; upload the pinned design snapshot bundle.
 - **Cloud provisioning (Prompts 61–64, 71).** HTTPS account origin, SES sender, Polar product and webhook,
@@ -258,3 +271,47 @@ the Figma progress spec; Electron non-design suite 10 of 10 (folder test 5 of 5 
 Not done / still red (pre-existing, unchanged without this fix): Electron `@design` A01–A06 goldens; editor-react
 C30/C31 and C33 design comparisons. WASM rebuilt: editor module 6.32 MB gzipped (gate 6.5 MiB). `pnpm clean`
 afterwards (target was 54 GB; free space 355 → 407 GiB). Not committed.
+
+## 2026-10-23 documentation site and brand icons
+
+Built the documentation site in `apps/docs` (Fumadocs, ADR-035): 71 hand-written pages (4,056 lines) and 92 pages
+generated at build time from the runbooks, decision records, the MCP tool snapshot, the format spec and the keyboard
+table. Search, `/llms.txt`, light and dark appearance and the brand token work. Outpost has 64 content pages; this is
+comparable in size, not a page-for-page copy.
+
+The logo from the docs header is now the app icon. `scripts/brand-icons.mjs` (macOS: `sips`, `iconutil`) reads the
+colours from `packages/ui-tokens`, writes `packages/config/assets/{mark,app-icon}.svg`, and writes: favicons, `icon.svg`
+and apple icons for `apps/docs`, `apps/web` and `apps/account`; `apps/desktop/build/icon.{icns,ico,png}`; and
+`apps/extension/media/icon.png` with `"icon"` in the extension manifest. The desktop development run sets the window and
+macOS dock icon. Electron-builder reads `build/icon.*` by default; a packaged build was not run. The icon is the mark on
+a white tile with a light border (dark mode uses the dark panel), so it reads on a dark dock and a dark tab bar. The
+docs site had a 404 for `favicon.ico`; it is served now.
+
+Pins decided on the way: Next.js 16.4.0 → 16.4.2 (three advisories fixed in 16.4.1; `pnpm audit` reports none now; the
+account and web apps share the pin). Fumadocs 16.16.2 for core and UI; `fumadocs-mdx` 15.4.6, because 15.4.7 and later
+need `fumadocs-core` 16.17; `@types/mdx` 2.0.14; Tailwind 4.3.3 in `apps/docs` only. The root Biome configuration
+enables Tailwind directives. `version-baseline.md` records each pin.
+
+Fixed on the way: the home page showed the raw `{{brand}}` token in one card title, because the brand check covers
+Markdown only. The title now reads `brand.name`. Earlier browser state had moved the test session between pages; a
+fresh session stays on the home page.
+
+Not changed on purpose: the Activity Bar icon. Its code says it is the frame glyph, not a brand logo. The mark's two
+shapes overlap, so one colour merges them; a knockout gap is the likely next step. The editor's top bar has no logo.
+
+Passed (exit 0): `pnpm --filter @vellum/docs build`, `… test` (16 node tests and vitest), `… type-check`; `pnpm exec
+biome check apps/docs`; `pnpm peers check`; `pnpm audit` (no Next.js advisory); `pnpm --filter ./apps/desktop
+type-check` and `… test` (30 vitest tests and the packaging test); `pnpm --filter ./apps/extension type-check` and
+`… test` (41 vitest tests and the packaging test); `pnpm --filter @vellum/web type-check`; `pnpm --filter
+@vellum/account type-check`; `node scripts/brand-icons.mjs`; `pnpm checksum`; `pnpm clean-room`; `pnpm copy-lint`;
+`pnpm tokens:lint`; `node --test scripts/__tests__/*.test.mjs`; `node --test scripts/__tests__/version-baseline.test.mjs
+scripts/__tests__/architecture-records.test.mjs`.
+
+Browser (Playwright, production build on 127.0.0.1:3002): the home page and a docs page in light and dark appearance;
+search for "keyboard" returns 30 results with breadcrumbs; no horizontal overflow at 390 px; no console errors on the home
+page. Not checked: Safari and Firefox, the mobile contents bar, the account and web apps in a browser.
+
+Not verified: `pnpm --filter ./apps/extension build` fails here because `@vellum/renderer-skia` has no
+`dist/vellum-editor.js` (the wasm pipeline is not built). The icon copy line in `apps/extension/build.mjs` is therefore
+not run end to end. The Electron dev run and `pnpm package:desktop` were not run. Root `cargo clippy` was not run (its
+failure at HEAD is recorded above).

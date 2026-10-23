@@ -1,0 +1,250 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "@vellum/ui-tokens/tokens.css";
+
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+
+/* Fumadocs' colour variables read the shared chrome tokens, so light and dark follow data-appearance. Blue marks
+   selection and focus, amber marks something that needs a person, red marks errors. The chrome stays neutral. */
+:root,
+[data-appearance] {
+  --color-fd-background: var(--chrome-panel);
+  --color-fd-foreground: var(--chrome-text);
+  --color-fd-card: var(--chrome-raised);
+  --color-fd-card-foreground: var(--chrome-text);
+  --color-fd-popover: var(--chrome-raised);
+  --color-fd-popover-foreground: var(--chrome-text);
+  --color-fd-primary: var(--chrome-focus);
+  --color-fd-primary-foreground: var(--chrome-inverse);
+  --color-fd-secondary: var(--chrome-sunken);
+  --color-fd-secondary-foreground: var(--chrome-text);
+  --color-fd-muted: var(--chrome-sunken);
+  --color-fd-muted-foreground: var(--chrome-secondary);
+  --color-fd-accent: var(--chrome-selected);
+  --color-fd-accent-foreground: var(--chrome-text);
+  --color-fd-border: var(--chrome-border);
+  --color-fd-ring: var(--chrome-focus);
+  --fd-layout-width: 1440px;
+  font-family: var(--font-inter), var(--font-ui), system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--font-jetbrains-mono), var(--font-mono), ui-monospace, monospace;
+}
+
+:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: -100px;
+  left: 16px;
+  padding: 12px;
+  background: var(--chrome-raised);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+.docs-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.docs-wordmark span {
+  color: var(--chrome-secondary);
+  font-weight: 400;
+}
+
+.docs-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.docs-mark-agent {
+  fill: var(--chrome-text);
+}
+
+.docs-mark-person {
+  fill: var(--chrome-secondary);
+}
+
+/* Home page */
+.home-intro {
+  max-width: 760px;
+  padding: 72px 24px 32px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  color: var(--chrome-secondary);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-intro h1 {
+  margin: 0;
+  font-size: clamp(36px, 6vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.home-lede {
+  margin: 20px 0 0;
+  color: var(--chrome-secondary);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.ink-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--chrome-focus);
+  text-decoration: none;
+}
+
+.release-note {
+  display: flex;
+  gap: 12px;
+  max-width: 760px;
+  margin: 0 auto 32px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--chrome-attention-bg);
+  color: var(--chrome-attention);
+}
+
+.release-note p {
+  margin: 0;
+  color: var(--chrome-text);
+}
+
+.release-note a {
+  color: var(--chrome-attention);
+  font-weight: 600;
+}
+
+.home-paths,
+.home-sections {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 24px 56px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  color: var(--chrome-secondary);
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: var(--chrome-text);
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.path-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.path-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+  text-decoration: none;
+}
+
+.path-card:hover {
+  border-color: var(--chrome-focus);
+}
+
+.path-card p {
+  margin: 0;
+  color: var(--chrome-secondary);
+  line-height: 1.5;
+}
+
+.path-card .path-detail {
+  margin-top: auto;
+  color: var(--chrome-tertiary);
+  font-size: 13px;
+}
+
+/* Route messages: loading, errors, 404 */
+.route-message {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  max-width: 640px;
+  margin: 96px auto;
+  padding: 0 24px;
+}
+
+.route-message h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.route-message p {
+  margin: 0;
+  color: var(--chrome-secondary);
+}

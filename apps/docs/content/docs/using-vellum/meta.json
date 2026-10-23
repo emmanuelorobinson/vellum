@@ -1,0 +1,20 @@
+{
+  "title": "Using {{brand}}",
+  "pages": [
+    "index",
+    "documents-and-pages",
+    "frames-and-layout",
+    "components-and-instances",
+    "variables-and-themes",
+    "text-and-fonts",
+    "images-and-icons",
+    "importing",
+    "exporting-and-handoff",
+    "sharing",
+    "agents-and-the-panel",
+    "permissions-and-safety",
+    "history-git-and-recovery",
+    "scripts-and-slides",
+    "collaboration"
+  ]
+}

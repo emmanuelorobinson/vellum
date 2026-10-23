@@ -72,7 +72,7 @@
 | @types/react-dom | 19.3.0 | 19.3.x (not in §5) | `pnpm-workspace.yaml` catalog | matches React |
 | @base-ui/react | 1.9.0 | 1.9.x | `pnpm-workspace.yaml` catalog; `@vellum/editor-react` | menus and tooltips of the editor chrome (Prompt 46, C26) |
 | shadcn | 4.21.4 | CLI current at scaffold (generated source, not a dependency) | not installed | C11 |
-| Tailwind CSS | 4.3.3 | 4.3.x | not yet used | not adopted in Prompt 46: the chrome is plain CSS over the token variables (C26) |
+| Tailwind CSS | 4.3.3 | 4.3.x | `pnpm-workspace.yaml` catalog; `apps/docs` only | the documentation site (ADR-035). The editor chrome stays plain CSS over the token variables (C26) |
 | Zustand | 5.0.15 | 5.0.x | not yet used | not adopted in Prompt 46: the workspace and session are small subscribable objects in editor-core (C26) |
 | Zod | 4.6.6 | 4.6.x | not yet used | schemas at the edges (Prompt 10 onward) |
 | i18next | 26.4.3 | 26.x | not yet used | copy and locale work (Prompt 70) |
@@ -86,7 +86,7 @@
 
 | Component | Resolved | Guide line | Pinned in | Decision |
 |---|---|---|---|---|
-| Next.js | 16.4.0 | 16.4.x | `pnpm-workspace.yaml` catalog | account app and web viewer |
+| Next.js | 16.4.2 | 16.4.x | `pnpm-workspace.yaml` catalog | account app, web viewer and documentation site (ADR-035). Raised from 16.4.0 for three advisories fixed in 16.4.1 |
 | Electron | 44.7.0 | 44.x | `pnpm-workspace.yaml` catalog | desktop host (Prompt 57) |
 | electron-builder | 26.15.7 | 26.15.x | not yet used | packaging (Prompt 58) |
 | electron-updater | 6.8.10 | 6.8.x | not yet used | updater (Prompt 58) |
@@ -98,6 +98,9 @@
 | better-auth | 1.7.7 | 1.7.x | not yet used | wrapped by `@vellum/auth` (Prompt 61) |
 | drizzle-orm | 0.45.4 | 0.45.x | not yet used | account app database (Prompt 61) |
 | Hono | 4.13.13 | 4.13.x | not yet used | public API (Prompt 61) |
+| Fumadocs (`fumadocs-core`, `fumadocs-ui`) | 16.16.2 | 16.16.x (not in §5) | `pnpm-workspace.yaml` catalog | documentation site (ADR-035) |
+| fumadocs-mdx | 15.4.6 | 15.4.x (not in §5) | `pnpm-workspace.yaml` catalog | content collections of the documentation site. 15.4.7 and later need fumadocs-core 16.17 (ADR-035) |
+| @types/mdx | 2.0.14 | 2.0.x (not in §5) | `pnpm-workspace.yaml` catalog | types for the MDX content (ADR-035) |
 
 ## Installed engines and the design tool
 
@@ -164,12 +167,13 @@ No repository has a release at or after its pin, so every pin stays at the guide
   Nothing is generated yet.
 - **C12: canvaskit-wasm 0.42.0** is installed only in the renderer spike (`spikes/renderer/web`), as Renderer A. ADR-001
   (Prompt 4) chose skia-safe in WASM, so no product package depends on it.
-- **C13: Lines not yet installed** (Tailwind, Zustand, Zod, i18next, Electron builder, vsce,
+- **C13: Lines not yet installed** (Zustand, Zod, i18next, Electron builder, vsce,
   better-auth, drizzle-orm, Hono, the MCP SDK and the unused Rust crates) are recorded at their resolved versions. The
   prompt that adds one installs the recorded version and updates this file in the same change.
-- **C14: Unchanged from Prompt 1:** pnpm 12.11.2, Turborepo 2.11.7, Biome 2.5.15, React 19.3.0, Vitest 5.0.3, Next.js
-  16.4.0, Electron 44.7.0, serde 1.0.229, serde_json 1.0.154, schemars 1.2.2, ts-rs 12.0.1 and clap 4.6.7. Each is still the
-  newest stable patch of its line.
+- **C14: Unchanged from Prompt 1:** pnpm 12.11.2, Turborepo 2.11.7, Biome 2.5.15, React 19.3.0, Vitest 5.0.3,
+  Electron 44.7.0, serde 1.0.229, serde_json 1.0.154, schemars 1.2.2, ts-rs 12.0.1 and clap 4.6.7. Each is still the
+  newest stable patch of its line. Next.js is not in this list: it moved from 16.4.0 to 16.4.2 (see the documentation
+  site section).
 - **C15: emsdk 4.0.6 and Skia from source for emscripten** (Prompt 4, ADR-001). 4.0.6 is the version Penpot pairs with
   skia-safe 0.153.x. rust-skia's prebuilt emscripten binaries do not link with Rust 1.99 (JS longjmp vs wasm exceptions),
   so the emscripten build compiles Skia from source with ninja; the native build keeps the prebuilt binaries.
@@ -434,3 +438,27 @@ under OFL-1.1; the fonts are bundled rather than fetched while running. See THIR
 new adapter boundary; no new vendor version. `@vellum/telemetry` uses the documented PostHog capture and
 Sentry envelope HTTP protocols with injected fetch, without SDK auto-instrumentation or new JS vendors.
 ADR-031 records the 2.4 MiB single-module gzip cap, 128 MiB idle RSS gate and paired regression method.
+
+## Documentation site (ADR-035, 2026-10-23)
+
+`apps/docs` (`@vellum/docs`) is a Fumadocs site on Next.js. Each pin is an exact catalog line and the newest patch of its
+minor line, except where a note says otherwise.
+
+- **Next.js 16.4.2**, raised from 16.4.0. `pnpm audit` reported three advisories for `>=16.0.0 <=16.4.0`: a critical
+  unauthenticated remote code execution in the image optimization API when SVG files are used, a critical unauthenticated
+  remote code execution in `use cache` functions that return typed arrays, and a high denial of service in the App Router
+  with Server Actions. The first patched release is 16.4.1 (published 2026-10-14). On 16.4.0 `next build` stopped with
+  `SecurityFatalError`. On 16.4.2 (published 2026-10-15) it completes, and `pnpm audit` reports no Next.js advisory. The
+  account app and the web viewer share the catalog line, so they moved to 16.4.2 too.
+- **`fumadocs-core` and `fumadocs-ui` 16.16.2**, the newest patch of the 16.16 line (`fumadocs-core` published 2026-10-05).
+- **`fumadocs-mdx` 15.4.6** (published 2026-10-02) builds the content collections. It is the newest 15.4 patch that accepts
+  fumadocs-core 16.16: 15.4.7 and later declare `fumadocs-core` ^16.17.0. The three Fumadocs packages move together, to
+  the 16.17 line, as one change.
+- **`@types/mdx` 2.0.14**, the newest patch of the 2.0 line.
+- **`tailwindcss` and `@tailwindcss/postcss` 4.3.3** (published 2026-07-16), used by `apps/docs` only. The editor chrome
+  stays plain CSS over the token variables (C26).
+
+The Next.js pin's install stopped with `ERR_PNPM_IGNORED_BUILDS` for five packages whose install scripts are not approved:
+`@vscode/vsce-sign`, `electron-winstaller`, `esbuild`, `keytar` and `msgpackr-extract`. The same five were already ignored
+before this change, so their scripts did not run then either. The docs site was installed with
+`pnpm install --config.strict-dep-builds=false`. Whether to approve them is open in reports.md.

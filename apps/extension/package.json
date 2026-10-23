@@ -29,6 +29,7 @@
     "vitest": "catalog:"
   },
   "displayName": "Vellum",
+  "icon": "media/icon.png",
   "publisher": "vellum",
   "categories": [
     "Visualization"

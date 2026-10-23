@@ -19,7 +19,9 @@ catalog:
   "@types/vscode": 1.140.0
   react: 19.3.0
   react-dom: 19.3.0
-  next: 16.4.0
+  # 16.4.0 is in the advisory range of three Next.js advisories (critical RCE in the image optimizer and in
+  # `use cache`, high Server Actions DoS). 16.4.1 is the first patched release; 16.4.2 is the newest patch.
+  next: 16.4.2
   electron: 44.7.0
   # Storybook (set up in Prompt 43 with create-storybook 10.6.2; version-baseline.md C15). Exact pins, no ranges.
   "@vitest/browser-playwright": 5.0.5
@@ -36,6 +38,15 @@ catalog:
   # Editor UI primitives (Prompt 46; version-baseline.md).
   "@base-ui/react": 1.9.0
   vite: 8.3.4
+  # Documentation site (ADR-035; version-baseline.md). Exact pins, like every other catalog line.
+  fumadocs-core: 16.16.2
+  fumadocs-ui: 16.16.2
+  # fumadocs-mdx 15.4.7 and later need fumadocs-core ^16.17.0. The site stays on the 16.16 line, where 15.4.6 is the newest
+  # match (version-baseline.md).
+  fumadocs-mdx: 15.4.6
+  "@types/mdx": 2.0.14
+  tailwindcss: 4.3.3
+  "@tailwindcss/postcss": 4.3.3
 
 minimumReleaseAgeExclude:
   - "@better-auth/core@1.7.11"

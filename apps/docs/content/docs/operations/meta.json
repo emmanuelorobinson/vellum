@@ -1,0 +1,15 @@
+{
+  "title": "Operations",
+  "pages": [
+    "index",
+    "running-the-daemon",
+    "desktop-app",
+    "vscode-extension",
+    "accounts-and-pro",
+    "sync-and-self-hosting",
+    "backups-and-recovery",
+    "security-and-privacy",
+    "updates-and-releases",
+    "runbooks"
+  ]
+}

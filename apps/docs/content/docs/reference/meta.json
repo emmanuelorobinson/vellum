@@ -1,0 +1,20 @@
+{
+  "title": "Reference",
+  "pages": [
+    "index",
+    "cli",
+    "configuration",
+    "environment-variables",
+    "file-locations",
+    "providers-and-keys",
+    "export-formats",
+    "keyboard-shortcuts",
+    "script-api",
+    "file-format",
+    "file-layout",
+    "file-format-spec",
+    "script-api-declarations",
+    "mcp-tools",
+    "decisions"
+  ]
+}

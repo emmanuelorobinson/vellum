@@ -47,3 +47,16 @@ apps/web/public/fonts/
 
 # Optional sync service data (canonical snapshots, SQL/WAL, no credentials).
 .sync-data/
+
+# Documentation site: copied from the repository on every docs build (apps/docs/scripts/docs-content.mjs), and the
+# Fumadocs output. Edit the source, never these copies.
+apps/docs/.source/
+apps/docs/.generated/
+apps/docs/content/docs/operations/runbooks/
+apps/docs/content/docs/reference/decisions/
+apps/docs/content/docs/reference/mcp-tools/
+apps/docs/content/docs/reference/keyboard-shortcuts.md
+apps/docs/content/docs/reference/script-api-declarations.md
+apps/docs/content/docs/reference/file-format-spec.md
+apps/docs/content/docs/reference/file-layout.md
+apps/docs/content/docs/architecture/threat-model.md

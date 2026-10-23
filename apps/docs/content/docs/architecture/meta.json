@@ -1,0 +1,19 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "index",
+    "big-picture",
+    "principles",
+    "document-model",
+    "core-modules",
+    "clients-and-hosts",
+    "daemon",
+    "ai-and-agents",
+    "cloud",
+    "quality-gates",
+    "performance",
+    "monorepo",
+    "threat-model",
+    "open-questions"
+  ]
+}

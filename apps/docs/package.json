@@ -5,10 +5,30 @@
   "description": "User docs, MCP reference, format spec, ADRs.",
   "type": "module",
   "scripts": {
-    "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "docs:prepare": "node scripts/docs-content.mjs && fumadocs-mdx",
+    "dev": "pnpm docs:prepare && next dev --port 3002",
+    "build": "pnpm docs:prepare && next build",
+    "start": "next start --port 3002",
+    "type-check": "pnpm docs:prepare && tsc --project tsconfig.json",
+    "test": "node scripts/docs-content.mjs && node --test \"scripts/__tests__/*.test.mjs\" && vitest run"
+  },
+  "dependencies": {
+    "@vellum/config": "workspace:*",
+    "@vellum/ui-tokens": "workspace:*",
+    "fumadocs-core": "catalog:",
+    "fumadocs-mdx": "catalog:",
+    "fumadocs-ui": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "catalog:",
+    "@types/mdx": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

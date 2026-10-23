@@ -84,6 +84,8 @@ const windows = new Map<
 const binary = app.isPackaged
   ? join(process.resourcesPath, "bin", process.platform === "win32" ? "vellum.exe" : "vellum")
   : join(__dirname, "../bin", process.platform === "win32" ? "vellum.exe" : "vellum");
+// A packaged app takes its icon from the bundle. A development run sets the brand icon itself.
+const developmentIcon = app.isPackaged ? undefined : join(__dirname, "../../build/icon.png");
 const account = new NativeAccount(accountRunner(binary), () => pushAll());
 let library: DesktopLibrary;
 let draftDirectory: string;
@@ -908,6 +910,7 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
   }
 }
 function createWindow(folder: string | null): WindowEntry {
+  if (developmentIcon && process.platform === "darwin") app.dock?.setIcon(developmentIcon);
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -916,6 +919,7 @@ function createWindow(folder: string | null): WindowEntry {
     useContentSize: true,
     show: false,
     title: brand.name,
+    icon: developmentIcon,
     autoHideMenuBar: process.platform !== "darwin",
     ...windowChrome(process.platform),
     webPreferences: {

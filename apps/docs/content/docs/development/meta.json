@@ -1,0 +1,16 @@
+{
+  "title": "Development",
+  "pages": [
+    "index",
+    "workspace",
+    "commands",
+    "verification",
+    "contributing",
+    "clean-room-and-licensing",
+    "documenting-the-site",
+    "design-source",
+    "reference-repositories",
+    "version-policy",
+    "build-plan"
+  ]
+}

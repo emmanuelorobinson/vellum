@@ -1,0 +1,13 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "using-vellum",
+    "agents",
+    "operations",
+    "reference",
+    "architecture",
+    "development"
+  ]
+}
