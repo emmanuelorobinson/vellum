@@ -28,6 +28,13 @@ Current open items only. Resolved items, decisions taken for the owner and every
 - **Electron tests leak daemons.** Eight `vellum` daemons from earlier desktop test runs were still running in
   temporary run directories (some three days old); `afterEach` closes the app but not every daemon it started.
   Stopped by hand on 2026-10-23.
+- **Agents reach the document, not yet all of it (ADR-034, phases 1b and 2).** Phase 1 added the `manage_pages`,
+  `manage_components`, `instance_nodes` and `arrange_nodes` tools. Still open: the daemon applies agents' changes
+  with no measured boxes, path geometry or script outputs, so boolean, outline stroke, convert script and
+  hug-sized align, distribute or scale fail through agents; `execute` has no methods for the new ops, no print channel, no
+  name-to-id map and no layout warnings; `browser` cannot read a selector's DOM or styles back.
+- **`cargo clippy -p vellum --all-targets -- -D warnings` fails at HEAD.** `crates/vellum/src/daemon/documents.rs:185`
+  (`scenes`) trips `type_complexity` under the installed toolchain (1.99). Not from ADR-034; the new files are clean.
 - **pnpm advisories without a patched release:** `braces` (via ovsx/secretlint) and `sprintf-js` (via
   electron-builder), both packaging-time tooling.
 
@@ -49,6 +56,14 @@ Current open items only. Resolved items, decisions taken for the owner and every
   settle the six Component-library entries without a reusable component.
 - **Share authority (Prompt 69).** Decide whether `vellum/share` needs its own host capability or approval;
   today any initialized local client shares that interface.
+- **How far "agents manipulate anything" goes (ADR-034).** Host controls (selection, viewport, undo, version
+  history, sharing), raw browser control and file writes from scripts act on the live editor or outside the canvas.
+  Decide, for each one, whether an agent may take it and whether it needs a `PermissionBroker` prompt. Nothing of
+  that kind is exposed to agents yet.
+- **Clean-room record (Invariant 14).** While comparing Vellum's MCP with pen.dev's, an agent read the text of
+  pen.dev's MCP skill (`read_skill`) before the rule that parity comes from public docs only was applied. Nothing
+  was copied, and the comparison uses ARCHITECTURE §7.4 and the tool schemas. Decide whether that read needs to be
+  recorded or re-checked.
 
 ## Prompt index
 

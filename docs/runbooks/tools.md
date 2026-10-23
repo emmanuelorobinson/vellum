@@ -68,6 +68,26 @@ a failed script with its `line`. Fix that item and call again. Each call also le
 `search_icons`, `insert_icon`, `fill_image`, `import`. See [Icons, pictures and imports](imports.md): the libraries,
 the importers, what asks for permission and what each leaves out.
 
+## Pages, components, instances and arrangement (ADR-034)
+
+| Tool | Batch items | Use |
+|---|---|---|
+| `manage_pages` | `insert`, `update`, `move`, `delete` | Add, rename, change the kind of, reorder and remove pages. Inserts run first |
+| `manage_components` | `update` (name, props, variants), `remove` | Rename a definition, replace its props or variants, remove one no instance uses |
+| `instance_nodes` | `detach`, `toggle` (`componentId`), `replace` (`instance`, `path`, `node`) | Detach instances, make a layer a component, turn an instance back into layers, override a layer inside one |
+| `arrange_nodes` | `group` (`into`: group or frame), `ungroup`, `flip`, `scale`, `align`, `distribute` | Group or frame layers, take groups apart, mirror, scale, line up and space layers |
+
+```sh
+vellum tool manage_pages --insert '[{"name":"Onboarding"}]'
+vellum tool arrange_nodes --group '[{"ids":["textTitle1","textBody01"],"name":"Intro"}]'
+vellum tool instance_nodes --replace '[{"instance":"instBtn001","path":"buttonRoot/buttonText","node":{"type":"text","name":"Label","width":"hug","height":"hug","content":[{"text":"Go","font":"Inter","size":14}]}}]'
+```
+
+A group or frame sits at the bounds of its children when they all have fixed positions and sizes. Layers that
+follow a layout can be grouped only with each other. Booleans, outline stroke and convert script are not in these
+tools yet, and neither are align, distribute or scale on hug-sized layers: the daemon applies agents' changes
+without measured boxes, path geometry or script outputs (ADR-034, phase 1b).
+
 ## Adding a tool
 
 Prompt 31 adds `list_skills`, `read_skill(path?)` and `get_style(name?)`; all work without an open document.

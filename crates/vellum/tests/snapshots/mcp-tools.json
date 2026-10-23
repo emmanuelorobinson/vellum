@@ -6,6 +6,246 @@
       },
       "annotations": {
         "destructiveHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Group or frame layers, ungroup, flip, scale, align or distribute them. Positions come from each layer's own fixed position and size, so layers in a layout can be grouped only with each other. One change for the batch.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "align": {
+            "description": "Layers to line up at one edge or at their centre, within their collective bounds.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "alignment": {
+                  "description": "Which edge or the centre.",
+                  "oneOf": [
+                    {
+                      "const": "start",
+                      "description": "The left edge, or the top one on the vertical axis.",
+                      "type": "string"
+                    },
+                    {
+                      "const": "center",
+                      "description": "The centre.",
+                      "type": "string"
+                    },
+                    {
+                      "const": "end",
+                      "description": "The right edge, or the bottom one on the vertical axis.",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "axis": {
+                  "description": "The axis: \"horizontal\" lines up left or right edges (or centres), \"vertical\" lines up tops or bottoms.",
+                  "oneOf": [
+                    {
+                      "const": "horizontal",
+                      "description": "Left to right: the x axis.",
+                      "type": "string"
+                    },
+                    {
+                      "const": "vertical",
+                      "description": "Top to bottom: the y axis.",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "ids": {
+                  "description": "The layers, siblings at fixed positions with fixed sizes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "ids",
+                "axis",
+                "alignment"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "distribute": {
+            "description": "Three or more layers to space with equal gaps. The outermost ones stay where they are.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "description": "The axis to space them along.",
+                  "oneOf": [
+                    {
+                      "const": "horizontal",
+                      "description": "Left to right: the x axis.",
+                      "type": "string"
+                    },
+                    {
+                      "const": "vertical",
+                      "description": "Top to bottom: the y axis.",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "ids": {
+                  "description": "Three or more layers, siblings at fixed positions with fixed sizes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "ids",
+                "axis"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "flip": {
+            "description": "Layers to mirror about their own centre.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "description": "The axis to mirror across.",
+                  "oneOf": [
+                    {
+                      "const": "horizontal",
+                      "description": "Left to right: the x axis.",
+                      "type": "string"
+                    },
+                    {
+                      "const": "vertical",
+                      "description": "Top to bottom: the y axis.",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "id": {
+                  "description": "The layer.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "axis"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "group": {
+            "description": "Layers to wrap in a new group, or in a frame with `into: \"frame\"`. The wrapper goes where the frontmost of\nthem was, and the layers keep where they are.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "ids": {
+                  "description": "The layers to wrap. They must be siblings, all at fixed positions with fixed sizes or all in one layout.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "into": {
+                  "description": "\"group\" (the default) or \"frame\".",
+                  "oneOf": [
+                    {
+                      "const": "group",
+                      "description": "A group: it has no fill and no size of its own.",
+                      "type": "string"
+                    },
+                    {
+                      "const": "frame",
+                      "description": "A frame: it has a size and can have a fill.",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "name": {
+                  "description": "The wrapper's name. Left out, it is named after its kind.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ids"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "scale": {
+            "description": "Layers to scale about an anchor on their own box, with everything inside them.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "anchor": {
+                  "additionalProperties": false,
+                  "description": "The fixed point of the scale, each from 0 to 1 across the layer's box. Left out, it is the top left corner.",
+                  "properties": {
+                    "x": {
+                      "description": "Across the box: 0 at the left, 1 at the right.",
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "y": {
+                      "description": "Down the box: 0 at the top, 1 at the bottom.",
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "type": "object"
+                },
+                "factor": {
+                  "description": "The factor, above 0: 2 doubles every length.",
+                  "format": "double",
+                  "type": "number"
+                },
+                "id": {
+                  "description": "The layer.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "factor"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ungroup": {
+            "description": "Groups to take apart: each child goes where its group was, and the group is removed.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "title": "ArrangeInput",
+        "type": "object"
+      },
+      "name": "arrange_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": false,
         "openWorldHint": true,
         "readOnlyHint": false
       },
@@ -1205,6 +1445,86 @@
         "vellum/version": 1
       },
       "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Detach instances, make a layer into a component, turn an instance back into layers, or override a layer inside an instance. The component itself is changed only by manage_components. One change for the batch.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "detach": {
+            "description": "Instances to expand into their own layers. They then no longer follow their component.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "replace": {
+            "description": "Layers inside an instance to replace with an override. The component itself is not changed.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "instance": {
+                  "description": "The instance whose layer is overridden.",
+                  "type": "string"
+                },
+                "node": {
+                  "additionalProperties": true,
+                  "description": "The new layer, in the file format. Its `id` and `name` may be left out.",
+                  "type": "object"
+                },
+                "path": {
+                  "description": "The layer inside the component, by id from the component's root, joined with \"/\": for example\n`buttonRoot/buttonText`.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "instance",
+                "path",
+                "node"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "toggle": {
+            "description": "Layers to make into components, or instances to turn back into layers. A layer needs `componentId`, the id\nthe new component takes. An instance keeps its own component's id; when it is that component's only\ninstance, the component is removed.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "componentId": {
+                  "description": "The id the new component takes. Required for a layer; an instance keeps its own.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "The layer, or the instance.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "title": "InstancesInput",
+        "type": "object"
+      },
+      "name": "instance_nodes"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
         "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
@@ -1322,6 +1642,186 @@
         "type": "object"
       },
       "name": "make_slot"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Rename a component, replace its props or variants, or remove a component that no instance uses. The layers inside a component are not changed here. One change for the batch.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Definitions to remove. One that an instance still uses is refused: detach those instances first.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "update": {
+            "description": "Definitions to change. What is left out stays as it is. The layers of a definition are not changed here.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The component.",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Its new name.",
+                  "type": "string"
+                },
+                "props": {
+                  "additionalProperties": true,
+                  "description": "Its props, replacing all of them: each name maps to its definition, in the file format (see read_skill).",
+                  "type": "object"
+                },
+                "variants": {
+                  "description": "Its variants, replacing all of them, in the file format (see read_skill).",
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "title": "ComponentsInput",
+        "type": "object"
+      },
+      "name": "manage_components"
+    },
+    {
+      "_meta": {
+        "vellum/version": 1
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "description": "Add, rename or change the kind of, move and remove pages. Inserts run first, then updates, moves and removals, all as one change. Removing a page removes every layer on it, so read it first.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "delete": {
+            "description": "Pages to remove, after everything else, each with every layer on it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "document": {
+            "description": "The document. Defaults to the one opened last.",
+            "type": "string"
+          },
+          "insert": {
+            "description": "Pages to add, first. Each goes at its index among the pages, counted as the list is when it is added; left\nout, it goes at the end.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "index": {
+                  "description": "Where among the pages, counting from 0. Left out, the page goes at the end.",
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "description": "\"canvas\" (the default) or \"slides\".",
+                  "enum": [
+                    "canvas",
+                    "slides"
+                  ],
+                  "type": "string"
+                },
+                "name": {
+                  "description": "The name shown in the page list.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "move": {
+            "description": "Pages to move, after the inserts and updates. An index counts the pages after the page has left its place.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The page.",
+                  "type": "string"
+                },
+                "index": {
+                  "description": "Where it ends up among the pages, counting from 0.",
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "index"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "update": {
+            "description": "Pages to rename or change the kind of. What is left out stays as it is.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "The page.",
+                  "type": "string"
+                },
+                "kind": {
+                  "description": "Its new kind: \"canvas\" or \"slides\". A page with layers that the kind does not allow is refused.",
+                  "enum": [
+                    "canvas",
+                    "slides"
+                  ],
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Its new name.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "title": "PagesInput",
+        "type": "object"
+      },
+      "name": "manage_pages"
     },
     {
       "_meta": {

@@ -5,10 +5,12 @@
 //! [`ToolCtx`], which routes to the daemon's targets, so a tool cannot tell a live editor from a headless file.
 //! Names are stable and schema changes are additive; a breaking change is a new tool name (§2.5).
 
+mod arrange;
 mod assets;
 mod batch;
 mod bridge;
 mod browser;
+mod components;
 mod content;
 mod context;
 mod coordinate;
@@ -18,6 +20,7 @@ mod image_work;
 mod library;
 mod model;
 mod nodes;
+mod pages;
 mod scene;
 mod spec;
 mod step;
@@ -570,6 +573,9 @@ impl Registry {
         library::register(&mut tools);
         write::register(&mut tools);
         model::register(&mut tools);
+        pages::register(&mut tools);
+        components::register(&mut tools);
+        arrange::register(&mut tools);
         coordinate::register(&mut tools, settings);
         execute::register(&mut tools);
         tokens::register(&mut tools, stacks);

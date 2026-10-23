@@ -7,7 +7,7 @@ use common::{Daemon, FakeEditor, design};
 use serde_json::{Value, json};
 use vellum::daemon::EditorId;
 use vellum::tools::{Client, ErrorKind, Registry, Session, Step, ToolCtx, ToolError, Verb};
-use vellum_types::{Actor, Document, Node};
+use vellum_types::{Actor, ComponentId, Document, Node, NodeKind};
 
 const PATH: &str = "design/app.vellum";
 
@@ -123,7 +123,8 @@ fn live(rig: &mut Rig) -> FakeEditor {
 
 // ---- the registry ---------------------------------------------------------------------------------------
 
-const WRITE_TOOLS: [&str; 15] = [
+const WRITE_TOOLS: [&str; 19] = [
+    "arrange_nodes",
     "claim_frame",
     "copy_nodes",
     "create_component",
@@ -131,7 +132,10 @@ const WRITE_TOOLS: [&str; 15] = [
     "delete_nodes",
     "execute",
     "insert_nodes",
+    "instance_nodes",
     "make_slot",
+    "manage_components",
+    "manage_pages",
     "move_nodes",
     "release_frame",
     "replace_nodes",
@@ -155,6 +159,10 @@ fn every_write_tool_is_registered_and_none_claims_to_be_read_only() {
         ("create_instance", false),
         ("claim_frame", false),
         ("report_progress", false),
+        ("arrange_nodes", false),
+        ("manage_pages", true),
+        ("manage_components", true),
+        ("instance_nodes", true),
         ("update_nodes", true),
         ("delete_nodes", true),
         ("replace_nodes", true),
@@ -901,4 +909,258 @@ fn a_scripted_agent_designs_a_screen_on_the_stub_endpoint() {
             .contains("nodes[0].width")
     );
     assert_eq!(rig.session.steps().len(), 3);
+}
+
+// ---- pages, component definitions, instances and arrangement (ADR-034) ------------------------------------------
+
+fn page_names(doc: &Document) -> Vec<String> {
+    doc.pages.iter().map(|p| p.name.clone()).collect()
+}
+
+fn x_of(doc: &Document, id: &str) -> f64 {
+    place_of(doc, id).0
+}
+
+/// A layer's absolute `(x, y)` as the file holds it: its parent's coordinates.
+fn place_of(doc: &Document, id: &str) -> (f64, f64) {
+    let node = serde_json::to_value(find(doc, id).expect("exists")).expect("a node");
+    (
+        node["position"]["x"].as_f64().expect("an absolute x"),
+        node["position"]["y"].as_f64().expect("an absolute y"),
+    )
+}
+
+#[test]
+fn manage_pages_adds_renames_moves_and_deletes_pages() {
+    let mut rig = Rig::headless();
+    let out = rig.ok("manage_pages", json!({"insert": [{"name": "Onboarding"}]}));
+    let added = created(&out).remove(0);
+    assert_eq!(page_names(&rig.doc()), vec!["Home", "Other", "Onboarding"]);
+
+    rig.ok(
+        "manage_pages",
+        json!({"update": [{"id": "pageHome01", "name": "Start"}]}),
+    );
+    rig.ok("manage_pages", json!({"move": [{"id": added, "index": 0}]}));
+    assert_eq!(page_names(&rig.doc()), vec!["Onboarding", "Start", "Other"]);
+
+    rig.ok("manage_pages", json!({"delete": ["pageHome01"]}));
+    let doc = rig.doc();
+    assert_eq!(page_names(&doc), vec!["Onboarding", "Other"]);
+    assert!(
+        find(&doc, "frameHero1").is_none(),
+        "a deleted page takes its layers"
+    );
+}
+
+#[test]
+fn manage_pages_refuses_a_bad_index_and_names_the_item() {
+    let mut rig = Rig::headless();
+    let err = rig
+        .call(
+            "manage_pages",
+            json!({"insert": [{"name": "Later", "index": 9}]}),
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidInput);
+    assert_eq!(err.path(), Some("insert[0].index"));
+    assert_eq!(page_names(&rig.doc()), vec!["Home", "Other"]);
+}
+
+#[test]
+fn manage_components_renames_and_keeps_what_it_is_not_given() {
+    let mut rig = Rig::headless();
+    rig.ok(
+        "manage_components",
+        json!({"update": [{"id": "compButton1", "name": "Action button"}]}),
+    );
+    let doc = rig.doc();
+    let component = doc
+        .components
+        .get(&ComponentId::new("compButton1").expect("an id"))
+        .expect("the component is still there");
+    assert_eq!(component.name, "Action button");
+    assert!(
+        component.props.contains_key("label"),
+        "props that were not given stay as they were"
+    );
+}
+
+#[test]
+fn manage_components_refuses_to_remove_a_definition_an_instance_uses() {
+    let mut rig = Rig::headless();
+    assert!(
+        rig.call("manage_components", json!({"remove": ["compButton1"]}))
+            .is_err()
+    );
+    assert!(
+        rig.doc()
+            .components
+            .contains_key(&ComponentId::new("compButton1").expect("an id"))
+    );
+}
+
+#[test]
+fn instance_nodes_detaches_an_instance_then_its_definition_can_go() {
+    let mut rig = Rig::headless();
+    rig.ok("instance_nodes", json!({"detach": ["instBtn001"]}));
+    let doc = rig.doc();
+    assert_eq!(
+        find(&doc, "instBtn001").expect("the layer is kept").kind(),
+        NodeKind::Frame
+    );
+
+    rig.ok("manage_components", json!({"remove": ["compButton1"]}));
+    assert!(rig.doc().components.is_empty());
+}
+
+#[test]
+fn instance_nodes_makes_a_component_from_a_layer() {
+    let mut rig = Rig::headless();
+    rig.ok(
+        "instance_nodes",
+        json!({"toggle": [{"id": "rectCard01", "componentId": "compCard01"}]}),
+    );
+    assert!(
+        rig.doc()
+            .components
+            .contains_key(&ComponentId::new("compCard01").expect("an id"))
+    );
+}
+
+#[test]
+fn instance_nodes_replaces_a_layer_inside_an_instance_and_leaves_the_component_alone() {
+    let mut rig = Rig::headless();
+    let root = ComponentId::new("compButton1").expect("an id");
+    let before = serde_json::to_value(&rig.doc().components[&root].root).expect("a node");
+    rig.ok(
+        "instance_nodes",
+        json!({"replace": [{
+            "instance": "instBtn001",
+            "path": "buttonRoot/buttonText",
+            "node": {"type": "text", "name": "Label", "width": "hug", "height": "hug", "content": [{"text": "Go", "font": "Inter", "size": 14}]}
+        }]}),
+    );
+    let after = serde_json::to_value(&rig.doc().components[&root].root).expect("a node");
+    assert_eq!(
+        before, after,
+        "the main component is not changed by an override"
+    );
+}
+
+#[test]
+fn arrange_nodes_groups_and_ungroups_layers() {
+    let mut rig = Rig::headless();
+    let out = rig.ok(
+        "arrange_nodes",
+        json!({"group": [{"ids": ["textTitle1", "textBody01"], "name": "Intro"}]}),
+    );
+    let group = created(&out).remove(0);
+    let doc = rig.doc();
+    assert_eq!(child_ids(&doc, &group), vec!["textTitle1", "textBody01"]);
+    assert!(child_ids(&doc, "frameHero1").contains(&group));
+    assert_eq!(find(&doc, &group).expect("the group").name(), "Intro");
+    // The group sits at its children's corner, and each child keeps its place on the canvas inside it.
+    assert_eq!(place_of(&doc, &group), (20.0, 20.0));
+    assert_eq!(place_of(&doc, "textTitle1"), (0.0, 0.0));
+    assert_eq!(place_of(&doc, "textBody01"), (0.0, 60.0));
+
+    rig.ok("arrange_nodes", json!({"ungroup": [group.clone()]}));
+    let doc = rig.doc();
+    assert!(find(&doc, &group).is_none());
+    assert!(child_ids(&doc, "frameHero1").contains(&"textTitle1".to_owned()));
+}
+
+#[test]
+fn arrange_nodes_refuses_layers_from_different_parents_and_names_the_item() {
+    let mut rig = Rig::headless();
+    let err = rig
+        .call(
+            "arrange_nodes",
+            json!({"group": [{"ids": ["textTitle1", "textFoot01"]}]}),
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidInput);
+    assert_eq!(err.path(), Some("group[0].ids[1]"));
+}
+
+#[test]
+fn arrange_nodes_flips_a_layer_and_aligns_layers_to_an_edge() {
+    let mut rig = Rig::headless();
+    let card =
+        serde_json::to_value(find(&rig.doc(), "rectCard01").expect("exists")).expect("a node");
+    rig.ok(
+        "arrange_nodes",
+        json!({"flip": [{"id": "rectCard01", "axis": "horizontal"}]}),
+    );
+    let flipped =
+        serde_json::to_value(find(&rig.doc(), "rectCard01").expect("exists")).expect("a node");
+    assert_ne!(flipped, card);
+    rig.ok(
+        "arrange_nodes",
+        json!({"flip": [{"id": "rectCard01", "axis": "horizontal"}]}),
+    );
+    let twice =
+        serde_json::to_value(find(&rig.doc(), "rectCard01").expect("exists")).expect("a node");
+    assert_eq!(twice, card, "two flips are no change");
+
+    rig.ok(
+        "arrange_nodes",
+        json!({"align": [{"ids": ["rectCard01", "textBody01"], "axis": "horizontal", "alignment": "end"}]}),
+    );
+    let doc = rig.doc();
+    assert_eq!(
+        x_of(&doc, "rectCard01"),
+        60.0,
+        "the card's right edge meets the body's (220)"
+    );
+    assert_eq!(x_of(&doc, "textBody01"), 20.0);
+}
+
+#[test]
+fn arrange_nodes_scales_a_layer_about_its_anchor() {
+    let mut rig = Rig::headless();
+    rig.ok(
+        "arrange_nodes",
+        json!({"scale": [{"id": "rectCard01", "factor": 2, "anchor": {"x": 0, "y": 0}}]}),
+    );
+    let doc = rig.doc();
+    let node = serde_json::to_value(find(&doc, "rectCard01").expect("exists")).expect("a node");
+    assert_eq!(node["width"].as_f64(), Some(320.0));
+    assert_eq!(node["height"].as_f64(), Some(160.0));
+    assert_eq!(
+        place_of(&doc, "rectCard01"),
+        (20.0, 120.0),
+        "the anchor stays put"
+    );
+}
+
+#[test]
+fn manage_components_reads_props_in_the_file_format_and_names_a_bad_one() {
+    let mut rig = Rig::headless();
+    let err = rig
+        .call(
+            "manage_components",
+            json!({"update": [{"id": "compButton1", "props": {"label": {"type": "nonsense"}}}]}),
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidInput);
+    assert_eq!(err.path(), Some("update[0].props"));
+}
+
+#[test]
+fn no_tool_schema_inlines_the_file_format() {
+    // The file format is read with read_skill. A schema that inlines it runs to megabytes; the largest today is a
+    // few kilobytes.
+    let registry = Registry::standard();
+    for tool in registry.tools() {
+        let size = serde_json::to_string(&tool.input_schema())
+            .expect("a schema")
+            .len();
+        assert!(
+            size < 16_384,
+            "{}'s input schema is {size} bytes",
+            tool.name()
+        );
+    }
 }
