@@ -214,6 +214,28 @@ impl McpServer {
         if !matches!(engine, "builtin" | "claude-code" | "codex") {
             return Err(error("Unknown engine"));
         }
+        let resumed = if let Some(id) = p["session"].as_str() {
+            let log = self
+                .log
+                .as_ref()
+                .ok_or_else(|| error("Sessions are unavailable"))?;
+            let meta = log
+                .metadata(std::path::Path::new(&path))
+                .map_err(error)?
+                .into_iter()
+                .find(|m| m.id.as_str() == id && matches!(m.kind, SessionKind::Engine { .. }))
+                .ok_or_else(|| error("No such engine session for this document"))?;
+            if self
+                .cli_runs
+                .values()
+                .any(|r| r.session == meta.id && !r.ended)
+            {
+                return Err(error("This session already has a running turn"));
+            }
+            Some(meta)
+        } else {
+            None
+        };
         let run = if let Some(turn) = p["join"].as_str() {
             // Join only a running owner connection for this document, never an arbitrary stored turn.
             let primary = self
@@ -236,7 +258,10 @@ impl McpServer {
             Run {
                 document: path.clone(),
                 turn: TurnId::new(self.docs.ulid()).expect("ULID"),
-                session: SessionId::new(self.docs.ulid()).expect("ULID"),
+                session: resumed
+                    .as_ref()
+                    .map(|m| m.id.clone())
+                    .unwrap_or_else(|| SessionId::new(self.docs.ulid()).expect("ULID")),
                 agent: agent.clone(),
                 person: Actor::Person {
                     device: DeviceId::new(self.docs.ulid()).expect("id"),
@@ -282,21 +307,26 @@ impl McpServer {
                 .log
                 .as_ref()
                 .ok_or_else(|| error("Session recording unavailable"))?;
-            let doc =
-                crate::sessions::doc_key(std::path::Path::new(&path), &crate::sessions::holds_git)
-                    .map_err(error)?;
-            log.store()
-                .create(NewSession {
-                    id: run.session.clone(),
-                    doc,
-                    kind: SessionKind::Engine {
-                        engine: engine.into(),
-                    },
-                    agent: agent.clone(),
-                    title: text(p, "prompt")?.chars().take(120).collect(),
-                    created_at: self.docs.now(),
-                })
+            let doc = log
+                .document_key(std::path::Path::new(&path))
                 .map_err(error)?;
+            if resumed.as_ref().is_some_and(|meta| meta.events == 0) {
+                log.store().rename(&run.session, &text(p, "prompt")?.chars().take(120).collect::<String>()).map_err(error)?;
+            }
+            if resumed.is_none() {
+                log.store()
+                    .create(NewSession {
+                        id: run.session.clone(),
+                        doc,
+                        kind: SessionKind::Engine {
+                            engine: engine.into(),
+                        },
+                        agent: agent.clone(),
+                        title: text(p, "prompt")?.chars().take(120).collect(),
+                        created_at: self.docs.now(),
+                    })
+                    .map_err(error)?;
+            }
             log.store()
                 .append(
                     &run.session,
@@ -332,7 +362,13 @@ impl McpServer {
         session.log_path_as(path.clone(), run.session.clone());
         self.sessions.insert(conn, session);
         self.docs.name_agent(agent.clone(), name.into());
-        let result = json!({"turn":run.turn.as_str(),"agent":agent.as_str(),"session":run.session.as_str(),"document":path});
+        let log = self
+            .log
+            .as_ref()
+            .ok_or_else(|| error("Sessions unavailable"))?;
+        let events = log.store().events(&run.session, None).map_err(error)?;
+        let history = vellum_core::sessions::history(log.store(), &events).map_err(error)?;
+        let result = json!({"turn":run.turn.as_str(),"agent":agent.as_str(),"session":run.session.as_str(),"document":path,"history":crate::cli::prompt::runner::encode_messages(history)});
         self.cli_runs.insert(conn, run);
         Ok(result)
     }
@@ -628,7 +664,7 @@ impl McpServer {
     }
 }
 
-fn decode_message(value: &Value) -> Result<ChatMessage> {
+pub(crate) fn decode_message(value: &Value) -> Result<ChatMessage> {
     let role = match text(value, "role")? {
         "user" => ChatRole::User,
         "assistant" => ChatRole::Assistant,

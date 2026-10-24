@@ -433,11 +433,28 @@ test("@electron desktop Home routes, persistent draft and native Save As", async
   await expect(first.getByRole("button", { name: "Continue in browser" })).toBeEnabled();
   await expect(first.getByRole("button", { name: "Check account" })).toBeEnabled();
   await first.getByRole("button", { name: "Home", exact: true }).click();
+  const homePrompt = first.getByRole("textbox", {
+    name: "What do you want to design?",
+    exact: true,
+  });
+  await expect(homePrompt).toBeEditable();
+  await homePrompt.focus();
+  await app.evaluate(({ clipboard, BrowserWindow }) => {
+    clipboard.writeText("TEST DATA pasted design brief");
+    BrowserWindow.getAllWindows()[0]?.webContents.paste();
+  });
+  await expect(homePrompt).toHaveValue("TEST DATA pasted design brief");
+  await expect(first.getByRole("button", { name: "Start designing", exact: true })).toBeEnabled();
   await first.getByRole("button", { name: "New file", exact: true }).click();
   await expect.poll(() => app.windows().some((p) => p !== first)).toBe(true);
   const page = app.windows().find((p) => p !== first);
   if (!page) throw Error("missing draft window");
   await expect(page.getByRole("tab", { name: /\.vellum/ })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Request", exact: true })).toBeEditable({
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "New session", exact: true }).click();
+  await expect(page.locator(".va-bar__title")).toHaveText("New session");
   await menu("home");
   await page.getByRole("tab", { name: "Drafts", exact: true }).click();
   await expect(page.getByRole("button", { name: "Save As…", exact: true })).toBeVisible();

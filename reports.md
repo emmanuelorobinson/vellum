@@ -315,3 +315,39 @@ Not verified: `pnpm --filter ./apps/extension build` fails here because `@vellum
 `dist/vellum-editor.js` (the wasm pipeline is not built). The icon copy line in `apps/extension/build.mjs` is therefore
 not run end to end. The Electron dev run and `pnpm package:desktop` were not run. Root `cargo clippy` was not run (its
 failure at HEAD is recorded above).
+
+## Prompt 72 follow-up: runners dating-app comparison (2026-10-24)
+
+Used computer UI control to submit an original four-screen runners dating-app brief in a new pen.dev draft;
+generation started with its existing model connection. No repository design file was opened or modified.
+Vellum could not be opened by app name: no installed app, desktop bundle or renderer WASM build was found.
+Confirmed `apps/desktop/src/renderer/Home.tsx` disables the design composer and Start designing control;
+the requested comparison is blocked by the existing host integration gap above. No implementation, builds or
+tests were run. No build output was created or cleared; `target/` was absent and disk availability was 372 GiB.
+
+## Prompt 72 follow-up: build and try the desktop (2026-10-24)
+
+Built the native daemon, editor WASM and unsigned macOS ARM64 app. Computer-use smoke test found a packaging
+bug: `engine/` was omitted from both staging and the archive, so a new draft could not start its engine.
+Added a failing runtime-asset regression test, then included the engine, Inter font and licence in packaging.
+After rebuilding and restarting, the same draft opens the canvas. Home's composer/Start designing remain
+disabled; Agents says provider/engine controls are unavailable; the draft shows an unavailable agent feed,
+read-only/daemon-offline state, and New session returns unavailable. No runners-app prompt could be submitted
+in Vellum and no ChatGPT connection was made. The existing host integration item remains open.
+
+Passed: `node scripts/skia-build.mjs build -p vellum`;
+`node scripts/skia-build.mjs build --release -p vellum-wasm --bin vellum-editor --target wasm32-unknown-emscripten`;
+`node apps/desktop/packaging.mjs --platform darwin --arch arm64 --daemon target/debug/vellum --development-preview --dir`;
+`node --test apps/desktop/packaging.test.mjs` (5 tests);
+`node_modules/.bin/biome check apps/desktop/packaging.mjs apps/desktop/packaging.test.mjs`;
+`apps/desktop/node_modules/.bin/tsc --noEmit -p apps/desktop/tsconfig.json`;
+`bash scripts/check-deps.sh ts`; `pnpm checksum`; `node scripts/spec-checksums.mjs check`; `git diff --check`.
+Rust logic was unchanged; clippy was not rerun. Native linking warned about the unwind table size.
+Initial WASM linking and packaging failed on sandbox cache/network access; retries with access passed.
+Sandboxed pnpm could not verify its registry signature; the network-enabled checksum invocation passed.
+
+Reviewed cleanup with `node scripts/clean.mjs --dry-run`. Staged unused Rust and desktop/WASM intermediates
+under `/tmp/vellum-build-clean-TRtvPl`, then ran
+`pnpm run clean -- --root /tmp/vellum-build-clean-TRtvPl` (3 output directories removed).
+Retained only `target/desktop-packages/` (611 MiB) because the built app is running there. Disk availability
+rose from 364 GiB before cleanup to 370 GiB after; source, dependencies, references and design cache retained.

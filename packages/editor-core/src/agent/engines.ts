@@ -77,6 +77,8 @@ export interface InstalledEngine {
   command?: string;
   /** Usage limit: when the plan's allowance comes back, in UTC milliseconds. */
   resetsAt?: number;
+  /** Models the program offers, as it lists them. Without any, it chooses its own. */
+  models?: ModelOption[];
 }
 
 const INSTALLED: Record<InstalledState, string> = {

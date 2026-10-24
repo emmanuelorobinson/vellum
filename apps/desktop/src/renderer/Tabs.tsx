@@ -35,7 +35,12 @@ export function DocumentTabs({ state, bridge }: { state: DesktopState; bridge: D
           ))}
         </div>
       )}
-      <div className="desktop-tabs" role="tablist" aria-label="Document tabs">
+      <div
+        className="desktop-tabs"
+        role="tablist"
+        aria-label="Document tabs"
+        data-single={state.tabs.length < 2}
+      >
         {state.tabs.map((tab, index) => (
           <div className="desktop-tab" data-selected={tab.id === state.active} key={tab.id}>
             <button

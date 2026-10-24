@@ -5,6 +5,30 @@ import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import { builderConfig } from "./packaging.mjs";
 
+test("the packaged app contains the engine and font at the main process runtime paths", async () => {
+  const { readFile, mkdtemp, mkdir, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join, matchesGlob } = await import("node:path");
+  const { stagePackage } = await import("./packaging.mjs");
+  const root = await mkdtemp(join(tmpdir(), "vellum-package-runtime-"));
+  try {
+    for (const name of ["main", "preload", "renderer", "engine"]) await mkdir(join(root, name));
+    const files = ["engine/vellum_editor.wasm", "engine/InterVariable.ttf", "engine/Inter-OFL.txt"];
+    for (const file of files) await writeFile(join(root, file), `TEST DATA ${file}`);
+    const config = builderConfig({ preview: true, version: "0.0.0", productName: "TEST DATA" });
+    for (const file of files)
+      assert.ok(
+        config.files.some((pattern) => matchesGlob(file, pattern)),
+        `${file} must enter the archive`,
+      );
+    await stagePackage(root, join(root, "package"));
+    for (const file of files)
+      assert.equal(await readFile(join(root, "package", file), "utf8"), `TEST DATA ${file}`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("release signing prerequisites follow the native platform; Linux uses signed update metadata", () => {
   const common = {
     preview: false,

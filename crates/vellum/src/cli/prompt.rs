@@ -1,5 +1,5 @@
 //! Agent mode over the existing engines and an authenticated remote tool bridge.
-mod runner;
+pub(crate) mod runner;
 
 use super::commands::{ExportArgs, Output, Rpc, export};
 use clap::Args;
@@ -18,6 +18,9 @@ use vellum_ipc_local::RunDir;
 
 #[derive(Args, Clone)]
 pub struct PromptArgs {
+    /// Continue an engine session of this document (desktop host).
+    #[arg(long)]
+    pub session: Option<String>,
     /// FILE PROMPT, or PROMPT with --out FILE.
     #[arg(num_args=0..=2)]
     pub words: Vec<String>,
@@ -289,8 +292,14 @@ fn one(
     };
     let turn = rpc.request(
         "vellum/cli",
-        json!({"action":"turn","document":file,"engine":engine_id,"prompt":text,"model":model}),
+        json!({"action":"turn","document":file,"engine":engine_id,"prompt":text,"model":model,"session":args.session}),
     )?;
+    if out.json {
+        println!(
+            "{}",
+            json!({"event":"turn_started","session":turn["session"],"turn":turn["turn"]})
+        );
+    }
     let id = vellum_types::TurnId::new(
         turn["turn"]
             .as_str()
@@ -298,6 +307,13 @@ fn one(
     )
     .map_err(io::Error::other)?;
     let mut request = TurnRequest::new(id, model.clone(), text);
+    request.history = turn["history"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(crate::mcp::cli::decode_message)
+        .collect::<Result<_, _>>()
+        .map_err(|(_, message)| io::Error::other(message))?;
     request.images = images;
     request.effort = effort;
     request.limits.max_failed_calls = args.max_failed_calls;

@@ -124,9 +124,13 @@ impl SessionLog {
         &self,
         path: &Path,
     ) -> Result<Vec<vellum_core::ports::SessionMeta>, StoreError> {
-        let key = doc_key(path, &*self.is_repo)
-            .map_err(|_| StoreError::Io("Invalid document path".to_owned()))?;
+        let key = self.document_key(path)?;
         self.store.sessions(&key)
+    }
+
+    pub fn document_key(&self, path: &Path) -> Result<DocKey, StoreError> {
+        doc_key(path, &*self.is_repo)
+            .map_err(|_| StoreError::Io("Invalid document path".to_owned()))
     }
 
     pub fn pricing(&self) -> &Pricing {

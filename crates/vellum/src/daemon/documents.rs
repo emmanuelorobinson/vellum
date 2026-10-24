@@ -182,8 +182,10 @@ pub struct Documents {
     image_generator: Option<Rc<dyn vellum_core::ports::ImageGenerator>>,
     image_model: Option<String>,
     /// Each document's scene services, with the document they were made for.
-    scenes: RefCell<BTreeMap<String, (Document, Rc<dyn Services>)>>,
+    scenes: RefCell<SceneCache>,
 }
+
+type SceneCache = BTreeMap<String, (Document, Rc<dyn Services>)>;
 
 /// An external client's `spawn_agents` call, for the host that runs helper agents.
 #[derive(Debug, Clone, PartialEq)]

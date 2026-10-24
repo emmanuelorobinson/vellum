@@ -158,6 +158,12 @@ export function Composer({
           <ParallelPopover composer={composer} disabled={offline} />
           <ExplorePopover composer={composer} disabled={offline} />
           <UsageMeter composer={composer} host={host} />
+          {model && !blocked ? (
+            <EnginePicker composer={composer} hasTurns={hasTurns}>
+              <span className="vk-model vc-mono">{model.split(" · ").at(-1)}</span>
+              <Icon name="chevron-down" size={12} />
+            </EnginePicker>
+          ) : null}
           {action.type === "stop" ? (
             <StopButton composer={composer} agents={action.agents} actor={actor} />
           ) : (
@@ -184,11 +190,6 @@ export function Composer({
         </p>
       ) : (
         <>
-          {model ? (
-            <EnginePicker composer={composer} hasTurns={hasTurns}>
-              <span className="vk-model vc-mono">{model}</span>
-            </EnginePicker>
-          ) : null}
           {!hasTurns && host.onConnectAgents ? (
             <button type="button" className="va-link vk-connect" onClick={host.onConnectAgents}>
               Connect your coding agent

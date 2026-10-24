@@ -5,6 +5,7 @@
  */
 import {
   type AgentFeed,
+  type ComposerController,
   createAgentController,
   createCommandController,
   createDefaultNode,
@@ -62,15 +63,15 @@ export function createLiveEditor(options: LiveEditorOptions) {
   });
   const paintEditor = createPaintEditor({ session, design });
   const workspace = createWorkspace();
-  const controller = createCommandController(
-    createEditorHandlers({
-      workspace,
-      session,
-      design,
-      pauseAll: options.pauseAll,
-      preferences: options.preferences,
-    }),
-  );
+  const handlerDeps = {
+    workspace,
+    session,
+    design,
+    pauseAll: options.pauseAll,
+    preferences: options.preferences,
+  };
+  const handlers = createEditorHandlers(handlerDeps);
+  const controller = createCommandController(handlers);
   const agent = options.agentFeed
     ? createAgentController({
         feed: options.agentFeed,
@@ -100,6 +101,9 @@ export function createLiveEditor(options: LiveEditorOptions) {
     content: engine.content,
     createRenderer,
     nextNodeId: () => engine.nextId(),
+    connectComposer(composer: ComposerController) {
+      Object.assign(handlers, createEditorHandlers({ ...handlerDeps, agent, composer }));
+    },
     /** Another page: the engine's scene and the session follow it together. */
     setPage(page: PageId) {
       engine.setPage(page);

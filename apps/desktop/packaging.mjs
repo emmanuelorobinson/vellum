@@ -57,6 +57,7 @@ export function builderConfig({
       "main/**",
       "preload/**",
       "renderer/**",
+      "engine/**",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
       "THIRD_PARTY_LICENSES.txt",
@@ -106,6 +107,11 @@ function run(script, args) {
     env: { ...process.env, TURBO_TELEMETRY_DISABLED: "1", NEXT_TELEMETRY_DISABLED: "1" },
   });
   if (result.error || result.status !== 0) throw Error("Desktop packaging failed");
+}
+export async function stagePackage(source, destination) {
+  await mkdir(destination, { recursive: true });
+  for (const name of ["main", "preload", "renderer", "engine"])
+    await cp(resolve(source, name), resolve(destination, name), { recursive: true });
 }
 export function nativeConfig(config, platform, arch) {
   const key = { darwin: "mac", win32: "win", linux: "linux" }[platform];
@@ -159,9 +165,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     accepted: process.env.VELLUM_DESKTOP_ACCEPTANCE === "complete",
   });
   run(resolve(root, "build.mjs"), ["--target", `${platform}-${arch}`, "--daemon", resolve(daemon)]);
-  await mkdir(resolve(root, "dist/package"), { recursive: true });
-  for (const name of ["main", "preload", "renderer"])
-    await cp(resolve(root, "dist", name), resolve(root, "dist/package", name), { recursive: true });
+  await stagePackage(resolve(root, "dist"), resolve(root, "dist/package"));
   for (const name of ["LICENSE", "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_LICENSES.txt"])
     await cp(resolve(root, "dist", name), resolve(root, "dist/package", name));
   await writeFile(

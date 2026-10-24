@@ -1,10 +1,11 @@
+import { spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { type FSWatcher, watch } from "node:fs";
 import { readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import { brand } from "@vellum/config";
-import { DaemonRuntime, externalUrl } from "@vellum/host-api";
+import { DaemonRuntime, externalUrl, type NativePrompt } from "@vellum/host-api";
 import { accountRunner, NativeAccount } from "@vellum/host-api/native-account";
 import { DaemonProcess } from "@vellum/host-api/native-relay";
 import type { AgentSettings, RecoveryView } from "@vellum/host-electron/bridge";
@@ -33,6 +34,7 @@ import {
   shell,
 } from "electron";
 import { EVENT_CHANNEL, REQUEST_CHANNEL } from "../shared/bridge";
+import { DesktopAgentRuns } from "./agent-runs";
 import { createElectronBrowser } from "./browser";
 import { connections } from "./connections";
 import { type ConfirmClose, FolderWindows } from "./folders";
@@ -87,6 +89,7 @@ const binary = app.isPackaged
 // A packaged app takes its icon from the bundle. A development run sets the brand icon itself.
 const developmentIcon = app.isPackaged ? undefined : join(__dirname, "../../build/icon.png");
 const account = new NativeAccount(accountRunner(binary), () => pushAll());
+const agentRuns = new DesktopAgentRuns(binary, runDir);
 let library: DesktopLibrary;
 let draftDirectory: string;
 let notifications = false;
@@ -134,6 +137,39 @@ function tabOf(path: string) {
   }
   return undefined;
 }
+function attachDocument(path: string) {
+  const relay = windowFor(path)?.relay;
+  // The tab opens at once; the daemon attaches behind it (a cold daemon takes seconds to start), and the
+  // tab's engine waits for that before it decides between live and read-only.
+  if (relay && device)
+    attaching.set(
+      path,
+      DaemonRuntime.open((p) => relay.editor(p), path, device).then(
+        (runtime) => {
+          if (!tabOf(path)) {
+            runtime.dispose();
+            return;
+          }
+          const held = { runtime, saved: runtime.revision, panels: new Map<string, string>() };
+          runtimes.set(path, held);
+          runtime.subscribe(({ revision }) => {
+            const at = tabOf(path);
+            if (!at) return;
+            model.update(at.folder, at.tab.id, {
+              dirty: revision !== held.saved,
+              running: false,
+            });
+            push(at.entry);
+          });
+          const at = tabOf(path);
+          if (at) push(at.entry);
+        },
+        () => {
+          /* No daemon, or a file it cannot read: read-only. */
+        },
+      ),
+    );
+}
 const model = new FolderWindows({
   canonical: realpath,
   folderOf: dirname,
@@ -143,37 +179,7 @@ const model = new FolderWindows({
     async open(path) {
       const info = await stat(path);
       if (!info.isFile() || info.size > 16 * 1024 * 1024) throw Error("invalid");
-      const relay = windowFor(path)?.relay;
-      // The tab opens at once; the daemon attaches behind it (a cold daemon takes seconds to start), and the
-      // tab's engine waits for that before it decides between live and read-only.
-      if (relay && device)
-        attaching.set(
-          path,
-          DaemonRuntime.open((p) => relay.editor(p), path, device).then(
-            (runtime) => {
-              if (!tabOf(path)) {
-                runtime.dispose();
-                return;
-              }
-              const held = { runtime, saved: runtime.revision, panels: new Map<string, string>() };
-              runtimes.set(path, held);
-              runtime.subscribe(({ revision }) => {
-                const at = tabOf(path);
-                if (!at) return;
-                model.update(at.folder, at.tab.id, {
-                  dirty: revision !== held.saved,
-                  running: false,
-                });
-                push(at.entry);
-              });
-              const at = tabOf(path);
-              if (at) push(at.entry);
-            },
-            () => {
-              /* No daemon, or a file it cannot read: read-only. */
-            },
-          ),
-        );
+      attachDocument(path);
       return { dirty: false, running: false };
     },
     async save(path) {
@@ -379,8 +385,9 @@ async function openKnown(from: WindowEntry, path: string) {
 }
 async function newDraft(from: WindowEntry) {
   const id = await library.newDraft();
-  await openKnown(from, library.path(id));
+  const entry = await openKnown(from, library.path(id));
   pushAll();
+  return entry;
 }
 async function closeKnown(path: string) {
   // Tabs first: their editors hold the file at the daemon until they close (ADR-033).
@@ -518,11 +525,11 @@ async function action(entry: WindowEntry, item: MenuAction) {
         entry.window.close();
         break;
       case "agent.pauseAll":
+        agentRuns.dispose();
         await entry.relay?.pauseAll();
         break;
       case "daemon.restart":
-        entry.relay?.disconnect();
-        await connect(entry);
+        await request(entry, { type: "restartDaemon" });
         break;
       case "help.about":
         await dialog.showMessageBox(entry.window, { message: brand.name, detail: brand.tagline });
@@ -560,6 +567,7 @@ function nativeMenu(entry: WindowEntry): MenuItemConstructorOptions[] {
       label: item.label,
       enabled: item.enabled,
       accelerator: item.accelerator,
+      ...(item.role ? { role: item.role } : {}),
       click: () => {
         void action(entry, item);
       },
@@ -586,6 +594,30 @@ function installMenu(entry: WindowEntry) {
 }
 async function request(entry: WindowEntry, value: DesktopRequest): Promise<unknown> {
   switch (value.type) {
+    case "designPrompt": {
+      const opened = await newDraft(entry);
+      const folder = requiredFolder(opened);
+      const tab = model.state(folder).active;
+      if (!tab || !opened.relay) throw Error("offline");
+      const path = model.path(folder, tab);
+      await attaching.get(path);
+      if (!runtimes.has(path)) throw Error("read-only");
+      const session = (await opened.relay.agentFeed({ action: "create", path })) as { id: string };
+      return agentRuns.send(
+        path,
+        session.id,
+        {
+          text: value.text,
+          context: [],
+          skills: [],
+          parallel: { count: 1, mode: "split" },
+          explore: null,
+          engine: null,
+          queue: null,
+        },
+        (turn, text) => push(opened, { type: "agentText", tab, session: session.id, turn, text }),
+      );
+    }
     case "telemetry":
       entry.telemetry?.consent(value.enabled);
       return;
@@ -772,12 +804,28 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
       await newFile(entry);
       return;
     case "pauseAll":
+      agentRuns.dispose();
       if (!entry.relay) throw Error("offline");
       await entry.relay.pauseAll();
       return;
     case "restartDaemon":
-      entry.relay?.disconnect();
-      await connect(entry);
+      agentRuns.dispose();
+      for (const held of runtimes.values()) held.runtime.dispose();
+      runtimes.clear();
+      attaching.clear();
+      for (const current of windows.values()) current.relay?.disconnect();
+      spawnSync(binary, [...(runDir ? ["--run-dir", runDir] : []), "daemon", "stop"], {
+        stdio: "ignore",
+        timeout: 5000,
+        windowsHide: true,
+      });
+      for (const current of windows.values()) {
+        await connect(current);
+        if (current.folder)
+          for (const tab of model.state(current.folder).tabs)
+            attachDocument(model.path(current.folder, tab.id));
+        current.window.webContents.reload();
+      }
       return;
     case "activate":
       model.activate(requiredFolder(entry), value.tab);
@@ -857,6 +905,15 @@ async function request(entry: WindowEntry, value: DesktopRequest): Promise<unkno
     case "agentFeed": {
       const path = model.path(requiredFolder(entry), value.tab);
       if (!entry.relay) throw Error("offline");
+      if (value.action === "engines") return agentRuns.engines();
+      if (value.action === "send") {
+        if (!runtimes.has(path)) throw Error("read-only");
+        const session = value.params.session as string;
+        return agentRuns.send(path, session, value.params.request as NativePrompt, (turn, text) =>
+          push(entry, { type: "agentText", tab: value.tab, session, turn, text }),
+        );
+      }
+      if (value.action === "stop") agentRuns.stop(value.params.session as string);
       return entry.relay.agentFeed({
         action: value.action,
         path,
@@ -1143,6 +1200,7 @@ else {
     if (process.platform !== "darwin") app.quit();
   });
   app.on("will-quit", () => {
+    agentRuns.dispose();
     account.dispose();
     for (const entry of windows.values()) entry.relay?.dispose();
   });

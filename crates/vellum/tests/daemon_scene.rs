@@ -5,7 +5,6 @@ mod common;
 
 use common::Daemon;
 use serde_json::json;
-use vellum_core::doc_api::Services;
 use vellum_core::ports::{FileSystem, ScriptValue};
 
 const PATH: &str = "designs/app.vellum";

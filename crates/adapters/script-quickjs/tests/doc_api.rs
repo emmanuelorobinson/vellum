@@ -46,6 +46,16 @@ fn run(
 }
 
 #[test]
+fn script_integer_fields_survive_the_javascript_number_boundary() {
+    let mut store = InMemoryDocStore::new(&doc(), 1);
+    let out = run("const t=doc.insert('page',{type:'text',width:100,height:30,content:[{text:'TEST DATA',font:'Inter',size:16,weight:600}]}); return doc.get(t).content[0].weight;", false, &mut store).unwrap();
+    assert_eq!(out.value, ScriptValue::Number(600.));
+    let before = store.snapshot();
+    assert!(run("doc.insert('page',{type:'text',width:100,height:30,content:[{text:'TEST DATA',font:'Inter',size:16,weight:600.5}]});", false, &mut store).is_err());
+    assert_eq!(store.snapshot(), before);
+}
+
+#[test]
 fn doc_api_atomic_read_your_writes_and_one_undo() {
     let before = doc();
     let mut store = InMemoryDocStore::new(&before, 1);

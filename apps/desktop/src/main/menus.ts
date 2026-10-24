@@ -5,6 +5,7 @@ export interface MenuAction {
   enabled: boolean;
   accelerator?: string;
   command?: string;
+  role?: "cut" | "copy" | "paste" | "selectAll";
 }
 /** Unsupported runtime actions stay visible and disabled. No menu supplies document bytes or Ops. */
 export function menuModel(state: {
@@ -93,9 +94,10 @@ export function menuModel(state: {
         command: "edit.redo",
         enabled: state.editable === true,
       },
-      action("edit.cut", "Cut"),
-      action("edit.copy", "Copy"),
-      action("edit.paste", "Paste"),
+      { id: "edit.cut", label: "Cut", enabled: true, role: "cut" },
+      { id: "edit.copy", label: "Copy", enabled: true, role: "copy" },
+      { id: "edit.paste", label: "Paste", enabled: true, role: "paste" },
+      { id: "edit.selectAll", label: "Select all", enabled: true, role: "selectAll" },
       action("edit.duplicate", "Duplicate"),
       action("edit.delete", "Delete"),
     ],
@@ -129,8 +131,14 @@ export function menuModel(state: {
     ],
     Agents: [
       { id: "agents.manage", label: "Manage agents…", enabled: true },
-      action("agent.focus", "Focus composer", "CommandOrControl+L"),
-      action("agent.stop", "Stop current session", "CommandOrControl+."),
+      {
+        ...view("agent.focus", "Focus composer", "agent.focus", "CommandOrControl+L"),
+        enabled: state.editable === true,
+      },
+      {
+        ...view("agent.stop", "Stop current session", "agent.stop", "CommandOrControl+."),
+        enabled: state.editable === true,
+      },
       {
         id: "agent.pauseAll",
         label: "Pause all agents",

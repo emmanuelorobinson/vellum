@@ -13,6 +13,7 @@ import {
   type ComposerController,
   capabilityWords,
   EFFORTS,
+  type InstalledEngine,
   installedLine,
   PROVIDERS,
   providerStatusLine,
@@ -43,6 +44,8 @@ export function EnginePicker({
   const builtin = catalog?.builtin ?? [];
   // Column-major, as the design lays them out: the first column takes the extra one.
   const half = Math.ceil(builtin.length / 2);
+  // A host with only installed engines (the desktop) gets a small menu above the chip, not the full panel.
+  const compact = builtin.length === 0;
   const columns = [builtin.slice(0, half), builtin.slice(half)].filter((c) => c.length);
   const anchor = {
     getBoundingClientRect: () => {
@@ -65,18 +68,18 @@ export function EnginePicker({
         </Popover.Trigger>
         <Popover.Portal container={container}>
           <Popover.Positioner
-            anchor={anchor}
-            side={direction === "rtl" ? "left" : "right"}
-            align="start"
-            sideOffset={72}
+            {...(compact ? {} : { anchor })}
+            side={compact ? "top" : direction === "rtl" ? "left" : "right"}
+            align={compact ? "end" : "start"}
+            sideOffset={compact ? 8 : 72}
             collisionPadding={8}
           >
-            <Popover.Popup className="vk-picker">
+            <Popover.Popup className="vk-picker" data-compact={compact ? "" : undefined}>
               <Popover.Title className="vk-picker__title">
                 {translateUi("Engine and model")}
               </Popover.Title>
-              <p className="vk-picker__group">Built-in</p>
-              <div className="vk-picker__columns">
+              {compact ? null : <p className="vk-picker__group">Built-in</p>}
+              <div className="vk-picker__columns" hidden={compact}>
                 {columns.map((column) => (
                   <div key={column[0]?.id} className="vk-picker__column">
                     {column.map((p) => (
@@ -87,9 +90,12 @@ export function EnginePicker({
               </div>
               {catalog?.installed.length ? (
                 <>
-                  <p className="vk-picker__group">Your installed agents</p>
+                  {compact ? null : <p className="vk-picker__group">Your installed agents</p>}
                   <div className="vk-picker__installed">
-                    {catalog.installed.map((e) => (
+                    {catalog.installed.map((e) =>
+                      compact ? (
+                        <InstalledEngineModels key={e.id} engine={e} composer={composer} />
+                      ) : (
                       <button
                         key={e.id}
                         type="button"
@@ -106,7 +112,8 @@ export function EnginePicker({
                           {installedLine(e)}
                         </span>
                       </button>
-                    ))}
+                      ),
+                    )}
                   </div>
                 </>
               ) : null}
@@ -118,13 +125,15 @@ export function EnginePicker({
                   A new provider won't see earlier turns in this session.
                 </p>
               ) : null}
-              <button
-                type="button"
-                className="va-button vk-picker__add"
-                onClick={() => composer.open({ type: "providers" })}
-              >
-                Add provider
-              </button>
+              {compact ? null : (
+                <button
+                  type="button"
+                  className="va-button vk-picker__add"
+                  onClick={() => composer.open({ type: "providers" })}
+                >
+                  Add provider
+                </button>
+              )}
             </Popover.Popup>
           </Popover.Positioner>
         </Popover.Portal>
@@ -134,6 +143,74 @@ export function EnginePicker({
         <ProviderSetupDialog composer={composer} provider={surface.provider} />
       ) : null}
     </>
+  );
+}
+
+/** One installed engine and the models it lists, as a menu: the engine's own choice first, then each model. */
+function InstalledEngineModels({
+  engine,
+  composer,
+}: {
+  engine: InstalledEngine;
+  composer: ComposerController;
+}) {
+  const choice = composer.state.choice;
+  const usable = engine.state === "signed_in";
+  const selected = choice?.engine === engine.id;
+  const models = engine.models ?? [];
+  const effort = choice?.effort ?? "medium";
+  const pick = (model: string) => {
+    composer.choose({ engine: engine.id, model });
+    composer.open(null);
+  };
+  const row = (id: string, label: string, caps?: string) => (
+    <button
+      key={id}
+      type="button"
+      className="vk-modelrow"
+      role="menuitemradio"
+      aria-checked={selected && choice?.model === id}
+      disabled={!usable}
+      onClick={() => pick(id)}
+    >
+      <span className="vk-modelrow__label vc-mono">{label}</span>
+      {caps ? <span className="vk-modelrow__caps">{caps}</span> : null}
+      {selected && choice?.model === id ? <Icon name="check" size={14} /> : null}
+    </button>
+  );
+  return (
+    <section className="vk-engine" aria-label={engine.name}>
+      <header className="vk-engine__head">
+        <span className="vk-installed__name">{engine.name}</span>
+        <span className="vk-installed__state" data-state={engine.state}>
+          {installedLine(engine)}
+        </span>
+      </header>
+      <div role="menu" aria-label={`${engine.name} models`} className="vk-engine__models">
+        {row("default", "Default", models.length ? undefined : "Chooses its own model")}
+        {models.map((m) => row(m.id, m.label, capabilityWords(m.caps) || undefined))}
+      </div>
+      {selected && usable && models.find((m) => m.id === choice?.model)?.caps.reasoning ? (
+        <div className="vk-engine__effort" role="radiogroup" aria-label="Reasoning effort">
+          <span className="vk-picker__group">Reasoning effort</span>
+          <div className="vk-choice">
+            {EFFORTS.map((e) => (
+              // biome-ignore lint/a11y/useSemanticElements: a segmented control; radio inputs would not take this style
+              <button
+                key={e.id}
+                type="button"
+                role="radio"
+                aria-checked={effort === e.id}
+                className="vk-choice__option"
+                onClick={() => composer.setEffort(e.id)}
+              >
+                {e.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

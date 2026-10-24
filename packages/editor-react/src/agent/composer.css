@@ -167,25 +167,38 @@
 .vk-send:disabled {
   cursor: default;
 }
+/* The engine and model chip in the footer: always shows what the next turn runs on, and that it can be changed. */
 .vk-model-button {
-  align-self: stretch;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 132px;
+  margin-inline-start: auto;
+  padding: 3px var(--space-2);
   border: 0;
-  background: none;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-sunken);
   color: var(--chrome-secondary);
   text-align: start;
   cursor: pointer;
   outline: none;
 }
+.vk-model-button:hover,
+.vk-model-button[data-popup-open] {
+  background: var(--chrome-hover);
+  color: var(--chrome-text);
+}
+.vk-model-button > svg {
+  flex: none;
+}
 .vk-model {
   display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.55;
-}
-.vk-model-button:hover .vk-model {
-  color: var(--chrome-text);
+  line-height: 15px;
 }
 .vk-connect {
   align-self: flex-start;
@@ -1042,4 +1055,77 @@
   height: 20px;
   padding: 0 6px;
   font-size: 11px;
+}
+
+/* Engine and model, for a host with installed engines only: a small menu above the footer chip. */
+.vk-picker[data-compact] {
+  width: 300px;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.vk-picker[data-compact] .vk-picker__installed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.vk-engine {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vk-engine__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.vk-engine__models {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.vk-modelrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--chrome-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.vk-modelrow:hover:not(:disabled) {
+  background: var(--chrome-hover);
+}
+.vk-modelrow[aria-checked="true"] {
+  background: var(--chrome-selected);
+}
+.vk-modelrow:disabled {
+  color: var(--chrome-secondary);
+  cursor: default;
+}
+.vk-modelrow:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: -2px;
+}
+.vk-modelrow__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vk-modelrow__caps {
+  font-size: 11px;
+  color: var(--chrome-secondary);
+}
+.vk-engine__effort {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }

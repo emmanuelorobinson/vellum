@@ -1,6 +1,7 @@
 import { brand } from "@vellum/config";
 import {
   createBrowserImport,
+  createComposerController,
   createFigmaImport,
   createPreferences,
   createSettingsController,
@@ -55,6 +56,8 @@ interface Editor {
   live: LiveEditor;
   replica: EditorReplica | null;
   settings: ReturnType<typeof createSettingsController>;
+  composer?: ReturnType<typeof createComposerController>;
+  disposeFeed(): void;
 }
 /** One editor module for the window; each tab is an engine in it (ADR-033). */
 let moduleLoad: Promise<{ module: EngineModule; fonts: Uint8Array[] }> | undefined;
@@ -116,28 +119,30 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
       fonts,
     });
   }
+  const feed = new DaemonAgentFeed(
+    async (action, params) => {
+      const reply = await bridge.request({
+        type: "agentFeed",
+        tab,
+        action: action as never,
+        params,
+      });
+      if (!reply.ok)
+        throw Error("The agent request failed. Check the daemon and installed engine.");
+      return reply.value;
+    },
+    { device: load.device as never },
+  );
+  const unsubscribeFeed = bridge.subscribe((event) => {
+    if (event.type === "agentText" && event.tab === tab)
+      feed.live(event.session as never, event.turn as never, { type: "text", text: event.text });
+  });
   const live = createLiveEditor({
     module,
     engine,
     device: load.device || "01JA0000000000000000000000",
     pauseAll: () => void bridge.request({ type: "pauseAll" }),
-    ...(load.device
-      ? {
-          agentFeed: new DaemonAgentFeed(
-            async (action, params) => {
-              const reply = await bridge.request({
-                type: "agentFeed",
-                tab,
-                action: action as never,
-                params: params as Record<string, string | number>,
-              });
-              if (!reply.ok) throw Error("The agent feed is unavailable");
-              return reply.value;
-            },
-            { device: load.device as never },
-          ),
-        }
-      : {}),
+    ...(load.live ? { agentFeed: feed } : {}),
     preferences,
   });
   const settings = createSettingsController({
@@ -145,7 +150,38 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
     keys: live.controller.keys,
     context: { host: "desktop", platform, focus: "outside" },
   });
-  return { live, replica, settings };
+  const composer = live.agent
+    ? createComposerController({
+        agent: live.agent,
+        feed,
+        defaultEngine: { engine: "codex", model: "default" },
+        scope: () => {
+          const ids = [...live.session.state.selection];
+          const doc = live.client.snapshot().document;
+          const page = doc?.pages.find((p) => p.id === live.session.page);
+          return {
+            selection: ids.length ? { ids, label: `${ids.length} layers` } : null,
+            page: page ? { id: page.id, name: page.name } : null,
+          };
+        },
+        documentMentions: () => [],
+      })
+    : undefined;
+  if (composer) {
+    live.connectComposer(composer);
+    void composer.load();
+  }
+  return {
+    live,
+    replica,
+    settings,
+    ...(composer ? { composer } : {}),
+    disposeFeed() {
+      unsubscribeFeed();
+      composer?.dispose();
+      live.agent?.dispose();
+    },
+  };
 }
 const editors = new Map<string, Editor>();
 const loading = new Set<string>();
@@ -180,6 +216,7 @@ function App() {
           void editor.live.controller.blur();
           void editor.replica?.close();
           editor.live.dispose();
+          editor.disposeFeed();
           editors.delete(id);
         }
       // A tab's engine starts when the tab is first shown, not when it opens.
@@ -324,6 +361,7 @@ function App() {
         design={live.design}
         paintEditor={live.paintEditor}
         {...(live.agent ? { agent: live.agent } : {})}
+        {...(editor.composer ? { composer: editor.composer } : {})}
         content={live.content}
         createRenderer={live.createRenderer}
         browser={browserImport.current.host.browser}

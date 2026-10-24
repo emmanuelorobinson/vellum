@@ -11,7 +11,7 @@ pub enum Mode {
     Exec,
 }
 /// Versions exercised by the replay and native engines lanes. Recheck after adding a new version fixture.
-pub const SUPPORTED_VERSIONS: &[&str] = &["0.158.0"];
+pub const SUPPORTED_VERSIONS: &[&str] = &["0.158.0", "0.163.0"];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Installation {
     pub version: Option<String>,
@@ -142,11 +142,12 @@ impl Launch {
                         &json!({"command":server["command"],"args":server["args"],"required":true})
                     )
                 ),
-                "--model".into(),
-                t.model.clone(),
                 "-c".into(),
                 format!("base_instructions={}", toml(&json!(INSTRUCTIONS))),
             ]);
+            if t.model != "default" {
+                args.extend(["--model".into(), t.model.clone()]);
+            }
             if let Some(e) = t.effort {
                 args.extend([
                     "-c".into(),
@@ -413,7 +414,7 @@ impl Decoder {
                         .unwrap_or_default();
                     let config = json!({"mcp_servers":servers});
                     let tools:Vec<_>=self.tools.iter().map(|t|json!({"type":"function","name":t.tool.name,"description":t.tool.description,"inputSchema":t.tool.parameters})).collect();
-                    out.outgoing.push(rpc(3,"thread/start",json!({"model":self.request.model,"approvalPolicy":"never","sandbox":"read-only","ephemeral":true,"environments":[],"baseInstructions":INSTRUCTIONS,"config":config,"dynamicTools":tools})));
+                    out.outgoing.push(rpc(3,"thread/start",json!({"model":(self.request.model != "default").then_some(&self.request.model),"approvalPolicy":"never","sandbox":"read-only","ephemeral":true,"environments":[],"baseInstructions":INSTRUCTIONS,"config":config,"dynamicTools":tools})));
                 }
                 3 => {
                     let id = r["thread"]["id"].as_str().ok_or_else(protocol)?;

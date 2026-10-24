@@ -587,8 +587,10 @@ export function createComposerController(deps: ComposerDeps) {
       const c = state.choice;
       if (!c) return null;
       if (c.engine !== "builtin") {
-        const name = state.catalog?.installed.find((e) => e.id === c.engine)?.name ?? c.engine;
-        return c.model && c.model !== "default" ? `${name} · ${c.model}` : name;
+        const engine = state.catalog?.installed.find((e) => e.id === c.engine);
+        const name = engine?.name ?? c.engine;
+        const label = engine?.models?.find((m) => m.id === c.model)?.label ?? c.model;
+        return c.model && c.model !== "default" ? `${name} · ${label}` : name;
       }
       const provider = state.catalog?.builtin.find((p) => p.id === c.provider);
       const model = provider?.models.find((m) => m.id === c.model);

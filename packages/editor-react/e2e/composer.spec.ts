@@ -333,13 +333,13 @@ test.describe("engine, model and usage", () => {
     await expect(picker).toContainText("Installed · signed in");
     await expect(picker).toContainText("A new provider won't see earlier turns in this session.");
     await picker.getByRole("button", { name: /^Anthropic/ }).click();
-    await expect(page.locator(".vk-model")).toHaveText("Anthropic · Claude Sonnet");
+    await expect(page.locator(".vk-model")).toHaveText("Claude Sonnet");
     await picker.getByRole("button", { name: "OpenAI model: Reasoning model" }).click();
     await page.getByRole("menuitemradio", { name: "Reasoning model" }).click();
     await picker.getByRole("button", { name: /Reasoning effort/ }).click();
     await page.getByRole("menuitemradio", { name: "High" }).click();
     await page.keyboard.press("Escape");
-    await expect(page.locator(".vk-model")).toHaveText("OpenAI · Reasoning model");
+    await expect(page.locator(".vk-model")).toHaveText("Reasoning model");
     await field(page).fill("Go");
     await field(page).press("Enter");
     expect((await sent(page)).at(-1)?.request).toMatchObject({

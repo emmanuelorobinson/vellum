@@ -1,11 +1,12 @@
 /**
  * The Agent panel's feed over the daemon's session store (`vellum/agentFeed`, ADR-006): the sessions of the open
  * document, their events as they are recorded, step pictures, and the person's controls (remove, undo a turn,
- * stop). The host relays `call` and adds the document's path. Starting turns from the composer and provider
- * setup are not served by the daemon yet: they fail with "unavailable", and the panel says so.
+ * stop). The host adds the document path and runs composer turns through its native engine runner. Provider
+ * key setup and outside-canvas permission prompts remain explicit host capabilities.
  */
 import type { DeviceId, SessionId, TurnId } from "@vellum/types-ts";
-import type { AgentFeed, FeedUpdate } from "./feed";
+import type { EngineCatalog } from "./engines";
+import type { AgentFeed, FeedUpdate, LiveEvent, PromptRequest } from "./feed";
 import type { SessionEvent } from "./log";
 import type { SessionInfo } from "./sessions";
 
@@ -126,21 +127,40 @@ export class DaemonAgentFeed implements AgentFeed {
     return null;
   }
 
-  // Not served by the daemon yet: turns start from a CLI or an MCP client (reports.md).
+  // Features without a native host service remain explicit errors, never successful no-ops.
   private unavailable(): Promise<never> {
     return Promise.reject(Error("unavailable"));
   }
-  create() {
-    return this.unavailable();
+  async create(): Promise<SessionInfo> {
+    return (await this.call("create", {})) as SessionInfo;
   }
-  retry() {
-    return this.unavailable();
+  async retry(session: SessionId, turn: TurnId) {
+    await this.retryRequest(session, turn);
   }
-  retryStep() {
-    return this.unavailable();
+  async retryStep(session: SessionId, turn: TurnId, seq: number) {
+    await this.retryRequest(session, turn, seq);
   }
-  send() {
-    return this.unavailable();
+  private async retryRequest(session: SessionId, turn: TurnId, seq?: number) {
+    const events = await this.events(session);
+    const prompt = events.find((e) => e.origin.turn === turn && e.body.type === "prompt");
+    if (prompt?.body.type !== "prompt") throw Error("The request is unavailable");
+    await this.send(session, {
+      text: `Continue the existing design without recreating completed work. ${seq === undefined ? "Repair the failed turn" : `Repair failed step ${seq}`} and verify the result. Original request:\n${prompt.body.text}`,
+      context: [],
+      skills: [],
+      parallel: { count: 1, mode: "split" },
+      explore: null,
+      engine: null,
+      queue: null,
+    });
+  }
+  async send(session: SessionId, request: PromptRequest): Promise<{ turn: TurnId }> {
+    const result = (await this.call("send", { session, request })) as { turn: TurnId };
+    await this.poll();
+    return result;
+  }
+  live(session: SessionId, turn: TurnId, item: LiveEvent) {
+    this.emit({ type: "live", session, turn, item });
   }
   buildPlan() {
     return this.unavailable();
@@ -185,6 +205,6 @@ export class DaemonAgentFeed implements AgentFeed {
     return [];
   }
   async engines() {
-    return { builtin: [], installed: [] };
+    return (await this.call("engines", {})) as EngineCatalog;
   }
 }

@@ -14,6 +14,7 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
   const [selected, setSelected] = useState<string[]>([]);
   const [problem, setProblem] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [prompt, setPrompt] = useState("");
   const recoveryDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (state.recovery && recoveryDialog.current && !recoveryDialog.current.open)
@@ -114,20 +115,26 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
       <textarea
         aria-label={copy.homeComposer}
         placeholder="Describe a screen, or attach DESIGN.md…"
-        disabled
+        value={prompt}
+        onChange={(event) => setPrompt(event.target.value)}
+        disabled={busy}
       />
       <div className="home-actions spread">
         {button(state.folderName || "Choose a folder…", { type: "openFolder" })}
         <button
           className="primary"
           type="button"
-          disabled
-          title="The document engine and agent request service are unavailable in this build."
+          disabled={busy || !state.daemon || !prompt.trim()}
+          onClick={() => void run({ type: "designPrompt", text: prompt })}
         >
           Start designing
         </button>
       </div>
-      <span className="unavailable">⊘ Sending a design prompt is unavailable in this build.</span>
+      {!state.daemon && (
+        <button type="button" onClick={() => void run({ type: "restartDaemon" })} disabled={busy}>
+          {copy.composerWhenOffline}
+        </button>
+      )}
     </section>
   );
   return (

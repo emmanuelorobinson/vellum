@@ -616,6 +616,11 @@ pub fn to_json(v: &ScriptValue) -> Result<Json, ScriptError> {
     Ok(match v {
         ScriptValue::Null => Json::Null,
         ScriptValue::Bool(v) => json!(v),
+        // JavaScript has one numeric type. Preserve safe integral values as JSON integers so typed
+        // fields (font weights, grid spans, indices) deserialize just as they do through typed tools.
+        ScriptValue::Number(v) if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0 => {
+            json!(*v as i64)
+        }
         ScriptValue::Number(v) => serde_json::Number::from_f64(*v)
             .map(Json::Number)
             .ok_or_else(|| error("Nonfinite number"))?,

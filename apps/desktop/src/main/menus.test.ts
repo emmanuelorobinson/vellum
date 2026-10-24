@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 import { menuModel } from "./menus";
 
 describe("desktop menus", () => {
+  it("provides native text editing in the Home and agent composers", () => {
+    const edit =
+      menuModel({ hasFolder: false, hasDocument: false, daemon: true }).find(
+        (g) => g.label === "Edit",
+      )?.items ?? [];
+    for (const role of ["cut", "copy", "paste", "selectAll"])
+      expect(edit.find((item) => item.id === `edit.${role}`)).toMatchObject({
+        enabled: true,
+        role,
+      });
+  });
   it("keeps the required groups in order and disables unserved document actions", () => {
     const menu = menuModel({ hasFolder: true, hasDocument: true, daemon: true });
     expect(menu.map((group) => group.label)).toEqual(MENU_CATEGORIES);

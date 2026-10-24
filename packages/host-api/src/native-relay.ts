@@ -76,10 +76,21 @@ export class DaemonProcess {
     if (this.disposed) return Promise.reject(Error("disposed"));
     if (this.ready) return Promise.resolve();
     if (this.connecting) return this.connecting;
-    this.connecting = this.start().finally(() => {
+    this.connecting = this.bootstrap().finally(() => {
       this.connecting = null;
     });
     return this.connecting;
+  }
+  private async bootstrap() {
+    // Two windows may elect the same cold daemon at once. Retrying only its read-only handshake is safe;
+    // document requests are never replayed after a disconnect.
+    try {
+      await this.start();
+    } catch {
+      if (this.disposed) throw Error("disposed");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await this.start();
+    }
   }
   private async start() {
     const child = spawn(this.binary, [...(this.runDir ? ["--run-dir", this.runDir] : []), "mcp"], {
@@ -141,6 +152,15 @@ export class DaemonProcess {
         (initialized as { protocolVersion?: string }).protocolVersion !== "2025-11-25"
       )
         throw Error("offline");
+      // A daemon from an older installed build may share the same socket and app version.
+      // Never report it ready when it cannot serve live editor replicas.
+      const host = await this.request("vellum/hostState", { paths: [] });
+      if (
+        !host ||
+        typeof host !== "object" ||
+        (host as { editorProtocol?: number }).editorProtocol !== 1
+      )
+        throw Error("The daemon needs to be restarted for this editor");
       this.connection(true);
     } catch {
       fail();
@@ -165,11 +185,10 @@ export class DaemonProcess {
   }
   async createDocument(path: string): Promise<void> {
     await this.connect();
-    const reply = (await this.request("tools/call", {
-      name: "open_document",
-      arguments: { path, create: true },
-    })) as { isError?: boolean };
-    if (reply?.isError !== false) throw Error("document creation failed");
+    const reply = (await this.request("vellum/cli", { action: "new", document: path })) as {
+      created?: boolean;
+    };
+    if (reply?.created !== true) throw Error("document creation failed");
   }
   /** The daemon's `vellum/editor` host method (ADR-033): an editor's replica of a document. */
   async editor(params: Record<string, string>): Promise<Record<string, unknown>> {

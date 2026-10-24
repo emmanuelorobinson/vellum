@@ -8,7 +8,7 @@
 //! Requests are answered one at a time on the thread that owns the documents. Each connection has a
 //! [`Session`] (its client, its working directory); the documents are shared by all of them.
 
-mod cli;
+pub(crate) mod cli;
 mod share;
 
 struct PermissionHost {
@@ -368,7 +368,7 @@ impl McpServer {
             .filter_map(|s| s.client.as_ref().map(|c| c.name.as_str()))
             .collect();
         Ok(
-            json!({"clients":clients,"toolCount":self.registry.tools().count(),"sessions":sessions,"sessionsAvailable":self.log.is_some()}),
+            json!({"editorProtocol":1,"clients":clients,"toolCount":self.registry.tools().count(),"sessions":sessions,"sessionsAvailable":self.log.is_some()}),
         )
     }
 
@@ -480,6 +480,30 @@ impl McpServer {
             return Err(invalid());
         }
         let log = self.log.as_ref().ok_or_else(unavailable)?;
+        if action == "create" {
+            use vellum_core::ports::NewSession;
+            let id = vellum_types::SessionId::new(self.docs.ulid()).map_err(|_| invalid())?;
+            let agent = vellum_types::AgentId::new(self.docs.ulid()).map_err(|_| invalid())?;
+            let now = self.docs.now();
+            let doc = log
+                .document_key(std::path::Path::new(path))
+                .map_err(|_| unavailable())?;
+            log.store()
+                .create(NewSession {
+                    id: id.clone(),
+                    doc,
+                    kind: SessionKind::Engine {
+                        engine: "codex".into(),
+                    },
+                    agent: agent.clone(),
+                    title: "New session".into(),
+                    created_at: now,
+                })
+                .map_err(|_| unavailable())?;
+            return Ok(
+                json!({"id":id.as_str(),"agent":agent.as_str(),"kind":{"type":"engine","engine":"codex"},"title":"New session","createdAt":now.0,"updatedAt":now.0,"state":null,"agents":1}),
+            );
+        }
         let metas = log
             .metadata(std::path::Path::new(path))
             .map_err(|_| unavailable())?;

@@ -239,7 +239,7 @@ pub(super) async fn drive(
     }
     end.ok_or_else(|| io::Error::other("Engine disconnected without a terminal event"))
 }
-fn encode_messages(messages: Vec<ChatMessage>) -> Value {
+pub(crate) fn encode_messages(messages: Vec<ChatMessage>) -> Value {
     json!(messages.into_iter().map(|message|json!({"role":if message.role==ChatRole::User{"user"}else{"assistant"},"content":message.content.into_iter().map(|part|match part{
         ChatPart::Text(text)=>json!({"type":"text","text":text}),
         ChatPart::Image{mime,base64}=>json!({"type":"image","mime":mime,"base64":base64}),

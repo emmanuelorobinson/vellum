@@ -141,6 +141,17 @@ fn both_transports_pass_the_shared_contract() {
     }
 }
 #[test]
+fn default_model_uses_the_installed_agents_configured_model() {
+    let (e, sent) = make(APP, Mode::AppServer, false);
+    let mut req = request();
+    req.model = "default".into();
+    let bridge = RecordingBridge::probe();
+    let mut stream = e.run_turn(req, &bridge).unwrap();
+    while block_on(stream.next()).is_some() {}
+    assert!(sent.lock().unwrap()[3]["params"]["model"].is_null());
+}
+
+#[test]
 fn app_server_handshake_is_sequential_and_text_usage_are_not_duplicated() {
     let (e, sent) = make(APP, Mode::AppServer, false);
     let ev = drain(&e);

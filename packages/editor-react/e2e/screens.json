@@ -730,11 +730,6 @@
           "why": "Text rasterised by two engines differs at glyph edges; the element's size equals the design's (Prompt 50 measured)."
         },
         {
-          "name": "engine line",
-          "selector": ".vk-model",
-          "design": [24, 759, 328, 17]
-        },
-        {
           "name": "inline prompt",
           "selector": ".vk-inline",
           "design": [760, 290, 360, 124],

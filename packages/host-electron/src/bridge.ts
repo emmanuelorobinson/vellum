@@ -77,6 +77,7 @@ export interface DesktopState {
   account?: AccountState;
 }
 export type DesktopRequest =
+  | { type: "designPrompt"; text: string }
   | { type: "telemetry"; enabled: boolean }
   | { type: "browserCapture"; request: BrowserRequest }
   | { type: "browserWatch"; id: string; request: BrowserRequest }
@@ -123,12 +124,13 @@ export type DesktopRequest =
       type: "agentFeed";
       tab: string;
       action: AgentFeedAction;
-      params: Record<string, string | number>;
+      params: Record<string, unknown>;
     }
   | { type: "menu"; category: MenuCategory }
   | { type: "external"; url: string }
   | { type: "clipboardWrite"; text: string };
 export type DesktopEvent =
+  | { type: "agentText"; tab: string; session: string; turn: string; text: string }
   | { type: "browserFrame"; id: string; capture: BrowserCapture | null }
   | { type: "state"; state: DesktopState }
   | { type: "changed"; tab: string }
@@ -146,6 +148,14 @@ export function parseRequest(value: unknown): DesktopRequest | null {
   const v = value as Record<string, unknown>;
   const keys = Object.keys(v).sort().join(",");
   const tab = typeof v.tab === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(v.tab);
+  if (
+    keys === "text,type" &&
+    v.type === "designPrompt" &&
+    typeof v.text === "string" &&
+    v.text.trim() &&
+    v.text.length <= 100_000
+  )
+    return { type: "designPrompt", text: v.text };
   if (keys === "type" && v.type === "engineModule") return { type: "engineModule" };
   if (keys === "tab,type" && v.type === "engineLoad" && tab)
     return { type: "engineLoad", tab: v.tab as string };

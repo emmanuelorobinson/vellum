@@ -74,6 +74,7 @@ mod sessions {
             json!({"paths":["/work/a/design/app.vellum"]}),
         );
         let result = &reply["result"];
+        assert_eq!(result["editorProtocol"], 1);
         assert_eq!(result["sessionsAvailable"], true);
         let rows = result["sessions"].as_array().unwrap();
         assert_eq!(rows.len(), 1);
@@ -95,6 +96,67 @@ mod sessions {
             )["error"]["code"],
             -32602
         );
+    }
+
+    #[test]
+    fn desktop_session_can_start_and_resume_cli_turns_only_for_its_document() {
+        let mut server = server();
+        rpc(
+            &mut server,
+            1,
+            "initialize",
+            json!({"protocolVersion":"2025-11-25","clientInfo":{"name":"vellum-desktop"}}),
+        );
+        call(
+            &mut server,
+            "open_document",
+            json!({"path":"design/app.vellum"}),
+        );
+        let path = "/work/a/design/app.vellum";
+        let created = rpc(
+            &mut server,
+            2,
+            "vellum/agentFeed",
+            json!({"action":"create","path":path}),
+        );
+        assert!(created.get("result").is_some(), "{created}");
+        let session = created["result"]["id"].as_str().expect("created session");
+        let begin = json!({"action":"turn","document":path,"engine":"codex","model":"default","prompt":"TEST DATA request","session":session});
+        let first = rpc(&mut server, 3, "vellum/cli", begin.clone());
+        assert_eq!(first["result"]["session"], session, "{first}");
+        let conversation = json!([{"role":"user","content":[{"type":"text","text":"TEST DATA request"}]},{"role":"assistant","content":[{"type":"text","text":"TEST DATA completed"}]}]);
+        rpc(
+            &mut server,
+            8,
+            "vellum/cli",
+            json!({"action":"messages","messages":conversation}),
+        );
+        assert!(
+            rpc(
+                &mut server,
+                4,
+                "vellum/cli",
+                json!({"action":"end","failed":false})
+            )["result"]["ended"]
+                == true
+        );
+        let second = rpc(&mut server, 5, "vellum/cli", begin);
+        assert_eq!(second["result"]["session"], session, "{second}");
+        assert_eq!(second["result"]["history"], conversation);
+        assert_ne!(first["result"]["turn"], second["result"]["turn"]);
+        rpc(
+            &mut server,
+            6,
+            "vellum/cli",
+            json!({"action":"end","failed":false}),
+        );
+        let denied = rpc(
+            &mut server,
+            7,
+            "vellum/cli",
+            json!({"action":"turn","document":"/work/a/other.vellum","engine":"codex","model":"default","prompt":"TEST DATA","session":session}),
+        );
+        assert!(denied.get("error").is_some(), "{denied}");
     }
 
     #[test]
