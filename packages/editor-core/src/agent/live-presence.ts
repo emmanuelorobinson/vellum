@@ -47,7 +47,8 @@ export interface LivePresenceDeps {
   connected(): boolean;
   paused?(): boolean;
   onAction?(action: PresenceAction): void | Promise<void>;
-  timers?: {
+  /** The host's timers: this package has no clock of its own. */
+  timers: {
     set(fn: () => void, ms: number): unknown;
     clear(handle: unknown): void;
   };
@@ -77,10 +78,7 @@ function snapshotScene(client: LivePresenceDeps["client"]): Seens | null {
 const area = (b: Box) => b.width * b.height;
 
 export function createLivePresence(deps: LivePresenceDeps) {
-  const timers = deps.timers ?? {
-    set: (fn: () => void, ms: number) => setTimeout(fn, ms),
-    clear: (h: unknown) => clearTimeout(h as ReturnType<typeof setTimeout>),
-  };
+  const { timers } = deps;
   const listeners = new Set<(snapshot: PresenceSnapshot) => void>();
   let running: { id: string; session: string; state: PresentAgent["state"]; task?: string }[] = [];
   let baseline: Seens | null = null;
@@ -90,7 +88,8 @@ export function createLivePresence(deps: LivePresenceDeps) {
   let walker: unknown;
   let diffTimer: unknown;
   let disposed = false;
-  const known = new Map<string, LivePresenceActor>();
+  /** Handed to the views by reference, so a turn seen later shows with its name and hue without a new object. */
+  const known: Record<string, LivePresenceActor> = {};
 
   const hueOf = (engine: string) => {
     let h = 0;
@@ -99,7 +98,8 @@ export function createLivePresence(deps: LivePresenceDeps) {
   };
   const taskOf = (items: TurnItem[]): string | undefined => {
     const last = items.at(-1);
-    const step = last?.type === "step" ? last.step : last?.type === "group" ? last.steps.at(-1) : null;
+    const step =
+      last?.type === "step" ? last.step : last?.type === "group" ? last.steps.at(-1) : null;
     return step && step.state === "working" ? step.line : undefined;
   };
   const readRunning = () => {
@@ -125,24 +125,31 @@ export function createLivePresence(deps: LivePresenceDeps) {
     return out;
   };
 
+  const register = () => {
+    for (const a of running)
+      known[a.id] = {
+        id: a.id,
+        kind: "agent",
+        name: deps.engineName(),
+        hue: hueOf(deps.engineId()),
+        state: a.state,
+      };
+  };
   const snapshot = (): PresenceSnapshot => {
     const page = deps.page();
     const name = deps.engineName();
     const hue = hueOf(deps.engineId());
-    const agents: PresentAgent[] = running.map((a) => {
-      known.set(a.id, { id: a.id, kind: "agent", name, hue, state: a.state });
-      return {
-        id: a.id as AgentId,
-        name,
-        hue,
-        session: a.session as SessionId,
-        state: a.state,
-        engine: deps.engineId(),
-        ...(a.task ? { task: a.task } : {}),
-        // The cursor belongs to the agent that is working; with several, the latest takes it.
-        ...(cursor && a === running.at(-1) ? { cursor } : {}),
-      };
-    });
+    const agents: PresentAgent[] = running.map((a) => ({
+      id: a.id as AgentId,
+      name,
+      hue,
+      session: a.session as SessionId,
+      state: a.state,
+      engine: deps.engineId(),
+      ...(a.task ? { task: a.task } : {}),
+      // The cursor belongs to the agent that is working; with several, the latest takes it.
+      ...(cursor && a === running.at(-1) ? { cursor } : {}),
+    }));
     const now = deps.now();
     const leases: FrameLease[] = [];
     for (const [frame, t] of touched) {
@@ -198,8 +205,7 @@ export function createLivePresence(deps: LivePresenceDeps) {
     const seens = snapshotScene(deps.client);
     if (!seens) return;
     const changed: string[] = [];
-    for (const [id, seen] of seens)
-      if (baseline.get(id)?.print !== seen.print) changed.push(id);
+    for (const [id, seen] of seens) if (baseline.get(id)?.print !== seen.print) changed.push(id);
     baseline = seens;
     if (!changed.length) return;
     const agent = (running.at(-1) as (typeof running)[number]).id;
@@ -224,6 +230,7 @@ export function createLivePresence(deps: LivePresenceDeps) {
   const onTurns = () => {
     const before = running.length;
     running = readRunning();
+    register();
     if (running.length && !baseline) baseline = snapshotScene(deps.client);
     if (!running.length && before) {
       // The turn is over: the cursor leaves, the leases linger a moment and then clear themselves.
@@ -242,6 +249,7 @@ export function createLivePresence(deps: LivePresenceDeps) {
   const turns = deps.agent.subscribe(onTurns);
   const doc = deps.client.subscribe(scheduleDiff);
   running = readRunning();
+  register();
   if (running.length) baseline = snapshotScene(deps.client);
 
   const feed: PresenceFeed = {
@@ -258,10 +266,8 @@ export function createLivePresence(deps: LivePresenceDeps) {
   };
   return {
     feed,
-    /** The agents seen so far, for the Agent tab's markers and the canvas to agree on a name and hue. */
-    actors(): Record<string, LivePresenceActor> {
-      return Object.fromEntries(known);
-    },
+    /** The agents seen so far (live: filled as turns appear), for the Agent tab and the canvas to agree on a name and hue. */
+    actors: known,
     dispose() {
       disposed = true;
       stopWalking();

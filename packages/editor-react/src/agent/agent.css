@@ -555,3 +555,80 @@ button.va-thumb:hover {
     450 12px / 18px var(--font-ui),
     sans-serif;
 }
+
+/* A turn that is running: its marker breathes and, between steps, three dots say the agent is thinking. */
+.va-working {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--chrome-secondary);
+}
+.va-working__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.va-working__dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.35;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .va-working__dots i {
+    animation: va-dot 1.2s ease-in-out infinite;
+  }
+  .va-working__dots i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .va-working__dots i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes va-dot {
+    0%,
+    80%,
+    100% {
+      opacity: 0.35;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+  .va-turn[data-running] .va-header .vc-marker {
+    animation: va-breathe 1.6s ease-in-out infinite alternate;
+  }
+  .va-turn[data-running] .va-header__state {
+    background: linear-gradient(
+      90deg,
+      var(--chrome-secondary) 30%,
+      var(--chrome-text) 50%,
+      var(--chrome-secondary) 70%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: va-sheen 2s linear infinite;
+  }
+  @keyframes va-breathe {
+    from {
+      transform: scale(0.88);
+      opacity: 0.7;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes va-sheen {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+}

@@ -151,7 +151,7 @@ describe("composer", () => {
     ])
       expect(t).toContain(s);
     expect(t).toContain(copy.drawByHandHint);
-    expect(t).toContain("OpenRouter · deepseek/deepseek-v4.1-flash");
+    expect(t).toContain("deepseek/deepseek-v4.1-flash");
     expect(t).toContain("1× Split");
     expect(t).toContain("Explore off");
   });

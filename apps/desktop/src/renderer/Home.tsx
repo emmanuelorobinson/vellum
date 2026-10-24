@@ -1,4 +1,5 @@
 import { brand, copy } from "@vellum/config";
+import { Icon } from "@vellum/editor-react";
 import type {
   DesktopBridge,
   DesktopRequest,
@@ -34,9 +35,9 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
       setBusy(false);
     }
   };
-  const button = (label: string, request: DesktopRequest, primary = false) => (
+  const button = (label: string, request: DesktopRequest, primary = false, quiet = false) => (
     <button
-      className={primary ? "primary" : undefined}
+      className={primary ? "primary" : quiet ? "quiet" : undefined}
       type="button"
       disabled={busy}
       onClick={() => void run(request)}
@@ -80,8 +81,10 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
           setSelected([f.id]);
         }}
       >
-        {layout === "Grid" && f.kind !== "draft" && (
-          <span className="file-thumbnail">Preview unavailable</span>
+        {layout === "Grid" && (
+          <span className="file-thumbnail" aria-hidden="true">
+            <Icon name={f.kind === "draft" ? "file" : "frame"} size={28} />
+          </span>
         )}
         <strong>{f.name}</strong>
         <span className="mono">{f.folder}</span>
@@ -92,11 +95,13 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
             <span className="mono">{f.branch ?? "Branch unavailable"}</span>
             <span>
               {date(f.opened)}
-              {f.running === true
-                ? " · ▣ Working"
-                : f.running === null
-                  ? " · Session state unavailable"
-                  : ""}
+              {f.running === true ? (
+                <span className="file-running"> · ▣ Working</span>
+              ) : f.running === null ? (
+                " · Session state unavailable"
+              ) : (
+                ""
+              )}
             </span>
           </>
         )}
@@ -115,23 +120,55 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
       <textarea
         aria-label={copy.homeComposer}
         placeholder="Describe a screen, or attach DESIGN.md…"
+        rows={3}
         value={prompt}
         onChange={(event) => setPrompt(event.target.value)}
+        onKeyDown={(event) => {
+          if (
+            (event.metaKey || event.ctrlKey) &&
+            event.key === "Enter" &&
+            prompt.trim() &&
+            state.daemon &&
+            !busy
+          ) {
+            event.preventDefault();
+            void run({ type: "designPrompt", text: prompt });
+          }
+        }}
         disabled={busy}
       />
       <div className="home-actions spread">
-        {button(state.folderName || "Choose a folder…", { type: "openFolder" })}
         <button
-          className="primary"
           type="button"
-          disabled={busy || !state.daemon || !prompt.trim()}
-          onClick={() => void run({ type: "designPrompt", text: prompt })}
+          className="folder-chip"
+          disabled={busy}
+          onClick={() => void run({ type: "openFolder" })}
         >
-          Start designing
+          <Icon name="folder" size={14} />
+          <span className="mono">{state.folderName || "Choose a folder…"}</span>
+          <Icon name="chevron-down" size={12} />
         </button>
+        <div className="home-actions">
+          <small className="home-keys" aria-hidden="true">
+            {state.platform === "mac" ? "⌘" : "Ctrl"} ↵
+          </small>
+          <button
+            className="primary"
+            type="button"
+            disabled={busy || !state.daemon || !prompt.trim()}
+            onClick={() => void run({ type: "designPrompt", text: prompt })}
+          >
+            Start designing
+          </button>
+        </div>
       </div>
       {!state.daemon && (
-        <button type="button" onClick={() => void run({ type: "restartDaemon" })} disabled={busy}>
+        <button
+          type="button"
+          className="quiet home-offline"
+          onClick={() => void run({ type: "restartDaemon" })}
+          disabled={busy}
+        >
           {copy.composerWhenOffline}
         </button>
       )}
@@ -145,12 +182,12 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
       onDrop={(e) => e.preventDefault()}
     >
       <header className="home-appbar">
-        <span>{brand.name}</span>
+        <span className="home-brand">{brand.name}</span>
         <nav aria-label="Desktop">
-          {button("Home", { type: "home" })}
-          {button("Agents", { type: "agents" })}
-          {button("Sign in", { type: "signin" })}
-          {state.active && button("Back to editor", { type: "editor" })}
+          {button("Home", { type: "home" }, false, true)}
+          {button("Agents", { type: "agents" }, false, true)}
+          {button("Sign in", { type: "signin" }, false, true)}
+          {state.active && button("Back to editor", { type: "editor" }, false, true)}
         </nav>
       </header>
       {page === "agents" ? (
@@ -273,7 +310,7 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
           </div>
         </section>
       ) : (
-        <section className={`home-content ${state.welcome ? "welcome-page" : ""}`}>
+        <section className={`home-content home-main ${state.welcome ? "welcome-page" : ""}`}>
           {state.welcome ? (
             <section className="welcome-content">
               <div className="wordmark">{brand.name.toLowerCase()}</div>
@@ -288,6 +325,7 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
                 {button("New file", { type: "newDraft" })}
                 {button("Connect your coding agent", { type: "agents" })}
               </div>
+              {composer}
             </section>
           ) : (
             <>
@@ -362,7 +400,8 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
                   type="button"
                   onClick={() => void run({ type: "folderRecent", id: f.id })}
                 >
-                  {f.label}
+                  <Icon name="folder" size={16} />
+                  <span>{f.label}</span>
                 </button>
               ))}
               <small>
@@ -371,11 +410,10 @@ export function Home({ state, bridge }: { state: DesktopState; bridge: DesktopBr
               </small>
             </>
           )}
-          {state.welcome && composer}
         </section>
       )}
       <footer className="home-footer">
-        {button("Check for Updates", { type: "checkUpdates" })}
+        {button("Check for Updates", { type: "checkUpdates" }, false, true)}
         <span role="status">
           {updates?.kind === "unavailable"
             ? "Updates require a signed release and update feed."

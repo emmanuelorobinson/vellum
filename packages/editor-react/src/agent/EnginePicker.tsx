@@ -63,6 +63,7 @@ export function EnginePicker({
           ref={trigger}
           className="vk-model-button"
           aria-label={`Engine and model: ${composer.modelLine() ?? "none"}`}
+          title={composer.modelLine() ?? undefined}
         >
           {children}
         </Popover.Trigger>
@@ -96,22 +97,22 @@ export function EnginePicker({
                       compact ? (
                         <InstalledEngineModels key={e.id} engine={e} composer={composer} />
                       ) : (
-                      <button
-                        key={e.id}
-                        type="button"
-                        className="vk-installed"
-                        aria-pressed={choice?.engine === e.id}
-                        disabled={e.state !== "signed_in"}
-                        onClick={() => {
-                          composer.choose({ engine: e.id, model: "default" });
-                          composer.open(null);
-                        }}
-                      >
-                        <span className="vk-installed__name">{e.name}</span>
-                        <span className="vk-installed__state" data-state={e.state}>
-                          {installedLine(e)}
-                        </span>
-                      </button>
+                        <button
+                          key={e.id}
+                          type="button"
+                          className="vk-installed"
+                          aria-pressed={choice?.engine === e.id}
+                          disabled={e.state !== "signed_in"}
+                          onClick={() => {
+                            composer.choose({ engine: e.id, model: "default" });
+                            composer.open(null);
+                          }}
+                        >
+                          <span className="vk-installed__name">{e.name}</span>
+                          <span className="vk-installed__state" data-state={e.state}>
+                            {installedLine(e)}
+                          </span>
+                        </button>
                       ),
                     )}
                   </div>
@@ -188,7 +189,7 @@ function InstalledEngineModels({
       </header>
       <div role="menu" aria-label={`${engine.name} models`} className="vk-engine__models">
         {row("default", "Default", models.length ? undefined : "Chooses its own model")}
-        {models.map((m) => row(m.id, m.label, capabilityWords(m.caps) || undefined))}
+        {models.map((m) => row(m.id, m.label))}
       </div>
       {selected && usable && models.find((m) => m.id === choice?.model)?.caps.reasoning ? (
         <div className="vk-engine__effort" role="radiogroup" aria-label="Reasoning effort">

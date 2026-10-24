@@ -94,7 +94,7 @@
 .vk-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-height: 31px;
 }
 .vk-composer .vk-attach {
@@ -172,8 +172,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-width: 0;
-  max-width: 132px;
+  min-width: 64px;
+  max-width: 148px;
   margin-inline-start: auto;
   padding: 3px var(--space-2);
   border: 0;

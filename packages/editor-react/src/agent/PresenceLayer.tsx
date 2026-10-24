@@ -99,6 +99,7 @@ export function PresenceLayer({
           <div
             key={`${l.frame}:${l.agent}`}
             className="vp-lease"
+            data-working={!l.idle && !l.rejected ? "" : undefined}
             style={{ ...box(session.sceneBounds(l.frame) ?? l.bounds), ...hue(l.agent) }}
           >
             <div className="vp-lease__tab">
@@ -116,6 +117,7 @@ export function PresenceLayer({
                           : "loader-circle"
                   }
                   size={12}
+                  {...(!l.rejected && !l.editing && !l.idle ? { className: "vp-spin" } : {})}
                 />
                 {leaseLabel(l)}
               </span>
@@ -161,6 +163,19 @@ export function PresenceLayer({
               </span>
               {a.task ? <span>{a.task}</span> : null}
             </div>
+          </div>
+        ))}
+      {p
+        ?.agents()
+        .filter((a) => !a.cursor && a.state === "working")
+        .slice(0, 1)
+        .map((a) => (
+          <div key={a.id} className="vp-working" role="status" style={hue(a.id)}>
+            <ActorMarker actor={actor(a.id)} size={12} />
+            <strong>{a.name}</strong>
+            <Icon name="loader-circle" size={12} className="vp-spin" />
+            <span>{presenceState(a.state)}</span>
+            {a.task ? <span className="vp-working__task">{a.task}</span> : null}
           </div>
         ))}
       {p

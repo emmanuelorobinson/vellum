@@ -79,6 +79,15 @@
 .vp-cursor {
   display: flex;
   gap: var(--space-1);
+  /* DESIGN.md: agent cursors glide over 100 ms; under reduced motion they jump. */
+  transition:
+    left var(--motion-cursor) linear,
+    top var(--motion-cursor) linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vp-cursor {
+    transition: none;
+  }
 }
 .vp-cursor > svg {
   color: var(--lease-hue);
@@ -174,4 +183,56 @@
   left: 0;
   pointer-events: auto;
   font-weight: 500;
+}
+
+/* An agent is working but has not touched the canvas yet: say so where the eye is, without a cursor to point at. */
+.vp-working {
+  position: absolute;
+  top: var(--space-2);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3) 5px var(--space-2);
+  border: 1px solid var(--lease-hue);
+  border-radius: var(--radius-lg);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.vp-working__task {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--chrome-secondary);
+}
+.vp-spin {
+  animation: vp-spin var(--motion-step-ring) linear infinite;
+}
+@keyframes vp-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vp-spin {
+    animation: none;
+  }
+}
+/* A lease being worked in breathes, so a frame in progress reads at a glance. */
+@media (prefers-reduced-motion: no-preference) {
+  .vp-lease[data-working] {
+    animation: vp-breathe 1.8s ease-in-out infinite alternate;
+  }
+  @keyframes vp-breathe {
+    from {
+      box-shadow: 0 0 0 0 transparent;
+    }
+    to {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--lease-hue) 28%, transparent);
+    }
+  }
 }

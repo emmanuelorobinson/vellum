@@ -5,6 +5,7 @@ export * from "./daemon-feed";
 export * from "./engines";
 export * from "./fake";
 export * from "./feed";
+export * from "./live-presence";
 export * from "./log";
 export * from "./orchestration";
 export * from "./permissions";

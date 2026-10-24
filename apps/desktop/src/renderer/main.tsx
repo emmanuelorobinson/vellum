@@ -3,7 +3,9 @@ import {
   createBrowserImport,
   createComposerController,
   createFigmaImport,
+  createLivePresence,
   createPreferences,
+  createPresenceController,
   createSettingsController,
   DaemonAgentFeed,
 } from "@vellum/editor-core";
@@ -57,6 +59,9 @@ interface Editor {
   replica: EditorReplica | null;
   settings: ReturnType<typeof createSettingsController>;
   composer?: ReturnType<typeof createComposerController>;
+  /** Where an agent is and what it is doing, read off the running turn and the changes it makes. */
+  presence?: ReturnType<typeof createPresenceController>;
+  actors: ReturnType<typeof createLivePresence>["actors"];
   disposeFeed(): void;
 }
 /** One editor module for the window; each tab is an engine in it (ADR-033). */
@@ -171,13 +176,44 @@ async function makeEditor(tab: string, platform: DesktopState["platform"]): Prom
     live.connectComposer(composer);
     void composer.load();
   }
+  const livePresence =
+    live.agent && composer && load.live
+      ? createLivePresence({
+          agent: live.agent,
+          client: live.client,
+          now: () => Date.now(),
+          page: () => live.session.page,
+          engineName: () => composer.modelLine()?.split(" · ")[0] ?? "Agent",
+          engineId: () => composer.state.choice?.engine ?? "agent",
+          connected: () => true,
+          timers: { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as number) },
+          onAction: async (action) => {
+            if (action.type === "pauseAll") void bridge.request({ type: "pauseAll" });
+            else if (action.type === "stopAgent") await composer.stopAgent(action.agent);
+            else if (action.type === "stopFrame") await composer.stopAll();
+          },
+        })
+      : undefined;
+  const presence = livePresence
+    ? createPresenceController({
+        feed: livePresence.feed,
+        now: () => Date.now(),
+        engine: live.client,
+        onFollow: () => {},
+      })
+    : undefined;
+  void presence?.load();
   return {
     live,
     replica,
     settings,
     ...(composer ? { composer } : {}),
+    ...(presence ? { presence } : {}),
+    actors: livePresence?.actors ?? {},
     disposeFeed() {
       unsubscribeFeed();
+      presence?.dispose();
+      livePresence?.dispose();
       composer?.dispose();
       live.agent?.dispose();
     },
@@ -362,6 +398,7 @@ function App() {
         paintEditor={live.paintEditor}
         {...(live.agent ? { agent: live.agent } : {})}
         {...(editor.composer ? { composer: editor.composer } : {})}
+        {...(editor.presence ? { presence: editor.presence } : {})}
         content={live.content}
         createRenderer={live.createRenderer}
         browser={browserImport.current.host.browser}
@@ -375,7 +412,7 @@ function App() {
         branch={null}
         connection={state.daemon && !readOnly ? { mode: "headless" } : { mode: "offline" }}
         agents={[]}
-        actors={{}}
+        actors={editor.actors}
         recent={{}}
         now={() => Date.now()}
         nextNodeId={live.nextNodeId}

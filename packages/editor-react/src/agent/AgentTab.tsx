@@ -379,9 +379,19 @@ function Turn({
   const external = turn.external;
   const first = actor(turn.agents[0]);
   const question = composer && !external ? composer.questionFor(turn.id) : null;
+  const running = !external && (turn.state === "running" || turn.state === "planning");
+  const lastItem = turn.items.at(-1);
+  // A step still working has its own ring; between steps, while the model thinks, the row below shows it is alive.
+  const stepWorking =
+    lastItem?.type === "step"
+      ? lastItem.step.state === "working"
+      : lastItem?.type === "group"
+        ? lastItem.steps.at(-1)?.state === "working"
+        : false;
   return (
     <article
       className="va-turn"
+      data-running={running ? "" : undefined}
       data-plan={turn.orchestration.status === "proposed" ? "" : undefined}
       aria-label={turn.prompt ? `Turn: ${turn.prompt.text}` : "Steps"}
     >
@@ -439,6 +449,16 @@ function Turn({
       ) : (
         <TurnItems items={turn.items} agent={agent} turn={turn.id} />
       )}
+      {running && !stepWorking && !question && !turn.orchestration.lanes.length ? (
+        <p className="va-working" role="status">
+          <span className="va-working__dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span>{t(turn.label)}…</span>
+        </p>
+      ) : null}
       {question ? (
         <PermissionCard
           question={question}

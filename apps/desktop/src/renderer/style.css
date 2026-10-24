@@ -53,9 +53,7 @@ button:focus-visible {
   left: 8px;
   top: 8px;
   height: 40px;
-  /* Sized by its tabs: one tab is a compact bar, many grow to the cap. */
-  width: fit-content;
-  max-width: min(808px, calc(100% - 240px));
+  width: min(808px, calc(100% - 240px));
   padding: 0 var(--space-3);
   border-radius: var(--radius-lg);
   gap: var(--space-2);
@@ -63,6 +61,7 @@ button:focus-visible {
 .desktop-tabs {
   display: flex;
   gap: var(--space-2);
+  width: 100%;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -70,14 +69,26 @@ button:focus-visible {
 .desktop-tab {
   display: flex;
   align-items: center;
-  min-width: 96px;
-  max-width: 240px;
-  flex: 0 1 auto;
+  min-width: 120px;
+  flex: 1;
   border-radius: var(--radius-sm);
   background: var(--chrome-panel);
 }
 .desktop-tab[data-selected="true"] {
   background: var(--chrome-sunken);
+}
+/* One or two tabs: the bar is as wide as they are, not the three-tab width the design draws. */
+.desktop-docbar[data-compact] {
+  width: fit-content;
+  max-width: min(808px, calc(100% - 240px));
+}
+.desktop-docbar[data-compact] .desktop-tabs {
+  width: auto;
+}
+.desktop-docbar[data-compact] .desktop-tab {
+  flex: 0 1 auto;
+  min-width: 96px;
+  max-width: 240px;
 }
 /* A lone tab needs no well around it. */
 .desktop-tabs[data-single="true"] .desktop-tab {
@@ -150,6 +161,10 @@ button:focus-visible {
 }
 @media (max-width: 1040px) {
   .desktop-docbar {
+    width: calc(100% - 240px);
+  }
+  .desktop-docbar[data-compact] {
+    width: fit-content;
     max-width: calc(100% - 240px);
   }
 }
@@ -184,55 +199,6 @@ button:focus-visible {
 .desktop-home .unavailable {
   color: var(--chrome-secondary);
 }
-.desktop-home button,
-.desktop-home select {
-  border: 1px solid var(--chrome-border);
-  background: var(--chrome-panel);
-  color: var(--chrome-text);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font: inherit;
-}
-.desktop-home button:disabled {
-  cursor: default;
-  opacity: 0.65;
-}
-.desktop-home .primary {
-  background: var(--chrome-text);
-  color: var(--chrome-inverse);
-}
-.home-appbar {
-  height: 52px;
-  flex: none;
-  border-bottom: 1px solid var(--chrome-separator);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.home-appbar nav {
-  display: flex;
-  gap: var(--space-2);
-}
-[data-platform="mac"] .home-appbar {
-  padding-left: 88px;
-  -webkit-app-region: drag;
-  user-select: none;
-}
-[data-platform="mac"] .home-appbar button {
-  -webkit-app-region: no-drag;
-}
-.home-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px 64px;
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
-}
 .home-actions {
   display: flex;
   align-items: center;
@@ -241,137 +207,8 @@ button:focus-visible {
 .spread {
   justify-content: space-between;
 }
-.home-composer {
-  padding: 20px;
-  border: 1px solid var(--chrome-border);
-  background: var(--chrome-sunken);
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.home-composer h2 {
-  font-size: 20px;
-  line-height: 24px;
-}
-.home-composer textarea {
-  background: transparent;
-  border: 0;
-  resize: none;
-  height: 22px;
-  padding: 0;
-  font: inherit;
-  font-size: 14px;
-  color: var(--chrome-secondary);
-}
-.home-composer textarea::placeholder {
-  color: var(--chrome-secondary);
-  opacity: 1;
-}
-.home-composer .unavailable {
-  font-size: 11px;
-}
-.welcome-page {
-  padding: 40px 64px;
-  gap: 24px;
-}
-.welcome-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  text-align: center;
-}
-.welcome-content h1 {
-  font-weight: 500;
-}
-.wordmark {
-  font-size: 40px;
-  font-weight: 650;
-  letter-spacing: -1.5px;
-}
-.home-files.grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-.home-files.list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.home-file {
-  min-width: 0;
-  background: var(--chrome-sunken);
-  border: 1px solid var(--chrome-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
-}
-.home-file[data-selected="true"] {
-  outline: 2px solid var(--canvas-selection);
-}
-.desktop-home .file-open {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  text-align: start;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-.file-open strong {
-  font-size: 13px;
-}
-.file-open span {
-  font-size: 11px;
-  color: var(--chrome-secondary);
-  overflow-wrap: anywhere;
-}
-.file-thumbnail {
-  width: 100%;
-  height: 120px;
-  border: 1px solid var(--chrome-border);
-  display: grid;
-  place-items: center;
-}
 .mono {
   font-family: var(--font-mono), monospace;
-}
-.home-file > .home-actions {
-  margin-top: 12px;
-}
-.desktop-home [role="tablist"] {
-  display: flex;
-  gap: 20px;
-}
-.desktop-home [role="tab"] {
-  border: 0;
-  padding: 0;
-  color: var(--chrome-secondary);
-}
-.desktop-home [role="tab"][aria-selected="true"] {
-  color: var(--chrome-text);
-  font-weight: 600;
-}
-.desktop-home .home-folder {
-  text-align: start;
-  border: 0;
-  border-bottom: 1px solid var(--chrome-separator);
-  border-radius: 0;
-  height: 40px;
-}
-.home-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 24px;
-  color: var(--chrome-secondary);
-  font-size: 11px;
-  border-top: 1px solid var(--chrome-separator);
 }
 .home-error {
   color: var(--chrome-error);
@@ -487,4 +324,315 @@ dialog.recovery-dialog::backdrop {
   top: 80px;
   right: 32px;
   width: min(800px, calc(100vw - 64px));
+}
+
+/* Home (A01 Welcome, A02 Home). One centred column; the prompt sits with the heading it answers. */
+.desktop-home button,
+.desktop-home select {
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-panel);
+  color: var(--chrome-text);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font: inherit;
+}
+.desktop-home button:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.desktop-home .primary {
+  background: var(--chrome-text);
+  color: var(--chrome-inverse);
+}
+/* Home and Welcome only: Agents, Sign in and Recovery keep the design's measured controls. */
+.home-main button,
+.home-main select {
+  padding: 0 12px;
+  height: 32px;
+  transition: background var(--motion-panel) ease-out;
+}
+.home-main button:hover:not(:disabled),
+.home-main select:hover {
+  background: var(--chrome-hover);
+}
+.home-main .primary {
+  border-color: var(--chrome-text);
+  font-weight: 600;
+}
+.home-main .primary:hover:not(:disabled) {
+  background: var(--chrome-text);
+  opacity: 0.88;
+}
+.desktop-home .quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--chrome-secondary);
+}
+.desktop-home .quiet:hover:not(:disabled) {
+  color: var(--chrome-text);
+}
+.home-appbar {
+  height: 52px;
+  flex: none;
+  border-bottom: 1px solid var(--chrome-separator);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 13px;
+}
+.home-brand {
+  font-weight: 650;
+  letter-spacing: -0.2px;
+}
+.home-appbar nav {
+  display: flex;
+  gap: var(--space-1);
+}
+[data-platform="mac"] .home-appbar {
+  padding-left: 88px;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+[data-platform="mac"] .home-appbar button {
+  -webkit-app-region: no-drag;
+}
+.home-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 64px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+.home-main {
+  gap: 20px;
+  width: 100%;
+  max-width: 1152px;
+  margin: 0 auto;
+  padding-top: 32px;
+  padding-bottom: 24px;
+}
+.home-composer {
+  padding: 20px;
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-sunken);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color var(--motion-panel) ease-out;
+}
+.home-composer:focus-within {
+  border-color: var(--chrome-secondary);
+}
+.home-composer h2 {
+  font-size: 18px;
+  line-height: 24px;
+}
+.home-composer textarea {
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: none;
+  min-height: 66px;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--chrome-text);
+}
+.home-composer textarea::placeholder {
+  color: var(--chrome-secondary);
+  opacity: 1;
+}
+.desktop-home .folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 60%;
+  border-color: transparent;
+  background: transparent;
+  color: var(--chrome-secondary);
+  padding: 0 var(--space-2);
+}
+.desktop-home .folder-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.desktop-home .folder-chip:hover:not(:disabled) {
+  color: var(--chrome-text);
+}
+.desktop-home .home-keys {
+  font-size: 11px;
+}
+.home-main.welcome-page {
+  padding-top: 0;
+  justify-content: center;
+}
+.welcome-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+.welcome-content h1 {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 500;
+}
+.welcome-content .home-composer {
+  width: 100%;
+  margin-top: var(--space-6);
+  text-align: start;
+}
+.wordmark {
+  font-size: 44px;
+  line-height: 48px;
+  font-weight: 650;
+  letter-spacing: -1.6px;
+}
+.home-files.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+.home-files.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-file {
+  min-width: 0;
+  background: var(--chrome-sunken);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  transition: border-color var(--motion-panel) ease-out;
+}
+.home-file:hover {
+  border-color: var(--chrome-secondary);
+}
+.home-file[data-selected="true"] {
+  outline: 2px solid var(--canvas-selection);
+}
+.desktop-home .file-open {
+  padding: 0;
+  height: auto;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.desktop-home .file-open:hover:not(:disabled) {
+  background: transparent;
+}
+.file-open strong {
+  font-size: 13px;
+  line-height: 16px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-open span {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--chrome-secondary);
+  overflow-wrap: anywhere;
+}
+.home-files.list .file-open {
+  display: grid;
+  grid-template-columns: 2fr 3fr 1fr 1fr;
+  align-items: center;
+  gap: var(--space-3);
+}
+.home-files.list .file-open strong {
+  margin: 0;
+}
+/* No rendered preview yet: a quiet canvas tile (a dot grid, as the canvas has), not a message. */
+.file-thumbnail {
+  width: 100%;
+  height: 132px;
+  border-radius: var(--radius-sm);
+  background-color: var(--canvas-backdrop);
+  background-image: radial-gradient(var(--chrome-border) 1px, transparent 1px);
+  background-size: 14px 14px;
+  display: grid;
+  place-items: center;
+}
+.file-thumbnail svg {
+  color: var(--chrome-secondary);
+}
+.file-running {
+  color: var(--chrome-text);
+}
+.home-file > .home-actions {
+  margin-top: 12px;
+}
+.desktop-home [role="tablist"] {
+  display: flex;
+  gap: 4px;
+}
+.desktop-home [role="tab"] {
+  height: 30px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 var(--space-2);
+  color: var(--chrome-secondary);
+}
+.desktop-home [role="tab"]:hover:not(:disabled) {
+  background: transparent;
+  color: var(--chrome-text);
+}
+.desktop-home [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--chrome-text);
+  color: var(--chrome-text);
+  font-weight: 600;
+}
+.desktop-home .home-folder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: start;
+  border: 0;
+  border-bottom: 1px solid var(--chrome-separator);
+  border-radius: 0;
+  background: transparent;
+  height: 44px;
+  padding: 0 var(--space-2);
+}
+.desktop-home .home-folder svg {
+  color: var(--chrome-secondary);
+}
+.home-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 24px;
+  color: var(--chrome-secondary);
+  font-size: 11px;
+  border-top: 1px solid var(--chrome-separator);
+}
+.desktop-home .home-offline {
+  align-self: flex-start;
+  height: auto;
+  padding: 0;
+  color: var(--chrome-attention);
+  font-size: 12px;
+  text-align: start;
 }

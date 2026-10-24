@@ -8,7 +8,11 @@ export function DocumentTabs({ state, bridge }: { state: DesktopState; bridge: D
     void bridge.request({ type, tab });
   };
   return (
-    <section className="vc-bar desktop-docbar" aria-label="Documents">
+    <section
+      className="vc-bar desktop-docbar"
+      aria-label="Documents"
+      data-compact={state.tabs.length < 3 ? "" : undefined}
+    >
       {state.platform !== "mac" && (
         <button
           type="button"
