@@ -40,10 +40,15 @@ export function promptArguments(
     );
   const context = request.context.map((c) => `${c.kind}: ${c.label} (${c.value})`).join("\n");
   const skills = request.skills.map((s) => `Use the Vellum skill ${s}.`).join("\n");
+  // An installed engine's own instructions are one line, so it is told here where the design guidance is.
+  const guidance =
+    "If this asks you to design or restyle something, first read design-craft.md and workflows/design-a-screen.md with read_skill, build to them, and check each frame with a screenshot before you finish.";
   args.push(
     "--",
     path,
-    [request.text, context && `Canvas context:\n${context}`, skills].filter(Boolean).join("\n\n"),
+    [request.text, context && `Canvas context:\n${context}`, skills, guidance]
+      .filter(Boolean)
+      .join("\n\n"),
   );
   return args;
 }

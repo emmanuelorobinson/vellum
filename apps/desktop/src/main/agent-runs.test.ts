@@ -32,7 +32,10 @@ it("passes prompt text as one positional argument and preserves the session and 
     "--engine",
     "codex",
   ]);
-  expect(args.slice(-3)).toEqual(["--", "/work/design.vellum", request.text]);
+  expect(args.slice(-3, -1)).toEqual(["--", "/work/design.vellum"]);
+  // The request stays the first thing the engine reads, as one argument, followed by where the design guidance is.
+  expect(args.at(-1)?.startsWith(request.text)).toBe(true);
+  expect(args.at(-1)).toContain("design-craft.md");
   expect(args).toContain("explore-style");
 });
 it.skipIf(process.platform === "win32")(

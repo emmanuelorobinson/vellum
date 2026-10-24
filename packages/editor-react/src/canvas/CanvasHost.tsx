@@ -63,6 +63,13 @@ const cursorFor = (tool: string, mode: string) =>
           ? "crosshair"
           : "default";
 
+/** A draw that takes longer than this is too slow to repeat for every step of a pan. */
+const HEAVY_DRAW_MS = 24;
+/** How long a heavy page waits after the last movement before it is redrawn exactly. */
+const SETTLE_MS = 120;
+/** The least time between redraws of a heavy page while it is still being moved. */
+const REFRESH_MS = 400;
+
 export function CanvasHost({
   session,
   size,
@@ -112,29 +119,82 @@ export function CanvasHost({
     };
   }, [createRenderer]);
 
+  // What the content canvas shows, and what drawing it costs, so a heavy page can be moved instead of redrawn.
+  type View = typeof session.state.viewport;
+  const drawn = useRef<View | null>(null);
+  const drawMs = useRef(0);
+  /** Redraw shortly after the motion stops, and (`refresh`) at a slower pace while it goes on. */
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refresh = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearTimers = () => {
+    if (settle.current !== null) clearTimeout(settle.current);
+    if (refresh.current !== null) clearTimeout(refresh.current);
+    settle.current = null;
+    refresh.current = null;
+  };
+
   const paintContent = () => {
     const r = renderer.current;
     if (!r || !content || r.state !== "ready") return;
+    clearTimers();
+    const viewport = session.state.viewport;
     const frame = content.frame({
       width: size.width,
       height: size.height,
       dpr,
-      viewport: session.state.viewport,
+      viewport,
     });
     if (!frame) return;
     try {
       r.resize({ width: size.width, height: size.height, dpr });
+      const started = performance.now();
       r.draw(frame);
+      const took = performance.now() - started;
+      drawMs.current = drawMs.current ? (drawMs.current + took) / 2 : took;
+      drawn.current = viewport;
+      // The pixels now show this viewport exactly: drop any transform that was standing in for it.
+      const el = contentCanvas.current;
+      if (el) el.style.transform = "";
     } catch {
       root.current?.setAttribute("data-content", "failed");
     }
+  };
+  /**
+   * The viewport moved. A page that draws quickly is redrawn at once. A page whose draw takes longer than a frame
+   * (shadows and blurs are rasterised on the CPU) is not: the pixels already drawn are moved and scaled with a
+   * transform, which costs nothing, and a real redraw follows at a pace the main thread can afford, and once more
+   * when the motion stops. Otherwise a fast pan queues redraws faster than they finish and the editor freezes.
+   */
+  const followViewport = () => {
+    const v = session.state.viewport;
+    const base = drawn.current;
+    if (!base || base === v) return;
+    const el = contentCanvas.current;
+    if (!el || drawMs.current <= HEAVY_DRAW_MS) {
+      paintContent();
+      return;
+    }
+    const scale = v.zoom / base.zoom;
+    el.style.transformOrigin = "0 0";
+    el.style.transform = `translate(${v.x - base.x * scale}px, ${v.y - base.y * scale}px) scale(${scale})`;
+    if (settle.current !== null) clearTimeout(settle.current);
+    settle.current = setTimeout(paintContent, SETTLE_MS);
+    // A long pan still refreshes now and then, but never so often that drawing is all the main thread does.
+    if (refresh.current === null)
+      refresh.current = setTimeout(paintContent, Math.max(REFRESH_MS, drawMs.current * 2));
   };
   useEffect(() => {
     if (!content) return;
     const s = content.subscribe(paintContent);
     return () => s.dispose();
   }, [content, size.width, size.height]);
-  useEffect(paintContent, [size.width, size.height, dpr, session.state.viewport]);
+  // A resize or a new pixel ratio clears the canvas: always redraw exactly.
+  useEffect(() => {
+    drawn.current = null;
+    paintContent();
+  }, [size.width, size.height, dpr]);
+  useEffect(followViewport, [session.state.viewport]);
+  useEffect(() => clearTimers, []);
 
   const shapes = (() => {
     const selection: SelectedItem[] = session.state.selection.flatMap((id) => {

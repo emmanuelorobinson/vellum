@@ -41,6 +41,11 @@ const BUILTINS: &[Builtin] = &[
         body: include_str!("../../../../packages/skills/src/generated/vellum-doc.d.ts"),
     },
     skill!(
+        "design-craft.md",
+        "Design craft",
+        "Hierarchy, type, spacing, colour, pictures and a finishing check, so a design looks considered."
+    ),
+    skill!(
         "workflows/design-a-screen.md",
         "Design a screen",
         "Build a screen from a brief and verify it."

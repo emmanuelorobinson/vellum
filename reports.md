@@ -28,6 +28,13 @@ Current open items only. Resolved items, decisions taken for the owner and every
   fallback exceed §12; open, idle RSS, Skia draw and both WASM size gates pass. In the browser, a frame with any
   shadow or blur still rasterizes the whole viewport on the CPU (ADR-017): about 150–400 ms per changed frame at
   1280×720 for `shapes.vellum`, more at 2× pixel ratio. GPU-native effects need to pass the goldens first.
+- **Pan stalls on effect-heavy pages (2026-10-24).** Reproduced on `fixtures/documents/shapes.vellum`: a fast pan gave
+  frame gaps of up to 2.1 s (every step re-rasterised the viewport, ADR-017). `CanvasHost` now moves the drawn pixels
+  with a CSS transform while a heavy page (draw over 24 ms) is panned or zoomed, redraws 120 ms after the motion stops
+  and at most every 400 ms (or twice the draw time) during it; worst gap fell to 25 ms and the settled frame is
+  pixel-identical to the old path. Still open: the one redraw after you stop still blocks for as long as the draw takes
+  (about 2 s here); the cure is GPU-native effects. The transform is not applied to the selection overlay, so
+  handles briefly lead the content during a fast pan.
 - **Localization coverage (Prompt 70).** 127 common messages in 13 catalogs; advanced descriptions, dynamic
   diagnostics, desktop Home and the account/web copy still fall back to English.
 - **Electron tests leak daemons.** Eight `vellum` daemons from earlier desktop test runs were still running in
@@ -45,6 +52,17 @@ Current open items only. Resolved items, decisions taken for the owner and every
 
 ### Needs a person
 
+- **Design guidance and pictures (2026-10-24).** Vellum's agents were told how to call tools but not how to design:
+  the built-in skills were API notes only, installed engines (Codex, Claude Code) get a one-line base instruction,
+  and no agent can fetch a picture (`set_stock` is called only by tests, and installed engines have no network), so
+  boards get hand-drawn vector faces. Added `design-craft.md` (own wording; please review it) and a directive on
+  desktop turns to read it. Decide the picture source: a stock key in the keychain, a configured generation model, or
+  attach-from-repo through the PermissionBroker; and whether to bundle visual styles beyond the six generic ones.
+- **Design differences made on request (2026-10-24).** The engine and model picker is now a chip in the composer
+  footer (C01, C08, C26, C27 draw it as a text line under the composer; the `engine line` golden region is removed
+  from `screens.json`). Welcome (A01) puts the prompt under the hero, not at the bottom; Home (A02) uses a quiet
+  dot-grid tile instead of a "Preview unavailable" message; the desktop document bar is only as wide as its tabs for
+  one or two tabs (A03 draws three). Update `vellum.pen` or reject any of these.
 - **Docs site and icons (2026-10-23).** Approve the icon as drafted (the brand mark on a white tile; see the last
   entry) or choose another container. Decide the Activity Bar icon (the Lucide frame glyph stays for now), whether the
   editor gets a logo, attribution for `apps/docs/lib/content-cache.mjs` (adapted from the Outpost project, which has no
@@ -351,3 +369,31 @@ under `/tmp/vellum-build-clean-TRtvPl`, then ran
 `pnpm run clean -- --root /tmp/vellum-build-clean-TRtvPl` (3 output directories removed).
 Retained only `target/desktop-packages/` (611 MiB) because the built app is running there. Disk availability
 rose from 364 GiB before cleanup to 370 GiB after; source, dependencies, references and design cache retained.
+
+## Follow-up 2026-10-24: desktop chrome, presence, picker, craft skill, pan stalls
+
+Built: compact document bar (`apps/desktop` `style.css`, `Tabs.tsx`); composer footer model chip and a compact
+Engine and model menu with each installed engine's models and reasoning effort (`EnginePicker`, `composer.css`;
+models come from `~/.codex/models_cache.json` and Claude Code's documented aliases, `agent-runs.ts`);
+`createLivePresence` (editor-core) derives agents, leases and a stepping cursor from the running turn and the nodes it
+changes, wired into the desktop editor; cursor glide, working pill, lease glow and a working row in the Agent tab;
+Home and Welcome restyled; `design-craft.md` registered in `crates/vellum/src/content/skills.rs` (tests count 8);
+`CanvasHost` adaptive pan.
+
+Differs from the design: see "Design differences made on request" above.
+
+Failed or not verified: Electron `@design` goldens A01–A06 and A03 tabs fail at HEAD and after (A01 0.026 to 0.032,
+A02 0.041 to 0.047, A04 0.027 unchanged; gate 0.01); A03 reads 908 px on macOS because the 88 px traffic-light padding
+is added to a content-box width. `@electron account device flow` did not open a window in two runs and was not
+diagnosed. `design.spec.ts` "Shader tab says it arrives in v1.1" is stale (the string no longer exists). The cursor
+and presence were checked on scripted scenarios and a unit test, not against a live Codex or Claude Code turn. Model
+choice was exercised in the UI, not through a real send. `cargo fmt --check` differs in `mcp/cli.rs` (not touched).
+
+Passed: `vitest` in editor-core (2405), editor-react (1362), apps/desktop (33); `tsc --noEmit` in the three;
+`pnpm tokens:lint`, `pnpm copy-lint`; `biome check --diagnostic-level=error`; Playwright composer, agent,
+collaboration, accessibility, editor, engine, design, shell specs (179 of 180; the one failure is the stale test above);
+`cargo test -p vellum --test skills_styles --test cli` (23).
+
+Cleared: this session's probe profiles in the system temp folder. Retained `target/` (running app in
+`target/desktop-packages/`); `pnpm clean` was not run for that reason.
+

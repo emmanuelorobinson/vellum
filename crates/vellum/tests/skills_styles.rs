@@ -22,14 +22,15 @@ fn call(registry: &Registry, name: &str, input: Value) -> Result<Value, vellum::
 }
 
 #[test]
-fn builtin_skills_include_format_execute_declarations_and_four_workflows() {
+fn builtin_skills_include_format_execute_declarations_craft_and_four_workflows() {
     let skills = BuiltinSkills;
     let paths: Vec<_> = skills.list().unwrap().into_iter().map(|m| m.path).collect();
-    assert_eq!(paths.len(), 7);
+    assert_eq!(paths.len(), 8);
     for path in [
         "format.md",
         "execute.md",
         "vellum-doc.d.ts",
+        "design-craft.md",
         "workflows/design-a-screen.md",
         "workflows/build-a-design-system.md",
         "workflows/recreate-from-code.md",
@@ -62,17 +63,17 @@ fn stacking_keeps_builtin_then_guidelines_then_user_folders_and_reads_fresh_cont
         Rc::new(FileSkills::folders(fs.clone(), vec!["skills/voice".into()]).unwrap()),
     ]);
     let list = skills.list().unwrap();
-    assert_eq!(list[7].path, "systems/minimal/guidelines.md");
-    assert_eq!(list[8].name, "test-voice");
-    assert_eq!(list[8].description, "A test voice.");
-    assert!(skills.read(&list[8].path).unwrap().contains("short labels"));
+    assert_eq!(list[8].path, "systems/minimal/guidelines.md");
+    assert_eq!(list[9].name, "test-voice");
+    assert_eq!(list[9].description, "A test voice.");
+    assert!(skills.read(&list[9].path).unwrap().contains("short labels"));
     fs.seed(
         "skills/voice/SKILL.md",
         b"---\nname: test-voice\ndescription: Changed.\n---\nChanged instructions.\n",
     );
     assert!(
         skills
-            .read(&list[8].path)
+            .read(&list[9].path)
             .unwrap()
             .contains("Changed instructions")
     );
@@ -81,7 +82,7 @@ fn stacking_keeps_builtin_then_guidelines_then_user_folders_and_reads_fresh_cont
         skills.list().is_err(),
         "missing configured folders are explicit"
     );
-    assert!(skills.read(&list[8].path).is_err(), "no stale cache");
+    assert!(skills.read(&list[9].path).is_err(), "no stale cache");
     assert_eq!(fs.mutations(), 1, "sources only read");
 }
 
@@ -161,7 +162,7 @@ fn skills_and_styles_tools_work_without_an_open_document_and_validate_inputs() {
         );
     }
     let list = call(&registry, "list_skills", json!({})).unwrap();
-    assert_eq!(list["skills"].as_array().unwrap().len(), 7);
+    assert_eq!(list["skills"].as_array().unwrap().len(), 8);
     assert_eq!(call(&registry, "read_skill", json!({})).unwrap(), list);
     let read = call(&registry, "read_skill", json!({"path": "execute.md"})).unwrap();
     assert!(read["content"].as_str().unwrap().contains("doc.apiVersion"));
@@ -205,7 +206,7 @@ fn configured_sources_are_visible_through_the_same_registry() {
             .as_array()
             .unwrap()
             .len(),
-        8
+        9
     );
     assert!(
         call(&registry, "read_skill", json!({"path":"voice/SKILL.md"})).unwrap()["content"]
@@ -237,7 +238,7 @@ fn later_sources_own_duplicate_paths_and_names_without_stale_fallback() {
             "TEST DATA override".into(),
         )])),
     ]);
-    assert_eq!(source.list().unwrap().len(), 7);
+    assert_eq!(source.list().unwrap().len(), 8);
     assert_eq!(source.list().unwrap().last().unwrap(), &user_meta);
     assert_eq!(source.read(&meta.path).unwrap(), "TEST DATA override");
     struct Unreadable(vellum_core::ports::SkillMeta);

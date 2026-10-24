@@ -310,8 +310,8 @@ fn writes_and_scripts_reach_the_file_through_the_real_daemon() {
 fn skills_and_styles_reach_the_shipped_cli_without_opening_a_document() {
     let space = Workspace::new();
     for (args, key, count) in [
-        (vec!["list_skills"], "skills", 7),
-        (vec!["read_skill"], "skills", 7),
+        (vec!["list_skills"], "skills", 8),
+        (vec!["read_skill"], "skills", 8),
         (vec!["get_style"], "styles", 6),
     ] {
         let result = tool(&space, &args);
